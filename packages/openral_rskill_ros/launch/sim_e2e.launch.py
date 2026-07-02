@@ -279,6 +279,9 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     dataset_out = LaunchConfiguration("dataset_out").perform(context)
     dataset_repo_id = LaunchConfiguration("dataset_repo_id").perform(context)
     dataset_license = LaunchConfiguration("dataset_license").perform(context)
+    # Real deploys — RobotEnvironment YAML whose `sensors:` the runtime
+    # node opens and publishes as /openral/cameras/<sensor_id>/image.
+    deploy_config = LaunchConfiguration("deploy_config").perform(context)
     dashboard_port = LaunchConfiguration("dashboard_port").perform(context)
     reasoner_provider = LaunchConfiguration("reasoner_provider").perform(context)
     reasoner_model = LaunchConfiguration("reasoner_model").perform(context)
@@ -766,6 +769,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                 "dataset_out": dataset_out,
                 "dataset_repo_id": dataset_repo_id,
                 "dataset_license": dataset_license,
+                # Real deploys — when set, the runtime opens the deploy
+                # config's camera readers (sensor_leg.py) and publishes
+                # them onto the WorldState image topics.
+                "deploy_config": deploy_config,
             }
         ],
         additional_env=otel_env,
@@ -1567,6 +1574,19 @@ def generate_launch_description() -> LaunchDescription:
                 "action + camera frames + episode markers) to this rosbag2 "
                 "mcap path. Convert offline with `openral dataset from-bag`. "
                 "Empty disables recording."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "deploy_config",
+            default_value="",
+            description=(
+                "Real deploys (`openral deploy run`) — path to the "
+                "RobotEnvironment YAML. The runtime node opens one "
+                "SensorReader per `sensors:` entry and publishes each "
+                "camera onto /openral/cameras/<sensor_id>/image (the "
+                "real-hardware counterpart of the sim HAL's "
+                "SimSensorBridge). Empty (sim) leaves the HAL bridge as "
+                "the only camera source."
             ),
         ),
         DeclareLaunchArgument(

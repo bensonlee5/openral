@@ -76,3 +76,29 @@ def test_real_mode_dry_run_prints_launch_without_shelling(
     assert "hal_mode=real" in result.output
     assert "hal_params:" in result.output
     assert "argv:" in result.output
+
+
+def test_real_mode_forwards_deploy_config_for_sensor_leg(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`deploy run` forwards its --config path as the `deploy_config` launch arg.
+
+    The runtime node opens the deploy config's `sensors:` readers from that
+    path and publishes the physical cameras onto
+    /openral/cameras/<sensor_id>/image — without it a real deploy has no
+    camera publisher at all (the sim HAL bridge only exists in sim mode).
+    """
+    captured: dict[str, LaunchInvocation] = {}
+
+    def _fake_run(invocation: LaunchInvocation, *, run_preflight: bool = True) -> int:
+        captured["inv"] = invocation
+        return 0
+
+    monkeypatch.setattr(_deploy_sim, "run_launch_invocation", _fake_run)
+
+    config = _write_deploy_scene_yaml(tmp_path, robot_id="so101_follower")
+    result = CliRunner().invoke(app, ["deploy", "run", "--config", str(config)])
+
+    assert result.exit_code == 0, result.output
+    inv = captured["inv"]
+    assert f"deploy_config:={config.resolve()}" in inv.argv_template
