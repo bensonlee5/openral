@@ -306,11 +306,14 @@ if _ROS2_AVAILABLE:
                 sensor_qos,
             )
 
-            # Per-camera image subscriptions. The HAL publishes
-            # `sensor_msgs/Image` with RELIABLE QoS on
-            # `<prefix>/<name>/image`; we mirror RELIABLE so the
-            # subscription matches and we never miss a frame on
-            # bring-up.
+            # Per-camera image subscriptions on `<prefix>/<name>/image`.
+            # BEST_EFFORT per CLAUDE.md §2 (sensor streams): a BEST_EFFORT
+            # subscription matches BOTH publisher reliabilities, so it
+            # receives from the sim HAL bridges (RELIABLE) and from the
+            # real-mode GStreamer ros_tee / SensorRosPublisher readers
+            # (BEST_EFFORT). The previous RELIABLE profile silently
+            # never matched the BEST_EFFORT real-camera publishers —
+            # zero frames, policy starved of images on real hardware.
             from sensor_msgs.msg import Image as RosImage
 
             camera_names_raw = list(
@@ -321,7 +324,7 @@ if _ROS2_AVAILABLE:
                 self.get_parameter("camera_topic_prefix").get_parameter_value().string_value
             )
             image_qos = QoSProfile(
-                reliability=QoSReliabilityPolicy.RELIABLE,
+                reliability=QoSReliabilityPolicy.BEST_EFFORT,
                 durability=QoSDurabilityPolicy.VOLATILE,
                 depth=1,
             )
