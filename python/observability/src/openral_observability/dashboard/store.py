@@ -660,7 +660,7 @@ class TelemetryStore:
             spans = sorted((s.to_json() for s in bucket), key=lambda s: s["start_unix_ns"])
         return spans
 
-    def _update_topics(  # noqa: PLR0912  # reason: linear span-name dispatch; each arm sets a different topic slot. Splitting into per-span methods (as already done for slam.occupancy_grid / reasoner.tick) hurts the read-this-and-see-every-routed-family ergonomic that the operator-facing dashboard handlers benefit from.
+    def _update_topics(  # noqa: PLR0912, PLR0915  # reason: linear span-name dispatch; each arm sets a different topic slot. Splitting into per-span methods (as already done for slam.occupancy_grid / reasoner.tick) hurts the read-this-and-see-every-routed-family ergonomic that the operator-facing dashboard handlers benefit from.
         self, span_name: str, attrs: dict[str, Any], ts_unix: float, duration_ms: float
     ) -> None:
         """Route span attributes into per-topic dynamic-state buckets."""
@@ -823,6 +823,48 @@ class TelemetryStore:
                 "duration_ms": duration_ms,
             }
             self._topics["safety"]["latest_ts_unix"] = ts_unix
+            if severity == "violation":
+                # A violation must SURVIVE and STAND OUT. The generic
+                # per-span event is severity "info" (the kernel span's
+                # status is OK — dropping the action IS the kernel working)
+                # and the 30 Hz hal.read_state stream evicts it from the
+                # 200-slot event ring within seconds, so the operator never
+                # saw WHY the arm stopped (observed live: SO-101 self-
+                # collision e-stop with zero trace on the dashboard). Two
+                # fixes: (a) a persistent ``last_violation`` slot on the
+                # safety topic that only the next violation overwrites (the
+                # per-check ledger row is reset by the next OK check), and
+                # (b) a dedicated error-severity ``safety.violation`` event
+                # + counter so the Event Log shows a red row while it lasts.
+                violation = {
+                    "ts_unix": ts_unix,
+                    "check_name": check_name,
+                    "drop_reason": attrs.get("safety.drop_reason"),
+                    "violation_value": attrs.get("safety.violation_value"),
+                    "collision_mode": attrs.get("safety.collision_mode"),
+                    "rskill_id": attrs.get("rskill.id"),
+                    "kernel": attrs.get("safety.kernel"),
+                }
+                self._topics["safety"]["last_violation"] = violation
+                reason = violation["drop_reason"] or "envelope"
+                value = violation["violation_value"]
+                value_s = f" value={value:.4g}" if isinstance(value, (int, float)) else ""
+                self._events.append(
+                    TelemetryEvent(
+                        ts_unix=ts_unix,
+                        kind="safety.violation",
+                        title=(
+                            f"safety.violation · {check_name} · reason={reason}{value_s}"
+                            f" · rskill={violation['rskill_id'] or '(unknown)'}"
+                        ),
+                        attrs=attrs,
+                        severity="error",
+                    )
+                )
+                # Reuse the counted-event key the dashboard's Safety counter
+                # already reads (`cnt-safety` ← openral.event.safety_violation)
+                # so the tally lights up without a UI change.
+                self._counters["openral.event.safety_violation"] += 1
         elif span_name == "reasoner.tick":
             self._record_reasoner_tick(attrs, ts_unix, duration_ms)
 
