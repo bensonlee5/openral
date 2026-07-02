@@ -677,6 +677,22 @@
       const vEl = document.createElement("span"); vEl.className = "pill " + sev; vEl.textContent = sev;
       el.appendChild(kEl); el.appendChild(vEl);
     }
+    // Persistent last-violation row: the per-check pill above resets to
+    // "info" on the next OK check and the violation's event-log row is
+    // evicted by high-rate spans within seconds — this row keeps WHY the
+    // arm stopped on screen until the next violation overwrites it.
+    const v = safety && safety.last_violation;
+    if (v) {
+      const kEl = document.createElement("span");
+      kEl.className = "k";
+      kEl.textContent = "last violation";
+      const vEl = document.createElement("span");
+      vEl.className = "pill violation";
+      const val = typeof v.violation_value === "number" ? " " + v.violation_value.toPrecision(3) : "";
+      vEl.textContent = (v.drop_reason || v.check_name || "violation") + val + " · " + fmtAge(v.ts_unix);
+      vEl.title = JSON.stringify(v);
+      el.appendChild(kEl); el.appendChild(vEl);
+    }
   }
 
   function renderCounters(counters, events) {
