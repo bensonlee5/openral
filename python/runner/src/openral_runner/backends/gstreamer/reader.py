@@ -42,14 +42,10 @@ import structlog
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst  # noqa: E402  # gi requires version-pin before import
-from openral_core import FrameEncoding, SensorFrame  # noqa: E402
-from openral_core.exceptions import (  # noqa: E402
-    ROSConfigError,
-    ROSPerceptionStale,
-    ROSRuntimeError,
-)
 
-# Initialise GStreamer at module load time, NOT inside open().
+# Initialise GStreamer at module load time, NOT inside open() — and
+# IMMEDIATELY after the ``gi.repository`` import, BEFORE any other
+# import.
 #
 # Why eager: when ``rclpy`` is imported into the same interpreter before
 # ``Gst.init()`` runs, ``rclpy.Node()`` segfaults inside Fast DDS thread
@@ -60,7 +56,23 @@ from openral_core.exceptions import (  # noqa: E402
 # we have found that does not segfault. ``Gst.init()`` is idempotent and
 # safe to call from a non-main thread, so re-imports / fork-safe wrappers
 # elsewhere remain valid.
+#
+# Why immediately after the gi import: letting ANY other import run
+# between ``from gi.repository import …`` and ``Gst.init()`` re-opens the
+# same crash on x86 Ubuntu 24.04 hosts (system PyGObject 3.48 / GStreamer
+# 1.24 / ROS Jazzy Fast-DDS): with the openral_core import chain loaded
+# in that gap, a later ``rclpy.create_node()`` SIGSEGVs inside
+# ``_rclpy.Node`` even though Gst.init ran "eagerly". Bisected
+# empirically (2026-07-02, SO-101 deploy bring-up): gi import →
+# Gst.init → other imports is the only safe statement order.
 Gst.init(None)
+
+from openral_core import FrameEncoding, SensorFrame  # noqa: E402
+from openral_core.exceptions import (  # noqa: E402
+    ROSConfigError,
+    ROSPerceptionStale,
+    ROSRuntimeError,
+)
 
 from openral_runner.backends.gstreamer.pipeline import (  # noqa: E402
     PipelineSpec,
