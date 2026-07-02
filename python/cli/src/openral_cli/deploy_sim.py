@@ -880,6 +880,7 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
     dataset_out: str | None = None,
     dataset_repo_id: str | None = None,
     dataset_license: str | None = None,
+    deploy_config: Path | None = None,
     hal_param_overrides: dict[str, object] | None = None,
     hal_mode: str = "sim",
     enable_slam: bool | None = None,
@@ -1290,6 +1291,13 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
     # leaves the reasoner in idle mode until an operator prompt arrives.
     if _resolved_initial_prompt:
         argv_template.append(f"initial_task_prompt:={_resolved_initial_prompt}")
+
+    # Real deploys — forward the RobotEnvironment YAML so the runtime node
+    # opens its `sensors:` readers and publishes the physical cameras onto
+    # /openral/cameras/<sensor_id>/image (sim keeps the HAL bridge as the
+    # only camera source; empty default in the launch file).
+    if deploy_config is not None and hal_mode == "real":
+        argv_template.append(f"deploy_config:={Path(deploy_config).resolve()}")
 
     return LaunchInvocation(
         robot_id=robot_id,

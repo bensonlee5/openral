@@ -3229,6 +3229,7 @@ def deploy_run(
             robot_override=robot or deploy_scene.robot_id,
             dashboard_port=dashboard_port,
             reset_to_pose_service=None,
+            deploy_config=config,
             hal_param_overrides=overrides,
             hal_mode="real",
             enable_dashboard=dashboard,

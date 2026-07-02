@@ -22,8 +22,31 @@ from __future__ import annotations
 
 import sys
 
+# ── gi/Gst FIRST — before numpy/pydantic/rclpy ───────────────────────
+# The real-camera sensor leg (``deploy_config`` param) opens GStreamer
+# readers in this process. Under Fast-DDS (the launch default), a later
+# ``rclpy.Node()`` SIGSEGVs inside ``_rclpy.Node`` whenever numpy or
+# pydantic were imported before ``gi`` + ``Gst.init()`` — bisected
+# empirically on x86 Ubuntu 24.04 (system PyGObject 3.48 / GStreamer
+# 1.24 / ROS Jazzy; SO-101 deploy bring-up 2026-07-02; Cyclone DDS is
+# unaffected). These MUST therefore be the first imports in the process,
+# ahead of every openral module (whose import chains pull numpy).
+# Deliberately NOT ``import openral_runner...reader`` — its package
+# ``__init__`` imports numpy first, defeating the ordering. Best-effort:
+# hosts without PyGObject skip cleanly, and the leg then fails loudly at
+# open time only if a gstreamer sensor is actually configured.
+try:
+    import gi
 
-def _main() -> int:  # noqa: PLR0915  # reason: linear bootstrap entry point — splitting obscures the launch contract
+    gi.require_version("Gst", "1.0")
+    from gi.repository import Gst  # reason: gi requires version-pin before import
+
+    Gst.init(None)
+except ImportError:
+    pass
+
+
+def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstrap entry point — splitting obscures the launch contract
     try:
         import rclpy
         from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
@@ -73,6 +96,13 @@ def _main() -> int:  # noqa: PLR0915  # reason: linear bootstrap entry point —
     bootstrap.declare_parameter("dataset_out", "")
     bootstrap.declare_parameter("dataset_repo_id", "")
     bootstrap.declare_parameter("dataset_license", "CC-BY-4.0")
+    # Real deploys only (`openral deploy run --config …`): path to the
+    # RobotEnvironment YAML. When set, the runtime opens one SensorReader
+    # per `sensors:` entry and publishes each camera onto
+    # `/openral/cameras/<sensor_id>/image` (the WorldState subscription) —
+    # the real-hardware counterpart of the sim HAL's SimSensorBridge.
+    # Empty (sim deploys) leaves the HAL bridge as the only camera source.
+    bootstrap.declare_parameter("deploy_config", "")
     robot_yaml: str = bootstrap.get_parameter("robot_yaml").get_parameter_value().string_value
     search_paths: list[str] = [
         p
@@ -101,6 +131,9 @@ def _main() -> int:  # noqa: PLR0915  # reason: linear bootstrap entry point —
     )
     dataset_license: str = (
         bootstrap.get_parameter("dataset_license").get_parameter_value().string_value
+    )
+    deploy_config: str = (
+        bootstrap.get_parameter("deploy_config").get_parameter_value().string_value
     )
     bootstrap.destroy_node()
 
@@ -164,6 +197,25 @@ def _main() -> int:  # noqa: PLR0915  # reason: linear bootstrap entry point —
         rclpy.try_shutdown()
         return 3
 
+    # Real deploys: open the deploy config's camera readers and publish
+    # them onto the WorldState image topics. Fail loudly — a real run
+    # whose cameras cannot open would otherwise starve the policy of
+    # images and fold blind (same failure class the safety-kernel
+    # autostart guards against).
+    sensor_leg = None
+    if deploy_config:
+        from openral_core import RobotEnvironment
+        from openral_rskill_ros.sensor_leg import open_deploy_sensor_readers
+
+        try:
+            sensor_leg = open_deploy_sensor_readers(
+                RobotEnvironment.from_yaml(deploy_config),
+            )
+        except Exception as exc:  # surface as exit code, not stack trace
+            print(f"runtime_node: sensor leg failed to open: {exc!s}", file=sys.stderr)
+            rclpy.try_shutdown()
+            return 6
+
     # Forward the optional reset-service name from the bootstrap to
     # the composed lifecycle node. ``RskillRunnerNode`` declared the
     # parameter at construction; this just overrides the empty
@@ -220,6 +272,10 @@ def _main() -> int:  # noqa: PLR0915  # reason: linear bootstrap entry point —
         # `try_shutdown()` switch below is the corresponding fix.
         pass
     finally:
+        # Close the real-camera leg first: its publishers poll the readers,
+        # and the readers hold v4l2 / GStreamer pipeline handles.
+        if sensor_leg is not None:
+            sensor_leg.close()
         # ADR-0019 — finalize the recorded bag (drains the writer thread,
         # closes any open episode) BEFORE the nodes go down.
         if runtime.dataset_recorder_bridge is not None:
