@@ -290,14 +290,26 @@ class SO100FollowerHAL(HALBase):
         port: str = "/dev/ttyUSB0",
         *,
         calibrate_on_connect: bool = False,
+        id: str | None = None,  # reason: mirrors lerobot RobotConfig.id verbatim
         max_relative_target: float | dict[str, float] | None = None,
         staleness_limit_s: float = 0.5,
         robot: _LeRobotRobot | None = None,
     ) -> None:
-        """Initialise the adapter; does not open any connection yet."""
+        """Initialise the adapter; does not open any connection yet.
+
+        ``id`` is lerobot's calibration identity: the stored calibration file
+        resolves to ``~/.cache/huggingface/lerobot/calibration/robots/
+        so_follower/<id>.json``. Without it (and with
+        ``calibrate_on_connect=False``) the bus connects but every
+        ``get_observation()`` raises ``has no calibration registered`` —
+        pass the same ``id`` the arm was calibrated with
+        (``lerobot-calibrate --robot.id=<id>``), e.g. via the deploy
+        config's ``hal.params.id``.
+        """
         self.description: RobotDescription = SO100_DESCRIPTION
         self._port = port
         self._calibrate_on_connect = calibrate_on_connect
+        self._id = id
         self._max_relative_target = max_relative_target
         self._staleness_limit_s = staleness_limit_s
         self._injected_robot: _LeRobotRobot | None = robot
@@ -345,6 +357,7 @@ class SO100FollowerHAL(HALBase):
 
             cfg: _SOFollowerRobotConfig = SOFollowerRobotConfig(
                 port=self._port,
+                id=self._id,  # calibration identity → <id>.json (see __init__)
                 max_relative_target=self._max_relative_target,
                 use_degrees=True,  # adapter converts degrees ↔ radians
             )

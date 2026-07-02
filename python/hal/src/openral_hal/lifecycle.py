@@ -931,6 +931,18 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("robot_yaml", "")
             self.declare_parameter("hal_mode", "sim")
             self.declare_parameter("sim_env_yaml", "")
+            # Real-HW transport overrides (ADR-0032): `openral deploy run`
+            # forwards the RobotEnvironment's hal.transport (serial `port` /
+            # `robot_ip` / `fci_ip`) + hal.params (calibration `id`) via the
+            # HAL params file. They MUST be declared here or rclpy silently
+            # drops them and build_hal falls back to the manifest's defaults —
+            # observed as the SO-101 node connecting to /dev/ttyUSB0 while the
+            # arm sat on /dev/ttyACM0, then reading with no calibration.
+            # Empty string = unset (manifest default applies).
+            self.declare_parameter("port", "")
+            self.declare_parameter("robot_ip", "")
+            self.declare_parameter("fci_ip", "")
+            self.declare_parameter("id", "")
             # ADR-0066 — scene-level MJCF composition (a `SceneComposition` as
             # JSON). `openral deploy sim` forwards the DeployScene's `composition`
             # here so the SCENE (not the robot manifest) owns its arena. Takes
@@ -1008,9 +1020,14 @@ if _ROS2_AVAILABLE:
                 composition = description.scene_defaults.composition
             if hal_mode == "sim" and sim_env_yaml is None and composition is not None:
                 transport["mjcf_path"] = self._compose_scene_mjcf(description, composition)
-            # Phase 1 (ADR-0032) routes sim through the seam; real-HW transport
-            # params (port / robot_ip / fci_ip) arrive with the `deploy run`
-            # launch path. mode is validated by build_hal (sim|real).
+            # Real-HW transport overrides (`deploy run` → HAL params file →
+            # the params declared in __init__). Only non-empty values are
+            # threaded so build_hal's manifest-defaults fallback still applies
+            # per-key. mode is validated by build_hal (sim|real).
+            for _transport_key in ("port", "robot_ip", "fci_ip", "id"):
+                _value = self.get_parameter(_transport_key).get_parameter_value().string_value
+                if _value:
+                    transport[_transport_key] = _value
             return build_hal(
                 description,
                 mode=hal_mode,  # type: ignore[arg-type]  # reason: hal_mode is a ROS param string validated as sim|real by build_hal
