@@ -1772,13 +1772,14 @@ def _detect_joint_units_are_degrees(adapter: object) -> bool:
       ``[0.0, 2.44346]``).
 
     Decoded by walking the preprocessor pipeline to find the
-    ``normalizer_processor`` step's loaded ``observation.state.q99``
-    tensor. If any non-gripper arm-joint q99 exceeds ``π``
-    (3.14) — physically impossible in radians for a manipulator
-    joint — the checkpoint is in degrees. Defaults to radians on any
-    introspection failure (the safer default — a missed deg→rad
-    conversion sends large numbers; a spurious one quietly compresses
-    them).
+    ``normalizer_processor`` step's loaded ``observation.state`` stats —
+    ``q99`` for quantile-normalized checkpoints, falling back to
+    ``max``/``min``/``std`` for MEAN_STD checkpoints (SmolVLA SO-101).
+    If any stat magnitude exceeds ``π`` (3.14) — physically impossible
+    in radians for a manipulator joint — the checkpoint is in degrees.
+    Defaults to radians on any introspection failure (the safer
+    default — a missed deg→rad conversion sends large numbers; a
+    spurious one quietly compresses them).
     """
     try:
         pipeline = adapter._preprocessor  # type: ignore[attr-defined]
@@ -1786,17 +1787,38 @@ def _detect_joint_units_are_degrees(adapter: object) -> bool:
             stats = getattr(step, "stats", None) or getattr(step, "_stats", None)
             if stats is None:
                 continue
-            q99 = stats.get("observation.state.q99")
-            if q99 is None:
+            # Two stats layouts exist across lerobot processor versions:
+            # flat ("observation.state.q99" → tensor) and nested
+            # ("observation.state" → {"q99"/"max"/"min"/"std": tensor}).
+            # And two stat families: quantile (q99, pi05-style) and
+            # MEAN_STD (mean/std/min/max — SmolVLA SO-101 checkpoints
+            # normalize with these; they carry no q99 at all, which
+            # previously made this heuristic silently default a
+            # degrees-trained checkpoint to radians).
+            candidates: list[object] = []
+            nested = stats.get("observation.state")
+            if isinstance(nested, dict):
+                candidates.extend(
+                    nested.get(key) for key in ("q99", "max", "min", "std")
+                )
+            else:
+                candidates.append(stats.get("observation.state.q99"))
+                candidates.extend(
+                    stats.get(f"observation.state.{key}") for key in ("max", "min", "std")
+                )
+            # Stats may be torch tensors OR numpy arrays depending on the
+            # processor version — builtin ``abs()`` handles both.
+            tensors = [c for c in candidates if c is not None and hasattr(c, "max")]
+            if not tensors:
                 continue
-            # The 16-vector layout is checkpoint-specific, but the
-            # *peak* magnitude across all 16 channels is enough:
-            # any radians-encoded arm joint stays below π regardless
-            # of position, while a degrees-encoded q99 hits 90+ for
-            # the elbows. Use 5 rad ≈ 286° as the threshold so
+            # The vector layout is checkpoint-specific, but the *peak*
+            # magnitude across all channels is enough: any
+            # radians-encoded arm joint stays below π regardless of
+            # position, while a degrees-encoded q99/max/std hits 90+
+            # for the elbows. Use 5 rad ≈ 286° as the threshold so
             # gripper outliers (custom motor unit, can be > 1 in
             # either convention) don't trip the heuristic.
-            peak = float(abs(q99).max())
+            peak = max(float(abs(t).max()) for t in tensors)
             return peak > 5.0
     except Exception:  # reason: introspection across processor versions; never fatal
         pass
