@@ -13,7 +13,18 @@ from openral_core.geometry import (
     ViewAxis,
     compute_gaze_pose,
     look_at_quat_wxyz,
+    quat_xyzw_to_yaw,
     rotation_to_quat_wxyz,
+    yaw_to_quat_wxyz,
+    yaw_to_quat_xyzw,
 )
 
-__all__ = ["ViewAxis", "compute_gaze_pose", "look_at_quat_wxyz", "rotation_to_quat_wxyz"]
+__all__ = [
+    "ViewAxis",
+    "compute_gaze_pose",
+    "look_at_quat_wxyz",
+    "quat_xyzw_to_yaw",
+    "rotation_to_quat_wxyz",
+    "yaw_to_quat_wxyz",
+    "yaw_to_quat_xyzw",
+]

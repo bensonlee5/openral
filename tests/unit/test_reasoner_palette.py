@@ -95,7 +95,6 @@ def test_palette_sensor_ids_are_forwarded_verbatim() -> None:
 
 
 def test_palette_node_ids_are_forwarded_verbatim() -> None:
-    """node_ids is a passthrough."""
     palette = build_tool_palette(
         installed_skills=[],
         robot_capabilities=RobotCapabilities(),

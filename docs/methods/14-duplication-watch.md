@@ -8,21 +8,12 @@ contributor should look at before adding similar code.
 
 ### Confirmed redundancy candidates
 
-1. **Sensor `_spec()` private factory helpers** — seven structurally
-   identical kwargs-only `_spec()` functions across:
-   - `python/sensors/src/openral_sensors/force_torque.py:28`
-   - `python/sensors/src/openral_sensors/imu.py:27`
-   - `python/sensors/src/openral_sensors/livox.py:31`
-   - `python/sensors/src/openral_sensors/ouster.py:23`
-   - `python/sensors/src/openral_sensors/hokuyo.py:25`
-   - `python/sensors/src/openral_sensors/slamtec.py:27`
-   - `python/sensors/src/openral_sensors/usb_uvc.py:51` (`_uvc_spec`)
-
-   Each just constructs a `SensorSpec(...)` from kwargs that map to the
-   same `openral_core.SensorSpec` field set. Reasonable
-   consolidation: a single `_make_sensor_spec(modality, **fields)`
-   helper in `openral_sensors.catalog` (or a new `_factories.py`
-   sibling). Low risk because the public `*_spec()` API is unchanged.
+1. **Sensor `_spec()` private factory helpers — *retired.*** The seven-way
+   `_spec()` duplication this item originally tracked is gone: the
+   `imu` / `livox` / `ouster` / `hokuyo` / `slamtec` modules no longer
+   exist under `python/sensors/src/openral_sensors/`. The surviving spec
+   factories (e.g. `force_torque.robotiq_ft300s_spec`) are one-per-file
+   public API, not duplication.
 
 2. **Three parallel registries** with the same lookup-by-string pattern:
    - `python/rskill/src/openral_rskill/loader.py:114` — `rSkill` +
@@ -57,7 +48,11 @@ contributor should look at before adding similar code.
    fires uniformly. For loading the lerobot
    `PolicyProcessorPipeline`, call `_processors.resolve_processor_dir`
    (sim-layer) or `materialize_processor_dir(manifest)` (skill-layer)
-   — do NOT call `snapshot_download` directly.**
+   — do NOT call `snapshot_download` directly.** (The two remaining
+   direct `snapshot_download` calls — `policies/diffusion.py`
+   norm-stat loading and the exempted `act.py` adapter — are weight/
+   norm-stat fetches, not processor-dir resolution; they are not
+   regressions of this item.)
 
 4. **SmolVLA skill-side `SmolVLAAdapter` vs eval-side `_SmolVLAAdapter` —
    *not a duplication target.*** The two have incompatible input
@@ -272,11 +267,36 @@ contributor should look at before adding similar code.
   base mixin (`openral_hal._lifecycle.RequireConnectedMixin`).
   `FrankaPandaRealHAL` / `SawyerRealHAL` deliberately delegate the
   check to their inner `RosControlHAL` rather than duplicating it.
-- **`from_yaml(cls, path)`** classmethods appear in `RSkillManifest`
-  (L883) and `SimEnvironment` (L1127). Both are "open file → parse YAML
-  → `model_validate(dict)`". Acceptable as a copy because they live in
-  the normative schemas module, but a `openral_core._yaml.py`
-  helper would remove the boilerplate.
+- **`from_yaml(cls, path)` classmethods — *resolved.*** The pattern had
+  grown to six copies (`RobotDescription`, `RSkillManifest`,
+  `DeployScene`, `SimScene`, `BenchmarkScene`, `RobotEnvironment`);
+  all now share `openral_core.schemas._load_yaml_model(cls, path)`,
+  and the byte-identical `SimScene` / `BenchmarkScene` overrides were
+  deleted (they inherit `DeployScene.from_yaml`, which returns `Self`).
+  A new `from_yaml` on a schemas-module model should be a one-line
+  delegation to `_load_yaml_model`.
+- **Rotation/quaternion math scattered across packages** — the **yaw
+  family is now consolidated** into `openral_core.geometry`
+  (`yaw_to_quat_xyzw`, `yaw_to_quat_wxyz`, `quat_xyzw_to_yaw`): the five
+  former copies in `openral_hal/…/mobile_base_bridge.py`,
+  `openral_world_state/…/{spatial_memory,grid}.py`,
+  `openral_sim/…/backends/so101_box/_assets.py`, and
+  `openral_runner/…/slam_bridge.py` all route through them. **Before
+  adding another yaw↔quat helper, use these.** The remaining full-3-DOF
+  conversions are **deliberately left in place**, each for a concrete
+  reason, not oversight:
+  - quat→matrix in `openral_sim/…/policies/rldx.py` (`_quat_wxyz_to_mat`)
+    is SAPIEN wxyz with its own norm-epsilon, pinned "bit-identical to
+    upstream WidowXBridgeEnv" — a calibration surface, not a duplicate.
+  - rpy→matrix/euler in `openral_safety/…/{mjcf,urdf}_lowering.py` is
+    safety-kernel lowering; touching it needs safety-WG review + a
+    hazard-log update (CLAUDE.md §3), so it does not move on a cleanup PR.
+  - the remaining `_quat_to_matrix` (`world_cloud_bridge.py`, float32) and
+    `_rpy_to_*` (`bucket2_markers.py`, `depth_height_filter_node.py`) are
+    single-caller and return package-specific types; consolidating them
+    would need a typed `quat_xyzw_to_matrix` / `rpy_to_*` set in
+    `openral_core.geometry` and is only worth it once a *second* caller
+    appears. Add that set (and route new code through it) at that point.
 
 ---
 

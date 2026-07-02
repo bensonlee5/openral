@@ -32,12 +32,55 @@ from numpy.typing import NDArray
 
 from openral_core.schemas import Pose6D
 
-__all__ = ["ViewAxis", "compute_gaze_pose", "look_at_quat_wxyz", "rotation_to_quat_wxyz"]
+__all__ = [
+    "ViewAxis",
+    "compute_gaze_pose",
+    "look_at_quat_wxyz",
+    "quat_xyzw_to_yaw",
+    "rotation_to_quat_wxyz",
+    "yaw_to_quat_wxyz",
+    "yaw_to_quat_xyzw",
+]
 
 ViewAxis = Literal["-z", "+z", "+x"]
 
 _ZERO_NORM = 1e-9
 _PARALLEL = 0.999
+
+
+def yaw_to_quat_xyzw(yaw: float) -> tuple[float, float, float, float]:
+    """Unit quaternion ``(x, y, z, w)`` (ROS order) for ``Rz(yaw)``.
+
+    Example:
+        >>> yaw_to_quat_xyzw(0.0)
+        (0.0, 0.0, 0.0, 1.0)
+    """
+    half = yaw * 0.5
+    return (0.0, 0.0, math.sin(half), math.cos(half))
+
+
+def yaw_to_quat_wxyz(yaw: float) -> tuple[float, float, float, float]:
+    """Unit quaternion ``(w, x, y, z)`` (MuJoCo order) for ``Rz(yaw)``.
+
+    Example:
+        >>> yaw_to_quat_wxyz(0.0)
+        (1.0, 0.0, 0.0, 0.0)
+    """
+    half = yaw * 0.5
+    return (math.cos(half), 0.0, 0.0, math.sin(half))
+
+
+def quat_xyzw_to_yaw(x: float, y: float, z: float, w: float) -> float:
+    """Planar yaw (rad, CCW about +Z, in ``[-pi, pi]``) from an ``(x, y, z, w)`` quaternion.
+
+    Standard ZYX extraction reduced to the yaw term; roll/pitch are ignored
+    (planar-base consumers: odometry, occupancy grids, SLAM poses).
+
+    Example:
+        >>> quat_xyzw_to_yaw(0.0, 0.0, 0.0, 1.0)
+        0.0
+    """
+    return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
 
 
 def _basis_to_quat_wxyz(rot: NDArray[np.float64]) -> tuple[float, float, float, float]:

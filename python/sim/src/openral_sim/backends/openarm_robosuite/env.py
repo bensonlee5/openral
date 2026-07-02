@@ -628,8 +628,6 @@ class _OpenArmTabletopRollout:
             self._renderer.close()
             self._renderer = None
 
-    # ------------------------------------------------------------------ helpers
-
     def _observation(self) -> Observation:
         images = self._render_cameras()
         self._last_pixels = images[self._image_keys[0]]

@@ -296,10 +296,11 @@ class CriticWatchdogGroup:
         >>> g.observe(critic_id="robometer", score=0.3, threshold=0.8) is None
         True
         >>> ev = g.observe(critic_id="robometer", score=0.3, threshold=0.8)
-        >>> ev.critic_id  # robometer fired; a second critic is untouched
+        >>> ev.critic_id  # robometer's stall fired; a second critic is untouched
         'robometer'
-        >>> g.observe(critic_id="sarm", score=0.95, threshold=0.9) is None
-        True
+        >>> ev2 = g.observe(critic_id="sarm", score=0.95, threshold=0.9)
+        >>> ev2.critic_id  # sarm's success crossing fires its own evidence
+        'sarm'
         >>> sorted(g.known_critics())
         ['robometer', 'sarm']
     """

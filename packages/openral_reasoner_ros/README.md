@@ -282,12 +282,10 @@ deploy image.
 
 ## CLAUDE.md amendment (ADR-0018 §9)
 
-The §6.2 dual-system pattern and §7.6 working-with-the-planner wording
-were amended in the same PR that introduced this package. Before F4,
-the Reasoner was specified to emit BehaviorTree.CPP v4 XML; F4 pivots
-to direct typed tool-call dispatch. A future `bt_executor_node`
-consuming `BehaviorTreeXml` plans alongside direct tool calls is left
-as an explicit follow-up — F4's contract does not preclude it.
+The §3 dual-system pattern wording was amended in the same PR that
+introduced this package to specify **direct typed `ReasonerToolCall`
+dispatch** as the reasoner's output contract — the LLM picks exactly one
+typed tool call per tick and the node routes it onto the ROS graph.
 
 ## See also
 

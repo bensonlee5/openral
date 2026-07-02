@@ -86,14 +86,10 @@ def test_sim_environment_n_episodes_validation() -> None:
 
 
 def test_scene_environment_yaml_round_trip(tmp_path: Path) -> None:
-    """``SimScene.from_yaml`` is the scene+task YAML entrypoint (post-ADR-0041).
+    """``SimScene.from_yaml`` is the scene+task YAML entrypoint (ADR-0041).
 
-    ``SimEnvironment.from_yaml`` was removed in the
-    ``feat(core,sim): SceneEnvironment + openral sim run --rskill, no legacy``
-    commit; YAMLs now carry scene + task only, and the policy is supplied
-    via ``--rskill`` on the CLI which composes the runtime
-    :class:`SimEnvironment`. ADR-0041 renamed ``SceneEnvironment`` to the
-    three-tier ``DeployScene`` / ``SimScene`` / ``BenchmarkScene`` hierarchy.
+    YAMLs carry scene + task only; the policy arrives via ``--rskill`` on
+    the CLI, which composes the runtime :class:`SimEnvironment`.
     """
     from openral_core import SimScene
 
@@ -149,14 +145,6 @@ def test_scene_environment_rejects_legacy_vla_block(tmp_path: Path) -> None:
 
     with pytest.raises(ROSConfigError, match="--rskill"):
         SimScene.from_yaml(str(p))
-
-
-def test_sim_environment_from_yaml_raises_typed_error() -> None:
-    """``SimEnvironment.from_yaml`` is removed; raises a typed error pointing to the new path."""
-    from openral_core.exceptions import ROSConfigError
-
-    with pytest.raises(ROSConfigError, match=r"SimScene\.from_yaml"):
-        SimEnvironment.from_yaml("/dev/null")
 
 
 def test_sim_environment_model_dump_serialisable() -> None:

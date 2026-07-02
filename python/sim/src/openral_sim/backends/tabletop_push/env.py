@@ -317,8 +317,6 @@ class _TabletopPushRollout:
         """
         return self._n_act
 
-    # ---------------------------------------------------------------- helpers
-
     def _observation(self) -> Observation:
         images = {name: self._render_named_rgb(name) for name in self._camera_names}
         self._last_rgb = images[self._camera_names[0]]

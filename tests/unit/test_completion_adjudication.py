@@ -343,7 +343,6 @@ def test_adjudicate_no_client_returns_none() -> None:
 
 @_ROS_SKIP
 def test_adjudicate_vlm_yes_returns_true() -> None:
-    """VLM answers 'yes' → True."""
     assert _ReasonerNode is not None
     jpeg = _make_jpeg()
     fake = _FakeAdjudicationNode(frame=jpeg, describe_result="yes")
@@ -363,7 +362,6 @@ def test_adjudicate_vlm_done_returns_true() -> None:
 
 @_ROS_SKIP
 def test_adjudicate_vlm_no_returns_false() -> None:
-    """VLM answers 'no' → False."""
     assert _ReasonerNode is not None
     jpeg = _make_jpeg()
     fake = _FakeAdjudicationNode(frame=jpeg, describe_result="no")

@@ -1653,7 +1653,6 @@ def test_footprint_polygon_rejects_non_finite_vertices() -> None:
 
 
 def test_footprint_polygon_defaults_none_for_fixed_base_arm() -> None:
-    """A fixed-base arm declares no footprint polygon."""
     description = RobotDescription.from_yaml(str(_REPO_ROOT / "robots" / "openarm" / "robot.yaml"))
     assert description.footprint_polygon is None
 

@@ -226,7 +226,10 @@ def test_send_action_recovers_when_env_terminal_but_latch_clear() -> None:
     # ``done`` is set, and reset() clears it (environments/base.py). This is the
     # genuine desync the deploy-sim flow hits — NOT a returned terminal, so the
     # HAL's returned-flag latch is (correctly) still clear.
-    robosuite_env = hal._env._env.env  # _LiberoSim → LiberoEnv → robosuite
+    # Reach the robosuite env via the production accessor, which walks the
+    # wrapper chain by capability (ignore_done + horizon) rather than a
+    # hardcoded attribute path — robust to LIBERO/robosuite re-layering.
+    robosuite_env = hal._env._robosuite_env()
     robosuite_env.done = True
     assert hal._episode_done is False  # the latch never saw this terminal
 

@@ -96,15 +96,10 @@ def test_read_state_shaped_to_manifest(hal) -> None:
     assert state.name == [j.name for j in description.joints]
 
 
-def test_read_images_returns_isaac_frame(hal) -> None:
-    import numpy as np
-
-    _hal, _desc = hal
-    images = _hal.read_images()
-    assert "camera1" in images
-    frame = np.asarray(images["camera1"])
-    assert frame.shape == (256, 256, 3)
-    assert frame.dtype == np.uint8
+# The RTX camera rig is scene-independent — the frame-shape/dtype check
+# lives once in test_franka_isaac_deploy_hal.py. Here we only assert the
+# URDF-import-specific paths (action_dim source, state shape, articulation
+# drive) that actually differ from the built-in-asset scene.
 
 
 def test_send_action_drives_imported_articulation(hal) -> None:

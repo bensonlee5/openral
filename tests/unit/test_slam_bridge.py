@@ -64,28 +64,6 @@ def test_encode_grid_unknown_cells_become_mid_grey() -> None:
     assert pixels == [128, 128]
 
 
-def test_yaw_from_quaternion_identity_is_zero() -> None:
-    from openral_runner.slam_bridge import yaw_from_quaternion_xyzw
-
-    assert yaw_from_quaternion_xyzw(0.0, 0.0, 0.0, 1.0) == pytest.approx(0.0)
-
-
-def test_yaw_from_quaternion_ninety_deg_about_z() -> None:
-    from openral_runner.slam_bridge import yaw_from_quaternion_xyzw
-
-    s = math.sin(math.pi / 4)
-    c = math.cos(math.pi / 4)
-    assert yaw_from_quaternion_xyzw(0.0, 0.0, s, c) == pytest.approx(math.pi / 2)
-
-
-def test_yaw_from_quaternion_negative_ninety_deg_about_z() -> None:
-    from openral_runner.slam_bridge import yaw_from_quaternion_xyzw
-
-    s = math.sin(-math.pi / 4)
-    c = math.cos(-math.pi / 4)
-    assert yaw_from_quaternion_xyzw(0.0, 0.0, s, c) == pytest.approx(-math.pi / 2)
-
-
 def test_robot_pose_from_transform_extracts_xy_and_yaw() -> None:
     from openral_runner.slam_bridge import robot_pose_from_transform
 

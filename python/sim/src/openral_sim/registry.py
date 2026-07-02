@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from openral_core.exceptions import ROSConfigError
 
 if TYPE_CHECKING:
-    from openral_core import RobotDescription, SimEnvironment
+    from openral_core import RobotDescription
 
     from openral_sim.policy import PolicyAdapter
     from openral_sim.rollout import SimRollout
@@ -129,10 +129,6 @@ class _Registry(Generic[T]):
     def __contains__(self, name: object) -> bool:
         return isinstance(name, str) and name in self._items
 
-
-SceneFactory = Callable[["SimEnvironment"], "SimRollout"]
-PolicyFactory = Callable[["SimEnvironment"], "PolicyAdapter"]
-RobotFactory = Callable[[], "RobotDescription"]
 
 SCENES: _Registry[SimRollout] = _Registry("scene")
 POLICIES: _Registry[PolicyAdapter] = _Registry("policy")

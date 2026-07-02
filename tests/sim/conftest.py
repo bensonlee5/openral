@@ -8,9 +8,8 @@ Also exposes :func:`compose_sim_env` — the test-side equivalent of
 ``scenes/sim/`` and ``scenes/benchmark/`` are :class:`SimScene` /
 :class:`BenchmarkScene` shapes (scene + task only); the runtime
 :class:`SimEnvironment` is composed by the CLI from a :class:`SimScene`
-plus a loaded rSkill manifest. ``SimEnvironment.from_yaml`` was removed in
-``feat(core,sim): SceneEnvironment + openral sim run --rskill, no legacy``;
-tests must compose the same way the CLI does. ``load_scene_strict`` accepts a
+plus a loaded rSkill manifest (never loaded from YAML directly); tests
+must compose the same way the CLI does. ``load_scene_strict`` accepts a
 ``BenchmarkScene`` YAML transparently when ``expected=SimScene``.
 """
 

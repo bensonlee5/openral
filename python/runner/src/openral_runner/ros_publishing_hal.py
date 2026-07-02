@@ -27,6 +27,7 @@ topic, behind which sits ``safety_node`` (F5) → ``<robot>_hal_node``.
 
 from __future__ import annotations
 
+import itertools
 import time
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
@@ -53,10 +54,7 @@ def _row_major_flatten(rows: list[list[float]] | None) -> list[float]:
     """
     if not rows:
         return []
-    out: list[float] = []
-    for row in rows:
-        out.extend(row)
-    return out
+    return list(itertools.chain.from_iterable(rows))
 
 
 def _flatten_rows(rows: list[list[float]] | None, horizon: int) -> tuple[list[float], int, int]:

@@ -270,7 +270,6 @@ class Bucket2MarkersNode:
         """Convert WorldCollision → MarkerArray and publish."""
         from visualization_msgs.msg import Marker, MarkerArray
 
-        # Extract parallel arrays from the ROS message
         radius = list(msg.radius)  # type: ignore[union-attr]
         half_length = list(msg.half_length)  # type: ignore[union-attr]
         origin_xyzrpy = list(msg.origin_xyzrpy)  # type: ignore[union-attr]
@@ -349,8 +348,6 @@ class Bucket2MarkersNode:
 
         self._pub_cloud.publish(cloud)
         log.debug("bucket2: published world_voxels_cloud", points=len(centers))
-
-    # ------------------------------------------------------------------
 
     def spin(self) -> None:
         """Block and spin the node until shutdown."""

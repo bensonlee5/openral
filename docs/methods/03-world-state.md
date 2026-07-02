@@ -45,7 +45,7 @@ _SpatialMemory — ADR-0038 Phase 2 persistent object-centric scene-graph memory
   - Module constants: `DEFAULT_ASSOC_DISTANCE_M`, `DEFAULT_STANDOFF_M`, `DEFAULT_CAMERA_FRAME`, `DEFAULT_MAP_FRAME`, `DEFAULT_MIN_TEXT_SIMILARITY`.
 
 ### `python/world_state/src/openral_world_state/geometry.py`
-_ADR-0044 Phase 1 — shared gaze geometry. **Relocated to `openral_core.geometry` in ADR-0065**; this module is now a thin re-export shim so `from openral_world_state.geometry import …` keeps working. Canonical entries (`ViewAxis`, `look_at_quat_wxyz`, `compute_gaze_pose`, `rotation_to_quat_wxyz`) are documented under [00-core-schemas.md](00-core-schemas.md)._
+_ADR-0044 Phase 1 — shared rotation geometry. **Relocated to `openral_core.geometry` in ADR-0065**; this module is now a thin re-export shim so `from openral_world_state.geometry import …` keeps working. Canonical entries (`ViewAxis`, `look_at_quat_wxyz`, `compute_gaze_pose`, `rotation_to_quat_wxyz`, `yaw_to_quat_xyzw`, `yaw_to_quat_wxyz`, `quat_xyzw_to_yaw`) are documented under [00-core-schemas.md](00-core-schemas.md)._
 
 ### `python/world_state/src/openral_world_state/grid.py`
 _ADR-0044 Phase 2 — occupancy-grid queries + approach-pose refinement (planning-layer proposal; the ADR-0030 Phase 6 kernel `check_nav_goal` gate stays the enforcement)._

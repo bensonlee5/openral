@@ -12,7 +12,7 @@ import binascii
 import math
 import re
 from enum import Enum
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, Self, TypeAlias, TypeVar
 
 from pydantic import (
     AliasChoices,
@@ -28,6 +28,22 @@ from pydantic import (
 # canonical exception family for any configuration-level failure (see
 # CLAUDE.md §10).
 from openral_core.exceptions import ROSConfigError, ROSGPUMemoryError
+
+_ModelT = TypeVar("_ModelT", bound=BaseModel)
+
+
+def _load_yaml_model(model: type[_ModelT], path: str) -> _ModelT:
+    """Load ``path`` as YAML and validate it against ``model``.
+
+    Shared body for every ``from_yaml`` classmethod in this module
+    (docs/methods/14-duplication-watch.md — "from_yaml classmethods").
+    """
+    import yaml  # noqa: PLC0415  # reason: deferred to avoid import-time cost
+
+    with open(path, encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+    return model.model_validate(data)
+
 
 # ─── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -1746,11 +1762,7 @@ class RobotDescription(BaseModel):
         Example:
             >>> # RobotDescription.from_yaml("robots/franka_panda/robot.yaml")
         """
-        import yaml  # noqa: PLC0415  # reason: deferred to avoid import-time cost
-
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return cls.model_validate(data)
+        return _load_yaml_model(cls, path)
 
     def validate_for_e2e_pipeline(self) -> None:
         """Assert this manifest carries every field the e2e ROS graph needs.
@@ -4949,7 +4961,7 @@ class RSkillManifest(BaseModel):
             currently loaded via :func:`rSkill.from_yaml` — 100% of
             in-tree skills); ``"s0"`` reserved for cerebellar realtime
             (humanoid balance, C++ only); ``"s2"`` reserved for slow
-            reasoning (LLM-emitted BehaviorTree XML).
+            reasoning.
         model_family: Closed VLA / policy family. Drives the runner's
             adapter dispatch.
         embodiment_tags: Robot embodiments this rSkill targets. Must
@@ -5726,11 +5738,7 @@ class RSkillManifest(BaseModel):
             FileNotFoundError: If ``path`` does not exist.
             pydantic.ValidationError: If the YAML fails schema validation.
         """
-        import yaml  # noqa: PLC0415  # reason: yaml is a runtime dep; deferred to avoid import-time cost
-
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return cls.model_validate(data)
+        return _load_yaml_model(cls, path)
 
 
 def assert_vla_reward_fits(
@@ -6358,26 +6366,6 @@ class SimEnvironment(BaseModel):
                 f"declared scene."
             )
 
-    @classmethod
-    def from_yaml(cls, path: str) -> SimEnvironment:  # pragma: no cover - removed
-        """Removed: pass ``--rskill`` on the CLI; YAML carries only the scene.
-
-        After the ``feat(core,sim): SceneEnvironment + openral sim run --rskill,
-        no legacy`` commit, the YAML shape for ``openral sim run`` is
-        :class:`SimScene` (scene + task only; ADR-0041 renamed
-        ``SceneEnvironment`` → ``SimScene``) and the policy is
-        supplied via the ``--rskill`` CLI flag. ``SimEnvironment`` is now
-        the *composed runtime form* and is built by the CLI; loading it
-        directly from YAML is no longer supported.
-        """
-        raise ROSConfigError(
-            "SimEnvironment.from_yaml has been removed. "
-            "Load the scene + task via SimScene.from_yaml(path) (or "
-            "load_scene_strict(path, SimScene)) and supply the rSkill via "
-            "--rskill rskills/<id> on the CLI; the CLI composes the "
-            "SimEnvironment from those two artefacts."
-        )
-
 
 class BenchmarkMetadata(BaseModel):
     """Provenance block required on every BenchmarkScene.
@@ -6443,13 +6431,13 @@ class DeployScene(BaseModel):
         return v
 
     @classmethod
-    def from_yaml(cls, path: str) -> DeployScene:
-        """Load and validate a ``DeployScene`` YAML from disk."""
-        import yaml  # noqa: PLC0415
+    def from_yaml(cls, path: str) -> Self:
+        """Load and validate a scene YAML from disk.
 
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return cls.model_validate(data)
+        Inherited by :class:`SimScene` and :class:`BenchmarkScene`, which
+        validate against their own (stricter) schemas via ``cls``.
+        """
+        return _load_yaml_model(cls, path)
 
 
 class SimScene(DeployScene):
@@ -6477,15 +6465,6 @@ class SimScene(DeployScene):
                 f"task.scene_id={self.task.scene_id!r} does not match scene.id={self.scene.id!r}"
             )
         return self
-
-    @classmethod
-    def from_yaml(cls, path: str) -> SimScene:
-        """Load and validate a ``SimScene`` YAML from disk."""
-        import yaml  # noqa: PLC0415
-
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return cls.model_validate(data)
 
 
 class BenchmarkScene(SimScene):
@@ -6515,15 +6494,6 @@ class BenchmarkScene(SimScene):
                 "Set it to the paper's canonical step budget."
             )
         return self
-
-    @classmethod
-    def from_yaml(cls, path: str) -> BenchmarkScene:
-        """Load and validate a ``BenchmarkScene`` YAML from disk."""
-        import yaml  # noqa: PLC0415
-
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return cls.model_validate(data)
 
 
 # ─── Standalone protocol descriptor (eval suites are bare lists now) ─────────
@@ -6888,11 +6858,7 @@ class RobotEnvironment(BaseModel):
             FileNotFoundError: If ``path`` does not exist.
             pydantic.ValidationError: If the YAML fails schema validation.
         """
-        import yaml  # noqa: PLC0415  # reason: deferred to avoid import-time cost
-
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return cls.model_validate(data)
+        return _load_yaml_model(cls, path)
 
 
 class TickResult(BaseModel):

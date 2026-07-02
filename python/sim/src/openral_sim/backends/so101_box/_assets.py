@@ -27,7 +27,7 @@ from pathlib import Path
 
 from openral_core import RobotDescription
 from openral_core.exceptions import ROSConfigError
-from openral_world_state.geometry import look_at_quat_wxyz
+from openral_world_state.geometry import look_at_quat_wxyz, yaw_to_quat_wxyz
 
 __all__ = [
     "BoxSceneOptions",
@@ -235,12 +235,6 @@ def _resolve_robot_mjcf(description: RobotDescription) -> Path:
     return path
 
 
-def _yaw_quat_z(yaw_deg: float) -> tuple[float, float, float, float]:
-    """Return the (w, x, y, z) MuJoCo quaternion for a rotation about world +Z."""
-    half = math.radians(yaw_deg) * 0.5
-    return (math.cos(half), 0.0, 0.0, math.sin(half))
-
-
 # MuJoCo (w, x, y, z) look-at quaternion — promoted to the shared gaze-geometry
 # helper in ADR-0044 Phase 1; the "-z" default is the MuJoCo camera convention.
 _look_at_quat = look_at_quat_wxyz
@@ -254,7 +248,7 @@ def _reanchor_robot_base(xml: str, pos: tuple[float, float, float], yaw_deg: flo
     the entire kinematic chain rigidly translates + yaws to the
     configured pose.
     """
-    quat = _yaw_quat_z(yaw_deg)
+    quat = yaw_to_quat_wxyz(math.radians(yaw_deg))
     pattern = re.compile(
         r'(<body[^>]*\bname="base"[^>]*\bpos=")([^"]+)("[^>]*\bquat=")([^"]+)("[^>]*>)',
     )

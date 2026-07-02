@@ -1,12 +1,10 @@
 """Hermetic tests for the pure mobile-base / scan helpers (issue #191 Phase 3).
 
-``quaternion_from_yaw`` and ``constant_scan_no_hit_ranges`` are plain Python
-functions exposed at module scope precisely so they can be unit-tested without
-booting rclpy or the ROS msg IDL. CLAUDE.md §1.11 — real components, real
-schemas; the helpers are the components under test. Phase 3 moved them out of
-the (now factory-only) panda_mobile lifecycle node into the shared
-``openral_hal`` bridges that own those streams generically; the frame ids are
-read from the robot's :class:`~openral_core.RobotDescription`.
+``yaw_to_quat_xyzw`` (the odometry/TF orientation source for
+``MobileBaseBridge._publish_odom``) and ``constant_scan_no_hit_ranges`` are
+plain Python functions, unit-testable without booting rclpy or the ROS msg
+IDL. CLAUDE.md §1.11 — real components, real schemas; frame ids are read
+from the robot's :class:`~openral_core.RobotDescription`.
 """
 
 from __future__ import annotations
@@ -14,10 +12,7 @@ from __future__ import annotations
 import math
 
 import pytest
-
-# The helpers now live in the shared bridges (the panda_mobile node is a thin
-# manifest-driven factory). Frame ids come from the canonical description.
-from openral_hal.mobile_base_bridge import quaternion_from_yaw
+from openral_core.geometry import yaw_to_quat_xyzw
 from openral_hal.panda_mobile import PANDA_MOBILE_DESCRIPTION
 from openral_hal.sim_sensor_bridge import constant_scan_no_hit_ranges
 
@@ -28,31 +23,31 @@ PANDA_MOBILE_SCAN_FRAME_ID = (
     _lidar.frame_id if _lidar is not None else PANDA_MOBILE_DESCRIPTION.base_frame
 )
 
-# ── quaternion_from_yaw ─────────────────────────────────────────────
+# ── yaw_to_quat_xyzw ─────────────────────────────────────────────
 
 
-def test_quaternion_from_yaw_zero_is_identity() -> None:
+def test_yaw_to_quat_xyzw_zero_is_identity() -> None:
     """yaw=0 → identity quaternion ``(0, 0, 0, 1)``."""
-    qx, qy, qz, qw = quaternion_from_yaw(0.0)
+    qx, qy, qz, qw = yaw_to_quat_xyzw(0.0)
     assert qx == 0.0
     assert qy == 0.0
     assert qz == 0.0
     assert qw == 1.0
 
 
-def test_quaternion_from_yaw_pi_over_two_matches_axis_angle() -> None:
+def test_yaw_to_quat_xyzw_pi_over_two_matches_axis_angle() -> None:
     """yaw=π/2 → ``(0, 0, sin(π/4), cos(π/4))`` (z-axis 90° rotation)."""
-    qx, qy, qz, qw = quaternion_from_yaw(math.pi / 2.0)
+    qx, qy, qz, qw = yaw_to_quat_xyzw(math.pi / 2.0)
     assert qx == 0.0
     assert qy == 0.0
     assert qz == pytest.approx(math.sin(math.pi / 4.0), abs=1e-12)
     assert qw == pytest.approx(math.cos(math.pi / 4.0), abs=1e-12)
 
 
-def test_quaternion_from_yaw_unit_norm() -> None:
+def test_yaw_to_quat_xyzw_unit_norm() -> None:
     """The returned quaternion is unit-norm for any yaw."""
     for yaw in (-math.pi, -1.234, 0.0, 0.5, 1.0, math.pi):
-        qx, qy, qz, qw = quaternion_from_yaw(yaw)
+        qx, qy, qz, qw = yaw_to_quat_xyzw(yaw)
         norm_sq = qx * qx + qy * qy + qz * qz + qw * qw
         assert norm_sq == pytest.approx(1.0, abs=1e-12), f"yaw={yaw}"
 

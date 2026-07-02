@@ -17,7 +17,7 @@ lazily so installing ``openral-sim`` never pulls them transitively.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import structlog
@@ -367,9 +367,12 @@ def _resolve_smolvla_processors(
         # Stats-fallback branch: no preprocessor JSON on disk → no
         # tokenizer step to warm-cache. Drop straight into the lerobot
         # factory so it builds the pipeline from scratch.
-        return make_pre_post_processors(
-            policy.config,
-            dataset_stats=dataset_stats,
+        return cast(
+            "tuple[Any, Any]",
+            make_pre_post_processors(
+                policy.config,
+                dataset_stats=dataset_stats,
+            ),
         )
 
 

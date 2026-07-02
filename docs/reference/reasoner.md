@@ -262,9 +262,6 @@ Still in flight:
 
 - **Dashboard mission card** — surfacing the `MissionState` ledger + the reward
   gate and attempts/cap ladder on the live `openral dashboard` (PR #122).
-- **`bt_executor_node`** — an optional BehaviorTree v4 executor consuming
-  `BehaviorTreeXml` plans alongside direct tool-call dispatch (ADR-0018 §4 / F4,
-  left as an explicit follow-up).
 
 ---
 

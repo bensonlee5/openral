@@ -326,8 +326,6 @@ class _So101BoxRollout:
         """
         return _SO101_ARM_DOF
 
-    # ---------------------------------------------------------------- helpers
-
     def _observation(self) -> Observation:
         oak_rgb, oak_depth = self._render_oak_top()
         wrist_rgb = self._render_named_rgb("wrist")

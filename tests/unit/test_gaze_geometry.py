@@ -14,7 +14,14 @@ import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from openral_world_state.geometry import ViewAxis, compute_gaze_pose, look_at_quat_wxyz
+from openral_world_state.geometry import (
+    ViewAxis,
+    compute_gaze_pose,
+    look_at_quat_wxyz,
+    quat_xyzw_to_yaw,
+    yaw_to_quat_wxyz,
+    yaw_to_quat_xyzw,
+)
 from openral_world_state.object_lift import homogeneous_from_quat_xyz
 
 _VIEW_VECTORS: dict[ViewAxis, tuple[float, float, float]] = {
@@ -123,3 +130,25 @@ def test_matches_sim_composer_behaviour() -> None:
     ]
     for eye, target, expected in cases:
         assert look_at_quat_wxyz(eye, target) == pytest.approx(expected, abs=1e-12)
+
+
+# ── yaw ↔ quaternion helpers ────────────────────────────────────────────────
+
+_yaw = st.floats(min_value=-math.pi, max_value=math.pi, allow_nan=False)
+
+
+@given(yaw=_yaw)
+def test_yaw_quat_round_trips(yaw: float) -> None:
+    """yaw → quat (either order) → yaw recovers the input across [-pi, pi]."""
+    x, y, z, w = yaw_to_quat_xyzw(yaw)
+    assert quat_xyzw_to_yaw(x, y, z, w) == pytest.approx(yaw, abs=1e-12)
+    # The wxyz variant is the same rotation, reordered.
+    assert yaw_to_quat_wxyz(yaw) == (w, x, y, z)
+
+
+@given(yaw=_yaw)
+def test_yaw_quat_matches_matrix_oracle(yaw: float) -> None:
+    """The yaw quat rotates +X to (cos yaw, sin yaw, 0) — checked via the matrix oracle."""
+    x, y, z, w = yaw_to_quat_xyzw(yaw)
+    rotated = _rotate_wxyz((w, x, y, z), (1.0, 0.0, 0.0))
+    assert rotated == pytest.approx([math.cos(yaw), math.sin(yaw), 0.0], abs=1e-9)

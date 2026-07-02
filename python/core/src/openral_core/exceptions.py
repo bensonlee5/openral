@@ -13,7 +13,6 @@ Example:
 """
 
 __all__ = [
-    "ROSBTValidationError",
     "ROSCapabilityMismatch",
     "ROSCollisionImminent",
     "ROSConfigError",
@@ -134,10 +133,6 @@ class ROSPlanningError(ROSError):
 
 class ROSReasonerInvalidPlan(ROSPlanningError):
     """The LLM returned a plan that failed schema or capability validation."""
-
-
-class ROSBTValidationError(ROSPlanningError):
-    """The emitted BehaviorTree XML failed BT.CPP v4 validation."""
 
 
 # ─── Fleet / dispatch ──────────────────────────────────────────────────────────

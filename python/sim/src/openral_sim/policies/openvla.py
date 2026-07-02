@@ -321,7 +321,9 @@ class _AutoModelForVision2SeqCompat:
                 "AutoModelForVision2Seq entry."
             )
         _install_prismatic_oft_compat()
-        model_cls = get_class_from_dynamic_module(
+        # Any: the class is repo-shipped remote code resolved at runtime;
+        # there is no static type to check against.
+        model_cls: Any = get_class_from_dynamic_module(
             class_ref,
             pretrained_model_name_or_path,
             revision=revision,
@@ -333,6 +335,7 @@ class _AutoModelForVision2SeqCompat:
 
 def _install_legacy_openvla_model_compat(model_cls: type[Any]) -> None:
     """Patch legacy OpenVLA remote classes for newer Transformers init hooks."""
+    cls: Any  # Any: monkey-patching attributes onto dynamically-loaded remote classes
     for cls in model_cls.__mro__:
         tie_weights = cls.__dict__.get("tie_weights")
         if tie_weights is None or getattr(tie_weights, "_openral_compat", False):
@@ -387,7 +390,10 @@ def _install_prismatic_oft_compat() -> None:
         return
     import torch
 
-    constants_mod = ModuleType("prismatic.vla.constants")
+    # Any: these are synthetic module shims whose attributes are the legacy
+    # `prismatic` package surface the remote OpenVLA code imports — set
+    # dynamically by design.
+    constants_mod: Any = ModuleType("prismatic.vla.constants")
     constants_mod.IGNORE_INDEX = -100
     constants_mod.ACTION_TOKEN_BEGIN_IDX = 31743
     constants_mod.STOP_INDEX = 2
@@ -396,7 +402,7 @@ def _install_prismatic_oft_compat() -> None:
     constants_mod.ACTION_PROPRIO_NORMALIZATION_TYPE = _OpenVLANormalizationType.BOUNDS_Q99
     constants_mod.NormalizationType = _OpenVLANormalizationType
 
-    train_utils_mod = ModuleType("prismatic.training.train_utils")
+    train_utils_mod: Any = ModuleType("prismatic.training.train_utils")
 
     def get_current_action_mask(token_ids: Any) -> Any:
         newline_positions = token_ids != constants_mod.IGNORE_INDEX
@@ -413,11 +419,11 @@ def _install_prismatic_oft_compat() -> None:
     train_utils_mod.get_current_action_mask = get_current_action_mask
     train_utils_mod.get_next_actions_mask = get_next_actions_mask
 
-    prismatic_mod = ModuleType("prismatic")
+    prismatic_mod: Any = ModuleType("prismatic")
     prismatic_mod.__path__ = []
-    training_mod = ModuleType("prismatic.training")
+    training_mod: Any = ModuleType("prismatic.training")
     training_mod.__path__ = []
-    vla_mod = ModuleType("prismatic.vla")
+    vla_mod: Any = ModuleType("prismatic.vla")
     vla_mod.__path__ = []
     training_mod.train_utils = train_utils_mod
     vla_mod.constants = constants_mod

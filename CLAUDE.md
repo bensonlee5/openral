@@ -59,7 +59,7 @@ In priority order. When two conflict, the earlier wins.
 
 Adding, removing, renaming, or moving a responsibility between layers → ADR required. A non-adjacent-layer dependency (Skill calling HAL directly, etc.) is rejected.
 
-**Dual-system pattern.** **S1** fast policy (30–200 Hz, action chunks) as a `Skill`. **S2** slow reasoning (event-driven; ~0.2 Hz heartbeat) as the `Reasoner` — emits typed tool calls (`ExecuteSkill`, `ReloadGstPipeline`, `LifecycleTransition`, `EmitPrompt`) via the `ReasonerToolCall` discriminated union; BT v4 XML is a future option behind `bt_executor_node` (ADR-0018 §4 / F4 + 2026-05-25 amendment). **S0** cerebellar layer (500–1000 Hz, C++ only) in `ros2_control` controllers, for humanoids. Skill manifest declares `role: s1 | s2 | s0`; loader enforces.
+**Dual-system pattern.** **S1** fast policy (30–200 Hz, action chunks) as a `Skill`. **S2** slow reasoning (event-driven; ~0.2 Hz heartbeat) as the `Reasoner` — emits typed tool calls (`ExecuteSkill`, `ReloadGstPipeline`, `LifecycleTransition`, `EmitPrompt`) via the `ReasonerToolCall` discriminated union (ADR-0018 §9 direct-dispatch surface). **S0** cerebellar layer (500–1000 Hz, C++ only) in `ros2_control` controllers, for humanoids. Skill manifest declares `role: s1 | s2 | s0`; loader enforces.
 
 **rSkill packaging.** One HF Hub repo per skill: `rskill.yaml` (name, version, license, embodiment_tags, capabilities_required, runtime, quantization, latency budgets, fallback_skill_id; plus `state_contract.dim` + `action_contract.dim` for ADR-0019 dataset bridge users), weights (`model.safetensors`), optional `engine.plan`/`Dockerfile`, `README.md` per [`rskills/template/README.md`](rskills/template/README.md) (publish gate enforced by `rskill_publisher` validator), `eval/<benchmark>.json` validating against `openral_core.SkillEvalResult`. Canonical eval producer: `openral benchmark run --suite <id> --vla <vla_id>:rskills/<this_skill>` (ADR-0009 PR D). Paper-cited numbers allowed with `reproduced_locally: false` + `reproduction_cli`. **Provenance:** sigstore signing/verification is the planned control but is **not yet implemented** (ADR-0006 — no manifest `signature` field, no verification in the loader). Until it lands, `rSkill.from_pretrained`/`from_yaml` emit an `rskill.unverified_provenance` warning and honor `OPENRAL_REQUIRE_SIGNED_SKILLS=1` to fail closed; `*.pt` weights are treated as untrusted code and require `OPENRAL_ALLOW_UNSAFE_PICKLE=1` to load (prefer `model.safetensors`); `trust_remote_code` models (e.g. MolmoAct2) execute repo-shipped code and require `OPENRAL_ALLOW_REMOTE_CODE=1`. Do not describe skills as "signed/verified" until the control exists (§1.2).
 
@@ -119,7 +119,7 @@ ROSError                            # base
 ├─ ROSRuntimeError                  # ROSInferenceTimeout, ROSQuantizationError, ROSGPUMemoryError
 ├─ ROSSafetyViolation               # ROSWorkspaceViolation, ROSForceLimitExceeded, ROSEStopRequested
 ├─ ROSPerceptionStale               # sensor older than deadline
-├─ ROSPlanningError                 # ROSReasonerInvalidPlan, ROSBTValidationError
+├─ ROSPlanningError                 # ROSReasonerInvalidPlan
 └─ ROSFleetError                    # ROSDispatchUnavailable, ROSDeadlineMissed
 ```
 

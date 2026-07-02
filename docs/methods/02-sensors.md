@@ -16,13 +16,12 @@ _Sensor catalog — vendor-agnostic registry of `SensorSpec` / `SensorBundle` fa
   - `__contains__(sensor_id) -> bool` (L190)
   - `__len__() -> int` (L194)
   - `__iter__() -> object` (L198)
-  - `keys() -> list[str]` — Insertion order. (L202)
-  - `list_ids() -> list[str]` — Sorted alphabetically. (L206)
-  - `entries() -> list[SensorCatalogEntry]` — Sorted by id. (L210)
-  - `filter(*, vendor=None, modality=None, kind=None) -> list[SensorCatalogEntry]` (L214)
-  - `find_by_signature(signature) -> SensorCatalogEntry | None` — Reverse-lookup for `openral detect`. (L233)
-  - `build(sensor_id, **kwargs) -> SensorSpec | SensorBundle` (L254)
-- const `CATALOG = SensorCatalog()` — global singleton. (L266)
+  - `list_ids() -> list[str]` — Sorted alphabetically. (L202)
+  - `entries() -> list[SensorCatalogEntry]` — Sorted by id. (L206)
+  - `filter(*, vendor=None, modality=None, kind=None) -> list[SensorCatalogEntry]` (L210)
+  - `find_by_signature(signature) -> SensorCatalogEntry | None` — Reverse-lookup for `openral detect`. (L229)
+  - `build(sensor_id, **kwargs) -> SensorSpec | SensorBundle` (L250)
+- const `CATALOG = SensorCatalog()` — global singleton. (L262)
 
 ### Sensor `SensorSpec` factories — single-modality
 

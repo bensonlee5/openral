@@ -1099,7 +1099,6 @@ def calibrate_camera(
         )
         raise typer.Exit(code=1)  # noqa: B904
 
-    # Derive topic names from sensor name if not overridden.
     image_topic = topic or f"/{sensor}/image_raw"
     info_topic = image_topic.replace("/image_raw", "/camera_info").replace(
         "/image_rect_raw", "/camera_info"

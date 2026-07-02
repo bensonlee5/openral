@@ -79,7 +79,6 @@ def test_constructor_rejects_zero_max_age() -> None:
 
 
 def test_open_close_idempotent(synthetic_video: Path) -> None:
-    """``open`` and ``close`` are idempotent."""
     reader = OpenCVThreadSensorReader(sensor_id="test_cam", device=str(synthetic_video), fps=_FPS)
     reader.open()
     assert reader.is_open is True

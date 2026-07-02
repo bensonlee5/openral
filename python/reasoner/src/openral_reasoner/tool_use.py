@@ -1,12 +1,9 @@
 """ADR-0018 F4 — typed LLM tool-use client + concrete provider implementations.
 
-Replaces the BT-XML-oriented :class:`~openral_reasoner.LLMClient` /
-:class:`~openral_reasoner.Plan` flow with direct LLM tool dispatch:
-every reasoner tick the LLM picks exactly one of the four
+Every reasoner tick the LLM picks exactly one of the four
 :data:`~openral_core.ReasonerToolCall` variants (ExecuteSkill,
 ReloadGstPipeline, LifecycleTransition, EmitPrompt) and the reasoner
-node routes it onto the ROS graph. No BT v4 XML in v1
-(CLAUDE.md §6.2 / §7.6 amendment in this PR).
+node routes it onto the ROS graph.
 
 This module ships:
 

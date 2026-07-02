@@ -28,6 +28,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 import structlog
+from openral_core.geometry import quat_xyzw_to_yaw
 
 if TYPE_CHECKING:
     # `rclpy` / `nav_msgs` are not importable without a sourced ROS 2
@@ -41,7 +42,6 @@ __all__ = [
     "SlamMapBridge",
     "encode_occupancy_grid_png",
     "robot_pose_from_transform",
-    "yaw_from_quaternion_xyzw",
 ]
 
 
@@ -130,30 +130,6 @@ def encode_occupancy_grid_png(
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def yaw_from_quaternion_xyzw(x: float, y: float, z: float, w: float) -> float:
-    """Planar yaw (rad, CCW about +Z) from a quaternion ``(x, y, z, w)``.
-
-    Standard ZYX extraction reduced to the yaw term; the robot base is
-    planar so roll/pitch are ignored.
-
-    Args:
-        x: Quaternion x component.
-        y: Quaternion y component.
-        z: Quaternion z component.
-        w: Quaternion w (scalar) component.
-
-    Returns:
-        Yaw in radians in ``[-pi, pi]``.
-
-    Example:
-        >>> round(yaw_from_quaternion_xyzw(0.0, 0.0, 0.0, 1.0), 6)
-        0.0
-    """
-    import math  # noqa: PLC0415
-
-    return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
-
-
 def robot_pose_from_transform(
     *,
     translation_xyz: tuple[float, float, float],
@@ -181,7 +157,7 @@ def robot_pose_from_transform(
     return (
         float(translation_xyz[0]),
         float(translation_xyz[1]),
-        yaw_from_quaternion_xyzw(*rotation_xyzw),
+        quat_xyzw_to_yaw(*rotation_xyzw),
     )
 
 

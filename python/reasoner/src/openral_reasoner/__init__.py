@@ -8,13 +8,6 @@ buffer of :class:`FailureEventRecord` / :class:`PerceptionEventRecord`
 structured tool-use API. The ROS-side ``reasoner_node`` (in
 ``packages/openral_reasoner_ros``) wraps this core with rclpy
 subscriptions and dispatch plumbing.
-
-ADR-0018 §9 — CLAUDE.md §6.2 / §7.6 wording was amended to accept
-direct tool-call dispatch (BT v4 XML is a future option behind a
-separate ``bt_executor_node``). The :class:`Plan` / :class:`ToolCall` /
-:class:`LLMClient` / :class:`Reasoner` / :class:`NullReasoner` symbols
-predate that amendment and are retained for the BT XML migration path;
-they are not used by F4's direct-dispatch surface.
 """
 
 from __future__ import annotations
@@ -41,10 +34,7 @@ from openral_reasoner.mission import (
     TaskState,
     evaluate_task_verdict,
 )
-from openral_reasoner.null_reasoner import NullReasoner
 from openral_reasoner.palette import ToolPalette, build_tool_palette
-from openral_reasoner.plan import Plan, ToolCall
-from openral_reasoner.protocol import LLMClient, Reasoner
 from openral_reasoner.spatial_query import (
     SpatialMemoryQuerier,
     SpatialQueryOutcome,
@@ -78,16 +68,12 @@ __all__ = [
     "CriticWatchdog",
     "CriticWatchdogGroup",
     "FailureEventRecord",
-    "LLMClient",
     "MemoryEntry",
     "MemoryStore",
     "MissionState",
-    "NullReasoner",
     "OpenAICompatibleToolUseClient",
     "PerceptionEventRecord",
-    "Plan",
     "PromptRecord",
-    "Reasoner",
     "ReasonerCore",
     "ReasonerTickResult",
     "SearchBudget",
@@ -97,7 +83,6 @@ __all__ = [
     "SpatialQueryOutcome",
     "SpatialQueryTool",
     "TaskState",
-    "ToolCall",
     "ToolPalette",
     "ToolUseClient",
     "build_tool_palette",

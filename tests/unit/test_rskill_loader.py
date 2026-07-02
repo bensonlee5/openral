@@ -1,7 +1,8 @@
 """Unit tests for rSkill loader — no network, no GPU required.
 
-All HF Hub I/O is mocked.  The local JSON registry is written to a
-pytest tmp_path so tests are fully isolated.
+The HF Hub network boundary is doubled with a recording fake
+(CLAUDE.md §1.11); the local JSON registry is written to a pytest
+tmp_path so tests are fully isolated.
 
 Coverage
 --------
@@ -26,11 +27,14 @@ Coverage
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import textwrap
+from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 from openral_core.exceptions import ROSCapabilityMismatch, ROSConfigError
@@ -283,41 +287,72 @@ class TestResolveToHfWithRevision:
 # ── from_pretrained (mocked HF Hub) ───────────────────────────────────────────
 
 
+class _FakeHub:
+    """Recording fake for the HF network boundary (CLAUDE.md §1.11).
+
+    ``hf_hub_download`` resolves ``rskill.yaml`` to a real on-disk manifest
+    written under tmp_path; ``snapshot_download`` returns the weights dir.
+    Both record their kwargs so tests assert on what reached the boundary
+    (real observable state, not mock call-bookkeeping), and either can be
+    armed to raise the way the real Hub does on a network error.
+    """
+
+    def __init__(
+        self,
+        manifest_path: Path,
+        snapshot_dir: Path,
+        *,
+        download_error: Exception | None = None,
+    ) -> None:
+        self._manifest_path = manifest_path
+        self._snapshot_dir = snapshot_dir
+        self._download_error = download_error
+        self.download_calls: list[dict[str, object]] = []
+        self.snapshot_calls: list[dict[str, object]] = []
+
+    def hf_hub_download(self, *, repo_id: str, filename: str, **kwargs: object) -> str:
+        self.download_calls.append({"repo_id": repo_id, "filename": filename, **kwargs})
+        if self._download_error is not None:
+            raise self._download_error
+        return str(self._manifest_path)
+
+    def snapshot_download(self, *, repo_id: str, **kwargs: object) -> str:
+        self.snapshot_calls.append({"repo_id": repo_id, **kwargs})
+        return str(self._snapshot_dir)
+
+
+@contextlib.contextmanager
+def _patch_hub(hub: _FakeHub) -> Iterator[None]:
+    """Route the loader's ``from huggingface_hub import …`` at its boundary."""
+    with (
+        patch("huggingface_hub.hf_hub_download", new=hub.hf_hub_download),
+        patch("huggingface_hub.snapshot_download", new=hub.snapshot_download),
+    ):
+        yield
+
+
 class TestFromPretrained:
-    def _mock_hf(
-        self, tmp_path: Path, yaml_content: str = _APACHE_YAML
-    ) -> tuple[MagicMock, MagicMock]:
-        """Return (mock_hf_download, mock_snapshot) pre-configured for tmp_path."""
+    def _fake_hub(self, tmp_path: Path, yaml_content: str = _APACHE_YAML) -> _FakeHub:
         manifest_file = _write_yaml(tmp_path, yaml_content)
-        mock_download = MagicMock(return_value=str(manifest_file))
-        mock_snapshot = MagicMock(return_value=str(tmp_path))
-        return mock_download, mock_snapshot
+        return _FakeHub(manifest_file, tmp_path)
+
+    def _patch(self, hub: _FakeHub) -> Any:
+        return _patch_hub(hub)
 
     def test_happy_path(self, tmp_path: Path) -> None:
         """from_pretrained returns rSkill with correct manifest on success."""
         reg = tmp_path / "rskills.json"
-        dl, snap = self._mock_hf(tmp_path)
-        with (
-            patch("openral_rskill.loader.hf_hub_download", dl, create=True),
-            patch("openral_rskill.loader.snapshot_download", snap, create=True),
-            patch("huggingface_hub.hf_hub_download", dl),
-            patch("huggingface_hub.snapshot_download", snap),
-        ):
-            pkg = rSkill.from_pretrained(
-                "test/rskill-alpha",
-                registry_path=reg,
-            )
+        hub = self._fake_hub(tmp_path)
+        with self._patch(hub):
+            pkg = rSkill.from_pretrained("test/rskill-alpha", registry_path=reg)
         assert pkg.manifest.name == "test/rskill-alpha"
         assert pkg.local_dir == tmp_path
 
     def test_registers_in_json(self, tmp_path: Path) -> None:
         """from_pretrained writes an entry to the JSON registry."""
         reg = tmp_path / "reg" / "rskills.json"
-        dl, snap = self._mock_hf(tmp_path)
-        with (
-            patch("huggingface_hub.hf_hub_download", dl),
-            patch("huggingface_hub.snapshot_download", snap),
-        ):
+        hub = self._fake_hub(tmp_path)
+        with self._patch(hub):
             rSkill.from_pretrained("test/rskill-alpha", registry_path=reg)
         entries = rSkill.list_installed(registry_path=reg)
         assert len(entries) == 1
@@ -340,9 +375,13 @@ class TestFromPretrained:
 
     def test_download_error_raises_ros_config_error(self, tmp_path: Path) -> None:
         """Network errors during hf_hub_download surface as ROSConfigError."""
-        dl = MagicMock(side_effect=RuntimeError("connection refused"))
+        hub = _FakeHub(
+            tmp_path / "unused.yaml",
+            tmp_path,
+            download_error=RuntimeError("connection refused"),
+        )
         with (
-            patch("huggingface_hub.hf_hub_download", dl),
+            self._patch(hub),
             pytest.raises(ROSConfigError, match=r"Failed to download rskill\.yaml"),
         ):
             rSkill.from_pretrained("test/rskill-alpha")
@@ -350,15 +389,11 @@ class TestFromPretrained:
     def test_revision_is_passed_through(self, tmp_path: Path) -> None:
         """from_pretrained forwards revision= to both HF Hub calls."""
         reg = tmp_path / "rskills.json"
-        dl, snap = self._mock_hf(tmp_path)
-        with (
-            patch("huggingface_hub.hf_hub_download", dl),
-            patch("huggingface_hub.snapshot_download", snap),
-        ):
+        hub = self._fake_hub(tmp_path)
+        with self._patch(hub):
             rSkill.from_pretrained("test/rskill-alpha", revision="deadbeef", registry_path=reg)
-        dl.assert_called_once()
-        _, dl_kwargs = dl.call_args
-        assert dl_kwargs.get("revision") == "deadbeef"
+        assert [c["revision"] for c in hub.download_calls] == ["deadbeef"]
+        assert all(c["revision"] == "deadbeef" for c in hub.snapshot_calls)
 
 
 # ── License guard ──────────────────────────────────────────────────────────────
@@ -669,7 +704,7 @@ class TestCheckCapabilities:
         m = self._manifest()
         rSkill.check_capabilities(m, RobotCapabilities(embodiment_tags=["so100_follower"]))
 
-    # ── runtime + quantization (new in commit 3) ─────────────────────────────
+    # ── runtime + quantization ───────────────────────────────────────────────
 
     def _manifest_with_runtime(
         self,

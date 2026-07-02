@@ -53,9 +53,7 @@ except Exception as exc:
 from openral_core import (
     Action,
     ControlMode,
-    EmbodimentKind,
     JointState,
-    JointType,
     ROSConfigError,
     ROSRuntimeError,
 )
@@ -77,40 +75,10 @@ pytestmark = [
 # ── Schema-level checks (cheap; do not require connect) ───────────────────────
 
 
-class TestSO100Description:
-    def test_canonical_description_shape(self) -> None:
-        desc = SO100_DESCRIPTION
-        assert desc.name == "so100_follower"
-        assert desc.embodiment_kind == EmbodimentKind.MANIPULATOR.value
-        # 5 revolute arm joints + 1 normalised gripper channel.
-        assert len(desc.joints) == 6
-
-    def test_joint_names_match_description(self) -> None:
-        names = [j.name for j in SO100_DESCRIPTION.joints]
-        assert names == [
-            "shoulder_pan",
-            "shoulder_lift",
-            "elbow_flex",
-            "wrist_flex",
-            "wrist_roll",
-            "gripper",
-        ]
-
-    def test_capabilities_advertise_joint_position(self) -> None:
-        modes = SO100_DESCRIPTION.capabilities.supported_control_modes
-        assert ControlMode.JOINT_POSITION.value in modes
-
-    def test_embodiment_tags_include_so100(self) -> None:
-        assert "so100_follower" in SO100_DESCRIPTION.capabilities.embodiment_tags
-
-    def test_gripper_is_prismatic_normalised(self) -> None:
-        # The description publishes the gripper as a synthetic prismatic
-        # joint in [0, 1] — the HAL is responsible for mapping that to the
-        # menagerie's revolute Jaw range.
-        gripper = SO100_DESCRIPTION.joints[-1]
-        assert gripper.name == "gripper"
-        assert gripper.joint_type == JointType.PRISMATIC.value
-        assert gripper.position_limits == (0.0, 1.0)
+# Static SO100_DESCRIPTION schema assertions (name, joint count/order,
+# control modes, embodiment tags, gripper shape) live in the unit tier —
+# tests/unit/test_so100_follower_hal.py::TestSO100Description. This file
+# owns the MuJoCo-dependent tiers below.
 
 
 # ── Menagerie XML schema invariants (catches upstream drift) ──────────────────

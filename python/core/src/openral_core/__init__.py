@@ -5,7 +5,6 @@ Public surface is everything imported here. Private modules use leading undersco
 
 from openral_core.detection_tracker import DetectionTracker2D, aabb_iou_2d
 from openral_core.exceptions import (
-    ROSBTValidationError,
     ROSCapabilityMismatch,
     ROSCollisionImminent,
     ROSConfigError,
@@ -286,7 +285,6 @@ __all__ = [
     "QuantizationDtype",
     "QuerySceneTool",
     "QueryTaskProgressTool",
-    "ROSBTValidationError",
     "ROSCapabilityMismatch",
     "ROSCollisionImminent",
     "ROSConfigError",

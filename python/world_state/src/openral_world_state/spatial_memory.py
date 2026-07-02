@@ -68,6 +68,7 @@ from openral_core import (
     SpatialRelationKind,
 )
 from openral_core.exceptions import ROSObjectNotInMemory
+from openral_core.geometry import yaw_to_quat_xyzw
 
 from openral_world_state.embedder import TextEmbedder
 
@@ -92,11 +93,6 @@ embedding-only hits; an exact/substring label match always qualifies regardless.
 
 _MIN_DIR_NORM = 1e-6
 """Below this horizontal distance the approach direction is treated as degenerate."""
-
-
-def _xy_yaw_quat(yaw: float) -> tuple[float, float, float, float]:
-    """Quaternion (x, y, z, w) for a pure yaw rotation about +Z."""
-    return (0.0, 0.0, math.sin(yaw / 2.0), math.cos(yaw / 2.0))
 
 
 def compute_approach_viewpoint(
@@ -134,7 +130,9 @@ def compute_approach_viewpoint(
     # Yaw so the camera (looking down its +X) points from the viewpoint at the target.
     yaw = math.atan2(ty - vp_y, tx - vp_x)
     return ApproachViewpoint(
-        pose=Pose6D(xyz=(vp_x, vp_y, tz), quat_xyzw=_xy_yaw_quat(yaw), frame_id=target.frame_id),
+        pose=Pose6D(
+            xyz=(vp_x, vp_y, tz), quat_xyzw=yaw_to_quat_xyzw(yaw), frame_id=target.frame_id
+        ),
         standoff_m=standoff_m,
         camera_frame_id=camera_frame_id,
     )

@@ -918,7 +918,6 @@ class ReasonerNode(LifecycleNode):
         # a tick (callbacks only run once the executor spins, after configure
         # returns), so the late construction is safe.
 
-        # Subscriptions.
         self.create_subscription(
             IDLWorldStateStamped,
             "/openral/world_state_slow",

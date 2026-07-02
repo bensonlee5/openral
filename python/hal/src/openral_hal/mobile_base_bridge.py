@@ -29,32 +29,12 @@ Lifted verbatim from the panda_mobile bespoke node's ``_publish_odom`` /
 
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING, Any
+
+from openral_core.geometry import yaw_to_quat_xyzw
 
 if TYPE_CHECKING:
     from openral_core import RobotDescription
-
-
-def quaternion_from_yaw(yaw: float) -> tuple[float, float, float, float]:
-    """Return the ``(x, y, z, w)`` quaternion for a yaw-only rotation.
-
-    Used by ``MobileBaseBridge._publish_odom`` for both the Odometry orientation
-    and the TF rotation. Pure function so it is hermetically testable without
-    rclpy.
-
-    Args:
-        yaw: Rotation about z, in radians.
-
-    Returns:
-        Tuple ``(x, y, z, w)`` — the unit quaternion for ``Rz(yaw)``.
-
-    Example:
-        >>> quaternion_from_yaw(0.0)
-        (0.0, 0.0, 0.0, 1.0)
-    """
-    half = 0.5 * yaw
-    return (0.0, 0.0, math.sin(half), math.cos(half))
 
 
 class MobileBaseBridge:
@@ -196,7 +176,7 @@ class MobileBaseBridge:
             (px, py, pz), (qx, qy, qz, qw) = pose_6dof
         else:
             px, py, pz = float(x), float(y), 0.0
-            qx, qy, qz, qw = quaternion_from_yaw(yaw)
+            qx, qy, qz, qw = yaw_to_quat_xyzw(yaw)
 
         now = self._node.get_clock().now().to_msg()
         msg = Odometry()

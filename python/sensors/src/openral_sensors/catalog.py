@@ -199,10 +199,6 @@ class SensorCatalog:
         """Iterate over registered ids."""
         return iter(self._entries)
 
-    def keys(self) -> list[str]:
-        """All registered ids (insertion order)."""
-        return list(self._entries.keys())
-
     def list_ids(self) -> list[str]:
         """All registered ids, sorted alphabetically."""
         return sorted(self._entries)

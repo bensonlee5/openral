@@ -33,11 +33,17 @@ def warnings_sink() -> list[str]:
 
 
 class TestUsbProbe:
-    def test_returns_empty_when_no_usb_present(self, warnings_sink: list[str]) -> None:
-        # Container/CI hosts typically have no USB serial devices.
+    def test_probe_never_raises_and_matches_map_to_seen_devices(
+        self, warnings_sink: list[str]
+    ) -> None:
+        # Host-agnostic contract: the probe never raises, returns typed
+        # records, and every VID/PID match refers to a device it actually
+        # enumerated. (Empty on USB-less CI hosts, populated on a dev
+        # laptop with a robot arm plugged in — both are valid.)
         result = probe_usb(warnings=warnings_sink)
-        assert result.devices == []
-        assert result.matches == []
+        assert isinstance(result.devices, list)
+        ports = {d.port for d in result.devices}
+        assert all(m.device.port in ports for m in result.matches)
 
 
 class TestDdsProbe:

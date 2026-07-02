@@ -24,6 +24,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 from openral_core import ApproachViewpoint, Pose6D
+from openral_core.geometry import quat_xyzw_to_yaw
 
 from openral_world_state.spatial_memory import compute_approach_viewpoint
 
@@ -33,11 +34,6 @@ _GRID_NDIM = 2
 FREE_MAX = 25
 """Highest ``nav_msgs/OccupancyGrid`` value still treated as free (map_server's
 ``free_thresh`` is ~20/100; everything above, plus ``-1`` unknown, blocks)."""
-
-
-def _yaw_from_quat_xyzw(quat: tuple[float, float, float, float]) -> float:
-    x, y, z, w = quat
-    return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
 
 
 class OccupancyGridIndex:
@@ -85,13 +81,11 @@ class OccupancyGridIndex:
         info = msg.info
         data = np.asarray(msg.data, dtype=np.int8).reshape(info.height, info.width)
         origin = info.origin
-        yaw = _yaw_from_quat_xyzw(
-            (
-                origin.orientation.x,
-                origin.orientation.y,
-                origin.orientation.z,
-                origin.orientation.w,
-            )
+        yaw = quat_xyzw_to_yaw(
+            origin.orientation.x,
+            origin.orientation.y,
+            origin.orientation.z,
+            origin.orientation.w,
         )
         return cls(
             data,
