@@ -464,8 +464,27 @@ def test_deploy_sim_explicit_locator_alias_resolves_to_manifest(
     assert f"object_detector_locators:={locator.resolve()}" in " ".join(invocation.argv_template)
 
 
-def test_deploy_sim_no_locators_when_detector_disabled() -> None:
-    """--no-object-detector → no continuous detector AND no on-demand locators."""
+def test_deploy_sim_no_implicit_locator_when_detector_disabled() -> None:
+    """--no-object-detector with no explicit locator → no continuous detector AND
+    no implicit on-demand locator (the omdet-turbo-locator default only applies
+    when the detector is on)."""
+    invocation = resolve_launch_invocation(
+        config=_OPENARM_CONFIG,
+        robot_override=None,
+        dashboard_port=4318,
+        reset_to_pose_service=None,
+        hal_param_overrides=None,
+        enable_object_detector=False,
+    )
+    assert invocation.object_detector_locators == ()
+    assert "object_detector_locators:=" not in " ".join(invocation.argv_template)
+
+
+def test_deploy_sim_explicit_locator_survives_no_object_detector() -> None:
+    """An explicit --object-detector-locator is honoured even with
+    --no-object-detector: the on-demand locator is an independent grounding
+    source (loads per-query, evicts), so a lean deploy can ground without the
+    VRAM-heavy always-on detector."""
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
         robot_override=None,
@@ -475,8 +494,9 @@ def test_deploy_sim_no_locators_when_detector_disabled() -> None:
         enable_object_detector=False,
         object_detector_locators=["omdet-turbo-locator"],
     )
-    assert invocation.object_detector_locators == ()
-    assert "object_detector_locators:=" not in " ".join(invocation.argv_template)
+    locator = _REPO_ROOT / "rskills" / "omdet-turbo-locator" / "rskill.yaml"
+    assert invocation.object_detector_locators == (str(locator.resolve()),)
+    assert f"object_detector_locators:={locator.resolve()}" in " ".join(invocation.argv_template)
 
 
 def test_deploy_sim_no_object_detector_flag_disables() -> None:
