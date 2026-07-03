@@ -219,3 +219,55 @@ def test_estopped_flag_latches_on_violation_and_clears_on_ok() -> None:
     assert store.snapshot()["topics"]["safety"]["estopped"] is True
     store.ingest_spans(_wrap(_ok_span()))
     assert store.snapshot()["topics"]["safety"]["estopped"] is False
+
+
+def _skill_failure_span(state: str) -> Span:
+    """A reasoner span carrying a skill_failure event (how the red row is born)."""
+    start = time.time_ns()
+    ev = Span.Event(
+        name="openral.event.skill_failure",
+        time_unix_nano=start,
+        attributes=_attrs(
+            {"openral.event.skill_failure.state": state, "reasoner.rskill_id": "OpenRAL/x"}
+        ),
+    )
+    return Span(
+        trace_id=b"\x0a" * 16,
+        span_id=b"\x0a" * 8,
+        name="reasoner.execute_rskill",
+        start_time_unix_nano=start,
+        end_time_unix_nano=start + 1_000,
+        events=[ev],
+        status=Status(code=0),
+    )
+
+
+def test_set_estopped_forces_flag() -> None:
+    """The dashboard's own e-stop action drives the latch flag authoritatively.
+
+    An operator e-stop aborts the skill, so no more safety.check spans flow and
+    the telemetry path can't flip the flag — the API handler calls set_estopped
+    so the Reset control still appears.
+    """
+    store = TelemetryStore()
+    assert store.snapshot()["topics"]["safety"]["estopped"] is False
+    store.set_estopped(True)
+    assert store.snapshot()["topics"]["safety"]["estopped"] is True
+    store.set_estopped(False)
+    assert store.snapshot()["topics"]["safety"]["estopped"] is False
+
+
+def test_skill_failure_is_error_when_not_latched() -> None:
+    store = TelemetryStore()
+    store.ingest_spans(_wrap(_skill_failure_span("timeout")))
+    ev = [e for e in store.snapshot()["events"] if e["kind"] == "openral.event.skill_failure"]
+    assert ev and ev[0]["severity"] == "error"
+
+
+def test_skill_failure_while_estopped_is_warning() -> None:
+    """A skill_failure while e-stop-latched is a consequence of the stop, not a fault."""
+    store = TelemetryStore()
+    store.set_estopped(True)
+    store.ingest_spans(_wrap(_skill_failure_span("aborted")))
+    ev = [e for e in store.snapshot()["events"] if e["kind"] == "openral.event.skill_failure"]
+    assert ev and ev[0]["severity"] == "warn"

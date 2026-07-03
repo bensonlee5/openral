@@ -499,6 +499,24 @@ class TelemetryStore:
         with self._lock:
             return self._snapshot_locked()
 
+    def set_estopped(self, value: bool) -> None:
+        """Force the e-stop latch flag from an authoritative operator action.
+
+        The autonomous ``safety.check`` path (violation → True, ok → False) only
+        updates while command chunks flow through the kernel. An operator e-stop
+        ABORTS the in-flight skill, so chunk flow stops and the kernel emits no
+        further ``safety.check`` spans — the flag would never flip and the UI's
+        Reset control would never appear. The dashboard issues the e-stop itself,
+        so it authoritatively knows the latch state and sets it here directly
+        (kernel self-trips still ride the safety.check path). Push the new state
+        to SSE subscribers immediately so the button updates without waiting for
+        the next telemetry tick.
+        """
+        with self._lock:
+            self._topics["safety"]["estopped"] = bool(value)
+            payload = self._snapshot_locked()
+        self._publish(payload)
+
     def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
         """Register an asyncio queue that receives every state update.
 
@@ -581,13 +599,27 @@ class TelemetryStore:
         # reads the reason, not just the bare event name.
         for event in span.events:
             event_attrs = _attrs_to_dict(list(event.attributes))
+            severity = _event_severity(event.name)
+            # A skill_failure that lands WHILE the kernel is e-stop-latched is a
+            # consequence of the stop — the in-flight goal is aborted and the
+            # reasoner's retries are rejected because the kernel drops everything
+            # until reset. That is the safety system working, not an independent
+            # fault, so it reads as a warning rather than a red error. Genuine
+            # failures (timeout / vram_insufficient / reward_plateau, which occur
+            # when not latched) still surface as errors.
+            if (
+                severity == "error"
+                and event.name == "openral.event.skill_failure"
+                and self._topics["safety"].get("estopped")
+            ):
+                severity = "warn"
             self._append_event(
                 TelemetryEvent(
                     ts_unix=event.time_unix_nano / 1_000_000_000.0,
                     kind=event.name,
                     title=_summarise_event(event.name, event_attrs),
                     attrs=event_attrs,
-                    severity=_event_severity(event.name),
+                    severity=severity,
                 )
             )
             if event.name in _COUNTED_EVENTS:
