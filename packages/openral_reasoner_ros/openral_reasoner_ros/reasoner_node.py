@@ -946,6 +946,24 @@ class ReasonerNode(LifecycleNode):
             self._on_prompt,
             _QOS_PROMPT,
         )
+        # Recovery signal: the operator cleared the safety e-stop (broadcast by
+        # the kernel-reset path, same topic the HAL + runner un-latch on). The
+        # reasoner is otherwise BLIND to the clear — the e-stop abort stays in its
+        # failure context, so after a reset it keeps refusing to retry ("please
+        # clear the e-stop") instead of re-dispatching. On clear, drop that stale
+        # failure context so the next operator prompt starts fresh. QoS matches
+        # the estop publishers (RELIABLE / VOLATILE / depth 10).
+        _estop_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            durability=QoSDurabilityPolicy.VOLATILE,
+            depth=10,
+        )
+        self.create_subscription(
+            IDLEmpty,
+            "/openral/estop_cleared",
+            self._on_estop_cleared,
+            _estop_qos,
+        )
 
         # ADR-0074 §5 — completion-camera subscription (BEST_EFFORT sensor QoS).
         # sensor_msgs/Image ships with every ROS 2 install but is gated like
@@ -1464,6 +1482,26 @@ class ReasonerNode(LifecycleNode):
             self._spatial_search.reset()
             self._locate_escalated.clear()
         self._on_tick(force=True, tier="D")
+
+    def _on_estop_cleared(self, _msg: Any) -> None:
+        """Operator cleared the safety e-stop — drop stale failure context.
+
+        The e-stop aborts the in-flight skill and records a ``safety_estop``
+        failure + a failed execution. Those are stale the moment the operator
+        resets, but the reasoner otherwise keeps them in context and refuses to
+        retry ("the e-stop aborted the motion / please clear the e-stop") even
+        after the HAL + runner have un-latched. Clearing them (and the retry-cap
+        streak) lets the NEXT operator prompt dispatch cleanly. We deliberately
+        do NOT auto-dispatch: the operator re-prompts when ready (they may want
+        to reposition the arm or the object first).
+        """
+        self._renderer.clear_failures()
+        if self._core is not None:
+            self._core.reset_kind_streak()
+        self.get_logger().info(
+            "reasoner.estop_cleared; dropped stale e-stop failure context "
+            "— ready to retry on the next prompt.",
+        )
 
     def _on_skill_registry_changed(self, msg: Any) -> None:
         """ADR-0018 §4 — rebuild the tool palette from the local rSkill registry.

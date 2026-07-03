@@ -636,6 +636,23 @@ class ContextRenderer:
         self._perception.append(record)
         self._seq += 1
 
+    def clear_failures(self) -> None:
+        """Drop accumulated failure + skill-execution records.
+
+        Called when the operator clears a safety e-stop. The e-stop aborts the
+        in-flight skill, which is recorded as a failure (``safety_estop``) and a
+        failed execution. Once the operator has reset the safety state those
+        records are stale — leaving them in context makes the LLM keep refusing
+        to retry ("the e-stop aborted the motion, I cannot proceed / please clear
+        the e-stop") instead of re-dispatching the skill. A reset is a deliberate
+        fresh start, so wipe the failure log for a clean retry. Bumps
+        :attr:`seq` so an otherwise-idle heartbeat re-evaluates.
+        """
+        if self._failures or self._executions:
+            self._failures.clear()
+            self._executions.clear()
+            self._seq += 1
+
     def append_prompt(self, record: PromptRecord) -> None:
         """Push an operator prompt onto the rolling buffer.
 

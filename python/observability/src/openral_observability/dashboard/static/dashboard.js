@@ -1468,7 +1468,9 @@
     const text = promptInput.value.trim();
     if (!text) return;
     promptSend.disabled = true;
-    setPromptStatus("publishing…", "");
+    // No "publishing…"/"published" status text — it grew the strip next to the
+    // buttons and shifted them. Clearing the input is the success signal; only a
+    // genuine failure surfaces text.
     try {
       const resp = await fetch("/api/prompt", {
         method: "POST",
@@ -1479,9 +1481,7 @@
       if (!resp.ok) {
         setPromptStatus(body.error || ("HTTP " + resp.status), "err");
       } else {
-        setPromptStatus("published", "ok");
         promptInput.value = "";
-        setTimeout(() => setPromptStatus("", ""), 3000);
       }
     } catch (e) {
       setPromptStatus(String(e), "err");
