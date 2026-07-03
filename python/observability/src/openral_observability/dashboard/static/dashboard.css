@@ -816,14 +816,23 @@
   #prompt-send:hover { background: var(--accent-tint); }
   #prompt-send:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   #prompt-send:disabled { background: var(--fg-mute); cursor: not-allowed; box-shadow: none; }
-  #estop-reset {
+  #estop-btn {
     font-family: var(--mono); font-weight: 700; letter-spacing: .04em;
-    background: transparent; color: var(--err);
-    border: 1px solid var(--err); border-radius: 9px; padding: 10px 15px;
-    cursor: pointer; transition: background .2s var(--ease), color .2s var(--ease);
+    border-radius: 9px; padding: 10px 15px; cursor: pointer;
+    transition: background .2s var(--ease), color .2s var(--ease);
   }
-  #estop-reset:hover { background: var(--err); color: #0b0c10; }
-  #estop-reset:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }
+  /* Running: a filled, prominent STOP-the-robot control. */
+  #estop-btn.trigger {
+    background: var(--err); color: #0b0c10; border: 1px solid var(--err);
+  }
+  #estop-btn.trigger:hover { background: transparent; color: var(--err); }
+  /* Latched: a quieter ghost button to CLEAR the e-stop. */
+  #estop-btn.reset {
+    background: transparent; color: var(--err); border: 1px solid var(--err);
+  }
+  #estop-btn.reset:hover { background: var(--err); color: #0b0c10; }
+  #estop-btn:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }
+  #estop-btn:disabled { opacity: .5; cursor: not-allowed; }
   /* Voice-prompt mic — square ghost icon button, monochrome per the design
      system (chroma stays reserved for safety state). It sits left of the input;
      the listening state pulses white, the working state dims. */

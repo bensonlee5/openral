@@ -354,7 +354,9 @@ class TelemetryStore:
             "world_state": {},
             "perception": {},  # per-camera modality + age + thumbnail
             "inference": {},
-            "safety": {"checks": {}},  # check_name -> {last_verdict, severity, ts}
+            # ``estopped`` tracks the kernel's e-stop latch so the UI shows an
+            # E-STOP control while running and Reset e-stop while latched.
+            "safety": {"checks": {}, "estopped": False},  # check_name -> {..., severity, ts}
             "system": {},  # populated by metrics ingest (gpu/cpu/ram)
             # ADR-0025 — live 2D occupancy map from slam_toolbox (and any
             # future Reasoner-managed mapping service). Populated by
@@ -823,6 +825,16 @@ class TelemetryStore:
                 "duration_ms": duration_ms,
             }
             self._topics["safety"]["latest_ts_unix"] = ts_unix
+            # E-stop latch state for the UI's E-STOP / Reset control. The kernel
+            # drops every chunk with severity "violation" while latched (a
+            # violation, an /openral/estop, or a subsequent estop_latched drop)
+            # and reports "ok" once running clean again — so this self-corrects
+            # after a reset without the dashboard needing an rclpy node. A clamp
+            # ("warning") is not a latch and leaves the flag untouched.
+            if severity == "violation":
+                self._topics["safety"]["estopped"] = True
+            elif severity == "ok":
+                self._topics["safety"]["estopped"] = False
             if severity == "violation":
                 # A violation must SURVIVE and STAND OUT. The generic
                 # per-span event is severity "info" (the kernel span's

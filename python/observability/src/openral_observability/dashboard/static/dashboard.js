@@ -1382,6 +1382,14 @@
     renderLedger(topics.safety);
     renderTrace(topics.trace);
 
+    // Drive the e-stop control from the kernel's latch state. Skip while a click
+    // is in flight (button disabled) so telemetry doesn't fight the optimistic
+    // flip before the kernel's next safety.check confirms the new state.
+    const estopEl = $("estop-btn");
+    if (estopEl && !estopEl.disabled) {
+      setEstopMode(estopEl, topics.safety && topics.safety.estopped ? "reset" : "trigger");
+    }
+
     pulseIfNew("card-robot-state", topics.robot_state && topics.robot_state.ts_unix);
     pulseIfNew("card-world-state", topics.world_state && topics.world_state.ts_unix);
     pulseIfNew("card-system", topics.system && topics.system.ts_unix);
@@ -1721,29 +1729,65 @@
     });
   }
 
-  // ── E-stop recovery (POST /api/estop_reset → ros2 service call) ──
-  // A latched safety e-stop makes the kernel drop every command, so no prompt
-  // works until it's cleared. This button calls the kernel reset service; on
-  // success the operator can send a fresh prompt to resume.
-  const estopReset = $("estop-reset");
-  if (estopReset) {
-    estopReset.addEventListener("click", async () => {
-      estopReset.disabled = true;
-      setPromptStatus("resetting e-stop…", "");
+  // Set the e-stop button's mode: `trigger` (arm running → stop it) vs `reset`
+  // (latched → clear it). Idempotent; safe to call every telemetry tick.
+  function setEstopMode(btn, mode) {
+    if (!btn || btn.dataset.mode === mode) return;
+    btn.dataset.mode = mode;
+    if (mode === "reset") {
+      btn.textContent = "Reset e-stop";
+      btn.classList.remove("trigger");
+      btn.classList.add("reset");
+      btn.title = "Clear the latched safety e-stop so the robot can be re-tasked (calls /openral/estop_reset).";
+    } else {
+      btn.textContent = "⛔ E-STOP";
+      btn.classList.remove("reset");
+      btn.classList.add("trigger");
+      btn.title = "Stop the robot NOW. Publishes /openral/estop so the kernel and HAL latch.";
+    }
+  }
+
+  // ── E-stop control — one button, two modes ──
+  // `trigger` (robot running): POST /api/estop publishes /openral/estop so the
+  // kernel + HAL latch and drop every command. `reset` (latched): POST
+  // /api/estop_reset calls the kernel reset service so the operator can re-task.
+  // The mode is driven by telemetry (topics.safety.estopped) in render(); on
+  // click we optimistically flip immediately so the UI is responsive before the
+  // next telemetry tick confirms.
+  const estopBtn = $("estop-btn");
+  if (estopBtn) {
+    estopBtn.addEventListener("click", async () => {
+      const mode = estopBtn.dataset.mode || "trigger";
+      estopBtn.disabled = true;
       try {
-        const resp = await fetch("/api/estop_reset", { method: "POST" });
-        const body = await resp.json().catch(() => ({}));
-        if (resp.ok && body.accepted) {
-          setPromptStatus("e-stop cleared — send a prompt to resume", "ok");
-        } else if (resp.status === 409) {
-          setPromptStatus("reset rejected (cooldown) — wait a moment and retry", "err");
+        if (mode === "trigger") {
+          setPromptStatus("e-stopping…", "");
+          setEstopMode(estopBtn, "reset"); // optimistic
+          const resp = await fetch("/api/estop", { method: "POST" });
+          const body = await resp.json().catch(() => ({}));
+          if (resp.ok && body.accepted) {
+            setPromptStatus("E-STOP latched — kernel is dropping all commands", "err");
+          } else {
+            setEstopMode(estopBtn, "trigger"); // revert on failure
+            setPromptStatus(body.error || ("HTTP " + resp.status), "err");
+          }
         } else {
-          setPromptStatus(body.error || ("HTTP " + resp.status), "err");
+          setPromptStatus("resetting e-stop…", "");
+          const resp = await fetch("/api/estop_reset", { method: "POST" });
+          const body = await resp.json().catch(() => ({}));
+          if (resp.ok && body.accepted) {
+            setEstopMode(estopBtn, "trigger"); // optimistic
+            setPromptStatus("e-stop cleared — send a prompt to resume", "ok");
+          } else if (resp.status === 409) {
+            setPromptStatus("reset rejected (cooldown) — wait a moment and retry", "err");
+          } else {
+            setPromptStatus(body.error || ("HTTP " + resp.status), "err");
+          }
         }
       } catch (e) {
         setPromptStatus(String(e), "err");
       } finally {
-        estopReset.disabled = false;
+        estopBtn.disabled = false;
       }
     });
   }

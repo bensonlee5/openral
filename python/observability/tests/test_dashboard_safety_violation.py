@@ -148,3 +148,29 @@ def test_ok_check_does_not_overwrite_last_violation() -> None:
     safety = store.snapshot()["topics"]["safety"]
     assert safety["checks"]["envelope"]["severity"] == "ok"  # pill reset
     assert safety["last_violation"]["drop_reason"] == "collision"  # slot survives
+
+
+def _ok_span() -> Span:
+    return _safety_span(
+        {"safety.check_name": "envelope", "safety.kernel": "cpp", "safety.severity": "ok"}
+    )
+
+
+def test_estopped_flag_defaults_false() -> None:
+    """Before any safety activity the dashboard shows the robot as runnable."""
+    assert TelemetryStore().snapshot()["topics"]["safety"]["estopped"] is False
+
+
+def test_estopped_flag_latches_on_violation_and_clears_on_ok() -> None:
+    """The e-stop control's mode follows the kernel latch.
+
+    A violation (self-collision, envelope, or an /openral/estop drop) latches
+    the kernel → ``estopped`` True → the UI shows Reset e-stop. A subsequent
+    passing check means the kernel is running clean again → ``estopped`` False →
+    the UI shows E-STOP. Self-corrects after a reset with no rclpy node.
+    """
+    store = TelemetryStore()
+    store.ingest_spans(_wrap(_safety_span(_VIOLATION_ATTRS)))
+    assert store.snapshot()["topics"]["safety"]["estopped"] is True
+    store.ingest_spans(_wrap(_ok_span()))
+    assert store.snapshot()["topics"]["safety"]["estopped"] is False

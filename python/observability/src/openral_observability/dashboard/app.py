@@ -347,6 +347,59 @@ async def _estop_reset_response() -> JSONResponse:
     )
 
 
+async def _estop_trigger_response() -> JSONResponse:
+    """Trigger a graph-wide safety e-stop by publishing to ``/openral/estop``.
+
+    The C++ safety kernel AND every HAL subscribe to this ``std_msgs/Empty``
+    topic and latch immediately — dropping every in-flight and future chunk
+    until ``/openral/estop_reset``. This is the operator's "stop the robot NOW"
+    control; it mirrors the physical deadman / hardware-estop publishers. Like
+    the reset path the dashboard has no rclpy node, so it shells out to ``ros2
+    topic pub``. Published a few times because a freshly-spawned publisher must
+    first discover the already-running subscribers; e-stop is idempotent (a
+    latch), so repeats are harmless and this beats the discovery race.
+    """
+    ros2 = shutil.which("ros2")
+    if ros2 is None:
+        return JSONResponse(
+            {"error": "`ros2` not on PATH; source the workspace install first"},
+            status_code=503,
+        )
+    proc = await asyncio.create_subprocess_exec(
+        ros2,
+        "topic",
+        "pub",
+        "--times",
+        "3",
+        "--rate",
+        "10",
+        "/openral/estop",
+        "std_msgs/msg/Empty",
+        "{}",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        _stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+    except TimeoutError:
+        proc.kill()
+        await proc.wait()
+        return JSONResponse(
+            {"error": "estop publish timed out after 10 s — is the graph running?"},
+            status_code=504,
+        )
+    if proc.returncode != 0:
+        return JSONResponse(
+            {
+                "error": "ros2 topic pub /openral/estop failed",
+                "returncode": proc.returncode,
+                "stderr": stderr_b.decode("utf-8", errors="replace").strip(),
+            },
+            status_code=502,
+        )
+    return JSONResponse({"status": "ok", "accepted": True}, status_code=200)
+
+
 def _config_response() -> JSONResponse:
     """Dashboard-level config (Jaeger UI url, write-controls flag, …) sourced from env.
 
@@ -670,7 +723,7 @@ async def _param_set_response(node: str, name: str, value: str, operator_ip: str
     return JSONResponse({"status": "ok", "stdout": out})
 
 
-def create_app(store: TelemetryStore | None = None) -> FastAPI:
+def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915  # reason: flat FastAPI route-registration table; each endpoint is one statement
     """Build the FastAPI app bound to ``store`` (a fresh one if ``None``).
 
     The returned app is a normal ASGI application; mount it under any
@@ -831,6 +884,12 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:
         # in a module helper to keep create_app() under the statement cap.
         audio = await _read_body(request)
         return await _transcribe_response(audio)
+
+    @app.post("/api/estop")
+    async def post_estop(_request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+        # Operator "stop the robot NOW" — publishes /openral/estop so the kernel
+        # + HAL latch. Body in a module-level helper (create_app statement cap).
+        return await _estop_trigger_response()
 
     @app.post("/api/estop_reset")
     async def post_estop_reset(_request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
