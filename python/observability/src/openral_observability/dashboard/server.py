@@ -53,7 +53,7 @@ def _exposure_warning(host: str) -> str | None:
     )
 
 
-def run_dashboard(
+def run_dashboard(  # noqa: PLR0915  # reason: linear bootstrap (app + estop pub + discovery + uvicorn)
     *,
     host: str = "127.0.0.1",
     port: int = 4318,
@@ -90,6 +90,22 @@ def run_dashboard(
     from openral_observability.dashboard.app import _write_controls_enabled, create_app
 
     app = create_app(store)
+
+    # Persistent e-stop publisher: created ONCE here so DDS discovery of the
+    # HAL/kernel/runner subscribers happens at launch, and every later E-STOP
+    # press publishes instantly (no per-press shell-out / discovery race — a
+    # racing shell-out once lost the message and the robot never stopped). Inert
+    # + graceful when rclpy/ROS is absent; the endpoints then fall back.
+    try:
+        from openral_observability.dashboard.estop_publisher import EstopPublisher
+
+        app.state.estop = EstopPublisher()
+        if app.state.estop.available:
+            _LOG.info("dashboard.estop_publisher ready (instant e-stop)")
+        else:
+            _LOG.warning("dashboard.estop_publisher inert (no ROS) — estop falls back to shell-out")
+    except Exception as exc:  # never gate the dashboard on the e-stop publisher
+        _LOG.warning("dashboard.estop_publisher_start_failed error=%s", exc)
 
     discovery = None
     try:

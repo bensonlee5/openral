@@ -293,16 +293,18 @@ async def _prompt_response(text: str) -> JSONResponse:
     return JSONResponse({"status": "ok", "stdout": stdout, "stderr": stderr})
 
 
-async def _estop_reset_response() -> JSONResponse:
+async def _estop_reset_response(estop: Any = None) -> JSONResponse:
     """Clear a latched safety e-stop via the kernel's ``/openral/estop_reset``.
 
     The C++ safety kernel latches on a violation and drops every candidate chunk
     until this ``std_srvs/Trigger`` service is called — so after an e-stop NO
-    prompt does anything until the latch is cleared. The dashboard has no rclpy
-    node of its own, so (like ``POST /api/prompt``'s ``openral prompt``
-    shell-out) we call ``ros2 service call``. The kernel enforces a post-estop
-    cooldown; an early call returns ``success=false`` (HTTP 409) so the operator
-    can retry. Re-prompt via ``/api/prompt`` once this succeeds.
+    prompt does anything until the latch is cleared. The reset itself is a
+    ``ros2 service call`` (a service is request/response, so no discovery race).
+    The kernel enforces a post-estop cooldown; an early call returns
+    ``success=false`` (HTTP 409) so the operator can retry. On success we also
+    broadcast ``/openral/estop_cleared`` so the HAL + runner un-latch too —
+    instantly via ``estop`` (the persistent publisher) when present, else the
+    shell-out fallback. Re-prompt via ``/api/prompt`` once this succeeds.
     """
     ros2 = shutil.which("ros2")
     if ros2 is None:
@@ -347,9 +349,13 @@ async def _estop_reset_response() -> JSONResponse:
         # independently on /openral/estop and had no reset path (they stayed
         # latched until a node restart, so the robot never resumed). Now that the
         # kernel's cooldown-gated reset has succeeded, broadcast
-        # /openral/estop_cleared so those nodes clear too. Best-effort: a publish
-        # failure doesn't undo the kernel reset, so it doesn't fail the response.
-        await _publish_estop_cleared()
+        # /openral/estop_cleared so those nodes clear too — instantly via the
+        # persistent publisher when present, else the shell-out fallback. Best
+        # effort: a publish failure doesn't undo the kernel reset.
+        if estop is not None and estop.available:
+            estop.clear()
+        else:
+            await _publish_estop_cleared()
     return JSONResponse(
         {"status": "ok" if accepted else "rejected", "accepted": accepted, "stdout": stdout},
         status_code=200 if accepted else 409,
@@ -371,6 +377,8 @@ async def _publish_estop_cleared() -> None:
             ros2,
             "topic",
             "pub",
+            "-w",
+            "1",
             "--times",
             "3",
             "--rate",
@@ -406,6 +414,12 @@ async def _estop_trigger_response() -> JSONResponse:
         ros2,
         "topic",
         "pub",
+        # CRITICAL: a fresh publisher must WAIT for the subscribers to be
+        # discovered before publishing, or the e-stop message is silently lost
+        # to the discovery race and the robot never stops (observed live). -w 1
+        # blocks until >=1 of the HAL/kernel/runner subscriptions is matched.
+        "-w",
+        "1",
         "--times",
         "3",
         "--rate",
@@ -773,6 +787,9 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915
     # Set by run_dashboard when mDNS discovery is wired; None in tests / when
     # the 'mdns' extra is absent. The /api/robots endpoint tolerates both.
     app.state.discovery = None
+    # Persistent e-stop publisher (set by run_dashboard). None here so tests /
+    # standalone use fall back to the shell-out path in the estop endpoints.
+    app.state.estop = None
 
     @app.post(
         "/v1/traces",
@@ -923,16 +940,21 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915
         return await _transcribe_response(audio)
 
     @app.post("/api/estop")
-    async def post_estop(_request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # Operator "stop the robot NOW" — publishes /openral/estop so the kernel
-        # + HAL latch. Body in a module-level helper (create_app statement cap).
+    async def post_estop(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+        # Operator "stop the robot NOW". The persistent publisher (discovered at
+        # launch) fires INSTANTLY; only when it's unavailable (standalone / no
+        # ROS) do we fall back to the slow, discovery-racing shell-out.
+        est = getattr(request.app.state, "estop", None)
+        if est is not None and est.available:
+            est.trigger()
+            return JSONResponse({"status": "ok", "accepted": True}, status_code=200)
         return await _estop_trigger_response()
 
     @app.post("/api/estop_reset")
-    async def post_estop_reset(_request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+    async def post_estop_reset(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
         # Operator recovery from a latched safety e-stop. Body lives in a
         # module-level helper to keep create_app() under the statement cap.
-        return await _estop_reset_response()
+        return await _estop_reset_response(getattr(request.app.state, "estop", None))
 
     @app.post("/api/skill/execute")
     async def post_skill_execute(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
