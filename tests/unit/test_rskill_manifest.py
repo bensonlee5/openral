@@ -31,10 +31,12 @@ import pathlib
 import pytest
 import yaml
 from openral_core import (
+    ActionRepresentation,
     ActuatorRequirement,
     ControlMode,
     ControlModeSemantics,
     EmbodimentExtra,
+    JointUnits,
     QuantizationBackend,
     QuantizationConfig,
     QuantizationDtype,
@@ -778,6 +780,61 @@ class TestInTreeManifests:
         )
         for p in manifest_paths:
             RSkillManifest.from_yaml(str(p))
+
+
+# ── joint_units declaration on joint-position rSkills (issue #135) ────────────
+
+
+class TestJointUnitsDeclared:
+    """Every joint-position rSkill must declare ``action_contract.joint_units``.
+
+    The skill_runner converts deg↔rad at the policy boundary; an undeclared
+    checkpoint falls back to a stats-magnitude heuristic that silently
+    mis-detected a degrees-trained SmolVLA SO-101 checkpoint as radians and
+    drove a real arm into its joint limits (issue #135). The schema validator
+    (:meth:`RSkillManifest._check_joint_units_declared`) makes this a hard,
+    fail-loud requirement so a new joint-position rSkill cannot merge without a
+    verified declaration.
+    """
+
+    def test_every_intree_joint_position_manifest_declares_units(self) -> None:
+        """No ``rskills/*/rskill.yaml`` joint-position manifest may omit units."""
+        repo_root = pathlib.Path(__file__).resolve().parents[2]
+        manifest_paths = sorted(repo_root.glob("rskills/*/rskill.yaml"))
+        assert manifest_paths, f"No rskills/*/rskill.yaml manifests under {repo_root}."
+        offenders: list[str] = []
+        for p in manifest_paths:
+            m = RSkillManifest.from_yaml(str(p))
+            ac = m.action_contract
+            if (
+                ac is not None
+                and ac.representation is ActionRepresentation.JOINT_POSITIONS
+                and ac.joint_units is None
+            ):
+                offenders.append(p.parent.name)
+        assert not offenders, (
+            "joint-position rSkills missing action_contract.joint_units "
+            f"(verify against the checkpoint's normalizer stats): {offenders}"
+        )
+
+    def test_validator_rejects_joint_positions_without_units(self) -> None:
+        """A joint-position action_contract with no joint_units fails to load."""
+        d = _minimal_manifest_dict()
+        d["action_contract"] = {"dim": 6, "representation": "joint_positions"}
+        with pytest.raises(ValidationError, match="joint_units"):
+            RSkillManifest.model_validate(d)
+
+    def test_validator_accepts_joint_positions_with_units(self) -> None:
+        """Declaring joint_units lets a joint-position manifest load."""
+        d = _minimal_manifest_dict()
+        d["action_contract"] = {
+            "dim": 6,
+            "representation": "joint_positions",
+            "joint_units": "degrees",
+        }
+        m = RSkillManifest.model_validate(d)
+        assert m.action_contract is not None
+        assert m.action_contract.joint_units is JointUnits.DEGREES
 
 
 # ── Optional rSkill envelope (ADR-0018 §5 / ADR-0020) ────────────────────────

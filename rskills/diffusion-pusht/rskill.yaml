@@ -101,3 +101,10 @@ action_contract:
   # Declared explicitly so the contract states joint-space rather than relying
   # on the undeclared-layout fallback.
   representation: "joint_positions"
+  # EXPLICIT joint units — PushT's 2-D action is a planar tip position in the
+  # 512×512 image frame (verified: observation.state normalizer max∈[496, 511],
+  # min∈[13, 33]), NOT angles. "radians" selects the identity (no deg↔rad
+  # conversion) so the 0–512 values pass through unchanged. It is declared to
+  # STOP the stats-magnitude heuristic — which sees peak ≫π and would wrongly
+  # flag "degrees" and corrupt the action with a ×π/180 scaling.
+  joint_units: "radians"

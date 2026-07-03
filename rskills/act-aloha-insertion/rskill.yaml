@@ -101,6 +101,12 @@ action_contract:
   dim: 14
   # ADR-0071 — ACT on ALOHA emits absolute joint positions (2×(6 arm + 1 gripper)).
   representation: "joint_positions"
+  # EXPLICIT joint units — the ALOHA sim (gym-aloha, MuJoCo qpos) records in
+  # RADIANS (verified: observation.state normalizer mean∈[-0.22, 0.74],
+  # std∈[0.10, 0.32] — every channel well under π). No deg↔rad conversion at
+  # the policy boundary. Declared so the runner does not fall back to the
+  # stats-magnitude heuristic.
+  joint_units: "radians"
 
 # ADR-0019 — per-checkpoint state contract.
 state_contract:

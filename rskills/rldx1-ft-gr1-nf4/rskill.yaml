@@ -134,3 +134,8 @@ action_contract:
   # the EE-owned Fourier-hand finger DoF); declared explicitly even though the
   # bare dim already drives the legacy whole-vector JOINT_POSITION path.
   representation: "joint_positions"
+  # EXPLICIT joint units — the GR1 state/action run through the RoboCasa robosuite
+  # BASIC composite controller (MuJoCo qpos, gr1_unified wrapper) via the rldx
+  # sidecar, i.e. RADIANS. No deg↔rad conversion at the policy boundary. Declared
+  # so the runner does not fall back to the stats-magnitude heuristic.
+  joint_units: "radians"

@@ -5441,6 +5441,37 @@ class RSkillManifest(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _check_joint_units_declared(self) -> RSkillManifest:
+        """A joint-position rSkill MUST declare its ``action_contract.joint_units``.
+
+        The skill_runner converts deg↔rad at the policy boundary. When the
+        manifest omits the units it falls back to a stats-magnitude heuristic
+        that silently mis-detected a degrees-trained SmolVLA SO-101 checkpoint as
+        radians — feeding the policy ~57× too-small state and emitting ~57×
+        too-large HAL commands, which drove a real arm into its joint limits
+        (issue #135). openral's ``JointState`` / ``Action`` contract is radians,
+        so getting this wrong is a hardware-safety hazard, not a nicety. Making
+        it a required field means a new joint-position rSkill cannot merge without
+        a verified declaration. EE-space representations (``delta_ee_*``,
+        ``cartesian_pose``) are unaffected — their action is not joint angles.
+        """
+        ac = self.action_contract
+        if (
+            ac is not None
+            and ac.representation is ActionRepresentation.JOINT_POSITIONS
+            and ac.joint_units is None
+        ):
+            raise ValueError(
+                f"RSkillManifest({self.name!r}): action_contract.representation is "
+                "'joint_positions' but action_contract.joint_units is not declared. "
+                "Add `joint_units: degrees|radians`, verified against the checkpoint's "
+                "normalizer stats (a manipulator joint peaking above ~5 (~90°+) is "
+                "degrees; all channels under π is radians). See issue #135 — a wrong "
+                "guess sends ~57× commands and the arm slams its limits."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _check_kind_consistency(self) -> RSkillManifest:  # noqa: PLR0911, PLR0912, PLR0915  # reason: each branch is a separate kind (one early return each) — splitting would obscure the per-kind contract table
         """Enforce the per-:attr:`kind` field shape for VLA vs ROS-wrapper vs detector.
 
