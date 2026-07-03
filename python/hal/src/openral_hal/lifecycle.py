@@ -341,6 +341,7 @@ if _ROS2_AVAILABLE:
             self._joint_state_pub: Any = None
             self._safe_action_sub: Any = None
             self._estop_sub: Any = None
+            self._estop_reset_sub: Any = None
             # ADR-0049 — decouple the cheap, latency-sensitive publishers (odom /
             # joint_state / TF) from the single executor thread, which is
             # head-of-line-blocked by env.step + render + scan raycast. They run
@@ -570,6 +571,15 @@ if _ROS2_AVAILABLE:
             self._estop_sub = self.create_subscription(
                 Empty, "/openral/estop", self._on_estop, estop_qos
             )
+            # Reset-cleared broadcast (symmetric to /openral/estop). The estop
+            # TRIGGER is a topic every node latches on, but reset was a
+            # kernel-only service, so the HAL stayed latched after
+            # /openral/estop_reset — the robot never resumed until a restart.
+            # The reset authority (the kernel via the dashboard, after its
+            # cooldown-gated reset succeeds) publishes here so the HAL clears too.
+            self._estop_reset_sub = self.create_subscription(
+                Empty, "/openral/estop_cleared", self._on_estop_cleared, estop_qos
+            )
 
             rate_hz: float = (
                 self.get_parameter("publish_rate_hz").get_parameter_value().double_value
@@ -614,6 +624,9 @@ if _ROS2_AVAILABLE:
             if self._estop_sub is not None:
                 self.destroy_subscription(self._estop_sub)
                 self._estop_sub = None
+            if self._estop_reset_sub is not None:
+                self.destroy_subscription(self._estop_reset_sub)
+                self._estop_reset_sub = None
             if self._publisher is not None:
                 self.destroy_publisher(self._publisher)
                 self._publisher = None
@@ -892,6 +905,22 @@ if _ROS2_AVAILABLE:
             self._estopped = True
             self.get_logger().error(
                 "openral_hal.estop_received; ignoring further commands until reset."
+            )
+
+        def _on_estop_cleared(self, _msg: object) -> None:
+            """Clear the estop latch when the reset authority broadcasts /openral/estop_cleared.
+
+            Without this the HAL stayed latched after the kernel's estop_reset —
+            it dropped every command (``_on_safe_action`` returns early on
+            ``_estopped``) so the robot never resumed until a node restart. The
+            kernel's cooldown gate has already passed by the time this fires
+            (the dashboard publishes it only after estop_reset returns success).
+            """
+            if not self._estopped:
+                return
+            self._estopped = False
+            self.get_logger().info(
+                "openral_hal.estop_cleared; resuming command execution."
             )
 
     class _FactoryHALLifecycleNode(HALLifecycleNodeBase):
