@@ -71,7 +71,7 @@ latency_budget:
 # ── Provenance ─────────────────────────────────────────────────────────────
 # Headline success rate from skills/diffusion-pusht/eval/pusht.json.
 benchmarks:
-  pusht: 0.60
+  pusht: 1.0
 
 paper_url: "https://arxiv.org/abs/2303.04137"
 source_repo: "hf://lerobot/diffusion_pusht"
