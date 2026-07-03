@@ -205,12 +205,14 @@ def test_estopped_flag_defaults_false() -> None:
 
 
 def test_estopped_flag_latches_on_violation_and_clears_on_ok() -> None:
-    """The e-stop control's mode follows the kernel latch.
+    """The separate Reset control's visibility follows the kernel latch.
 
     A violation (self-collision, envelope, or an /openral/estop drop) latches
-    the kernel → ``estopped`` True → the UI shows Reset e-stop. A subsequent
-    passing check means the kernel is running clean again → ``estopped`` False →
-    the UI shows E-STOP. Self-corrects after a reset with no rclpy node.
+    the kernel → ``estopped`` True → the UI reveals the Reset e-stop button. A
+    subsequent passing check means the kernel is running clean again →
+    ``estopped`` False → Reset is hidden. The red E-STOP is always present and
+    always a stop; only Reset is state-driven. Self-corrects after a reset with
+    no rclpy node.
     """
     store = TelemetryStore()
     store.ingest_spans(_wrap(_safety_span(_VIOLATION_ATTRS)))
