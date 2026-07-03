@@ -1382,13 +1382,15 @@
     renderLedger(topics.safety);
     renderTrace(topics.trace);
 
-    // The E-STOP button is UNCONDITIONAL — telemetry never touches it, it is
-    // always a stop. Only the separate Reset control is state-driven: shown
-    // while the kernel is latched, hidden otherwise. Skip while a reset click is
-    // in flight (button disabled) so telemetry doesn't fight the optimistic hide.
-    const estopResetEl = $("estop-reset-btn");
-    if (estopResetEl && !estopResetEl.disabled) {
-      estopResetEl.hidden = !(topics.safety && topics.safety.estopped);
+    // One fixed-position button that toggles between E-STOP (running) and Reset
+    // (latched). Safe as a toggle now that `estopped` is authoritative — the
+    // dashboard sets it True the instant it issues an e-stop, so the button only
+    // becomes Reset AFTER a real stop, never while the arm is running unstopped.
+    // Skip while a click is in flight (disabled) so telemetry doesn't fight the
+    // optimistic flip.
+    const estopEl = $("estop-btn");
+    if (estopEl && !estopEl.disabled) {
+      setEstopMode(estopEl, topics.safety && topics.safety.estopped ? "reset" : "trigger");
     }
 
     pulseIfNew("card-robot-state", topics.robot_state && topics.robot_state.ts_unix);
@@ -1730,54 +1732,62 @@
     });
   }
 
-  // ── E-stop controls — STOP and RESET are SEPARATE buttons, never the same ──
-  // The red E-STOP publishes /openral/estop UNCONDITIONALLY: every press is a
-  // stop, no matter what telemetry believes the robot is doing. Overloading one
-  // button so a stale `estopped` flag could turn it into a reset (a no-op on a
-  // moving arm) let the robot keep moving through an operator press — twice.
-  // Reset is its own control (rendered only while latched); clearing is never
-  // something the stop button can silently become.
+  // Toggle the button between E-STOP (running → stop it) and Reset (latched →
+  // clear it). Fixed width in CSS + centred label, so the swap never shifts the
+  // control. Idempotent; safe to call every telemetry tick.
+  function setEstopMode(btn, mode) {
+    if (!btn || btn.dataset.mode === mode) return;
+    btn.dataset.mode = mode;
+    if (mode === "reset") {
+      btn.textContent = "Reset e-stop";
+      btn.classList.remove("trigger");
+      btn.classList.add("reset");
+      btn.title = "Clear the latched safety e-stop so the robot can be re-tasked (calls /openral/estop_reset).";
+    } else {
+      btn.textContent = "⛔ E-STOP";
+      btn.classList.remove("reset");
+      btn.classList.add("trigger");
+      btn.title = "Stop the robot NOW. Publishes /openral/estop so the kernel and HAL latch.";
+    }
+  }
+
+  // ── E-stop control — one fixed button, two modes ──
+  // `trigger` (running): POST /api/estop latches the kernel + HAL. `reset`
+  // (latched): POST /api/estop_reset clears it. The mode is driven by the
+  // authoritative `estopped` flag in render(); we optimistically flip the label
+  // on click for responsiveness. No status text on success/progress — the label
+  // change IS the feedback, and a growing status string would shift the layout.
+  // Only a genuine FAILURE surfaces text (a safety action must never fail
+  // silently), and that path is rare.
   const estopBtn = $("estop-btn");
   if (estopBtn) {
     estopBtn.addEventListener("click", async () => {
+      const mode = estopBtn.dataset.mode || "trigger";
       estopBtn.disabled = true;
-      setPromptStatus("e-stopping…", "");
       try {
-        const resp = await fetch("/api/estop", { method: "POST" });
-        const body = await resp.json().catch(() => ({}));
-        if (resp.ok && body.accepted) {
-          setPromptStatus("E-STOP latched — kernel is dropping all commands", "err");
+        if (mode === "trigger") {
+          setEstopMode(estopBtn, "reset"); // optimistic
+          const resp = await fetch("/api/estop", { method: "POST" });
+          const body = await resp.json().catch(() => ({}));
+          if (!(resp.ok && body.accepted)) {
+            setEstopMode(estopBtn, "trigger"); // revert on failure
+            setPromptStatus(body.error || ("e-stop failed — HTTP " + resp.status), "err");
+          }
         } else {
-          setPromptStatus(body.error || ("HTTP " + resp.status), "err");
+          const resp = await fetch("/api/estop_reset", { method: "POST" });
+          const body = await resp.json().catch(() => ({}));
+          if (resp.ok && body.accepted) {
+            setEstopMode(estopBtn, "trigger"); // optimistic
+          } else if (resp.status === 409) {
+            setPromptStatus("reset rejected (cooldown) — wait a moment and retry", "err");
+          } else {
+            setPromptStatus(body.error || ("reset failed — HTTP " + resp.status), "err");
+          }
         }
       } catch (e) {
         setPromptStatus(String(e), "err");
       } finally {
         estopBtn.disabled = false;
-      }
-    });
-  }
-
-  const estopResetBtn = $("estop-reset-btn");
-  if (estopResetBtn) {
-    estopResetBtn.addEventListener("click", async () => {
-      estopResetBtn.disabled = true;
-      setPromptStatus("resetting e-stop…", "");
-      try {
-        const resp = await fetch("/api/estop_reset", { method: "POST" });
-        const body = await resp.json().catch(() => ({}));
-        if (resp.ok && body.accepted) {
-          estopResetBtn.hidden = true; // optimistic; next telemetry tick confirms
-          setPromptStatus("e-stop cleared — send a prompt to resume", "ok");
-        } else if (resp.status === 409) {
-          setPromptStatus("reset rejected (cooldown) — wait a moment and retry", "err");
-        } else {
-          setPromptStatus(body.error || ("HTTP " + resp.status), "err");
-        }
-      } catch (e) {
-        setPromptStatus(String(e), "err");
-      } finally {
-        estopResetBtn.disabled = false;
       }
     });
   }

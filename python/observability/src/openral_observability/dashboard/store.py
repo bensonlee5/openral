@@ -626,15 +626,17 @@ class TelemetryStore:
                 self._counters[event.name] += 1
 
     def _append_event(self, ev: TelemetryEvent) -> None:
-        """Append to the main ring, and mirror error/fatal into the protected lane.
+        """Append to the main ring, and mirror durable events into the protected lane.
 
-        The protected lane keeps the last :data:`_ERROR_EVENT_RING_SIZE` error
-        events alive even when the high-rate info/debug stream cycles the main
-        ring, so a skill_failure / estop / safety.violation always leaves a
-        durable trace the operator can still find seconds later.
+        The protected lane keeps the last :data:`_ERROR_EVENT_RING_SIZE` events
+        alive even when the high-rate info/debug stream cycles the main ring, so
+        a skill_failure / estop / safety.violation always leaves a trace the
+        operator can still find seconds later. Mirrored when the severity is
+        error/fatal OR the kind is in :data:`_PROTECTED_EVENT_KINDS` (a
+        skill_failure downgraded to "warn" while latched must still survive).
         """
         self._events.append(ev)
-        if ev.severity in _ERROR_SEVERITIES:
+        if ev.severity in _ERROR_SEVERITIES or ev.kind in _PROTECTED_EVENT_KINDS:
             self._error_events.append(ev)
 
     def _record_log(self, record: LogRecord, scope_name: str) -> None:
@@ -1222,6 +1224,18 @@ _WARN_EVENTS = frozenset(
         "openral.event.sensor_stale",
         "openral.event.staleness_latched",
         "openral.event.action_dropped",
+    }
+)
+
+# Event kinds that must ALWAYS survive the high-rate main-ring flood, even when
+# their severity is only "warn". A skill_failure carries the reason the operator
+# needs (aborted / rejected / timeout …); when it lands while e-stop-latched it
+# is downgraded to a warning, but it must still leave a durable trace — a warn
+# that gets evicted in seconds is the "counter goes up, no trace" bug. So these
+# are mirrored into the protected lane regardless of severity.
+_PROTECTED_EVENT_KINDS = frozenset(
+    {
+        "openral.event.skill_failure",
     }
 )
 
