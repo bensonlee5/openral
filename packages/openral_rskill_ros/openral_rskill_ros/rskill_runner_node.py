@@ -162,6 +162,7 @@ if _ROS2_AVAILABLE:
             self._hal: Any = None
             self._action_server: Any = None
             self._estop_sub: Any = None
+            self._estop_reset_sub: Any = None
             self._episode_pub: Any = None
             self._episode_counter: int = 0
             # ADR-0019 — 1-based inference-tick index stamped onto every
@@ -278,6 +279,12 @@ if _ROS2_AVAILABLE:
             estop_topic: str = self.get_parameter("estop_topic").get_parameter_value().string_value
             self._estop_sub = self.create_subscription(
                 Empty, estop_topic, self._on_estop, estop_qos
+            )
+            # Reset-cleared broadcast — clear the runner latch so a new goal runs
+            # after the operator resets (symmetric to /openral/estop; see
+            # ManifestHALLifecycleNode._on_estop_cleared).
+            self._estop_reset_sub = self.create_subscription(
+                Empty, "/openral/estop_cleared", self._on_estop_cleared, estop_qos
             )
 
             # ADR-0019 — Episode boundary markers on the bus. A dataset
@@ -406,6 +413,9 @@ if _ROS2_AVAILABLE:
             if self._estop_sub is not None:
                 self.destroy_subscription(self._estop_sub)
                 self._estop_sub = None
+            if self._estop_reset_sub is not None:
+                self.destroy_subscription(self._estop_reset_sub)
+                self._estop_reset_sub = None
             if self._episode_pub is not None:
                 self.destroy_publisher(self._episode_pub)
                 self._episode_pub = None
@@ -1228,6 +1238,18 @@ if _ROS2_AVAILABLE:
                 "rskill_runner.estop_received; "
                 f"aborting in-flight goal (rskill_id={self._active_skill_id!r})"
             )
+
+        def _on_estop_cleared(self, _msg: object) -> None:
+            """Clear the runner latch on /openral/estop_cleared so a new goal runs.
+
+            Without this the runner stayed latched after a reset (every goal
+            aborted immediately), mirroring the HAL gap. The reset authority's
+            cooldown gate has already passed by the time this fires.
+            """
+            if not self._estop_latched:
+                return
+            self._estop_latched = False
+            self.get_logger().info("rskill_runner.estop_cleared; accepting new goals.")
 
 
 def _default_skill_resolver(

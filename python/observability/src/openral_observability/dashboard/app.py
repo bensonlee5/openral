@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import contextlib
 import gzip
 import io
 import json
@@ -341,10 +342,46 @@ async def _estop_reset_response() -> JSONResponse:
         )
     # Trigger response renders as `success=True/False, message='…'`.
     accepted = "success=True" in stdout
+    if accepted:
+        # The kernel service only clears the KERNEL latch; the HAL + runner latch
+        # independently on /openral/estop and had no reset path (they stayed
+        # latched until a node restart, so the robot never resumed). Now that the
+        # kernel's cooldown-gated reset has succeeded, broadcast
+        # /openral/estop_cleared so those nodes clear too. Best-effort: a publish
+        # failure doesn't undo the kernel reset, so it doesn't fail the response.
+        await _publish_estop_cleared()
     return JSONResponse(
         {"status": "ok" if accepted else "rejected", "accepted": accepted, "stdout": stdout},
         status_code=200 if accepted else 409,
     )
+
+
+async def _publish_estop_cleared() -> None:
+    """Broadcast /openral/estop_cleared so latching nodes (HAL, runner) resume.
+
+    Symmetric to the /openral/estop trigger. Best-effort + swallowed errors:
+    the kernel reset has already succeeded by the time we get here, so a failed
+    broadcast must not turn a successful reset into an error response.
+    """
+    ros2 = shutil.which("ros2")
+    if ros2 is None:
+        return
+    with contextlib.suppress(Exception):
+        proc = await asyncio.create_subprocess_exec(
+            ros2,
+            "topic",
+            "pub",
+            "--times",
+            "3",
+            "--rate",
+            "10",
+            "/openral/estop_cleared",
+            "std_msgs/msg/Empty",
+            "{}",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=10.0)
 
 
 async def _estop_trigger_response() -> JSONResponse:
