@@ -34,6 +34,17 @@
           ],
           "default": null,
           "title": "Slots"
+        },
+        "joint_units": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JointUnits"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -428,6 +439,15 @@
       },
       "title": "ImagePreprocessing",
       "type": "object"
+    },
+    "JointUnits": {
+      "description": "Angular units a joint-position checkpoint was trained in.\n\nA joint-position VLA consumes state and emits actions in ONE angular\nconvention (whatever its training dataset recorded). openral's\n:class:`JointState` / :class:`Action` contract is **radians**, so the\nskill_runner must convert deg<->rad at the policy boundary when the\ncheckpoint is in degrees. Getting this wrong is not subtle: feeding a\ndegrees-trained policy radians makes every observation ~57x too small\n(out-of-distribution -> garbage actions), and emitting its degree actions\nas radians makes the HAL command ~57x too large (the arm slams its\nlimits). Declaring it on the manifest removes the fragile runtime guess.",
+      "enum": [
+        "degrees",
+        "radians"
+      ],
+      "title": "JointUnits",
+      "type": "string"
     },
     "PlaybookContract": {
       "additionalProperties": false,
