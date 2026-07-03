@@ -147,3 +147,10 @@ action_contract:
   # ADR-0071 — RoboTwin aloha-agilex emits absolute joint positions
   # (2×(6 arm + 1 gripper)).
   representation: "joint_positions"
+  # EXPLICIT joint units — RoboTwin (SAPIEN, aloha-agilex qpos) records in
+  # RADIANS. Verified: the arm channels' normalizer max stays ~π–8.5 rad (a
+  # few continuous joints wrap past π); degrees is impossible — a degrees-trained
+  # manipulator peaks at ±90+, not ±8. Channels 6/13 are the 0–1 grippers. This
+  # MUST be declared: peak 8.5 > the heuristic's 5.0 threshold, so the fallback
+  # would wrongly flag "degrees" and corrupt every command with a ÷π/180 scaling.
+  joint_units: "radians"

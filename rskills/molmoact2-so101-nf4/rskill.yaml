@@ -170,3 +170,9 @@ action_contract:
   dim: 6
   # ADR-0071 — SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
   representation: "joint_positions"
+  # EXPLICIT joint units — trained on LeRobot SO-100/101 teleop, which records in
+  # DEGREES (verified from norm_stats.json metadata_by_tag/so100_so101_molmoact2:
+  # state_stats span −270…+250, q99≈185 — far outside radians). The runner
+  # converts deg↔rad at the policy boundary; see the header UNITS note. Same
+  # convention as the smolvla-so101-pen reference.
+  joint_units: "degrees"
