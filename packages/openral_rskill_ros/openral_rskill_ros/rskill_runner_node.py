@@ -1838,9 +1838,7 @@ def _detect_joint_units_are_degrees(adapter: object) -> bool:
             candidates: list[object] = []
             nested = stats.get("observation.state")
             if isinstance(nested, dict):
-                candidates.extend(
-                    nested.get(key) for key in ("q99", "max", "min", "std")
-                )
+                candidates.extend(nested.get(key) for key in ("q99", "max", "min", "std"))
             else:
                 candidates.append(stats.get("observation.state.q99"))
                 candidates.extend(
@@ -2211,9 +2209,7 @@ def _make_policy_adapter_skill(
     # degrees-trained SmolVLA SO-101 checkpoint to radians, which fed the policy
     # ~57× too-small state and emitted ~57× too-large HAL commands → the arm
     # slammed its limits). Fall back to the heuristic only when undeclared.
-    _declared_units = getattr(
-        getattr(manifest, "action_contract", None), "joint_units", None
-    )
+    _declared_units = getattr(getattr(manifest, "action_contract", None), "joint_units", None)
     if _declared_units is not None:
         _units_str = str(getattr(_declared_units, "value", _declared_units))
         joint_units_are_degrees = _units_str == "degrees"

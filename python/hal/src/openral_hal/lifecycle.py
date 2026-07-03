@@ -919,9 +919,7 @@ if _ROS2_AVAILABLE:
             if not self._estopped:
                 return
             self._estopped = False
-            self.get_logger().info(
-                "openral_hal.estop_cleared; resuming command execution."
-            )
+            self.get_logger().info("openral_hal.estop_cleared; resuming command execution.")
 
     class _FactoryHALLifecycleNode(HALLifecycleNodeBase):
         """Thin subclass that takes a zero-arg HAL factory.
