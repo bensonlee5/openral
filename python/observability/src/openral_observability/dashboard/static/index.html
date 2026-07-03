@@ -53,7 +53,8 @@
       <span id="mic-meter" class="mic-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       <input id="prompt-input" type="text" placeholder='e.g. "pick the red cube"' autocomplete="off" spellcheck="false" />
       <button id="prompt-send" type="button">Send</button>
-      <button id="estop-btn" type="button" class="trigger" data-mode="trigger" title="Stop the robot NOW. Publishes /openral/estop so the kernel and HAL latch.">⛔ E-STOP</button>
+      <button id="estop-btn" type="button" class="trigger" title="Stop the robot NOW. Always publishes /openral/estop so the kernel and HAL latch.">⛔ E-STOP</button>
+      <button id="estop-reset-btn" type="button" hidden title="Clear the latched safety e-stop so the robot can be re-tasked (calls /openral/estop_reset).">Reset e-stop</button>
       <span id="prompt-status" class="status"></span>
     </div>
     <div class="prompt-hint">Hit <b>E-STOP</b> to latch the safety kernel and drop every command immediately. Once latched the button becomes <b>Reset e-stop</b>; click it, then send a new prompt to resume.</div>
