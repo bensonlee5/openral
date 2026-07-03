@@ -1784,8 +1784,17 @@ def _detect_joint_units_are_degrees(adapter: object) -> bool:
     try:
         pipeline = adapter._preprocessor  # type: ignore[attr-defined]
         for step in getattr(pipeline, "steps", []):
-            stats = getattr(step, "stats", None) or getattr(step, "_stats", None)
-            if stats is None:
+            # lerobot's NormalizerProcessorStep keeps the loaded tensors in
+            # ``_tensor_stats`` (nested {feature: {stat: tensor}}); ``stats`` is a
+            # human-readable mirror that is EMPTY until load_state_dict
+            # reconstructs it — so ``_tensor_stats`` is the reliable source. Check
+            # all three so this works across processor versions.
+            stats = (
+                getattr(step, "stats", None)
+                or getattr(step, "_tensor_stats", None)
+                or getattr(step, "_stats", None)
+            )
+            if not stats:
                 continue
             # Two stats layouts exist across lerobot processor versions:
             # flat ("observation.state.q99" → tensor) and nested
@@ -1823,6 +1832,70 @@ def _detect_joint_units_are_degrees(adapter: object) -> bool:
     except Exception:  # reason: introspection across processor versions; never fatal
         pass
     return False
+
+
+def _effective_perm(robot_to_policy: list[int] | None, n: int) -> list[int]:
+    """The joint permutation to use, defaulting to identity when there's no reorder.
+
+    ``robot_to_policy`` is ``None`` when the checkpoint's joint order already
+    matches the robot's (e.g. SO-101) or when there isn't enough metadata to
+    reorder safely. Returning ``range(n)`` here — instead of skipping the whole
+    conversion block — is what guarantees the deg↔rad unit conversion still runs
+    on the no-reorder path. Nesting the conversion inside ``if robot_to_policy is
+    not None`` was the bug that sent a degrees checkpoint's actions out raw
+    (~57× too large → the arm slammed its limits).
+    """
+    if robot_to_policy is not None and len(robot_to_policy) == n:
+        return robot_to_policy
+    return list(range(n))
+
+
+def _robot_state_to_policy(
+    robot_state: Any,
+    robot_to_policy: list[int] | None,
+    joint_units_are_degrees: bool,
+    policy_is_gripper: list[bool],
+) -> Any:
+    """Reorder robot-order state → policy order and convert rad→deg when needed.
+
+    The conversion runs on EVERY path (identity perm when no reorder), so a
+    degrees-trained policy is never fed raw radians (~57× too small → OOD). The
+    gripper channel (``policy_is_gripper[j]``) is left untouched — its unit is a
+    custom 0-1/0-100 motor range, not an angle.
+    """
+    n = robot_state.shape[0]
+    policy_state = robot_state.copy()
+    for i, j in enumerate(_effective_perm(robot_to_policy, n)):
+        val = float(robot_state[i])
+        is_grip = bool(policy_is_gripper) and j < len(policy_is_gripper) and policy_is_gripper[j]
+        if joint_units_are_degrees and not is_grip:
+            val = math.degrees(val)
+        policy_state[j] = val
+    return policy_state
+
+
+def _policy_action_to_robot(
+    policy_action: Any,
+    robot_to_policy: list[int] | None,
+    joint_units_are_degrees: bool,
+    policy_is_gripper: list[bool],
+) -> Any:
+    """Reorder policy-order action → robot order and convert deg→rad when needed.
+
+    Symmetric to :func:`_robot_state_to_policy`. Runs on every path (identity
+    perm when no reorder) so a degrees checkpoint's actions reach the radians
+    ``Action`` contract instead of passing through raw (~57× too large → the arm
+    slams its limits). Gripper channels are left untouched.
+    """
+    n = policy_action.shape[0]
+    robot_action = policy_action.copy()
+    for i, j in enumerate(_effective_perm(robot_to_policy, n)):
+        val = float(policy_action[j])
+        is_grip = bool(policy_is_gripper) and j < len(policy_is_gripper) and policy_is_gripper[j]
+        if joint_units_are_degrees and not is_grip:
+            val = math.radians(val)
+        robot_action[i] = val
+    return robot_action
 
 
 def _build_joint_permutation(
@@ -2101,7 +2174,22 @@ def _make_policy_adapter_skill(
     # rekeys `obs["images"]` to what the adapter looks up. Built once at
     # skill-build time; see `_sensor_name_to_vla_slot`.
     sensor_to_slot = _sensor_name_to_vla_slot(description)
-    joint_units_are_degrees = _detect_joint_units_are_degrees(adapter)
+    # Joint units govern the deg↔rad conversion at the policy boundary. Prefer
+    # the manifest's EXPLICIT declaration (action_contract.joint_units) — the
+    # stats-magnitude heuristic is fragile (it silently defaulted a
+    # degrees-trained SmolVLA SO-101 checkpoint to radians, which fed the policy
+    # ~57× too-small state and emitted ~57× too-large HAL commands → the arm
+    # slammed its limits). Fall back to the heuristic only when undeclared.
+    _declared_units = getattr(
+        getattr(manifest, "action_contract", None), "joint_units", None
+    )
+    if _declared_units is not None:
+        _units_str = str(getattr(_declared_units, "value", _declared_units))
+        joint_units_are_degrees = _units_str == "degrees"
+        _units_source = "manifest"
+    else:
+        joint_units_are_degrees = _detect_joint_units_are_degrees(adapter)
+        _units_source = "heuristic"
     # Print to stderr so the diagnostic shows up in the launch's
     # stitched-together stdout (structlog's OTel sink doesn't surface
     # there). One-time event at build-time — keeps the per-step
@@ -2110,6 +2198,7 @@ def _make_policy_adapter_skill(
         f"[rskill_runner_node] policy_adapter.skill_built "
         f"skill={getattr(manifest, 'name', '?')!r} "
         f"joint_units={'degrees' if joint_units_are_degrees else 'radians'} "
+        f"({_units_source}) "
         f"perm={robot_to_policy} "
         f"is_gripper={policy_is_gripper}",
         file=sys.stderr,
@@ -2276,7 +2365,7 @@ def _make_policy_adapter_skill(
                     flush=True,
                 )
 
-        def _step_impl(self, world_state: Any) -> Action | list[Action]:  # noqa: PLR0912, PLR0915  # reason: layout/unit/clamp branches per openarm pi0.5 checkpoint are intentionally inline; splitting them obscures the per-step contract
+        def _step_impl(self, world_state: Any) -> Action | list[Action]:
             obs: dict[str, object] = {"task": self._prompt}
             js = world_state.joint_state
             robot_state = np.asarray(list(js.position), dtype=np.float32)
@@ -2326,18 +2415,13 @@ def _make_policy_adapter_skill(
             # kept untouched — their state distribution centres around
             # ``-1`` in a custom motor unit that isn't a rad↔deg conversion.
             if not state_assembled:
-                if robot_to_policy is not None and robot_state.shape[0] == len(robot_to_policy):
-                    policy_state = np.empty_like(robot_state)
-                    for i, j in enumerate(robot_to_policy):
-                        val = float(robot_state[i])
-                        if joint_units_are_degrees and not (
-                            policy_is_gripper and policy_is_gripper[j]
-                        ):
-                            val = math.degrees(val)
-                        policy_state[j] = val
-                    obs["state"] = policy_state
-                else:
-                    obs["state"] = robot_state
+                # rad->deg conversion is INDEPENDENT of reordering — it runs on
+                # every path (identity perm when no reorder), so a checkpoint
+                # whose joint order already matches the robot (SO-101) is not fed
+                # raw radians. See _robot_state_to_policy / _effective_perm.
+                obs["state"] = _robot_state_to_policy(
+                    robot_state, robot_to_policy, joint_units_are_degrees, policy_is_gripper
+                )
             # Deploy-sim keys `world_state.image_frames` by the manifest
             # sensor NAME; VLA adapters look up `obs["images"]` by the VLA
             # slot (camera1/camera2/...). `sensor_to_slot` realigns the two
@@ -2360,19 +2444,13 @@ def _make_policy_adapter_skill(
             # IK shim translates if the adapter's output semantics
             # differ.
             policy_action = np.asarray(action_array, dtype=np.float32)
-            if robot_to_policy is not None and policy_action.shape[0] == len(robot_to_policy):
-                robot_action = np.empty_like(policy_action)
-                for i, j in enumerate(robot_to_policy):
-                    val = float(policy_action[j])
-                    # Symmetric to the state path: convert action back
-                    # from degrees only when the checkpoint declares
-                    # joints in degrees, and only for non-gripper
-                    # channels.
-                    if joint_units_are_degrees and not (policy_is_gripper and policy_is_gripper[j]):
-                        val = math.radians(val)
-                    robot_action[i] = val
-            else:
-                robot_action = policy_action
+            # Symmetric to the state path: deg->rad conversion runs on every path
+            # (identity perm when no reorder) so a matching-order checkpoint
+            # (SO-101) reaches the radians Action contract instead of passing
+            # through raw (~57x too large → the arm slams its limits).
+            robot_action = _policy_action_to_robot(
+                policy_action, robot_to_policy, joint_units_are_degrees, policy_is_gripper
+            )
             # One-shot stderr diagnostic so the launch's stdout shows
             # what's actually being commanded. Print the FIRST step
             # (or every 50th) to catch policy saturation without spam.

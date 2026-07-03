@@ -892,6 +892,24 @@ class ActionRepresentation(str, Enum):
     CARTESIAN_POSE = "cartesian_pose"
 
 
+class JointUnits(str, Enum):
+    """Angular units a joint-position checkpoint was trained in.
+
+    A joint-position VLA consumes state and emits actions in ONE angular
+    convention (whatever its training dataset recorded). openral's
+    :class:`JointState` / :class:`Action` contract is **radians**, so the
+    skill_runner must convert deg<->rad at the policy boundary when the
+    checkpoint is in degrees. Getting this wrong is not subtle: feeding a
+    degrees-trained policy radians makes every observation ~57x too small
+    (out-of-distribution -> garbage actions), and emitting its degree actions
+    as radians makes the HAL command ~57x too large (the arm slams its
+    limits). Declaring it on the manifest removes the fragile runtime guess.
+    """
+
+    DEGREES = "degrees"
+    RADIANS = "radians"
+
+
 class RSkillAction(str, Enum):
     """Closed vocabulary of high-level action verbs an rSkill can perform.
 
@@ -3177,6 +3195,13 @@ class ActionContract(BaseModel):
     dim: int = Field(gt=0)
     representation: ActionRepresentation | None = None
     slots: list[ActionSlot] | None = None
+    # Angular convention the checkpoint's joint state/action are in. openral's
+    # Action/JointState contract is radians, so the skill_runner converts
+    # deg↔rad at the policy boundary when this is DEGREES. When None the runner
+    # falls back to a fragile stats-magnitude heuristic — declare it explicitly
+    # for joint-position checkpoints (a wrong guess sends ~57x commands and the
+    # arm slams its limits). Governs BOTH the state fed in and the action out.
+    joint_units: JointUnits | None = None
 
     @model_validator(mode="after")
     def _validate_slots_cover_dim(self) -> ActionContract:
