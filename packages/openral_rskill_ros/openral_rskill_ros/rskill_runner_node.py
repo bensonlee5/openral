@@ -1786,83 +1786,6 @@ class _SimpleEnvCfg:
         self.scene = _SimpleSceneCfg(cameras=cameras)
 
 
-def _detect_joint_units_are_degrees(adapter: object) -> bool:
-    """Inspect the loaded normalizer's state stats to infer the checkpoint's joint units.
-
-    Different OpenArm pi05 checkpoints use different conventions:
-
-    * ``yuto-urushima/openarm_pickplace_*`` /
-      ``OpenRAL/rskill-pi05-openarm-pickplace-*`` record state +
-      action in DEGREES (the canonical lerobot OpenArm SDK
-      convention — ``logger.debug(f"Clipped {motor_name} from
-      {position:.2f}° to {clipped_position:.2f}°")`` lives in
-      ``lerobot/robots/openarm_follower/openarm_follower.py:282``).
-    * ``mddoai/pi05_openarm_*`` records in RADIANS (state quantiles
-      align with ``robots/openarm/robot.yaml``'s ``position_limits``
-      in radians — e.g. ``L_j4.min/max = 0.299/2.438`` rad ↔ yaml
-      ``[0.0, 2.44346]``).
-
-    Decoded by walking the preprocessor pipeline to find the
-    ``normalizer_processor`` step's loaded ``observation.state`` stats —
-    ``q99`` for quantile-normalized checkpoints, falling back to
-    ``max``/``min``/``std`` for MEAN_STD checkpoints (SmolVLA SO-101).
-    If any stat magnitude exceeds ``π`` (3.14) — physically impossible
-    in radians for a manipulator joint — the checkpoint is in degrees.
-    Defaults to radians on any introspection failure (the safer
-    default — a missed deg→rad conversion sends large numbers; a
-    spurious one quietly compresses them).
-    """
-    try:
-        pipeline = adapter._preprocessor  # type: ignore[attr-defined]
-        for step in getattr(pipeline, "steps", []):
-            # lerobot's NormalizerProcessorStep keeps the loaded tensors in
-            # ``_tensor_stats`` (nested {feature: {stat: tensor}}); ``stats`` is a
-            # human-readable mirror that is EMPTY until load_state_dict
-            # reconstructs it — so ``_tensor_stats`` is the reliable source. Check
-            # all three so this works across processor versions.
-            stats = (
-                getattr(step, "stats", None)
-                or getattr(step, "_tensor_stats", None)
-                or getattr(step, "_stats", None)
-            )
-            if not stats:
-                continue
-            # Two stats layouts exist across lerobot processor versions:
-            # flat ("observation.state.q99" → tensor) and nested
-            # ("observation.state" → {"q99"/"max"/"min"/"std": tensor}).
-            # And two stat families: quantile (q99, pi05-style) and
-            # MEAN_STD (mean/std/min/max — SmolVLA SO-101 checkpoints
-            # normalize with these; they carry no q99 at all, which
-            # previously made this heuristic silently default a
-            # degrees-trained checkpoint to radians).
-            candidates: list[object] = []
-            nested = stats.get("observation.state")
-            if isinstance(nested, dict):
-                candidates.extend(nested.get(key) for key in ("q99", "max", "min", "std"))
-            else:
-                candidates.append(stats.get("observation.state.q99"))
-                candidates.extend(
-                    stats.get(f"observation.state.{key}") for key in ("max", "min", "std")
-                )
-            # Stats may be torch tensors OR numpy arrays depending on the
-            # processor version — builtin ``abs()`` handles both.
-            tensors = [c for c in candidates if c is not None and hasattr(c, "max")]
-            if not tensors:
-                continue
-            # The vector layout is checkpoint-specific, but the *peak*
-            # magnitude across all channels is enough: any
-            # radians-encoded arm joint stays below π regardless of
-            # position, while a degrees-encoded q99/max/std hits 90+
-            # for the elbows. Use 5 rad ≈ 286° as the threshold so
-            # gripper outliers (custom motor unit, can be > 1 in
-            # either convention) don't trip the heuristic.
-            peak = max(float(abs(t).max()) for t in tensors)
-            return peak > 5.0
-    except Exception:  # reason: introspection across processor versions; never fatal
-        pass
-    return False
-
-
 def _effective_perm(robot_to_policy: list[int] | None, n: int) -> list[int]:
     """The joint permutation to use, defaulting to identity when there's no reorder.
 
@@ -2204,19 +2127,38 @@ def _make_policy_adapter_skill(
     # skill-build time; see `_sensor_name_to_vla_slot`.
     sensor_to_slot = _sensor_name_to_vla_slot(description)
     # Joint units govern the deg↔rad conversion at the policy boundary. Prefer
-    # the manifest's EXPLICIT declaration (action_contract.joint_units) — the
-    # stats-magnitude heuristic is fragile (it silently defaulted a
-    # degrees-trained SmolVLA SO-101 checkpoint to radians, which fed the policy
-    # ~57× too-small state and emitted ~57× too-large HAL commands → the arm
-    # slammed its limits). Fall back to the heuristic only when undeclared.
-    _declared_units = getattr(getattr(manifest, "action_contract", None), "joint_units", None)
+    # the manifest's EXPLICIT declaration (action_contract.joint_units). issue
+    # #135: there is no runtime guess anymore — the old stats-magnitude heuristic
+    # was fragile (it silently defaulted a degrees-trained SmolVLA SO-101
+    # checkpoint to radians, feeding the policy ~57× too-small state and emitting
+    # ~57× too-large HAL commands → the arm slammed its limits). Every
+    # joint-position rSkill now declares its verified units
+    # (RSkillManifest._check_joint_units_declared enforces it at load). A
+    # joint-position skill reaching the runner without a declaration is a hard
+    # error, not a silent radians default. EE-space skills legitimately leave it
+    # None — their action is not joint angles, so no deg↔rad conversion applies.
+    _action_contract = getattr(manifest, "action_contract", None)
+    _declared_units = getattr(_action_contract, "joint_units", None)
     if _declared_units is not None:
-        _units_str = str(getattr(_declared_units, "value", _declared_units))
-        joint_units_are_degrees = _units_str == "degrees"
-        _units_source = "manifest"
+        joint_units_are_degrees = (
+            str(getattr(_declared_units, "value", _declared_units)) == "degrees"
+        )
     else:
-        joint_units_are_degrees = _detect_joint_units_are_degrees(adapter)
-        _units_source = "heuristic"
+        from openral_core.exceptions import ROSConfigError
+        from openral_core.schemas import ActionRepresentation
+
+        if (
+            getattr(_action_contract, "representation", None)
+            is ActionRepresentation.JOINT_POSITIONS
+        ):
+            raise ROSConfigError(
+                f"rskill_runner_node: skill {getattr(manifest, 'name', '?')!r} has "
+                "action_contract.representation='joint_positions' but no "
+                "action_contract.joint_units. Declare 'degrees' or 'radians' "
+                "(verified against the checkpoint's normalizer stats) — the runner "
+                "no longer guesses the units (issue #135)."
+            )
+        joint_units_are_degrees = False
     # Print to stderr so the diagnostic shows up in the launch's
     # stitched-together stdout (structlog's OTel sink doesn't surface
     # there). One-time event at build-time — keeps the per-step
@@ -2225,7 +2167,7 @@ def _make_policy_adapter_skill(
         f"[rskill_runner_node] policy_adapter.skill_built "
         f"skill={getattr(manifest, 'name', '?')!r} "
         f"joint_units={'degrees' if joint_units_are_degrees else 'radians'} "
-        f"({_units_source}) "
+        f"(manifest) "
         f"perm={robot_to_policy} "
         f"is_gripper={policy_is_gripper}",
         file=sys.stderr,
