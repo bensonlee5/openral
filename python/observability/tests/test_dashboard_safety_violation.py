@@ -205,14 +205,13 @@ def test_estopped_flag_defaults_false() -> None:
 
 
 def test_estopped_flag_latches_on_violation_and_clears_on_ok() -> None:
-    """The separate Reset control's visibility follows the kernel latch.
+    """The e-stop button's mode follows the kernel latch.
 
     A violation (self-collision, envelope, or an /openral/estop drop) latches
-    the kernel → ``estopped`` True → the UI reveals the Reset e-stop button. A
-    subsequent passing check means the kernel is running clean again →
-    ``estopped`` False → Reset is hidden. The red E-STOP is always present and
-    always a stop; only Reset is state-driven. Self-corrects after a reset with
-    no rclpy node.
+    the kernel → ``estopped`` True → the single button switches to Reset e-stop.
+    A subsequent passing check means the kernel is running clean again →
+    ``estopped`` False → the button switches back to E-STOP. Self-corrects after
+    a reset with no rclpy node.
     """
     store = TelemetryStore()
     store.ingest_spans(_wrap(_safety_span(_VIOLATION_ATTRS)))
@@ -271,3 +270,41 @@ def test_skill_failure_while_estopped_is_warning() -> None:
     store.ingest_spans(_wrap(_skill_failure_span("aborted")))
     ev = [e for e in store.snapshot()["events"] if e["kind"] == "openral.event.skill_failure"]
     assert ev and ev[0]["severity"] == "warn"
+
+
+def test_skill_failure_survives_flood_even_when_warn() -> None:
+    """A latched (warn) skill_failure must still leave a durable trace + reason.
+
+    Regression: skill_failure downgraded to "warn" while e-stopped used to fall
+    out of the protected lane and get evicted by the 30 Hz read_state stream in
+    seconds — the counter climbed but the event log showed nothing (the operator
+    couldn't see WHY the skill stopped). It is now protected by kind regardless
+    of severity.
+    """
+    store = TelemetryStore()
+    store.set_estopped(True)
+    store.ingest_spans(_wrap(_skill_failure_span("aborted")))
+
+    # Flood the 200-slot main ring well past capacity — what evicts it live.
+    start = time.time_ns()
+    flood = [
+        Span(
+            trace_id=b"\x02" * 16,
+            span_id=bytes([i % 256]) * 8,
+            name="hal.read_state",
+            start_time_unix_nano=start,
+            end_time_unix_nano=start + 1_000_000,
+            attributes=_attrs({"openral.hal.adapter": "so100"}),
+            status=Status(code=0),
+        )
+        for i in range(300)
+    ]
+    store.ingest_spans(_wrap(*flood))
+
+    snap = store.snapshot()
+    sf = [e for e in snap["events"] if e["kind"] == "openral.event.skill_failure"]
+    assert sf, "latched skill_failure was evicted — no durable trace"
+    assert sf[0]["severity"] == "warn"
+    assert "aborted" in sf[0]["title"]  # the reason is carried on the surviving row
+    # Counter still tallies it too.
+    assert snap["counters"]["openral.event.skill_failure"] == 1
