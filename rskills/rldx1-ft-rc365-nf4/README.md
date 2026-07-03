@@ -1,19 +1,25 @@
 ---
-tags:
-  - openral
-  - rskill
-  - rldx
-  - vla
-  - panda_mobile
-  - robocasa
-  - kitchen
-  - manipulation
-  - non-commercial
-license: other
-license_name: rlwrld-model-license-v1.0
-license_link: https://huggingface.co/RLWRLD/RLDX-1-PT
 language:
-  - en
+- en
+license: other
+license_name: rlwrld-non-commercial
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- rldx
+- vision-language-action
+- nf4
+- 4-bit
+- panda_mobile
+- openral
+- vla
+- robocasa
+- kitchen
+- manipulation
+- non-commercial
+inference: false
+license_link: https://huggingface.co/RLWRLD/RLDX-1-PT
 ---
 
 # rskill-rldx1-ft-rc365-nf4

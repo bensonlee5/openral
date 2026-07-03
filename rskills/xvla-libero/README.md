@@ -1,15 +1,20 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - xvla
-  - lerobot
-  - vla
-  - libero
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- xvla
+- lerobot
+- vision-language-action
+- franka_panda
+- vla
+- libero
+- manipulation
+inference: false
 ---
 
 # rskill-xvla-libero

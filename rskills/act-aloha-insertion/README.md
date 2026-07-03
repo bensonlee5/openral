@@ -1,16 +1,20 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - act
-  - lerobot
-  - aloha
-  - bimanual
-  - manipulation
-  - insertion
-license: mit
 language:
-  - en
+- en
+license: mit
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- act
+- lerobot
+- vision-language-action
+- aloha
+- bimanual
+- manipulation
+- insertion
+inference: false
 ---
 
 # rskill-act-aloha-insertion

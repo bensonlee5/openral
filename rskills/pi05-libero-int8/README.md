@@ -1,16 +1,26 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - pi05
-  - lerobot
-  - vla
-  - libero
-  - manipulation
+language:
+- en
 license: other
 license_name: permissive-research
-language:
-  - en
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- pi05
+- lerobot
+- vision-language-action
+- nf4
+- 4-bit
+- franka_panda
+- vla
+- libero
+- manipulation
+base_model:
+- lerobot/pi05_libero_finetuned_v044
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-pi05-libero-int8

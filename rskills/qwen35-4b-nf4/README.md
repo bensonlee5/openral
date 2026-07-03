@@ -1,19 +1,24 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - vlm
-  - video-language-model
-  - scene-understanding
-  - spatial-reasoning
-  - qwen
-  - nf4
-  - bitsandbytes
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- nf4
+- 4-bit
+- any
+- vlm
+- video-language-model
+- scene-understanding
+- spatial-reasoning
+- qwen
+- bitsandbytes
 base_model:
-  - Qwen/Qwen3.5-4B
+- Qwen/Qwen3.5-4B
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-qwen35-4b-nf4

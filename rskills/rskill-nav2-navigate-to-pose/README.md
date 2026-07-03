@@ -1,12 +1,15 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - ros2
-  - nav2
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- ros2
+- mobile_base
+- nav2
+inference: false
 ---
 
 # rskill-nav2-navigate-to-pose

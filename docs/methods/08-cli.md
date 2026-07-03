@@ -88,6 +88,15 @@ Hard gate consumed by `tools/rskill_publisher.py` (and printed in dry-run mode):
 - `format_report(report) -> str` — Human-readable summary used by the publisher dry-run.
 - Module-level constants: `README_REQUIRED_SECTIONS`, `PLACEHOLDER_SENTINELS`, `PLACEHOLDER_MANIFEST_DESCRIPTION_MARKERS`, `DELEGATION_MARKER_NAME`.
 
+### `python/cli/src/openral_cli/_rskill_readme.py`
+_Derive an HF model-card README from an rSkill manifest (manifest = single source of truth, CLAUDE.md §1.3)._
+
+The manifest-derived model-card **front-matter** (`license` / `license_name`, `library_name`, `pipeline_tag`, `tags`, `base_model` + `base_model_relation`, `datasets`, `inference`) is emitted uniformly so every published repo — **private OR public** — carries a consistent, discoverable card. `tools/rskill_publisher.py` builds it at publish time (README excluded from the folder upload, then rebuilt); the human-written prose body is preserved verbatim. Hand-curated extras already on the in-tree README's front-matter (extra `tags`, a curated `datasets`) are unioned in ("best of both"); derived fields win on conflict.
+
+- `build_rskill_frontmatter(manifest: RSkillManifest) -> dict[str, Any]` — Pure, deterministic derivation of the model-card front-matter dict (no network). `base_model` comes from `source_repo` (NF4 repos self-host weights via `weights_uri`); `base_model_relation` is `quantized` when a quantization block is present, else `finetune`. (L~86)
+- `render_frontmatter(fm: dict[str, Any]) -> str` — Render the dict as a `---`-fenced YAML block, stable field order.
+- `build_rskill_readme(manifest: RSkillManifest, body: str) -> str` — Full README = merged front-matter + prose body; strips any existing front-matter from `body` and merges its curated extras. Idempotent. (L~150)
+
 ### `python/cli/src/openral_cli/deploy_sim.py`
 _`openral deploy sim` — boot the full ROS graph against a digital-twin HAL via `ros2 launch openral_rskill_ros sim_e2e.launch.py` (one generic launch, no `--rskill`)._
 

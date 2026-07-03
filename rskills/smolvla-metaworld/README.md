@@ -1,15 +1,22 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - smolvla
-  - lerobot
-  - vla
-  - metaworld
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- smolvla
+- lerobot
+- vision-language-action
+- sawyer
+- vla
+- metaworld
+- manipulation
+datasets:
+- lerobot/metaworld_mt50
+inference: false
 ---
 
 # rskill-smolvla-metaworld

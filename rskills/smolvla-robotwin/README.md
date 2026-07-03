@@ -1,17 +1,23 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - smolvla
-  - lerobot
-  - vla
-  - aloha_agilex
-  - robotwin
-  - bimanual
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- smolvla
+- lerobot
+- vision-language-action
+- aloha_agilex
+- vla
+- robotwin
+- bimanual
+- manipulation
+datasets:
+- lerobot/robotwin_unified
+inference: false
 ---
 
 # rskill-smolvla-robotwin

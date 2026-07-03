@@ -1,21 +1,26 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - detector
-  - object-detection
-  - visual-grounding
-  - locateanything
-  - nvidia
-  - nf4
-  - bitsandbytes
-license: other
-license_name: nvidia-license
-license_link: https://huggingface.co/nvidia/LocateAnything-3B/blob/main/LICENSE
 language:
-  - en
+- en
+license: other
+license_name: nvidia-non-commercial
+pipeline_tag: object-detection
+tags:
+- OpenRAL
+- rskill
+- detector
+- object-detection
+- nf4
+- 4-bit
+- any
+- visual-grounding
+- locateanything
+- nvidia
+- bitsandbytes
 base_model:
-  - nvidia/LocateAnything-3B
+- nvidia/LocateAnything-3B
+base_model_relation: quantized
+inference: false
+license_link: https://huggingface.co/nvidia/LocateAnything-3B/blob/main/LICENSE
 ---
 
 # rskill-locateanything-3b-nf4

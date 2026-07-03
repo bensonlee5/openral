@@ -1,18 +1,21 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - detector
-  - object-detection
-  - open-vocabulary
-  - zero-shot
-  - omdet-turbo
-  - indoor
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: object-detection
+tags:
+- OpenRAL
+- rskill
+- detector
+- object-detection
+- any
+- open-vocabulary
+- zero-shot
+- omdet-turbo
+- indoor
+inference: false
 base_model:
-  - omlab/omdet-turbo-swin-tiny-hf
+- omlab/omdet-turbo-swin-tiny-hf
 ---
 
 # rskill-omdet-turbo-indoor
