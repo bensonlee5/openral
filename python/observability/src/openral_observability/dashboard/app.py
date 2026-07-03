@@ -26,6 +26,7 @@ import base64
 import binascii
 import contextlib
 import gzip
+import http
 import io
 import json
 import mimetypes
@@ -944,6 +945,10 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915
         # Operator "stop the robot NOW". The persistent publisher (discovered at
         # launch) fires INSTANTLY; only when it's unavailable (standalone / no
         # ROS) do we fall back to the slow, discovery-racing shell-out.
+        # Mark the latch authoritatively: the e-stop aborts the skill, so the
+        # kernel stops emitting safety.check spans and the telemetry-driven flag
+        # would never flip — the Reset control would never appear (observed live).
+        request.app.state.store.set_estopped(True)
         est = getattr(request.app.state, "estop", None)
         if est is not None and est.available:
             est.trigger()
@@ -954,7 +959,13 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915
     async def post_estop_reset(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
         # Operator recovery from a latched safety e-stop. Body lives in a
         # module-level helper to keep create_app() under the statement cap.
-        return await _estop_reset_response(getattr(request.app.state, "estop", None))
+        resp = await _estop_reset_response(getattr(request.app.state, "estop", None))
+        # Clear the latch flag only when the kernel actually accepted the reset
+        # (200); a cooldown rejection (409) leaves the robot latched, so the
+        # Reset control must stay.
+        if resp.status_code == http.HTTPStatus.OK:
+            request.app.state.store.set_estopped(False)
+        return resp
 
     @app.post("/api/skill/execute")
     async def post_skill_execute(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
