@@ -22,6 +22,7 @@ from openral_reasoner import (
     PerceptionEventRecord,
     PromptRecord,
 )
+from openral_reasoner.context import ExecutionEventRecord
 
 
 def _world_state() -> WorldState:
@@ -52,6 +53,41 @@ def test_renders_empty_when_no_state() -> None:
         assert header in text
     assert "(no snapshot yet)" in text
     assert text.count("(none)") == 4  # executions, failures, perception, prompts
+
+
+def test_clear_failures_drops_failure_context_and_bumps_seq() -> None:
+    """E-stop reset clears stale failure/execution context before the next prompt."""
+    r = ContextRenderer()
+    r.append_failure(
+        FailureEventRecord(
+            source="safety",
+            kind=4,
+            severity=2,
+            evidence_json='{"reason":"e-stop aborted the motion"}',
+            rskill_id="OpenRAL/rskill-smolvla-so101-pen",
+            trace_id="0123456789abcdef",
+            stamp_ns=1,
+        )
+    )
+    r.append_execution(
+        ExecutionEventRecord(
+            rskill_id="OpenRAL/rskill-smolvla-so101-pen",
+            outcome="failed",
+            summary="aborted by e-stop",
+            reflection=None,
+            stamp_ns=2,
+        )
+    )
+    seq_before = r.seq
+    assert "e-stop aborted the motion" in r.render(world_state=None)
+    assert "aborted by e-stop" in r.render(world_state=None)
+
+    r.clear_failures()
+
+    text = r.render(world_state=None)
+    assert "e-stop aborted the motion" not in text
+    assert "aborted by e-stop" not in text
+    assert r.seq == seq_before + 1
 
 
 def test_renders_world_state_joint_positions() -> None:
