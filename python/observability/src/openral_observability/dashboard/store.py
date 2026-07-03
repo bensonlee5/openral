@@ -40,6 +40,15 @@ from opentelemetry.proto.trace.v1.trace_pb2 import ResourceSpans, Span
 __all__ = ["TelemetryEvent", "TelemetryStore"]
 
 _EVENT_RING_SIZE = 200
+# A SEPARATE, protected ring for error/fatal events. The main ring is a single
+# FIFO shared with high-rate streams (world_state ~30 Hz, read_state WARN
+# floods), so it fully cycles in ~5-7 s and evicts rare-but-critical events
+# (skill_failure, estop, safety.violation) before an operator can see them —
+# enabling the "Error" filter then shows nothing because the event is already
+# gone from the ring. Errors ALSO land here so they survive the flood; the
+# snapshot merges both lanes.
+_ERROR_EVENT_RING_SIZE = 64
+_ERROR_SEVERITIES = ("error", "fatal")
 _METRIC_SAMPLE_RING_SIZE = 600  # ~5 min at one sample per 500 ms
 _SUBSCRIBER_QUEUE_SIZE = 256
 # OTLP Status.code values per opentelemetry-proto: 0=UNSET, 1=OK, 2=ERROR.
@@ -336,6 +345,9 @@ class TelemetryStore:
         self._last_ingest_ts: float = 0.0
         self._cards: dict[str, _SpanCard] = {}
         self._events: deque[TelemetryEvent] = deque(maxlen=_EVENT_RING_SIZE)
+        # Protected lane: error/fatal events, immune to the high-rate flood that
+        # cycles the main ring in seconds (see _ERROR_EVENT_RING_SIZE).
+        self._error_events: deque[TelemetryEvent] = deque(maxlen=_ERROR_EVENT_RING_SIZE)
         self._counters: dict[str, int] = defaultdict(int)
         self._metrics: dict[str, _MetricSeries] = {}
         # Topical state buckets — one per "topic" the dashboard renders
@@ -553,7 +565,7 @@ class TelemetryStore:
         # most recent activity. Severity escalates on ERROR status.
         severity = "error" if span.status.code == _STATUS_ERROR else "info"
         title = _summarise_span(span.name, attrs, duration_ms)
-        self._events.append(
+        self._append_event(
             TelemetryEvent(
                 ts_unix=ts_unix,
                 kind=span.name,
@@ -569,7 +581,7 @@ class TelemetryStore:
         # reads the reason, not just the bare event name.
         for event in span.events:
             event_attrs = _attrs_to_dict(list(event.attributes))
-            self._events.append(
+            self._append_event(
                 TelemetryEvent(
                     ts_unix=event.time_unix_nano / 1_000_000_000.0,
                     kind=event.name,
@@ -581,6 +593,18 @@ class TelemetryStore:
             if event.name in _COUNTED_EVENTS:
                 self._counters[event.name] += 1
 
+    def _append_event(self, ev: TelemetryEvent) -> None:
+        """Append to the main ring, and mirror error/fatal into the protected lane.
+
+        The protected lane keeps the last :data:`_ERROR_EVENT_RING_SIZE` error
+        events alive even when the high-rate info/debug stream cycles the main
+        ring, so a skill_failure / estop / safety.violation always leaves a
+        durable trace the operator can still find seconds later.
+        """
+        self._events.append(ev)
+        if ev.severity in _ERROR_SEVERITIES:
+            self._error_events.append(ev)
+
     def _record_log(self, record: LogRecord, scope_name: str) -> None:
         """Append one bridged OTLP ``LogRecord`` to the event ring (issue #318)."""
         attrs = _attrs_to_dict(list(record.attributes))
@@ -588,7 +612,7 @@ class TelemetryStore:
         ts_unix = ts_ns / 1_000_000_000.0 if ts_ns else time.time()
         body = _attr_value(record.body)
         title = str(body) if body is not None else scope_name
-        self._events.append(
+        self._append_event(
             TelemetryEvent(
                 ts_unix=ts_unix,
                 kind=scope_name,
@@ -861,7 +885,7 @@ class TelemetryStore:
                 reason = violation["drop_reason"] or "envelope"
                 value = violation["violation_value"]
                 value_s = f" value={value:.4g}" if isinstance(value, (int, float)) else ""
-                self._events.append(
+                self._append_event(
                     TelemetryEvent(
                         ts_unix=ts_unix,
                         kind="safety.violation",
@@ -1010,6 +1034,25 @@ class TelemetryStore:
             return non_hal[0]
         return sorted(self._services)[0]
 
+    def _merged_events(self) -> list[TelemetryEvent]:
+        """Main ring + protected error lane, deduped, most-recent first.
+
+        Error events evicted from the fast-cycling main ring survive in
+        ``_error_events`` and are merged back here, so the event log always
+        carries the last ``_ERROR_EVENT_RING_SIZE`` errors no matter how hard the
+        info/debug stream floods the main ring. Dedup is by object identity (the
+        same event object is appended to both lanes).
+        """
+        seen: set[int] = set()
+        merged: list[TelemetryEvent] = []
+        for ev in (*self._events, *self._error_events):
+            if id(ev) in seen:
+                continue
+            seen.add(id(ev))
+            merged.append(ev)
+        merged.sort(key=lambda e: e.ts_unix, reverse=True)
+        return merged
+
     def _snapshot_locked(self) -> dict[str, Any]:
         return {
             "service_name": self._primary_service(),
@@ -1022,7 +1065,7 @@ class TelemetryStore:
             "identity": dict(self._identity),
             "topics": _deep_copy_topics(self._topics),
             "cards": {k: v.to_json() for k, v in self._cards.items()},
-            "events": [e.to_json() for e in reversed(self._events)],
+            "events": [e.to_json() for e in self._merged_events()],
             "counters": dict(self._counters),
             "metrics": [s.to_json() for s in self._metrics.values()],
         }

@@ -122,11 +122,54 @@ def test_persistent_slot_survives_a_high_rate_span_flood() -> None:
     store.ingest_spans(_wrap(*flood))
 
     snap = store.snapshot()
-    # The raw event is gone from the ring…
-    assert not [e for e in snap["events"] if e["kind"] == "safety.violation"]
-    # …but the persistent slot + counter still carry the violation.
+    # The safety.violation event now SURVIVES the flood via the protected error
+    # lane (it used to be evicted from the shared 200-slot ring within seconds,
+    # leaving no trace) …
+    assert [e for e in snap["events"] if e["kind"] == "safety.violation"]
+    # … and the persistent slot + counter still carry the violation too.
     assert snap["topics"]["safety"]["last_violation"]["drop_reason"] == "collision"
     assert snap["counters"]["openral.event.safety_violation"] == 1
+
+
+def test_error_events_survive_high_rate_flood_via_protected_lane() -> None:
+    """Any error event (skill_failure, estop, ...) outlives the main-ring flood.
+
+    The shared 200-slot event ring cycles in ~seconds under a 30 Hz stream; the
+    protected error lane keeps the last N error/fatal events so the operator can
+    still find WHY the robot stopped. Generic — not tied to safety.violation.
+    """
+    store = TelemetryStore()
+    # An error-status span → a synthesised error-severity event (this is how a
+    # reasoner skill-failure / a HAL estop surface a red row on the dashboard).
+    es = time.time_ns()
+    err_span = Span(
+        trace_id=b"\x07" * 16,
+        span_id=b"\x07" * 8,
+        name="reasoner.skill_failure",
+        start_time_unix_nano=es,
+        end_time_unix_nano=es + 1_000,
+        status=Status(code=2),  # ERROR
+    )
+    store.ingest_spans(_wrap(err_span))
+
+    # Flood the 200-slot main ring well past capacity with info spans.
+    fs = time.time_ns()
+    flood = [
+        Span(
+            trace_id=b"\x01" * 16,
+            span_id=bytes([i % 256]) * 8,
+            name="hal.read_state",
+            start_time_unix_nano=fs,
+            end_time_unix_nano=fs + 1_000,
+            status=Status(code=0),
+        )
+        for i in range(400)
+    ]
+    store.ingest_spans(_wrap(*flood))
+
+    snap = store.snapshot()
+    error_kinds = [e["kind"] for e in snap["events"] if e["severity"] in ("error", "fatal")]
+    assert "reasoner.skill_failure" in error_kinds
 
 
 def test_ok_check_does_not_overwrite_last_violation() -> None:

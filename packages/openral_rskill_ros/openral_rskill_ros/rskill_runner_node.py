@@ -1213,7 +1213,16 @@ if _ROS2_AVAILABLE:
                 self._current_tick_index = 0
 
         def _on_estop(self, _msg: object) -> None:
-            """``/openral/estop`` callback: latch + abort the active goal."""
+            """``/openral/estop`` callback: latch + abort the active goal.
+
+            Idempotent: ``/openral/estop`` is published repeatedly by design
+            (deadman heartbeats, the dashboard's multi-publish to beat discovery
+            races), so only the FIRST message of a latch aborts + logs. Without
+            this guard one e-stop click logged one "aborting in-flight goal" per
+            published message, which read as several skill failures.
+            """
+            if self._estop_latched:
+                return
             self._estop_latched = True
             self.get_logger().error(
                 "rskill_runner.estop_received; "
