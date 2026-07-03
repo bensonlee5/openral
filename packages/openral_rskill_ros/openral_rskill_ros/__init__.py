@@ -16,7 +16,6 @@ from openral_rskill_ros.compose import (
     compose_so100_runtime,
 )
 from openral_rskill_ros.rskill_runner_node import (
-    RskillRunnerNode,
     main,
     make_default_skill_resolver,
     make_local_skill_resolver,
@@ -24,10 +23,16 @@ from openral_rskill_ros.rskill_runner_node import (
 
 __all__ = [
     "ComposedRuntime",
-    "RskillRunnerNode",
     "compose_runtime",
     "compose_so100_runtime",
     "main",
     "make_default_skill_resolver",
     "make_local_skill_resolver",
 ]
+
+try:
+    from openral_rskill_ros.rskill_runner_node import RskillRunnerNode
+except ImportError:
+    pass
+else:
+    __all__.append("RskillRunnerNode")
