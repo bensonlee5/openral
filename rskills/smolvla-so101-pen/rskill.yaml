@@ -116,3 +116,9 @@ action_contract:
   dim: 6
   # ADR-0071 — SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
   representation: "joint_positions"
+  # EXPLICIT joint units — this checkpoint's normalizer stats span ±100 (verified:
+  # observation.state.max=100.0, .min=-99.7, .std=46.5), i.e. DEGREES. The runner
+  # converts deg↔rad at the policy boundary. Declared here so the runner does NOT
+  # rely on the stats-magnitude heuristic, which silently mis-detected this
+  # checkpoint as radians → no conversion → the arm slammed its limits.
+  joint_units: "degrees"
