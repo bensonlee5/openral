@@ -1,16 +1,23 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - smolvla
-  - lerobot
-  - vla
-  - so100
-  - libero
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- smolvla
+- lerobot
+- vision-language-action
+- franka_panda
+- vla
+- so100
+- libero
+- manipulation
+datasets:
+- HuggingFaceVLA/libero
+inference: false
 ---
 
 # rskill-smolvla-libero

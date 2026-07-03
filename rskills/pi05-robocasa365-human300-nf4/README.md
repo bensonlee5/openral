@@ -1,17 +1,24 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - pi05
-  - lerobot
-  - vla
-  - franka
-  - robocasa
-  - kitchen
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- pi05
+- lerobot
+- vision-language-action
+- nf4
+- 4-bit
+- panda_mobile
+- vla
+- franka
+- robocasa
+- kitchen
+- manipulation
+inference: false
 ---
 
 # pi05-robocasa365-human300-nf4

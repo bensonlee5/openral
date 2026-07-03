@@ -1,16 +1,24 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - gr00t
-  - nvidia
-  - vla
-  - franka
-  - libero
-  - manipulation
-license: other
 language:
-  - en
+- en
+license: other
+license_name: nvidia-open-model-license
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- gr00t
+- vision-language-action
+- franka_panda
+- nvidia
+- vla
+- franka
+- libero
+- manipulation
+base_model:
+- nvidia/GR00T-N1.7-LIBERO
+base_model_relation: finetune
+inference: false
 ---
 
 # rskill-gr00t-n17-libero

@@ -1,17 +1,23 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - smolvla
-  - lerobot
-  - vla
-  - franka_panda
-  - maniskill
-  - maniskill3
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- smolvla
+- lerobot
+- vision-language-action
+- franka_panda
+- vla
+- maniskill
+- maniskill3
+- manipulation
+datasets:
+- Calvert0921/SmolVLA_LiftCube_Franka_1000
+inference: false
 ---
 
 # rskill-smolvla-maniskill-franka

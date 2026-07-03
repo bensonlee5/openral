@@ -1,17 +1,22 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - diffuser-actor
-  - 3d-diffuser-actor
-  - rlbench
-  - coppeliasim
-  - peract
-  - manipulation
-  - franka
-license: mit
 language:
-  - en
+- en
+license: mit
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- diffuser_actor
+- vision-language-action
+- franka_panda
+- diffuser-actor
+- 3d-diffuser-actor
+- rlbench
+- coppeliasim
+- peract
+- manipulation
+- franka
+inference: false
 ---
 
 <!--

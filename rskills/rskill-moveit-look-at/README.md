@@ -1,12 +1,22 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - ros2
-  - moveit
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- ros2
+- moveit
+- franka_panda
+- ur5e
+- ur10e
+- so100_follower
+- openarm
+- rizon4
+- sawyer
+- widowx
+inference: false
 ---
 
 # rskill-moveit-look-at

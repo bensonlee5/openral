@@ -65,6 +65,7 @@ from openral_cli._rskill_doc_validator import (  # noqa: E402
     format_report,
     validate_rskill_docs,
 )
+from openral_cli._rskill_readme import build_rskill_readme  # noqa: E402
 from openral_core.exceptions import ROSConfigError  # noqa: E402
 
 log = structlog.get_logger(__name__)
@@ -386,14 +387,28 @@ def _publish(
         _ensure_private(api, repo_id)
 
     # ── 3. Upload files ────────────────────────────────────────────────────────
+    # README.md is excluded from the folder upload and rebuilt below: the HF
+    # model-card front-matter is DERIVED from the manifest so every published repo
+    # — private OR public — carries a consistent, discoverable card, regardless of
+    # whatever front-matter the in-tree README happens to have.
     log.info("rskill_publisher.uploading", skill_dir=str(skill_dir), repo_id=repo_id)
     try:
         api.upload_folder(
             folder_path=str(skill_dir),
             repo_id=repo_id,
             repo_type="model",
-            ignore_patterns=_IGNORE_PATTERNS,
+            ignore_patterns=[*_IGNORE_PATTERNS, "README.md"],
             commit_message=f"chore: publish rSkill {manifest.name} v{manifest.version}",
+        )
+        readme_path = skill_dir / "README.md"
+        body = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
+        card = build_rskill_readme(manifest, body)
+        api.upload_file(
+            path_or_fileobj=card.encode("utf-8"),
+            path_in_repo="README.md",
+            repo_id=repo_id,
+            repo_type="model",
+            commit_message=f"docs: HF model card for {manifest.name} v{manifest.version}",
         )
     except Exception as exc:
         log.error("rskill_publisher.upload_failed", error=str(exc))

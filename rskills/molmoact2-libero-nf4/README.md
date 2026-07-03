@@ -1,15 +1,24 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - molmoact2
-  - transformers
-  - vla
-  - libero
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- molmoact2
+- vision-language-action
+- nf4
+- 4-bit
+- franka_panda
+- transformers
+- vla
+- libero
+- manipulation
+base_model:
+- allenai/MolmoAct2-LIBERO
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-molmoact2-libero-nf4

@@ -1,17 +1,21 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - detector
-  - object-detection
-  - rt-detr
-  - onnx
-  - coco
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: object-detection
+tags:
+- OpenRAL
+- rskill
+- detector
+- object-detection
+- any
+- rt-detr
+- onnx
+- coco
 base_model:
-  - PekingU/rtdetr_r18vd_coco_o365
+- PekingU/rtdetr_r18vd_coco_o365
+base_model_relation: finetune
+inference: false
 ---
 
 # rskill-rtdetr-coco-r18

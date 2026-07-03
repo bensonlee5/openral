@@ -1,17 +1,26 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - pi05
-  - lerobot
-  - vla
-  - openarm
-  - bimanual
-  - manipulation
-license: other
-license_name: permissive-research
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- pi05
+- lerobot
+- vision-language-action
+- nf4
+- 4-bit
+- openarm
+- vla
+- bimanual
+- manipulation
+base_model:
+- mddoai/pi05_openarm_vision
+base_model_relation: quantized
+inference: false
+license_name: permissive-research
 ---
 
 # pi05-openarm-mddoai-vision

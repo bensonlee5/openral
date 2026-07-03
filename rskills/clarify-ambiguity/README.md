@@ -1,3 +1,15 @@
+---
+language:
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- any
+inference: false
+---
+
 # rskill-clarify-ambiguity
 
 A `kind: playbook` rSkill (ADR-0072): a symbolic S2 **decision procedure** the

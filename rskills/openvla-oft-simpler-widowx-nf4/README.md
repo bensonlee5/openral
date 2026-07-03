@@ -1,17 +1,23 @@
 ---
-tags:
-  - openral
-  - rskill
-  - openvla
-  - openvla-oft
-  - vla
-  - widowx
-  - simpler
-  - maniskill3
-  - manipulation
-license: mit
 language:
-  - en
+- en
+license: mit
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- openvla
+- vision-language-action
+- nf4
+- 4-bit
+- widowx
+- openral
+- openvla-oft
+- vla
+- simpler
+- maniskill3
+- manipulation
+inference: false
 ---
 
 # rskill-openvla-oft-simpler-widowx-nf4
