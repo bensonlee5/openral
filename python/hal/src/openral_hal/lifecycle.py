@@ -943,6 +943,12 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("robot_ip", "")
             self.declare_parameter("fci_ip", "")
             self.declare_parameter("id", "")
+            # Calibration directory override (ADR-0032). `deploy run` forwards
+            # the RobotEnvironment's `hal.params.calibration_dir` so a deploy can
+            # load a calibration committed next to its config instead of the
+            # ambient HF cache (which may hold several stale `<id>.json` for one
+            # arm). Empty string = unset (lerobot's default HF cache dir).
+            self.declare_parameter("calibration_dir", "")
             # ADR-0066 — scene-level MJCF composition (a `SceneComposition` as
             # JSON). `openral deploy sim` forwards the DeployScene's `composition`
             # here so the SCENE (not the robot manifest) owns its arena. Takes
@@ -1024,7 +1030,7 @@ if _ROS2_AVAILABLE:
             # the params declared in __init__). Only non-empty values are
             # threaded so build_hal's manifest-defaults fallback still applies
             # per-key. mode is validated by build_hal (sim|real).
-            for _transport_key in ("port", "robot_ip", "fci_ip", "id"):
+            for _transport_key in ("port", "robot_ip", "fci_ip", "id", "calibration_dir"):
                 _value = self.get_parameter(_transport_key).get_parameter_value().string_value
                 if _value:
                     transport[_transport_key] = _value

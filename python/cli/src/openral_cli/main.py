@@ -3223,6 +3223,13 @@ def deploy_run(
 
     overrides = _parse_hal_overrides(hal)
 
+    # A committed, config-relative `calibration_dir` (deploy owns its calibration
+    # instead of the ambient HF cache) is resolved against THIS config's
+    # directory so it works regardless of the CWD `deploy run` is invoked from.
+    cal_dir = overrides.get("calibration_dir")
+    if isinstance(cal_dir, str) and cal_dir and not Path(cal_dir).is_absolute():
+        overrides["calibration_dir"] = str((config.parent / cal_dir).resolve())
+
     try:
         invocation = resolve_launch_invocation(
             config=config,

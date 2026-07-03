@@ -18,9 +18,15 @@ hal:
   params:
     calibrate_on_connect: false
     # lerobot calibration identity — the arm was calibrated with
-    # `lerobot-calibrate --robot.id=so_follower`, so the stored file is
-    # ~/.cache/huggingface/lerobot/calibration/robots/so_follower/so_follower.json
+    # `lerobot-calibrate --robot.id=so_follower`. The calibration is COMMITTED
+    # next to this config (deployments/calibration/so_follower.json) and loaded
+    # from there, so the deploy owns its calibration instead of depending on
+    # whatever `<id>.json` happens to be in the ambient HF cache (that dir held
+    # two differing so_follower calibrations for one arm — a silent footgun).
+    # calibration_dir is resolved relative to THIS config file's directory by
+    # `openral deploy run`. lerobot loads `<calibration_dir>/<id>.json`.
     id: so_follower
+    calibration_dir: calibration
 sensors:
 - sensor_id: top
   backend: gstreamer
