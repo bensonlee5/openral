@@ -250,7 +250,7 @@ class TestDetectorRunnerKindGuard:
         can use a minimal pipeline (``videotestsrc ! fakesink``) with no tee —
         the ``TeeManager`` constructor is never reached.
         """
-        vla_fixture = _REPO_ROOT / "rskills" / "pi05-libero" / "rskill.yaml"
+        vla_fixture = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
         assert vla_fixture.exists(), f"vla fixture not found: {vla_fixture}"
         with open(vla_fixture, encoding="utf-8") as fh:
             vla_data = yaml.safe_load(fh)
