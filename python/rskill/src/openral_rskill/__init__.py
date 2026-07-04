@@ -17,6 +17,7 @@ backends (``PyTorchRuntime``, ``ONNXRuntime``, ``TensorRTRuntime``) are **not** 
 Import them explicitly when their dependencies are installed:
 
     from openral_rskill.smolvla import SmolVLAAdapter, SO100SmolVLASkill
+    from openral_rskill.smolvla_export import export_smolvla_split_onnx
     from openral_rskill.runtime_pytorch import PyTorchRuntime
     from openral_rskill.runtime_onnx import ONNXRuntime
     from openral_rskill.runtime_tensorrt import TensorRTRuntime
