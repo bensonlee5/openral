@@ -229,7 +229,7 @@ COPY python/ python/
 # the venv in the runtime stage so both gi and rclpy share the same
 # glib link.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --all-packages
+    uv sync --frozen --all-packages --group tensorrt
 
 # Copy the colcon-buildable trees AFTER the venv resolve so a
 # packages/ tweak doesn't bust the (much larger) Python dep layer.
@@ -274,6 +274,8 @@ RUN ln -sfT /usr/lib/python3/dist-packages/gi \
 #   - openral_prompt_router:         ADR-0018 F10 prompt fan-in
 #   - openral_safety / _watchdog:    ADR-0018 F5 + deadman
 #   - openral_human_estop:           ADR-0018 F5 forwarder
+#   - openral_foxglove_bringup:      read-only topic allowlists imported by
+#                                    openral_rskill_ros launch files
 #   - openral_rskill_ros:            ADR-0018 F1 ExecuteSkill action
 #   - openral_octomap_bridge:        ADR-0030 octree→OccupancyVoxels
 #                                    bridge feeding the kernel voxel check
@@ -305,6 +307,7 @@ RUN bash -lc 'set -eo pipefail \
                           openral_safety_watchdog \
                           openral_safety_kernel \
                           openral_human_estop \
+                          openral_foxglove_bringup \
                           openral_rskill_ros \
                           openral_octomap_bridge \
         --cmake-args -DPython3_EXECUTABLE=/workspace/.venv/bin/python \
@@ -483,7 +486,7 @@ RUN tar -xvf /tmp/deepstream.tbz2 -C / \
     # Drop samples to shrink the image — keep only libs + gst-plugins.
     && rm -rf /opt/nvidia/deepstream/deepstream-*/samples
 
-ENV LD_LIBRARY_PATH=/opt/nvidia/deepstream/deepstream/lib:${LD_LIBRARY_PATH} \
+ENV LD_LIBRARY_PATH=/workspace/.venv/lib/python3.12/site-packages/tensorrt_libs:/workspace/.venv/lib/python3.12/site-packages/nvidia/cuda_nvrtc/lib:/workspace/.venv/lib/python3.12/site-packages/nvidia/cuda_runtime/lib:/workspace/install/lib:/opt/nvidia/deepstream/deepstream/lib:${LD_LIBRARY_PATH} \
     GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
 
 # ── Final stage ──────────────────────────────────────────────────────

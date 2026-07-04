@@ -7,6 +7,7 @@ pycuda). Skipped without tensorrt/cuda-python/GPU."""
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
@@ -95,3 +96,56 @@ def test_nvmm_detector_devptr_to_objectsmetadata(tmp_path: Path) -> None:
     assert isinstance(md, ObjectsMetadata)
     assert md.detections[0].label == "car"
     assert md.sensor_id == "head_rgb"
+
+
+def test_nvmm_detector_reports_timings_without_gpu(tmp_path: Path, monkeypatch: Any) -> None:
+    from openral_runner.backends.gstreamer import nvmm_detector
+
+    class _Runtime:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        def serialized_engine(self, _: Path) -> bytes:
+            return b"engine"
+
+    class _Executor:
+        def __init__(self, engine_bytes: bytes, **_: Any) -> None:
+            assert engine_bytes == b"engine"
+
+        def output_shapes(self) -> list[tuple[str, tuple[int, ...]]]:
+            return [("logits", (1, 1, 2)), ("boxes", (1, 1, 4))]
+
+        def infer_rgba_devptr(self, *_: Any, **__: Any) -> dict[str, np.ndarray]:
+            return {
+                "logits": np.array([[[0.0, 9.0]]], dtype=np.float32),
+                "boxes": np.array([[[0.5, 0.5, 0.4, 0.4]]], dtype=np.float32),
+            }
+
+        def close(self) -> None:
+            pass
+
+    def _postprocess(*_: Any, **__: Any) -> Any:
+        return "metadata"
+
+    monkeypatch.setattr("openral_rskill.runtime_tensorrt.TensorRTRuntime", _Runtime)
+    monkeypatch.setattr(nvmm_detector, "TrtNvmmExecutor", _Executor)
+    monkeypatch.setattr(nvmm_detector, "postprocess_rtdetr", _postprocess)
+
+    onnx_path = tmp_path / "model.onnx"
+    onnx_path.write_bytes(b"onnx")
+    det = nvmm_detector.NvmmObjectsDetector(
+        onnx_path,
+        labels=["bg", "car"],
+        model_id="rtdetr-const",
+        input_size=(64, 64),
+    )
+
+    assert {"engine_ms", "executor_init_ms", "init_total_ms"} <= set(det.last_timings_ms)
+    result = det.detect_nvmm(
+        SimpleNamespace(gpu_ptr=1, width=64, height=64, pitch=256),
+        "head_rgb",
+    )
+
+    assert result == "metadata"
+    assert {"trt_infer_ms", "postprocess_ms", "detect_total_ms"} <= set(det.last_timings_ms)
+    assert all(value >= 0.0 for value in det.last_timings_ms.values())
