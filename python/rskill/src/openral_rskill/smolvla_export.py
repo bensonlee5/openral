@@ -18,8 +18,14 @@ preprocessing:
 So the model is exported as **two static-shape graphs** split at the embedding
 boundary, with both blockers patched only for the duration of the export:
 
-- ``vision_encoder.onnx``: pixels ``(1, 3, H, W)`` -> SigLIP tower + connector
-  -> image embeddings ``(1, T_img, hidden)``. Run once per camera.
+- ``vision_encoder.onnx``: pixels ``(n_cameras, 3, H, W)`` -> SigLIP tower +
+  connector -> image embeddings ``(n_cameras, T_img, hidden)``. All cameras
+  ride one pass as the **batch** axis: the tower is per-sample throughout
+  (patch conv, within-image attention, per-sample pixel-shuffle connector),
+  so batching is mathematically identical to per-camera passes, and the host
+  reshape ``(N, T, hidden) -> (1, N*T, hidden)`` reproduces ``embed_prefix``'s
+  per-camera concat order exactly (no special tokens interleave when
+  ``add_image_special_tokens=False``, which the export enforces).
 - ``policy_graph.onnx``: image embeddings (all cameras concatenated), language
   tokens/masks, projected-state input, and flow-matching noise -> the full
   action chunk ``(1, chunk_size, max_action_dim)``. Internally: prefix pass
@@ -60,8 +66,9 @@ class SmolVLAOnnxPaths:
     """Filesystem locations of the two exported graphs.
 
     Attributes:
-        vision_onnx: Per-camera SigLIP vision-encoder graph.
+        vision_onnx: SigLIP vision-encoder graph; batch axis = camera count.
         policy_onnx: Prefix + unrolled flow-matching policy graph.
+        n_cameras: Camera count baked into both graphs (vision batch size).
         image_tokens_per_camera: Vision-graph output tokens per camera; the
             policy graph's ``img_embs`` input length is
             ``n_cameras * image_tokens_per_camera``.
@@ -69,6 +76,7 @@ class SmolVLAOnnxPaths:
 
     vision_onnx: Path
     policy_onnx: Path
+    n_cameras: int
     image_tokens_per_camera: int
 
 
@@ -295,8 +303,9 @@ def export_smolvla_split_onnx(
             caller owns HF-cache/offline concerns).
         out_dir: Directory receiving ``vision_encoder.onnx`` and
             ``policy_graph.onnx`` (+ external-data sidecars when large).
-        n_cameras: Camera count baked into the policy graph's ``img_embs``
-            input length. Defaults to ``len(policy.config.image_features)``.
+        n_cameras: Camera count baked into the vision graph's batch axis and
+            the policy graph's ``img_embs`` input length. Defaults to
+            ``len(policy.config.image_features)``.
 
     Returns:
         :class:`SmolVLAOnnxPaths` with both graph paths.
@@ -329,7 +338,7 @@ def export_smolvla_split_onnx(
     policy_path = out_dir / "policy_graph.onnx"
 
     with torch.no_grad(), _export_safe_patches():
-        pixels = torch.zeros(1, 3, height, width, dtype=torch.float32)
+        pixels = torch.zeros(n_cameras, 3, height, width, dtype=torch.float32)
         t0 = time.perf_counter()
         vision = _vision_encoder_module(model)
         img_emb_example = vision(pixels)
@@ -371,6 +380,7 @@ def export_smolvla_split_onnx(
     return SmolVLAOnnxPaths(
         vision_onnx=vision_path,
         policy_onnx=policy_path,
+        n_cameras=n_cameras,
         image_tokens_per_camera=tokens_per_camera,
     )
 

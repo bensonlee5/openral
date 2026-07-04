@@ -121,13 +121,17 @@ def test_split_onnx_matches_torch_sample_actions(policy: Any, tmp_path: Path) ->
     policy_sess = ort.InferenceSession(str(paths.policy_onnx), providers=["CPUExecutionProvider"])
     timings["ort_session_init_s"] = time.perf_counter() - t0
 
+    # All cameras ride one vision pass as the batch axis; reshaping
+    # (N, T, hidden) -> (1, N*T, hidden) reproduces embed_prefix's per-camera
+    # concat order (the torch reference below still embeds per camera, so the
+    # final parity assert also proves batching == per-camera passes).
+    stacked = np.concatenate([img.numpy() for img in inp["images"]], axis=0)
     t0 = time.perf_counter()
-    embs = [
-        vision.run(None, {"pixel_values": img.numpy()})[0] for img in inp["images"]
-    ]
-    timings["ort_vision_per_cam_s"] = (time.perf_counter() - t0) / len(embs)
-    img_embs = np.concatenate(embs, axis=1)
-    assert img_embs.shape[1] == len(embs) * paths.image_tokens_per_camera
+    (embs,) = vision.run(None, {"pixel_values": stacked})
+    timings["ort_vision_batched_s"] = time.perf_counter() - t0
+    assert embs.shape[0] == paths.n_cameras == len(inp["images"])
+    img_embs = embs.reshape(1, -1, embs.shape[-1])
+    assert img_embs.shape[1] == paths.n_cameras * paths.image_tokens_per_camera
 
     t0 = time.perf_counter()
     (actions,) = policy_sess.run(
