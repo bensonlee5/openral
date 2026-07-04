@@ -496,7 +496,6 @@ const SCHEMAS = [
   { name: "Hand",                 where: "core",  kind: "enum" },
 
   // inference runner (ADR-0010)
-  { name: "RobotEnvironment",       where: "core",  kind: "manifest", note: "Sibling of SimScene for `openral deploy run` (hardware). Pins (robot × HAL × sensors × task × VLA × safety). from_yaml() loads `deployments/*.yaml`. Enforces unique sensor ids + rskill:// weights_uri. ADR-0010." },
   { name: "HalConfig",              where: "core",  kind: "part", note: "Which HAL adapter to instantiate + transport (serial port / FCI URI / ROS namespace) + adapter-specific params. ADR-0010." },
   { name: "SensorReaderConfig",     where: "core",  kind: "part", note: "Per-sensor backend (opencv_thread / ros2_image / gstreamer) + backend params + optional ROS-tee for observability. ADR-0010." },
   { name: "SensorReaderBackend",    where: "core",  kind: "enum", note: "opencv_thread (default, lerobot-pattern), ros2_image, gstreamer. ADR-0010." },
@@ -981,7 +980,7 @@ const LAYERS = [
         title: "GpuPassthroughSkill (M8 PR I/10)",
         pkg: "python/rskill · gpu_passthrough.py",
         status: "green",
-        desc: "Weight-less Skill whose _step_impl uploads each SensorFrame to torch.cuda, runs per-channel mean reduction with explicit torch.cuda.synchronize, and emits the result as Action.confidence. configure() RAISES when device='cuda' is requested and torch.cuda.is_available() is False — no silent CPU fallback. Wired into SKILL_REGISTRY as 'gpu_passthrough'. Paired with deployments/so100_gpu_passthrough_h264.yaml (nvh264dec + this skill) for the literal 'decoded raw frame never on CPU + rSkill all on GPU' demonstration: p99 inference 3.85 ms (vs HelloSkill's 0.171 ms — the delta IS the cudaMemcpy + kernel + cudaSynchronize cost).",
+        desc: "Weight-less Skill whose _step_impl uploads each SensorFrame to torch.cuda, runs per-channel mean reduction with explicit torch.cuda.synchronize, and emits the result as Action.confidence. configure() RAISES when device='cuda' is requested and torch.cuda.is_available() is False — no silent CPU fallback. Wired into SKILL_REGISTRY as 'gpu_passthrough'. Paired with scenes/deploy/so100_gpu_passthrough_h264.yaml (nvh264dec + this skill) for the literal 'decoded raw frame never on CPU + rSkill all on GPU' demonstration: p99 inference 3.85 ms (vs HelloSkill's 0.171 ms — the delta IS the cudaMemcpy + kernel + cudaSynchronize cost).",
         inputs: ["WorldState.image_frames[sensor_id]"],
         outputs: ["Action.confidence (GPU-reduced mean)"],
         schemas: ["SensorFrame", "Action"],
@@ -1029,7 +1028,7 @@ const LAYERS = [
         desc: "First concrete InferenceRunnerBase subclass; the inference loop now closes end-to-end on real hardware / a digital twin. Composes a HAL adapter, a Skill (caller pre-configures + activates), a WorldStateAggregator, a list of SensorReaders, and a SafetyClient. Runner is the safety-supervisor boundary per CLAUDE.md §10: catches ROSSafetyViolation, records on TickResult, withholds HAL.send_action. Tested in tests/unit/test_deploy_runner.py against a real SO100FollowerHAL(robot=SO100DigitalTwin) + WorldStateAggregator + a deterministic test Skill + NullSafetyClient — 8 tests including 30 Hz cadence assertion (±15 ms over 10 ticks) and supervisor-boundary semantics.",
         inputs: ["HAL", "Skill", "WorldStateAggregator", "SensorReader[]", "SafetyClient"],
         outputs: ["Action", "TickResult", "RunResult"],
-        schemas: ["RobotEnvironment", "TickResult", "RunResult", "WorldState", "Action"],
+        schemas: ["TickResult", "RunResult", "WorldState", "Action"],
       },
       {
         title: "SimRunner (ADR-0010 amendment 1)",
@@ -1472,7 +1471,7 @@ const CROSS = [
     desc: "Canonical entry point is `openral` (ADR-0021). Bare `openral` (no args) drops into an interactive REPL where subcommands run bare (`sim run --config …`); with args it runs one-shot for scripts/CI. doctor (env diagnose), detect (autodetect + write robot.yaml + optional DetectionReport JSON dump), connect (open HAL + verify), calibrate camera, install (sim/libero/metaworld/maniskill3/simpler-env/robocasa/rldx/ros — opt-in dep groups for the curl-bash installer), rskill install/list/check/new (the app was renamed skill→rskill), sensor list/show, benchmark run/report, sim run (mounted from openral_sim.cli.sim_app), dataset from-bag/push (ADR-0019), deploy run/sim (own card), prompt (publishes onto the F10 prompt_router), plus dashboard / replay / record / profile (own L7 cards). Typer + Rich; @app.callback wires openral_observability so every invocation is traced. `rskill new` scaffolds from rskills/template/ via python/cli/_rskill_scaffolder.py + tools/rskill_scaffolder.py (interactive prompts; --yes for scripting).",
     inputs: ["robot.yaml","hf://skill-id","rskills/<id>/eval/*.json","scenes/{deploy,sim,benchmark}/*.yaml","scripts/install.sh"],
     outputs: ["table reports","robot.yaml","registry entries","benchmark roll-ups","episode result","uv tool venv (~/.local/bin/openral)"],
-    schemas: ["RobotDescription","RSkillManifest","RSkillEvalResult","DetectionReport","CompatibilityReport","DeployScene","SimScene","BenchmarkScene","BenchmarkMetadata","RobotEnvironment"],
+    schemas: ["RobotDescription","RSkillManifest","RSkillEvalResult","DetectionReport","CompatibilityReport","DeployScene","SimScene","BenchmarkScene","BenchmarkMetadata"],
   },
   {
     title: "openral sim run subcommand",
@@ -1487,10 +1486,10 @@ const CROSS = [
     title: "openral deploy subcommand (ADR-0010 PR G)",
     pkg: "python/cli · main.py + deploy_sim.py + python/runner · factory.py",
     status: "green",
-    desc: "Real-hardware sibling of `openral deploy sim`. ADR-0032: `openral deploy run` loads a `RobotEnvironment` YAML for its `robot_id` + `hal.transport`, then shells the SAME `sim_e2e.launch.py` graph with `hal_mode:=real` (via `resolve_launch_invocation(hal_mode='real')` + `run_launch_invocation`) — the HAL lifecycle node builds the real HAL through `build_hal(mode='real')`, alongside the C++ safety kernel + reasoner + world state (+ SLAM/Nav2 when the robot declares a lidar). The HAL's `connect()` fails loudly with no hardware attached; a simulation-only robot (`hal.real` null) raises `ROSCapabilityMismatch` before the launch (use `deploy sim`). This supersedes the former in-process `DeployRunner` CLI path (the `openral_runner` library lives on, wrapped by `runtime_node`); `transport.digital_twin` is gone (ADR-0031). Resolution + error paths unit-tested in tests/unit/test_cli_deploy.py + test_deploy_run_real_resolution.py; the live launch + real connect() are HIL-verified. **`openral deploy sim`** (added 2026-05-24) is the ROS-graph sibling: loads a `DeployScene` YAML (scenes/deploy/*.yaml; ADR-0041), picks the HAL spawn from `_ROBOT_HAL_REGISTRY[robot_id]`, asserts the HAL's `supported_robot_names` matches the manifest, and shells `ros2 launch openral_rskill_ros sim_e2e.launch.py` — ONE generic launch for every robot. The launch's `OpaqueFunction` loads `robots/<robot_id>/robot.yaml`, calls `openral_safety.envelope_loader.compute_intersection(robot, None)`, and forwards each field as a ROS parameter on the C++ safety_kernel node (which grew a parameter-based loader in ADR-0020 PR-K). **Zero envelope YAML files** — neither committed nor ephemeral (the per-robot `openarm_e2e.launch.py` / `so100_e2e.launch.py` were deleted in the same change). No `--rskill` flag: the reasoner picks the active rSkill dynamically from `rskills/` at on_configure. `--hal key=value` (repeatable) overrides per-robot HAL defaults. Before launch, an ADVISORY policy-extras preflight (`_preflight_palette_deps`) probes the capability-matched rSkills: it warn-and-drops the ones whose extras are missing and boots the rest (the reasoner already drops them at on_configure), hard-failing only when the palette would be empty; `OPENRAL_AUTO_INSTALL_DEPS=1` auto-installs the missing `just sync --all-packages --group …` groups, else a TTY prompts. Each HAL lifecycle transition is bounded by `tools/lifecycle_autostart.py --transition-timeout-s` (default 300 s) so a slow robocasa `on_configure` (MuJoCo + robosuite import + env.reset + a possible uv build of the editable robocasa pkg, all synchronous on the HAL executor) can't false-fail the boot with `did not advance the FSM`. Tested in tests/unit/test_cli_deploy_sim.py (openarm config) + tests/unit/test_lifecycle_autostart.py, plus an opt-in live-launch smoke gated on OPENRAL_DEPLOY_SIM_SMOKE=1. Heavy deps (lerobot, opencv) load lazily; `openral --help` stays sub-second.",
-    inputs: ["RobotEnvironment yaml", "DeployScene yaml"],
+    desc: "Real-hardware sibling of `openral deploy sim`. ADR-0032 + ADR-0078: `openral deploy run` and `openral deploy sim` both load a `DeployScene` YAML (scenes/deploy/*.yaml), then shell the SAME `sim_e2e.launch.py` graph with `hal_mode:=real|sim`. Real mode skips sim scene-attach injections and the HAL lifecycle node builds the real HAL through `build_hal(mode='real')`; sim mode uses the digital-twin HAL. The launch loads `robots/<robot_id>/robot.yaml`, calls `openral_safety.envelope_loader.compute_intersection(robot, None, deploy=DeployScene.safety)`, applies additive `extra_allowed_collision_pairs`, and forwards the resulting params to the C++ safety_kernel. Robot facts live in robot.yaml; workcell facts live in DeployScene. No `--rskill` flag: the reasoner picks the active rSkill dynamically from `rskills/` at on_configure.",
+    inputs: ["DeployScene yaml", "RobotDescription yaml"],
     outputs: ["RunResult", "Rich summary table", "ros2 launch graph"],
-    schemas: ["RobotEnvironment", "DeployScene", "RobotDescription", "RunResult", "TickResult"],
+    schemas: ["DeployScene", "RobotDescription", "RunResult", "TickResult"],
   },
   {
     title: "USB autodetect",
@@ -1557,7 +1556,7 @@ const CROSS = [
     title: "Tests · HIL",
     pkg: "tests/hil",
     status: "yellow",
-    desc: "10 files: test_so100, test_realsense, test_ur5e, test_ur10e, test_franka_panda, test_sawyer, test_aloha (real-hardware HALs gated by self-hosted [lab-<robot>] runner labels + UR{5,10}E_HOST / *_FCI_HOST env vars), plus test_detect_so100_full_assemble, test_detect_realsense_live, test_detect_jetson_live for the auto-provisioning probes. The shared rclpy bridge lives in _ros_control_transport.py (RosControlHILTransport) and _aloha_ros_transport.py (4-way ALOHA fan-out). The L4T HIL workflow (`hil-l4t.yml`) that PR #93 added was removed by the 2026-05-14 single-Dockerfile consolidation amendment — L4T returns when the `[self-hosted, l4t]` runner pool is online. No lab runners registered yet — surface exists, hardware does not.",
+    desc: "10 files: test_so100, test_realsense, test_ur5e, test_ur10e, test_franka_panda, test_sawyer, test_aloha (real-hardware HALs gated by self-hosted [lab-<robot>] runner labels + UR{5,10}E_HOST / *_FCI_HOST env vars), plus test_detect_so101_full_assemble, test_detect_realsense_live, test_detect_jetson_live for the auto-provisioning probes. The shared rclpy bridge lives in _ros_control_transport.py (RosControlHILTransport) and _aloha_ros_transport.py (4-way ALOHA fan-out). The L4T HIL workflow (`hil-l4t.yml`) that PR #93 added was removed by the 2026-05-14 single-Dockerfile consolidation amendment — L4T returns when the `[self-hosted, l4t]` runner pool is online. No lab runners registered yet — surface exists, hardware does not.",
   },
   {
     title: "CI · Docker image build",

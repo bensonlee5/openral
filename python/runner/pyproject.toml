@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "Apache-2.0" }
 dependencies = [
-    "openral-core",            # reason: RobotEnvironment / TickResult / RunResult / SensorFrame schemas
+    "openral-core",            # reason: TickResult / RunResult / SensorFrame schemas
     "openral-hal",             # reason: HardwareRunner depends on the HAL Protocol
     "openral-observability",   # reason: rskill_span / safety_span wired into HardwareRunner ticks
     "openral-rskill",           # reason: HardwareRunner accepts a Skill and calls Skill.step

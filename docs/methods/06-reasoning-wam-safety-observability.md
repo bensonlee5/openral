@@ -150,9 +150,11 @@ _Lifecycle node skeleton; reserves the supervisor node name and topic surface fo
 ### `packages/openral_safety/openral_safety/envelope_loader.py`
 _Pydantic → C++ kernel ROS-param bridge (ADR-0020 PR-K; ADR-0030 collision)._
 
-- `compute_intersection(robot, skill=None) -> EnvelopeIntersection` — Robot ceiling ∩ optional skill envelope; rejects (never clamps) a skill that loosens the ceiling.
+- `merge_deploy_envelope(robot_env, deploy) -> SafetyEnvelope` — Apply explicit `DeployScene.safety` fields to the robot ceiling with tighten-only validation; omitted fields keep robot manifest values.
+- `compute_intersection(robot, skill=None, *, deploy=None) -> EnvelopeIntersection` — Robot ceiling ∩ optional deploy/workcell envelope ∩ optional skill envelope; rejects (never clamps) any deploy or skill safety field that loosens the robot ceiling.
 - `kernel_params_from_envelope(envelope) -> dict[str, object]` — Canonical scalar/AABB envelope → kernel ROS-param dict.
 - `collision_params_from_description(robot, *, margin_m=0.0) -> dict[str, object]` — ADR-0030. Flatten `collision_geometry` + `allowed_collision_pairs` + the kinematic chain (joint `origin_xyz/rpy/axis`) into the kernel's per-capsule collision params (`collision_capsule_link` + parallel radius/half-length/origin arrays, link-level ACM), topologically ordered. `{"self_collision_enabled": False}` when no geometry. Manifest-source adapter.
+- `merge_extra_allowed_pairs(params, pairs) -> dict[str, object]` — Additive deploy-scene ACM merge. Resolves link names through `collision_link_names`, rejects unknown/self pairs, dedupes order-insensitively, and no-ops when self-collision geometry is disabled.
 - `ee_link_index_from_collision_params(params) -> int` — ADR-0040 Phase 3. Pick the predictive-Cartesian EE control link (the kinematically deepest collision link) for the kernel's Jacobian look-ahead; `-1` when no collision model (predictive disabled, reactive floor only). Mis-identification is bounded by the reactive check.
 
 ### `packages/openral_safety/openral_safety/mjcf_lowering.py`

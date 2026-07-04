@@ -57,7 +57,7 @@ openral sim run --dashboard \
   --config scenes/benchmark/pusht.yaml \
   --rskill diffusion-pusht
 
-openral deploy run --dashboard --config deployments/so100.yaml
+openral deploy run --dashboard --config scenes/deploy/so100.yaml
 
 openral benchmark run --dashboard \
   --suite libero_spatial \

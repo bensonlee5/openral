@@ -26,9 +26,10 @@ of HAL **type** leaks out of the manifest into environment config and runtime pa
    registry (`_ROBOT_HAL_REGISTRY`) carries per-robot `supports_sim_env_yaml` /
    `supports_sim_robot_yaml` flags that inject those params.
 
-3. **`deploy run` decides sim-vs-real from env config.** The in-process `DeployRunner`
-   (so100-only) selects a digital twin vs real serial from a `hal.transport.digital_twin`
-   boolean in the `RobotEnvironment` YAML.
+3. **`deploy run` decides sim-vs-real from env config.** The legacy in-process `DeployRunner`
+   (so100-only) selected a digital twin vs real serial from a YAML boolean. ADR-0078 later
+   removed `RobotEnvironment`; deploy config is now `DeployScene` and HAL real/sim selection is
+   explicit through `hal_mode`.
 
 The net effect: the same command can boot a different HAL class depending on YAML, violating
 "types are the contract" and "explicit beats implicit".

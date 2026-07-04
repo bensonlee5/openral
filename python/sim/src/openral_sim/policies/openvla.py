@@ -357,7 +357,7 @@ def _install_legacy_openvla_model_compat(model_cls: type[Any]) -> None:
 def _legacy_openvla_timm_version_guard() -> Any:
     """Let legacy OpenVLA remote code pass its strict pre-1.0 timm version check."""
     try:
-        import timm
+        import timm  # type: ignore[import-not-found]  # reason: optional OpenVLA remote-code dependency
     except ImportError:
         yield
         return

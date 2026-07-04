@@ -233,6 +233,11 @@ def _sim_run_callback(
         "--dashboard-port",
         help="Port for the spawned dashboard when --dashboard is set.",
     ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Resolve config + rSkill and print the planned run without building the sim.",
+    ),
 ) -> None:
     """Top-level eval entry point — collects argv into the args namespace and dispatches."""
     args = SimpleNamespace(
@@ -254,6 +259,7 @@ def _sim_run_callback(
         dataset_repo_id=dataset_repo_id,
         dataset_license=dataset_license,
         view=view,
+        dry_run=dry_run,
         verbose=verbose,
     )
 
@@ -707,6 +713,16 @@ def _run(args: SimpleNamespace) -> int:
     print(f"  seed  : {env_cfg.seed}  episodes={env_cfg.n_episodes}")
     print("=" * 60)
 
+    # Upper bound: each episode is at most ``max_steps`` step-ticks plus a
+    # leading reset-tick; ``SimRunner._should_terminate`` stops the loop
+    # once ``n_episodes`` complete, so ``max_ticks`` is just a ceiling.
+    _max = env_cfg.task.max_steps if env_cfg.task.max_steps is not None else 1000
+    max_ticks = env_cfg.n_episodes * (_max + 1)
+    if args.dry_run:
+        print(f"  max_ticks: {max_ticks}")
+        print("  dry-run: resolved config + rSkill; simulator not built")
+        return 0
+
     view, strict_view = _resolve_view(args.view)
 
     # ADR-0019: build a RolloutRecorder + LeRobotDatasetSink when
@@ -725,11 +741,6 @@ def _run(args: SimpleNamespace) -> int:
         instruction_override=args.instruction,
         recorder=recorder,
     )
-    # Upper bound: each episode is at most ``max_steps`` step-ticks plus a
-    # leading reset-tick; ``SimRunner._should_terminate`` stops the loop
-    # once ``n_episodes`` complete, so ``max_ticks`` is just a ceiling.
-    _max = env_cfg.task.max_steps if env_cfg.task.max_steps is not None else 1000
-    max_ticks = env_cfg.n_episodes * (_max + 1)
     try:
         runner.activate()
         run_result = runner.run(max_ticks=max_ticks)

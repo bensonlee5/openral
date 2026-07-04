@@ -55,14 +55,14 @@
 # ── Run ──────────────────────────────────────────────────────────────
 #
 #   docker run --rm --gpus all \
-#       -v "$(pwd)/deployments:/workspace/deployments:ro" \
+#       -v "$(pwd)/scenes:/workspace/scenes:ro" \
 #       -v "$(pwd)/rskills:/workspace/rskills:ro" \
 #       -v "$(pwd)/robots:/workspace/robots:ro" \
 #       openral:x86-latest \
-#       run --config deployments/<your-deployment>.yaml
+#       run --config scenes/deploy/<your-workcell>.yaml
 #
-# `deploy run` is real-hardware only (ADR-0031): a RobotEnvironment config
-# under `deployments/` + a connected robot are required.
+# `deploy run` is real-hardware only (ADR-0031): a DeployScene config
+# under `scenes/deploy/` + a connected robot are required.
 #
 # `--network host` is recommended when the workspace publishes on a DDS
 # bus the host needs to subscribe to. Inside the container ROS 2 Jazzy

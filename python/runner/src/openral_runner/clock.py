@@ -1,7 +1,7 @@
 """High-precision cadence helpers for the inference runner.
 
 The :class:`~openral_runner.InferenceRunner` foreground loop ticks at
-``RobotEnvironment.rate_hz`` (default 30 Hz to match
+the runner rate (default 30 Hz to match
 :class:`~openral_world_state.WorldStateAggregator`). To hit that cadence
 on hosts where ``time.sleep`` has ~1-2 ms jitter, the runner uses
 :func:`precise_sleep` — a hybrid that delegates the bulk of the wait to

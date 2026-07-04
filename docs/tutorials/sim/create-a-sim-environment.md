@@ -237,10 +237,9 @@ openral sim run --config my_config.yaml --rskill rskills/<your_skill>
 ```
 
 You will see a per-episode summary line and a `0` exit code on success.
-The same `InferenceRunner` Protocol underneath also drives
-`openral benchmark run`. (`openral deploy run` is the hardware sibling — it
-consumes a separate `RobotEnvironment` YAML with the policy bundled
-in-file, and is not interchangeable with `openral sim run`.)
+The same runtime pattern also drives `openral benchmark run`. `openral deploy
+run` is the hardware sibling; it consumes a `DeployScene` workcell YAML and lets
+the reasoner select policy at runtime.
 
 ---
 

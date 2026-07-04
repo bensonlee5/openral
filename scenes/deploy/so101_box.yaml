@@ -20,3 +20,7 @@ scene:
   observation_height: 480
   observation_width: 640
   cameras: ["oak_top", "wrist"]
+robot_id: so101_follower
+safety:
+  workspace_box_min_xyz: [-0.3, -0.3, 0.02]
+  workspace_box_max_xyz: [0.3, 0.3, 0.45]

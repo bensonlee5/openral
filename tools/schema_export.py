@@ -53,7 +53,6 @@ from openral_core.schemas import (
     RoboCasaBackendOptions,
     RobotCapabilities,
     RobotDescription,
-    RobotEnvironment,
     RSkillEvalBenchmark,
     RSkillEvalResult,
     RSkillEvalSource,
@@ -127,7 +126,6 @@ _MODEL_TYPES: list[type] = [
     RSkillEvalResult,
     SensorReaderConfig,
     HalConfig,
-    RobotEnvironment,
     TickResult,
     RunResult,
 ]

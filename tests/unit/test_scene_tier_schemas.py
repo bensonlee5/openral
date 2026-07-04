@@ -86,6 +86,23 @@ def test_deploy_scene_composition_round_trips():
     assert again.composition == d.composition
 
 
+def test_deploy_scene_workcell_fields_round_trip():
+    from openral_core import DeployScene, SafetyEnvelope, SceneSpec
+
+    d = DeployScene(
+        scene=SceneSpec(id="so101_box", backend="mujoco"),
+        robot_id="so101_follower",
+        safety=SafetyEnvelope(
+            workspace_box_min_xyz=(-0.3, -0.3, 0.0),
+            workspace_box_max_xyz=(0.3, 0.3, 0.5),
+        ),
+        extra_allowed_collision_pairs=[("upper_arm", "forearm")],
+    )
+    again = DeployScene.model_validate_json(d.model_dump_json())
+    assert again.safety == d.safety
+    assert again.extra_allowed_collision_pairs == [("upper_arm", "forearm")]
+
+
 def test_openarm_deploy_scene_owns_composition_robot_manifest_does_not():
     # ADR-0066 separation: the openarm tabletop arena lives on the scene; the
     # robot manifest describes only the robot (no scene_defaults).

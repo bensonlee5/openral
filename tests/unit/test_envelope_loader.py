@@ -27,6 +27,8 @@ from openral_core.exceptions import ROSConfigError
 from openral_safety.envelope_loader import (
     compute_intersection,
     kernel_params_from_envelope,
+    merge_deploy_envelope,
+    merge_extra_allowed_pairs,
 )
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
@@ -181,6 +183,60 @@ class TestIntersectionNoSkill:
             assert math.isinf(hi) and hi > 0
             assert math.isinf(v)
             assert math.isinf(t)
+
+
+class TestDeployEnvelope:
+    def test_partial_deploy_envelope_keeps_robot_siblings(self) -> None:
+        robot = _toy_robot(max_force_n=50.0, max_ee_speed=0.2)
+        deploy = SafetyEnvelope(max_force_n=10.0)
+        merged = merge_deploy_envelope(robot.safety, deploy)
+        assert merged.max_force_n == 10.0
+        assert merged.max_ee_speed_m_s == 0.2
+
+    def test_deploy_loosen_rejected(self) -> None:
+        robot = _toy_robot(max_force_n=10.0)
+        with pytest.raises(ROSConfigError, match="deploy envelope"):
+            merge_deploy_envelope(robot.safety, SafetyEnvelope(max_force_n=20.0))
+
+    def test_robot_deploy_skill_box_intersects_componentwise(self) -> None:
+        robot = _toy_robot(workspace_min=(-1.0, -1.0, 0.0), workspace_max=(1.0, 1.0, 1.0))
+        deploy = SafetyEnvelope(
+            workspace_box_min_xyz=(-0.5, -0.2, 0.0),
+            workspace_box_max_xyz=(0.8, 0.7, 0.9),
+        )
+        skill = _skill_with_envelope(
+            {
+                "workspace_box_min_xyz": [-0.4, -0.8, 0.1],
+                "workspace_box_max_xyz": [0.6, 0.3, 0.8],
+            }
+        )
+        intersection = compute_intersection(robot, skill, deploy=deploy)
+        assert intersection.workspace_box_min_xyz == (-0.4, -0.2, 0.1)
+        assert intersection.workspace_box_max_xyz == (0.6, 0.3, 0.8)
+
+
+class TestExtraAllowedCollisionPairs:
+    def test_adds_and_dedupes_pairs(self) -> None:
+        params = {
+            "self_collision_enabled": True,
+            "collision_link_names": ["base", "upper", "forearm"],
+            "collision_allowed_pairs": [0, 1],
+        }
+        out = merge_extra_allowed_pairs(params, [("forearm", "upper"), ("upper", "base")])
+        assert out["collision_allowed_pairs"] == [0, 1, 1, 2]
+
+    def test_unknown_link_rejected(self) -> None:
+        params = {
+            "self_collision_enabled": True,
+            "collision_link_names": ["base"],
+            "collision_allowed_pairs": [],
+        }
+        with pytest.raises(ROSConfigError, match="valid collision links"):
+            merge_extra_allowed_pairs(params, [("base", "missing")])
+
+    def test_no_geometry_is_noop(self) -> None:
+        params = {"self_collision_enabled": False}
+        assert merge_extra_allowed_pairs(params, [("a", "b")]) == params
 
 
 # ── compute_intersection: tighter skill ─────────────────────────────────────

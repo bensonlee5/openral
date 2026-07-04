@@ -119,7 +119,7 @@ SENSORS_WIDTH: Final[str] = "openral.sensors.width"
 SENSORS_HEIGHT: Final[str] = "openral.sensors.height"
 SENSORS_CHANNELS: Final[str] = "openral.sensors.channels"
 SENSORS_ENCODING: Final[str] = "openral.sensors.encoding"
-# Throttled thumbnail (DeployRunner.thumbnail_hz, default 25 Hz per
+# Throttled thumbnail (DeployRunner private 25 Hz cadence per
 # camera): a base64-encoded JPEG capped at 640x480 / q90 so the dashboard
 # can show "what is the robot seeing" without competing with Foxglove's
 # image pipeline.

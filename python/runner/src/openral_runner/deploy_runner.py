@@ -69,6 +69,7 @@ __all__ = ["DeployRunner"]
 
 log = structlog.get_logger(__name__)
 
+_THUMBNAIL_HZ = 25.0
 
 _modality_for_encoding = ral_producer.modality_for_encoding
 
@@ -109,11 +110,6 @@ class DeployRunner(InferenceRunnerBase):
         safety_client: Optional :class:`SafetyClient`. Defaults to a
             :class:`NullSafetyClient` so digital-twin runs still emit
             ``safety.check`` spans even without the C++ kernel.
-        thumbnail_hz: Per-camera rate at which a JPEG thumbnail is encoded
-            onto the ``sensors.read_latest`` span for the dashboard.
-            Default 25 Hz, decoupled from the tick ``rate_hz``; ``0`` disables
-            thumbnails. Throttling keeps ticks above the rate free of image
-            bytes so the trace pipeline stays light.
         **base_kwargs: Forwarded to
             :class:`InferenceRunnerBase.__init__` (``rate_hz``,
             ``deadline_overrun_policy``, ``runner_name``,
@@ -134,7 +130,6 @@ class DeployRunner(InferenceRunnerBase):
         sensor_readers: Sequence[SensorReader] = (),
         safety_client: SafetyClient | None = None,
         recorder: object | None = None,
-        thumbnail_hz: float = 25.0,
         **base_kwargs: object,
     ) -> None:
         """Initialise the runner; does not open any I/O until :meth:`activate`.
@@ -173,9 +168,9 @@ class DeployRunner(InferenceRunnerBase):
         # Dashboard thumbnail throttle. Encoding a JPEG on every tick (up to
         # rate_hz) bloats every sensors.read_latest span and the trace
         # pipeline; the dashboard only needs an at-a-glance preview. Gate per
-        # camera to thumbnail_hz (0 disables), decoupled from rate_hz, using a
+        # camera to a private 25 Hz cadence, decoupled from rate_hz, using a
         # wall-clock (time.monotonic) deadline per sensor_id.
-        self._thumbnail_hz = float(thumbnail_hz)
+        self._thumbnail_rate_hz = _THUMBNAIL_HZ
         self._thumb_next_due: dict[str, float] = {}
         # Monotonic clock the thumbnail gate reads. A seam (not a config knob):
         # production always uses ``time.monotonic``; tests inject a deterministic
@@ -305,21 +300,21 @@ class DeployRunner(InferenceRunnerBase):
         """Per-camera rate gate for dashboard thumbnails.
 
         Returns ``True`` (and advances the per-camera deadline) when a
-        thumbnail is due at ``thumbnail_hz``; ``False`` otherwise. ``0`` Hz
-        disables. Deadlines advance from the *previous* deadline (not from
-        ``now``), so the long-run average holds at ``thumbnail_hz`` even when
+        thumbnail is due at the fixed private cadence; ``False`` otherwise.
+        Deadlines advance from the *previous* deadline (not from ``now``), so
+        the long-run average holds at the configured cadence even when
         ticks run only slightly faster than it — advancing from ``now`` would
         quantise the emit rate down to a tick subharmonic (e.g. 25 Hz against a
         28 Hz tick collapses to ~14 Hz). A deadline that has fallen more than a
         period behind (cold start / long stall) is resynced to ``now + period``
         so the gate never bursts to catch up.
         """
-        if self._thumbnail_hz <= 0.0:
+        if self._thumbnail_rate_hz <= 0.0:
             return False
         due = self._thumb_next_due.get(sensor_id)
         if due is not None and now < due:
             return False
-        period = 1.0 / self._thumbnail_hz
+        period = 1.0 / self._thumbnail_rate_hz
         nxt = (due + period) if due is not None else (now + period)
         if nxt <= now:
             nxt = now + period
@@ -361,10 +356,10 @@ class DeployRunner(InferenceRunnerBase):
                     age_ms = (tick_wall_ns - frame.stamp_wall_ns) / 1e6
                     modality = _modality_for_encoding(frame.encoding)
                     # Per-camera thumbnail gate (dashboard preview): encode +
-                    # attach a JPEG only when due at ``thumbnail_hz``, so most
+                    # attach a JPEG only when due at the private cadence, so most
                     # ticks carry zero image bytes and skip the encode — the
                     # trace path stays light while the dashboard refreshes at
-                    # ~thumbnail_hz. ``encode_frame_thumbnail`` returns None for
+                    # ~25 Hz. ``encode_frame_thumbnail`` returns None for
                     # unrenderable frames (DEPTH16/CUDA_NV12/RAW) or topic-ref /
                     # GPU-handle frames; the gate has already advanced, so a
                     # non-renderable camera does not retry the encode each tick.

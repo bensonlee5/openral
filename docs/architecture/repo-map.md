@@ -45,7 +45,7 @@ openral/                      ← THIS monorepo
 ├─ rskills/                       ← rSkill packages (manifest + weights + eval/) — VLA + detector kinds ✓
 ├─ scenes/                        ← SimEnvironment YAMLs (`sim run`) + native scenes (ADR-0002/0033) ✓
 ├─ benchmarks/                    ← benchmark suite definitions ✓
-├─ deployments/                   ← RobotEnvironment deploy YAMLs (`openral deploy run`, ADR-0032) ✓
+├─ deployments/                   ← retired; deploy configs live in scenes/deploy (ADR-0078) ✓
 ├─ robots/                        ← canonical RobotDescription manifests ✓
 ├─ tests/{unit,integration,sim,hil}/  ← all four trees ✓
 ├─ docs/                          ← mkdocs-material; ADRs in docs/adr/ ✓

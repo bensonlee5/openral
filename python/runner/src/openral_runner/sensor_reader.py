@@ -41,7 +41,7 @@ class SensorReader(Protocol):
 
     Attributes:
         sensor_id: Sensor name; matches :attr:`SensorReaderConfig.sensor_id`
-            in the :class:`~openral_core.RobotEnvironment`.
+            in the robot/deploy configuration.
         is_open: ``True`` between :meth:`open` and :meth:`close`.
     """
 

@@ -6392,18 +6392,23 @@ class BenchmarkMetadata(BaseModel):
 
 
 class DeployScene(BaseModel):
-    """Environment-only scene for ``openral deploy run``.
+    """Unified deploy/workcell scene for ``openral deploy sim`` and ``deploy run``.
 
-    Carries the physics world and optional robot mount. No task, no eval
-    config — this is a playground for the full OpenRAL stack.
+    Carries the physical/logical workcell: scene identity, optional robot mount,
+    sim composition, and deploy-time safety/collision tightening. No task, no
+    eval config — the reasoner/operator supplies goals at runtime.
 
     ``composition`` (ADR-0066) lets a deploy scene declare the MJCF composer that
     builds its environment (e.g. the openarm tabletop arena: table + cubes +
     drawer + overview camera) instead of the robot manifest carrying it: the
     robot manifest describes the robot, the scene describes the scene. ``openral
-    deploy sim`` threads it to the manifest-driven HAL node, which composes the
-    MJCF and builds a bare twin off the result. ``None`` = no scene composition
-    (a bare-arm twin; cameras come from the robot's own sensor placements).
+    deploy sim`` threads it to the manifest-driven HAL node. ``openral deploy
+    run`` ignores it because real-world geometry is physical, not MJCF.
+
+    ``safety`` tightens the robot manifest's :class:`SafetyEnvelope`; loosening
+    is rejected before launch. ``extra_allowed_collision_pairs`` is the only
+    sanctioned collision loosening: additive per-pair ACM entries, never a global
+    self-collision disable.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -6412,6 +6417,8 @@ class DeployScene(BaseModel):
     robot_id: str | None = None
     base_pose: Pose6D | None = None
     composition: SceneComposition | None = None
+    safety: SafetyEnvelope | None = None
+    extra_allowed_collision_pairs: list[tuple[str, str]] = Field(default_factory=list)
     memory_dir: str | None = None
     """ADR-0072 Decision 3b — path to a per-robot deploy memory bundle directory
     holding any of ``MEMORY.md`` (self-maintained semantic memory), ``scene_graph.json``
@@ -6737,128 +6744,6 @@ class HalConfig(BaseModel):
     adapter: str
     transport: dict[str, object] = Field(default_factory=dict)
     params: dict[str, object] = Field(default_factory=dict)
-
-
-class RobotEnvironment(BaseModel):
-    """A full hardware deployment configuration — the ``openral deploy`` artefact.
-
-    Sibling of :class:`SimEnvironment` for real hardware. Loaded from YAML
-    by ``openral_runner`` (planned, ADR-0010) and consumed by the
-    hardware ``InferenceRunner``. The runner instantiates the HAL adapter,
-    opens every :class:`SensorReader`, wires the
-    :class:`~openral_world_state.aggregator.WorldStateAggregator`,
-    constructs the :class:`~openral_rskill.Skill` from
-    ``vla.weights_uri`` (a bare rSkill reference — name, path, or HF repo ID)
-    and ticks at ``rate_hz``.
-
-    Cross-field invariants enforced in :meth:`model_post_init`:
-
-    * Every :attr:`SensorReaderConfig.sensor_id` MUST be unique within
-      :attr:`sensors`.
-    * :attr:`vla.weights_uri` MUST be a bare rSkill reference (no URI scheme)
-      — the rSkill manifest is the contract between robot/sensors/preprocessing
-      and policy weights (CLAUDE.md §6.4).
-
-    Attributes:
-        robot_id: ID into the ROBOTS registry — matches a
-            :attr:`RobotDescription.name`. Examples: ``"so100_follower"``,
-            ``"franka_panda"``, ``"ur5e"``.
-        hal: HAL adapter + transport configuration.
-        sensors: Per-sensor reader backend choices. The runner opens one
-            :class:`SensorReader` per entry and feeds the
-            :class:`WorldStateAggregator`.
-        task: What the robot should achieve. Reused from
-            :class:`SimEnvironment` so :attr:`TaskSpec.instruction` becomes
-            the language prompt handed to the VLA.
-        vla: Policy that drives the robot. ``vla.weights_uri`` MUST be a
-            bare rSkill reference (name, path, or HF repo ID).
-        safety: Optional :class:`SafetyEnvelope` override; falls back to the
-            robot's :attr:`RobotDescription.safety` when ``None``.
-        rate_hz: Foreground tick rate. Default 30 Hz (matches the
-            :class:`WorldStateAggregator` publish rate).
-        thumbnail_hz: Per-camera rate at which the runner encodes a JPEG
-            thumbnail onto the ``sensors.read_latest`` span for the dashboard.
-            Default 25 Hz; decoupled from ``rate_hz``. ``0`` disables thumbnails.
-            End-to-end dashboard refresh is ``min(thumbnail_hz, span export
-            flush rate)`` — see ``OPENRAL_OTEL_SPAN_SCHEDULE_DELAY_MS``.
-        deadline_overrun_policy: Behavior when tick wall-time exceeds
-            ``1 / rate_hz``.
-        max_ticks: Optional cap — the runner exits cleanly after this many
-            ticks. ``None`` means "run until ``task.max_steps`` or external
-            stop".
-        save_dir: Optional directory for traces / video / JSON summaries.
-        metadata: Free-form notes (operator, run id, …).
-
-    Example:
-        >>> env = RobotEnvironment(
-        ...     robot_id="so100_follower",
-        ...     hal=HalConfig(adapter="so100_follower"),
-        ...     sensors=[SensorReaderConfig(sensor_id="wrist_rgb")],
-        ...     task=TaskSpec(
-        ...         id="pick_cube/red",
-        ...         scene_id="pick_cube/red",
-        ...         instruction="pick up the red cube",
-        ...     ),
-        ...     vla=VLASpec(
-        ...         id="smolvla",
-        ...         weights_uri="rskills/smolvla-so100",
-        ...     ),
-        ... )
-        >>> env.rate_hz
-        30.0
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    robot_id: str
-    hal: HalConfig
-    sensors: list[SensorReaderConfig] = Field(default_factory=list)
-    task: TaskSpec
-    vla: VLASpec
-    safety: SafetyEnvelope | None = None
-    rate_hz: float = Field(default=30.0, gt=0)
-    thumbnail_hz: float = Field(default=25.0, ge=0)
-    deadline_overrun_policy: DeadlineOverrunPolicy = DeadlineOverrunPolicy.WARN
-    max_ticks: int | None = Field(default=None, gt=0)
-    save_dir: str | None = None
-    metadata: dict[str, object] = Field(default_factory=dict)
-
-    def model_post_init(self, _context: object) -> None:
-        """Cross-field validation: unique sensors, bare rSkill weights_uri."""
-        seen: set[str] = set()
-        for sensor in self.sensors:
-            if sensor.sensor_id in seen:
-                raise ValueError(
-                    f"RobotEnvironment({self.robot_id!r}) has duplicate "
-                    f"sensor_id={sensor.sensor_id!r} in sensors; each "
-                    f"sensor must be configured at most once."
-                )
-            seen.add(sensor.sensor_id)
-        for bad in ("hf://", "local://", "file://", "http://", "https://"):
-            if self.vla.weights_uri.startswith(bad):
-                raise ValueError(
-                    f"RobotEnvironment({self.robot_id!r}).vla.weights_uri must "
-                    f"be a bare rSkill reference (name, path, or HF repo ID), "
-                    f"got {self.vla.weights_uri!r}; hardware deployments resolve "
-                    f"weights through an rSkill manifest for reproducibility "
-                    f"(CLAUDE.md §6.4)."
-                )
-
-    @classmethod
-    def from_yaml(cls, path: str) -> RobotEnvironment:
-        """Load and validate a ``RobotEnvironment`` YAML from disk.
-
-        Args:
-            path: Filesystem path to the YAML config file.
-
-        Returns:
-            A validated :class:`RobotEnvironment`.
-
-        Raises:
-            FileNotFoundError: If ``path`` does not exist.
-            pydantic.ValidationError: If the YAML fails schema validation.
-        """
-        return _load_yaml_model(cls, path)
 
 
 class TickResult(BaseModel):

@@ -68,7 +68,7 @@ _MAX_EE_FRAMES = 8
 # Thumbnail target — capped at VGA so the dashboard shows native-resolution
 # frames (the largest rskill camera contract is 640x480; PIL.thumbnail only
 # ever shrinks, so this never upscales). Emitted at a throttled rate
-# (DeployRunner.thumbnail_hz, default 25 Hz), not faster than tick rate — so q90 stays
+# (DeployRunner private 25 Hz cadence), not faster than tick rate — so q90 stays
 # cheap over OTLP even at 2-3 cameras on localhost.
 _THUMB_MAX_WIDTH = 640
 _THUMB_MAX_HEIGHT = 480
@@ -200,7 +200,7 @@ def record_sensor_frame_attrs(
     """Attach sensor-frame attributes to a ``sensors.read_latest`` span.
 
     Pass ``thumbnail_bytes`` at the throttled dashboard rate
-    (``DeployRunner.thumbnail_hz``, default 25 Hz per camera); OTLP
+    (DeployRunner's private 25 Hz per-camera cadence); OTLP
     attributes are a preview channel, not a 30 fps video transport. When
     set, the value is base64-encoded inline; downstream consumers
     (including :mod:`openral_observability.dashboard`) decode it for
@@ -269,7 +269,7 @@ def encode_frame_thumbnail(frame: Any) -> bytes | None:
 
     The whole encode pipeline runs in a few ms per frame at typical
     sensor resolutions. The runner calls it at the throttled
-    ``thumbnail_hz`` rate (not every tick), so the per-tick cost is
+    thumbnail cadence (not every tick), so the per-tick cost is
     amortised across cameras and the tick budget is unaffected.
     """
     try:

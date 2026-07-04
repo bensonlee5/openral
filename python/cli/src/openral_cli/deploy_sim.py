@@ -904,23 +904,29 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
 ) -> LaunchInvocation:
     """Resolve every input into the ``ros2 launch`` argv to execute.
 
-    Shared by ``openral deploy sim`` (``hal_mode="sim"``, a ``DeployScene``
-    ``config``) and ``openral deploy run`` (``hal_mode="real"``, ``robot_override``
-    from a ``RobotEnvironment`` — no sim scene; ADR-0032). In real mode the
-    sim-twin / scene-attach injections are skipped so the HAL node builds the
-    real hardware HAL via ``build_hal(mode="real")``.
+    Shared by ``openral deploy sim`` (``hal_mode="sim"``) and ``openral deploy
+    run`` (``hal_mode="real"``) from the same ``DeployScene`` config. In real
+    mode the sim-twin / scene-attach injections are skipped so the HAL node
+    builds the real hardware HAL via ``build_hal(mode="real")``.
 
     Returned ``argv_template`` carries a ``HAL_PARAMS_FILE_PLACEHOLDER``
     sentinel the caller substitutes after writing the ephemeral HAL params
     YAML. No envelope file is ever written — the launch reads ``robot_yaml``
     and feeds the kernel via ROS params.
     """
-    from openral_core import RobotDescription  # reason: defer schema import
+    from openral_core import DeployScene, RobotDescription  # reason: defer schema import
 
     if hal_mode not in ("sim", "real"):
         raise ROSConfigError(f"hal_mode must be 'sim' or 'real', got {hal_mode!r}.")
 
-    scene_robot_id = _load_scene_robot_id(config) if config is not None else None
+    deploy_scene = DeployScene.from_yaml(str(config)) if config is not None else None
+    scene_robot_id = (
+        deploy_scene.robot_id
+        if deploy_scene is not None and deploy_scene.robot_id is not None
+        else _load_scene_robot_id(config)
+        if config is not None
+        else None
+    )
     robot_id = robot_override or scene_robot_id
     if not robot_id:
         raise ROSConfigError(
@@ -1153,10 +1159,8 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
         # to the manifest-driven node so the SCENE owns its environment instead
         # of the robot manifest. Sim-mode bare-twin robots only (scene-attach
         # robots build the scene's SimRollout directly via sim_env_yaml).
-        if hal_mode == "sim" and config is not None and hal.bare_twin_sim:
-            from openral_core import DeployScene
-
-            scene_composition = DeployScene.from_yaml(str(config)).composition
+        if hal_mode == "sim" and deploy_scene is not None and hal.bare_twin_sim:
+            scene_composition = deploy_scene.composition
             if scene_composition is not None:
                 hal_params.setdefault("scene_composition_json", scene_composition.model_dump_json())
 
@@ -1267,14 +1271,17 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
         if dataset_license:
             argv_template.append(f"dataset_license:={dataset_license}")
 
+    if deploy_scene is not None and (
+        deploy_scene.safety is not None or deploy_scene.extra_allowed_collision_pairs
+    ):
+        argv_template.append(f"workcell_json:={deploy_scene.model_dump_json(exclude_unset=True)}")
+
     # ADR-0072 Decision 3b — the deploy memory bundle. ``--memory-dir`` (CLI) wins;
     # otherwise the DeployScene's own ``memory_dir`` field. Derive the per-modality
     # launch paths by convention and forward them (each to its consumer's arg).
     effective_memory_dir = memory_dir
-    if effective_memory_dir is None and config is not None:
-        from openral_core import DeployScene
-
-        effective_memory_dir = DeployScene.from_yaml(str(config)).memory_dir
+    if effective_memory_dir is None and deploy_scene is not None:
+        effective_memory_dir = deploy_scene.memory_dir
     if effective_memory_dir:
         argv_template.extend(_memory_bundle_launch_args(effective_memory_dir))
 

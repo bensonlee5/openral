@@ -3,8 +3,8 @@
 `openral deploy run` is the real-hardware sibling of `openral sim run`. It boots
 the full production ROS graph — the HAL lifecycle node, the C++ safety kernel,
 the reasoner, world state (plus SLAM/Nav2 when the robot declares a lidar) — and
-ticks an rSkill against your **real** robot, driven by a `RobotEnvironment`
-YAML (ADR-0031/0032). This tutorial writes a deployment config, dry-runs it
+ticks an rSkill against your **real** robot, driven by a `DeployScene`
+YAML (ADR-0031/0032/0078). This tutorial writes a deploy scene, dry-runs it
 against a digital twin, then runs it on hardware with the live dashboard.
 
 ## Prerequisites
@@ -22,46 +22,56 @@ You need a `RobotDescription` for your robot under
 Rizon 4, H1, G1, panda_mobile), and an installed rSkill (see
 [Write an rSkill](../rskill/write-and-publish-an-rskill.md)).
 
-## 1. Write a `RobotEnvironment` config
+## 1. Write a `DeployScene` config
 
-Deployment configs live in
-[`deployments/`](https://github.com/OpenRAL/openral/blob/master/deployments/README.md).
-A `RobotEnvironment` pins one deployment: `(robot × HAL × sensors × task × VLA
-× safety)`. They are intentionally **not** shipped in the open-core tree —
-they encode a specific lab's robot IP / FCI port / camera serial — so you add
-your own.
+Deploy configs live in
+[`scenes/deploy/`](https://github.com/OpenRAL/openral/blob/master/scenes/deploy/).
+A `DeployScene` pins the workcell: scene id, `robot_id`, optional sim
+composition, safety tightening, and additive allowed collision pairs. Robot
+facts such as serial ports, IPs, sensors, poses, rates, and limits live in
+`robots/<robot_id>/robot.yaml`.
 
-Create `deployments/so100_pick_cube.yaml`:
+### Option A — create/update the robot manifest with `openral detect`
 
-```yaml
-robot_id: so100_follower          # matches robots/so100_follower/robot.yaml
-hal:
-  adapter: so100_follower
-  transport:
-    port: /dev/ttyUSB0            # serial port (robot_ip / fci_ip for others)
-sensors:
-  - sensor_id: wrist_rgb
-task:
-  id: pick_cube/red
-  scene_id: pick_cube/red
-  instruction: "pick up the red cube"   # becomes the VLA's language prompt
-vla:
-  id: molmoact2
-  weights_uri: rskills/molmoact2-so101-nf4   # skill reference (bare name or rskills/<name>)
-rate_hz: 30.0
+If the robot is plugged in, let detection write or refresh the robot manifest:
+
+```bash
+# A bare detect resolves a plugged-in Feetech arm to so101_follower by default.
+openral detect \
+    --output robots/so101_follower/robot.yaml
 ```
 
-Two invariants the loader enforces: every `sensors[].sensor_id` is unique, and
-`vla.weights_uri` must be a valid skill reference — the rSkill manifest is the
-contract between the robot, sensors, preprocessing, and weights. The full
-schema is
-[`openral_core.schemas.RobotEnvironment`](https://github.com/OpenRAL/openral/blob/master/python/core/src/openral_core/schemas.py).
-`safety` is optional and falls back to the robot manifest's `SafetyEnvelope`.
+Detection records robot-owned facts in `robot.yaml`; it does not create a
+deploy scene. The rSkill that drives the robot is **not** set in deploy config —
+the reasoner selects it at runtime from the installed `rskills/` registry.
+
+> The SO-101 is electrically identical to the SO-100 over USB (same Feetech
+> controller), so the bus alone can't distinguish them — the current SO-101 is
+> the default. To target the older SO-100 instead, add `--robot so100` (the flag
+> accepts a short slug like `so100` or a manifest directory name like
+> `so100_follower`).
+
+### Option B — write the workcell by hand
+
+Create `scenes/deploy/so100_pick_cube.yaml`:
+
+```yaml
+scene:
+  id: so100_pick_cube
+  backend: mujoco
+robot_id: so100_follower          # matches robots/so100_follower/robot.yaml
+safety:
+  workspace_box_min_xyz: [-0.3, -0.3, 0.0]
+  workspace_box_max_xyz: [0.3, 0.3, 0.5]
+```
+
+The full schema is `openral_core.schemas.DeployScene`. `safety` is optional and
+must tighten the robot manifest's `SafetyEnvelope`.
 
 List what's available:
 
 ```bash
-openral deploy list      # walks deployments/*.yaml; prints <none> if empty
+openral deploy list      # walks scenes/deploy/*.yaml
 ```
 
 ## 2. Dry-run against a digital twin first
@@ -69,13 +79,15 @@ openral deploy list      # walks deployments/*.yaml; prints <none> if empty
 Before touching hardware, validate the whole graph against a simulated HAL
 with `openral deploy sim`. It boots the **same** graph (dashboard + safety
 kernel + reasoner + prompt router + runtime + HAL) but against a digital-twin
-HAL driven by a `SceneEnvironment` YAML — no robot required:
+HAL driven by the same `DeployScene` YAML — no robot required:
 
 ```bash
 openral deploy sim \
-  --config scenes/benchmark/libero_spatial.yaml \
-  --rskill rskills/smolvla-libero
+  --config scenes/deploy/so100_pick_cube.yaml
 ```
+
+`deploy sim` takes no `--rskill` — the reasoner picks the active rSkill from the
+in-tree `rskills/` palette at `on_configure`, embodiment-filtered.
 
 This is the safe place to shake out manifest, sensor, and rSkill-compatibility
 errors.
@@ -92,7 +104,7 @@ by default; run it like so:
 ```bash
 just sync --group robocasa    # robosuite + deps (swaps out the libero/sim group)
 OPENRAL_AUTO_INSTALL_DEPS=1 openral deploy sim \
-  --config scenes/deploy/robocasa_navigate.yaml --rskill <rskill>
+  --config scenes/deploy/robocasa_navigate.yaml
 ```
 
 Do **not** hand-install `robocasa` / `robosuite` — that pulls the wrong
@@ -115,7 +127,7 @@ groups](../../contributing/toolchain.md#managing-the-python-environment-dependen
 With the robot powered, connected, and within a clear workspace:
 
 ```bash
-openral deploy run --config deployments/so100_pick_cube.yaml
+openral deploy run --config scenes/deploy/so100_pick_cube.yaml
 ```
 
 What happens:
@@ -123,12 +135,11 @@ What happens:
 - The robot is resolved from `--config`; `build_hal(mode="real")` constructs
   the real HAL. If no hardware is attached, `connect()` **fails loudly**; a
   simulation-only robot raises `ROSCapabilityMismatch` (use `deploy sim`).
-- The robot's `hal.transport` (`port` / `robot_ip` / `fci_ip`) and `hal.params`
-  are forwarded as HAL node params. Override at the CLI with repeatable
-  `--hal key=value`:
+- Robot HAL defaults (`port` / `robot_ip` / `fci_ip` / adapter params) come from
+  `robots/<robot_id>/robot.yaml`. Override at the CLI with repeatable `--hal key=value`:
 
   ```bash
-  openral deploy run --config deployments/so100_pick_cube.yaml --hal port=/dev/ttyUSB1
+  openral deploy run --config scenes/deploy/so100_pick_cube.yaml --hal port=/dev/ttyUSB1
   ```
 
 - The C++ safety kernel sits between the policy and the motors: Python
@@ -165,7 +176,7 @@ mode).
 
 ## See also
 
-- [`deployments/README.md`](https://github.com/OpenRAL/openral/blob/master/deployments/README.md) — RobotEnvironment configs and the sim/real split.
+- [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md) — DeployScene / SimScene / BenchmarkScene tiers.
 - [`openral dashboard` quickstart](../../quickstart/dashboard.md).
 - `openral detect` — auto-generate `robot.yaml` by probing USB devices and sensors.
 - [ADR-0031 / ADR-0032](https://github.com/OpenRAL/openral/blob/master/docs/adr/) — the deploy graph design.

@@ -30,10 +30,10 @@ services:
       - ../../examples:/workspace/examples:ro
       - ../../skills:/workspace/skills:ro
       - ../../robots:/workspace/robots:ro
-      - ../../deployments:/workspace/deployments:ro
+      - ../../scenes:/workspace/scenes:ro
     # `deploy run` is real-hardware only (ADR-0031): append your own
-    # `command: ["run", "--config", "deployments/<your-deployment>.yaml"]`
-    # once a RobotEnvironment config exists and a robot is connected. With no
+    # `command: ["run", "--config", "scenes/deploy/<your-workcell>.yaml"]`
+    # once a DeployScene config exists and a robot is connected. With no
     # command the image runs its `openral deploy` entrypoint (prints help).
 
   # Opt-in DeepStream variant — bundles NVIDIA DeepStream SDK 9.0 for
@@ -65,6 +65,6 @@ services:
       - ../../examples:/workspace/examples:ro
       - ../../skills:/workspace/skills:ro
       - ../../robots:/workspace/robots:ro
-      - ../../deployments:/workspace/deployments:ro
+      - ../../scenes:/workspace/scenes:ro
     # See `inference-x86` above: append a real `command:` against a
-    # `deployments/*.yaml` once you have one + connected hardware (ADR-0031).
+    # `scenes/deploy/*.yaml` once you have one + connected hardware (ADR-0031).

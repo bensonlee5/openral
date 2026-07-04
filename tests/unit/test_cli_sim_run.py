@@ -47,7 +47,7 @@ def test_bh_sim_run_help_shows_flags() -> None:
     """`openral sim run --help` surfaces the rollout flag set, not the root `openral` help."""
     result = runner.invoke(app, ["sim", "run", "--help"])
     assert result.exit_code == 0, result.output
-    for flag in ("--config", "--rskill", "--robot", "--task", "--no-view"):
+    for flag in ("--config", "--rskill", "--robot", "--task", "--no-view", "--dry-run"):
         assert flag in result.output, f"flag {flag!r} missing from `openral sim run --help`"
     # Legacy free-flag composition (--scene / --vla) was removed in the
     # `feat(core,sim): SceneEnvironment + openral sim run --rskill, no legacy` commit.
@@ -90,6 +90,26 @@ def test_bh_sim_run_help_omits_record_video_flag() -> None:
     result = runner.invoke(app, ["sim", "run", "--help"])
     assert result.exit_code == 0, result.output
     assert "--record-video" not in result.output
+
+
+def test_bh_sim_run_dry_run_resolves_without_building_sim() -> None:
+    """`--dry-run` resolves the SimScene + rSkill but does not enter SimRunner."""
+    result = runner.invoke(
+        app,
+        [
+            "sim",
+            "run",
+            "--config",
+            "scenes/sim/tabletop_cube_push.yaml",
+            "--rskill",
+            "rskills/molmoact2-so101-nf4",
+            "--dry-run",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "openral sim run" in result.output
+    assert "dry-run: resolved config + rSkill" in result.output
+    assert "max_ticks:" in result.output
 
 
 def test_bh_sim_run_legacy_scene_flag_rejected() -> None:

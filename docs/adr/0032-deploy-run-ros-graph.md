@@ -83,10 +83,9 @@ Two enabling facts from the Effort-2 investigation:
   mode-dispatch) + `tests/unit/test_hal_lifecycle_manifest.py`.
 - **Phase 2 — launch resolution + CLI — *done.*** `resolve_launch_invocation` gained
   `hal_mode` + optional `config`; real mode skips the sim twin/scene injection and fast-fails a
-  sim-only robot; `run_launch_invocation` is the shared shelling path. `deploy run` now resolves
-  the robot from a `RobotEnvironment` and shells `sim_e2e.launch.py` with `hal_mode:=real`, no
-  in-process runner. No `sim_e2e.launch.py` change was needed (the launch argv has no scene arg;
-  `hal_mode` flows via the HAL params file). Resolution + error/ happy paths unit-tested
+  sim-only robot; `run_launch_invocation` is the shared shelling path. ADR-0078 later unified the
+  config as `DeployScene` for both sim and real deploys, with `workcell_json` carrying safety/ACM
+  into `sim_e2e.launch.py`. Resolution + error/ happy paths unit-tested
   (`test_deploy_run_real_resolution.py`, `test_cli_deploy.py`); the live `ros2 launch` + real
   `connect()` are HIL-verified.
 - **Phase 3 — HIL tests + docs:** `tests/hil/test_real_e2e_<robot>.py` (live launch on a robot

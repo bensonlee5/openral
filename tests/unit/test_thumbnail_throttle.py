@@ -1,4 +1,4 @@
-"""DeployRunner throttles dashboard thumbnail emission to thumbnail_hz/camera.
+"""DeployRunner throttles dashboard thumbnail emission to a fixed cadence.
 
 Real twin + real skill + real synthetic camera readers (no mocks per
 CLAUDE.md §1.11). A :class:`_SyntheticRgbReader` is a genuine
@@ -100,9 +100,7 @@ def memory_exporter() -> Iterator[InMemorySpanExporter]:
         exporter.clear()
 
 
-def _build_runner(
-    *, thumbnail_hz: float, readers: list[_SyntheticRgbReader]
-) -> tuple[DeployRunner, _NoOpSkill]:
+def _build_runner(*, readers: list[_SyntheticRgbReader]) -> tuple[DeployRunner, _NoOpSkill]:
     skill = _NoOpSkill()
     skill.configure()
     skill.activate()
@@ -115,7 +113,6 @@ def _build_runner(
         aggregator=aggregator,
         sensor_readers=readers,
         rate_hz=30.0,
-        thumbnail_hz=thumbnail_hz,
     )
     return runner, skill
 
@@ -157,17 +154,17 @@ class _FakeClock:
         return self.t
 
 
-def test_gate_emits_at_thumbnail_hz(memory_exporter: InMemorySpanExporter) -> None:
+def test_gate_emits_at_private_thumbnail_rate(memory_exporter: InMemorySpanExporter) -> None:
     reader = _SyntheticRgbReader("cam_top")
-    runner, skill = _build_runner(thumbnail_hz=5.0, readers=[reader])
+    runner, skill = _build_runner(readers=[reader])
     clock = _FakeClock()
     runner._thumbnail_clock = clock
     runner.activate()
-    # 5 Hz gate (period 0.2 s). Tick step 0.07 s is chosen NOT to divide the
+    # 25 Hz gate (period 0.04 s). Tick step 0.01 s is chosen to divide the
     # period, so no tick ever lands exactly on a deadline (which float fuzz
     # could then drop): emits at the first tick past each deadline →
-    # t ≈ 1000.00, .21, .42, .63, .84, 1.05 = 6 over 16 ticks.
-    dt = 0.07
+    # t = 1000.00, .04, .08, .12 = 4 over 16 ticks.
+    dt = 0.01
     n_ticks = 16
     try:
         for i in range(n_ticks):
@@ -178,16 +175,16 @@ def test_gate_emits_at_thumbnail_hz(memory_exporter: InMemorySpanExporter) -> No
         _shutdown(skill)
 
     n = _thumbnails_by_source(memory_exporter).get("cam_top", 0)
-    assert n == 6, f"expected exactly 6 thumbnails at 5 Hz over 16 ticks, got {n}"
+    assert n == 4, f"expected exactly 4 thumbnails at 25 Hz over 16 ticks, got {n}"
 
 
 def test_gate_is_per_camera(memory_exporter: InMemorySpanExporter) -> None:
     readers = [_SyntheticRgbReader("cam_a"), _SyntheticRgbReader("cam_b")]
-    runner, skill = _build_runner(thumbnail_hz=5.0, readers=readers)
+    runner, skill = _build_runner(readers=readers)
     clock = _FakeClock()
     runner._thumbnail_clock = clock
     runner.activate()
-    dt = 0.07
+    dt = 0.01
     n_ticks = 16
     try:
         for i in range(n_ticks):
@@ -199,22 +196,8 @@ def test_gate_is_per_camera(memory_exporter: InMemorySpanExporter) -> None:
 
     counts = _thumbnails_by_source(memory_exporter)
     assert set(counts) == {"cam_a", "cam_b"}
-    # Each camera is gated independently at 5 Hz → 6 emits over the 16 ticks.
-    assert all(v == 6 for v in counts.values()), counts
-
-
-def test_zero_disables_thumbnails(memory_exporter: InMemorySpanExporter) -> None:
-    reader = _SyntheticRgbReader("cam_top")
-    runner, skill = _build_runner(thumbnail_hz=0.0, readers=[reader])
-    runner.activate()
-    try:
-        for _ in range(60):
-            runner.tick()
-    finally:
-        runner.deactivate()
-        _shutdown(skill)
-
-    assert _thumbnails_by_source(memory_exporter) == {}
+    # Each camera is gated independently at 25 Hz → 4 emits over the 16 ticks.
+    assert all(v == 4 for v in counts.values()), counts
 
 
 def test_thumbnail_due_holds_rate_near_tick_rate() -> None:
@@ -222,7 +205,7 @@ def test_thumbnail_due_holds_rate_near_tick_rate() -> None:
     # subharmonic (~14 Hz). Regression for the `now + period` quantisation bug:
     # advancing the deadline from `now` collapsed the rate when the tick period
     # was only slightly shorter than the gate period.
-    runner, skill = _build_runner(thumbnail_hz=25.0, readers=[])
+    runner, skill = _build_runner(readers=[])
     try:
         tick_dt = 1.0 / 28.0
         t = 1000.0
@@ -242,36 +225,11 @@ def test_thumbnail_due_no_cold_start_burst() -> None:
     # First call (no prior deadline) emits once; a tick a few ms later must NOT
     # emit — the deadline starts at `now + period`, never a zero/epoch value
     # that would burst-fire every tick to catch up.
-    runner, skill = _build_runner(thumbnail_hz=5.0, readers=[])
+    runner, skill = _build_runner(readers=[])
     try:
         t = 5000.0
         assert runner._thumbnail_due("cam", t) is True
-        assert runner._thumbnail_due("cam", t + 0.01) is False  # 10 ms < 200 ms
-        assert runner._thumbnail_due("cam", t + 0.21) is True  # past the 200 ms period
+        assert runner._thumbnail_due("cam", t + 0.01) is False  # 10 ms < 40 ms
+        assert runner._thumbnail_due("cam", t + 0.05) is True  # past the 40 ms period
     finally:
         _shutdown(skill)
-
-
-def test_thumbnail_due_disabled_returns_false() -> None:
-    runner, skill = _build_runner(thumbnail_hz=0.0, readers=[])
-    try:
-        assert runner._thumbnail_due("cam", 1000.0) is False
-        assert runner._thumbnail_due("cam", 2000.0) is False
-    finally:
-        _shutdown(skill)
-
-
-def test_factory_passes_thumbnail_hz() -> None:
-    from openral_core import RobotEnvironment
-    from openral_core.schemas import HalConfig, TaskSpec, VLASpec
-    from openral_runner.factory import build_runner
-
-    env = RobotEnvironment(
-        robot_id="so100_follower",
-        hal=HalConfig(adapter="so100_follower"),
-        task=TaskSpec(id="pick_cube/red", scene_id="pick_cube/red", instruction="pick"),
-        vla=VLASpec(id="gpu_passthrough", weights_uri="rskills/noop"),
-        thumbnail_hz=12.0,
-    )
-    runner, _skill = build_runner(env)
-    assert runner._thumbnail_hz == 12.0

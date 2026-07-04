@@ -1,8 +1,8 @@
 # LIBERO-Spatial benchmark — franka_panda fixed by the scene registry.
 # Run with any LIBERO-compatible rSkill:
 #
-#   openral benchmark --config scenes/benchmark/libero_spatial.yaml \
-#                     --rskill rskill://rskills/smolvla-libero
+#   openral benchmark scene --config scenes/benchmark/libero_spatial.yaml \
+#                           --rskill rskill://rskills/smolvla-libero
 #
 # Setup: CC=/usr/bin/gcc just sync --all-packages --group libero
 

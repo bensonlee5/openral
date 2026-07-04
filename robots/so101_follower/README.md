@@ -46,6 +46,25 @@ by index against `description.joints`, so the manifest's logical
 names (`shoulder_pan`, …, `gripper`) drive the user-facing contract
 while the MJCF stays as upstream ships it.
 
+## Detect & deploy
+
+The SO-101 is electrically identical to the SO-100 over USB — the same Feetech
+controller and USB VID/PID — so the bus alone cannot tell them apart. The SO-101
+is the current revision, so a bare `openral detect` resolves to **this** manifest
+by default (no `--robot` flag needed; an SO-100 is selected with `--robot
+so100`). Use detection to validate/write robot-owned facts:
+
+```bash
+openral connect --robot so101                    # smoke-test the serial link
+openral detect \
+    --output robots/so101_follower/robot.yaml
+```
+
+Workcell/deploy context lives in `scenes/deploy/*.yaml`; robot facts such as the
+serial port, cameras, and limits stay in `robot.yaml`. The rSkill is not pinned —
+the reasoner selects it at runtime from the installed `rskills/` registry. See the
+[deploy tutorial](../../docs/tutorials/deploy/deploy-run-and-dashboard.md).
+
 ## Pair with
 
 | Component | Path |

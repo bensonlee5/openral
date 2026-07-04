@@ -269,7 +269,7 @@ contributor should look at before adding similar code.
   check to their inner `RosControlHAL` rather than duplicating it.
 - **`from_yaml(cls, path)` classmethods — *resolved.*** The pattern had
   grown to six copies (`RobotDescription`, `RSkillManifest`,
-  `DeployScene`, `SimScene`, `BenchmarkScene`, `RobotEnvironment`);
+  `DeployScene`, `SimScene`, `BenchmarkScene`);
   all now share `openral_core.schemas._load_yaml_model(cls, path)`,
   and the byte-identical `SimScene` / `BenchmarkScene` overrides were
   deleted (they inherit `DeployScene.from_yaml`, which returns `Self`).
@@ -305,4 +305,3 @@ contributor should look at before adding similar code.
 extraction whenever a module is added or renamed; this file is hand-edited
 afterwards. If a future contributor automates regeneration, mirror the
 pattern in `tools/schema_export.py`.*
-

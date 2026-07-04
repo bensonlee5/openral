@@ -23,10 +23,11 @@ Coverage
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from openral_cli.main import app
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
+from openral_core.schemas import JointState
 from typer.testing import CliRunner
 
 from tests.unit.fakes.fake_so100_hal import FakeSO100FollowerHAL
@@ -62,6 +63,29 @@ def test_connect_so100_happy_path() -> None:
     assert hal.read_count == 1
     assert not hal.connected  # disconnected on the way out
     assert hal.disconnect_count == 1
+
+
+def test_connect_so101_happy_path() -> None:
+    """SO-101 routes through the shared SO100FollowerHAL (same controller)."""
+    fake_state = JointState(
+        name=["shoulder_pan", "shoulder_lift", "elbow_flex"],
+        position=[0.1, 0.2, 0.3],
+        velocity=[0.0, 0.0, 0.0],
+        effort=[0.0, 0.0, 0.0],
+        stamp_ns=0,
+    )
+    fake_hal = MagicMock()
+    fake_hal.read_state.return_value = fake_state
+
+    with patch("openral_hal.so100_follower.SO100FollowerHAL", return_value=fake_hal):
+        result = runner.invoke(app, ["connect", "--robot", "so101", "--port", "/dev/null"])
+
+    assert result.exit_code == 0, result.output
+    assert "SO-101" in result.output
+    assert "Connected" in result.output
+    fake_hal.connect.assert_called_once()
+    fake_hal.read_state.assert_called_once()
+    fake_hal.disconnect.assert_called_once()
 
 
 def test_connect_so100_rosconfigerror_exits_1() -> None:

@@ -249,7 +249,7 @@ just sim-act-aloha                           # ACT × gym-aloha bimanual
 uv run openral dashboard                     # OTLP receiver at :4318
 
 # Hardware deployment
-uv run openral deploy run --config deployments/<your-deployment>.yaml
+uv run openral deploy run --config scenes/deploy/<your-workcell>.yaml
 uv run openral deploy sim --config scenes/deploy/openarm_tabletop.yaml
 just hil so100                               # SO-100 HIL (USB + servos)
 

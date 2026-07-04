@@ -57,6 +57,26 @@ class TestRealModeResolution:
                 hal_mode="real",
             )
 
+    def test_real_mode_config_forwards_workcell_json(self, tmp_path) -> None:
+        config = tmp_path / "deploy.yaml"
+        config.write_text(
+            "scene:\n"
+            "  id: so101_box\n"
+            "  backend: mujoco\n"
+            "robot_id: so100_follower\n"
+            "safety:\n"
+            "  max_force_n: 5.0\n",
+            encoding="utf-8",
+        )
+        inv = resolve_launch_invocation(
+            config=config,
+            robot_override=None,
+            dashboard_port=4318,
+            reset_to_pose_service=None,
+            hal_mode="real",
+        )
+        assert any(arg.startswith("workcell_json:=") for arg in inv.argv_template)
+
 
 class TestSimModeUnchanged:
     def test_so100_sim_builds_bare_twin(self) -> None:

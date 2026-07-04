@@ -69,7 +69,11 @@ from openral_cli.install import install_app
 from openral_cli.prompt import prompt_command
 
 if TYPE_CHECKING:
-    from openral_core import BenchmarkScene, RSkillEvalResult, VLASpec
+    from openral_core import (
+        BenchmarkScene,
+        RSkillEvalResult,
+        VLASpec,
+    )
     from openral_core.schemas import RSkillManifest
     from openral_detect import CompatibilityReport, RSkillCompatRow
     from openral_detect.report import GpuProbeResult
@@ -850,6 +854,15 @@ def detect(
     output: Path = typer.Option(
         Path("robot.yaml"), "--output", "-o", help="Output robot.yaml path"
     ),
+    robot_type: str | None = typer.Option(
+        None,
+        "--robot",
+        "--as",
+        help="Force the canonical base manifest (slug e.g. 'so100' or dir name "
+        "'so100_follower'), overriding USB/DDS inference. A bare Feetech "
+        "plug-in defaults to the SO-101; use this to select the SO-100 (the "
+        "two are indistinguishable over USB).",
+    ),
     report: Path | None = typer.Option(
         None,
         "--report",
@@ -909,7 +922,11 @@ def detect(
         report.write_text(detection.model_dump_json(indent=2), encoding="utf-8")
         console.print(f"[green]Wrote[/green] {report} (raw DetectionReport)")
 
-    description = assemble_robot_description(detection)
+    try:
+        description = assemble_robot_description(detection, force_robot_type=robot_type)
+    except ROSConfigError as exc:
+        console.print(f"[red]detect:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
     yaml_text = _yaml.safe_dump(
         description.model_dump(mode="json"),
         sort_keys=False,
@@ -986,28 +1003,32 @@ def _render_detection_summary(detection: object) -> None:
 
 @app.command()
 def connect(
-    robot: str = typer.Option(..., help="Robot type (so100, g1, ur5e, …)"),
+    robot: str = typer.Option(..., help="Robot type (so100, so101, g1, ur5e, …)"),
     port: str = typer.Option("", "--port", help="USB/serial port override, e.g. /dev/ttyUSB0"),
 ) -> None:
     """Open a HAL connection to a robot, read one joint state, and disconnect.
 
     Exits 0 on success; exits 1 with an error message on failure.
 
-    Supported robots: so100
+    Supported robots: so100, so101 (both drive the shared ``SO100FollowerHAL``
+    Feetech serial bus — the SO-101 is the same controller as the SO-100).
 
     Example:
         >>> # openral connect --robot so100
-        >>> # openral connect --robot so100 --port /dev/ttyUSB1
+        >>> # openral connect --robot so101 --port /dev/ttyUSB1
     """
-    if robot == "so100":
-        _connect_so100(port or "/dev/ttyUSB0")
+    # so100 and so101 share the Feetech SO100FollowerHAL (identical USB
+    # controller + driver); the label only changes the console banner.
+    so_follower_labels = {"so100": "SO-100", "so101": "SO-101"}
+    if robot in so_follower_labels:
+        _connect_so_follower(so_follower_labels[robot], port or "/dev/ttyUSB0")
     else:
-        console.print(f"[red]Unknown robot '{robot}'. Supported: so100[/red]")
+        console.print(f"[red]Unknown robot '{robot}'. Supported: so100, so101[/red]")
         raise typer.Exit(code=1)
 
 
-def _connect_so100(port: str) -> None:
-    """Connect to an SO-100 follower arm, read state, and disconnect."""
+def _connect_so_follower(label: str, port: str) -> None:
+    """Connect to an SO-100/SO-101 follower arm, read state, and disconnect."""
     try:
         from openral_hal.so100_follower import SO100FollowerHAL
     except ImportError:
@@ -1015,7 +1036,7 @@ def _connect_so100(port: str) -> None:
         raise typer.Exit(code=1)  # noqa: B904
 
     hal = SO100FollowerHAL(port=port)
-    console.print(f"Connecting to SO-100 on [bold]{port}[/bold] …")
+    console.print(f"Connecting to {label} on [bold]{port}[/bold] …")
     try:
         hal.connect()
     except ROSConfigError as exc:
@@ -2467,6 +2488,13 @@ def _parse_rskill_cli_arg(raw: str) -> VLASpec:
     except ROSConfigError as exc:
         raise typer.BadParameter(str(exc)) from exc
     manifest = load_rskill_manifest(uri)
+    if manifest.model_family is None:
+        # Only `kind='vla'` skills carry a model_family; a detector/reward skill
+        # has none and cannot drive a VLASpec.
+        raise typer.BadParameter(
+            f"rSkill {raw!r} has no model_family (kind={manifest.kind!r}); "
+            f"--rskill expects a VLA skill."
+        )
     return VLASpec(
         id=manifest.model_family,
         weights_uri=uri,
@@ -3088,9 +3116,8 @@ def dashboard(
 deploy_app = typer.Typer(
     name="deploy",
     help=(
-        "Hardware deploy — run an rSkill on a real robot (or digital twin) "
-        "per a RobotEnvironment YAML (`openral deploy run`), or list available "
-        "robot configs (`openral deploy list`)."
+        "Hardware deploy — run the ROS graph against a real robot from a "
+        "DeployScene YAML (`openral deploy run`) or list deploy scenes."
     ),
     no_args_is_help=True,
 )
@@ -3108,9 +3135,9 @@ deploy_app.command(
 
 @deploy_app.command("list")
 def deploy_list() -> None:
-    """List every robot config under `deployments/*.yaml`.
+    """List every deploy scene under `scenes/deploy/*.yaml`.
 
-    Each entry is a paste-able `--config` path for `openral deploy run`.
+    Each entry is a paste-able `--config` path for `openral deploy run` or `deploy sim`.
     No hardware touch, no GPU.
     """
     from openral_rskill.loader import _find_repo_root_from
@@ -3119,11 +3146,11 @@ def deploy_list() -> None:
     if repo_root is None:
         console.print("[red]Could not locate repo root.[/red]")
         raise typer.Exit(code=1)
-    robot_examples = repo_root / "deployments"
-    if not robot_examples.is_dir():
+    deploy_scenes = repo_root / "scenes" / "deploy"
+    if not deploy_scenes.is_dir():
         print("<none>")
         return
-    configs = sorted(robot_examples.rglob("*.yaml"))
+    configs = sorted(deploy_scenes.rglob("*.yaml"))
     if not configs:
         print("<none>")
         return
@@ -3140,7 +3167,7 @@ def deploy_run(
         exists=True,
         readable=True,
         dir_okay=False,
-        help="Path to a RobotEnvironment YAML; its robot_id + hal.transport drive the launch.",
+        help="Path to a DeployScene YAML; its robot_id selects the real robot workcell.",
     ),
     robot: str | None = typer.Option(
         None,
@@ -3162,20 +3189,25 @@ def deploy_run(
         "--dashboard-port",
         help="Dashboard OTLP port.",
     ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Print the resolved real-mode launch argv and exit without shelling out.",
+    ),
 ) -> None:
     """Run an rSkill on REAL hardware via the production ROS graph (ADR-0032).
 
     Unlike `openral deploy sim`, this drives the **real** hardware HAL: it
-    resolves the robot from `--config` (a RobotEnvironment) and shells the SAME
+    resolves the robot from `--config` (a DeployScene) and shells the SAME
     `sim_e2e.launch.py` graph with `hal_mode:=real` — the HAL lifecycle node +
     C++ safety kernel + reasoner + world state (+ SLAM/Nav2 when the robot
     declares a lidar). The HAL's `connect()` fails loudly if no hardware is
     attached; a simulation-only robot raises ROSCapabilityMismatch (use
-    `openral deploy sim`). The robot's `hal.transport` (serial `port` /
-    `robot_ip` / `fci_ip`) is forwarded as HAL node params; `--hal` wins.
+    `openral deploy sim`). Robot HAL defaults come from robot.yaml; `--hal` wins.
     """
-    from openral_core import RobotEnvironment  # reason: defer schema import
+    from openral_core import DeployScene  # reason: defer schema import
     from openral_core.exceptions import ROSCapabilityMismatch  # reason: defer
+    from pydantic import ValidationError  # reason: defer CLI import
 
     from openral_cli.deploy_sim import (  # reason: defer heavy CLI import
         _parse_hal_overrides,
@@ -3184,20 +3216,17 @@ def deploy_run(
     )
 
     try:
-        env = RobotEnvironment.from_yaml(str(config))
-    except (FileNotFoundError, ROSConfigError) as exc:
+        deploy_scene = DeployScene.from_yaml(str(config))
+    except (FileNotFoundError, ROSConfigError, ValidationError) as exc:
         console.print(f"[red]config error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    # RobotEnvironment.hal.transport (serial port / robot_ip / fci_ip) + params
-    # become HAL node param overrides; an explicit --hal key=value wins.
-    overrides: dict[str, object] = {**env.hal.transport, **env.hal.params}
-    overrides.update(_parse_hal_overrides(hal))
+    overrides = _parse_hal_overrides(hal)
 
     try:
         invocation = resolve_launch_invocation(
-            config=None,
-            robot_override=robot or env.robot_id,
+            config=config,
+            robot_override=robot or deploy_scene.robot_id,
             dashboard_port=dashboard_port,
             reset_to_pose_service=None,
             hal_param_overrides=overrides,
@@ -3212,6 +3241,15 @@ def deploy_run(
         f"[cyan]deploy run[/cyan] {invocation.robot_id} → real HAL "
         f"(hal_mode=real); the HAL's connect() requires the robot to be attached."
     )
+    if dry_run:
+        printed = [
+            arg.replace("HAL_PARAMS_FILE_PLACEHOLDER", "<hal-params-tmp>")
+            for arg in invocation.argv_template
+        ]
+        console.print(f"  hal_params: {invocation.hal_params}")
+        console.print(f"  argv: {shlex.join(printed)}")
+        return
+
     returncode = run_launch_invocation(invocation)
     raise typer.Exit(code=returncode)
 

@@ -49,6 +49,8 @@ __all__ = [
     "compute_intersection",
     "ee_link_index_from_collision_params",
     "kernel_params_from_envelope",
+    "merge_deploy_envelope",
+    "merge_extra_allowed_pairs",
 ]
 
 
@@ -151,6 +153,8 @@ def _check_box_subset(
     skill_max: tuple[float, float, float] | None,
     robot_min: tuple[float, float, float] | None,
     robot_max: tuple[float, float, float] | None,
+    *,
+    label: str = "rSkill",
 ) -> None:
     """Raise ROSConfigError if the skill's workspace box loosens the robot's.
 
@@ -167,21 +171,21 @@ def _check_box_subset(
         return
     if skill_min is None or skill_max is None:
         raise ROSConfigError(
-            "rSkill envelope declared one of workspace_box_{min,max}_xyz "
+            f"{label} envelope declared one of workspace_box_{{min,max}}_xyz "
             "but not the other; both must be set together."
         )
     axes = ("x", "y", "z")
     for i, axis in enumerate(axes):
         if skill_min[i] < robot_min[i] - 1e-9:
             raise ROSConfigError(
-                f"rSkill workspace_box_min_xyz[{axis}]={skill_min[i]!r} "
+                f"{label} workspace_box_min_xyz[{axis}]={skill_min[i]!r} "
                 f"loosens the robot ceiling "
                 f"workspace_box_min_xyz[{axis}]={robot_min[i]!r}; "
-                "skill envelope must be contained in the robot box."
+                f"{label} envelope must be contained in the robot box."
             )
         if skill_max[i] > robot_max[i] + 1e-9:
             raise ROSConfigError(
-                f"rSkill workspace_box_max_xyz[{axis}]={skill_max[i]!r} "
+                f"{label} workspace_box_max_xyz[{axis}]={skill_max[i]!r} "
                 f"loosens the robot ceiling "
                 f"workspace_box_max_xyz[{axis}]={robot_max[i]!r}."
             )
@@ -191,19 +195,104 @@ def _check_scalar_not_loosened(
     field: str,
     skill_value: float,
     robot_value: float,
+    *,
+    label: str = "rSkill",
 ) -> None:
     """Raise when ``skill_value > robot_value`` on a ``max_*`` field."""
     if skill_value > robot_value + 1e-9:
         raise ROSConfigError(
-            f"rSkill envelope {field}={skill_value!r} loosens robot ceiling "
-            f"{field}={robot_value!r}; skill envelope must be tighter "
+            f"{label} envelope {field}={skill_value!r} loosens robot ceiling "
+            f"{field}={robot_value!r}; {label} envelope must be tighter "
             "or equal to the robot ceiling (ADR-0018 §5)."
         )
+
+
+def _validate_envelope_tightens(
+    ceiling: SafetyEnvelope,
+    candidate: SafetyEnvelope,
+    explicit_fields: frozenset[str],
+    *,
+    label: str,
+) -> None:
+    if "workspace_box_min_xyz" in explicit_fields or "workspace_box_max_xyz" in explicit_fields:
+        _check_box_subset(
+            candidate.workspace_box_min_xyz,
+            candidate.workspace_box_max_xyz,
+            ceiling.workspace_box_min_xyz,
+            ceiling.workspace_box_max_xyz,
+            label=label,
+        )
+    for field in (
+        "max_ee_speed_m_s",
+        "max_ee_accel_m_s2",
+        "max_joint_speed_factor",
+        "max_force_n",
+        "max_torque_nm",
+        "contact_force_threshold_n",
+    ):
+        if field in explicit_fields:
+            _check_scalar_not_loosened(
+                field, getattr(candidate, field), getattr(ceiling, field), label=label
+            )
+    if (
+        "deadman_required" in explicit_fields
+        and ceiling.deadman_required
+        and not candidate.deadman_required
+    ):
+        raise ROSConfigError(
+            f"{label} envelope clears deadman_required while the robot ceiling "
+            "requires it; loosening rejected (ADR-0018 §5)."
+        )
+
+
+def merge_deploy_envelope(
+    robot_env: SafetyEnvelope, deploy: SafetyEnvelope | None
+) -> SafetyEnvelope:
+    """Apply explicit deploy/workcell safety fields to the robot ceiling.
+
+    Only fields explicitly present in the deploy YAML are considered; omitted
+    fields keep the robot manifest's tighter values instead of resetting to
+    ``SafetyEnvelope`` schema defaults.
+    """
+    if deploy is None:
+        return robot_env
+    deploy_set = frozenset(deploy.model_fields_set)
+    _validate_envelope_tightens(robot_env, deploy, deploy_set, label="deploy")
+    updates = {field: getattr(deploy, field) for field in deploy_set}
+    return robot_env.model_copy(update=updates)
+
+
+def _intersect_workspace_boxes(
+    base_min: tuple[float, float, float] | None,
+    base_max: tuple[float, float, float] | None,
+    skill_min: tuple[float, float, float] | None,
+    skill_max: tuple[float, float, float] | None,
+) -> tuple[tuple[float, float, float] | None, tuple[float, float, float] | None]:
+    if skill_min is None and skill_max is None:
+        return base_min, base_max
+    if base_min is None or base_max is None:
+        return skill_min, skill_max
+    if skill_min is None or skill_max is None:
+        raise ROSConfigError(
+            "rSkill envelope declared one of workspace_box_{min,max}_xyz "
+            "but not the other; both must be set together."
+        )
+    out_min = tuple(max(base_min[i], skill_min[i]) for i in range(3))
+    out_max = tuple(min(base_max[i], skill_max[i]) for i in range(3))
+    for i, axis in enumerate(("x", "y", "z")):
+        if out_min[i] > out_max[i] + 1e-9:
+            raise ROSConfigError(
+                f"workspace intersection is empty on {axis}: min={out_min[i]!r}, "
+                f"max={out_max[i]!r}."
+            )
+    return out_min, out_max
 
 
 def compute_intersection(
     robot: RobotDescription,
     skill: RSkillManifest | None,
+    *,
+    deploy: SafetyEnvelope | None = None,
 ) -> EnvelopeIntersection:
     """Return the validated intersection of a robot ceiling and a skill envelope.
 
@@ -217,6 +306,8 @@ def compute_intersection(
     Args:
         robot: The robot manifest (the ceiling).
         skill: Optional rSkill manifest (the optional tighter envelope).
+        deploy: Optional deploy-scene workcell envelope; explicit fields must
+            tighten the robot ceiling before skill intersection.
 
     Returns:
         An :class:`EnvelopeIntersection` ready to be serialized for the
@@ -228,6 +319,7 @@ def compute_intersection(
             (CLAUDE.md §1.1, §1.4; ADR-0018 §5).
     """
     robot_env: SafetyEnvelope = robot.safety
+    merged_env = merge_deploy_envelope(robot_env, deploy)
     skill_env: SafetyEnvelope | None = skill.envelope if skill is not None else None
 
     # ``model_fields_set`` tells us which fields the user *explicitly set*
@@ -242,49 +334,18 @@ def compute_intersection(
 
     # Validate the skill envelope first — if it loosens the robot, fail loudly.
     if skill_env is not None:
-        # Workspace box: the two corners are treated as a unit; a partial
-        # declaration is itself an error inside _check_box_subset.
-        if "workspace_box_min_xyz" in skill_set or "workspace_box_max_xyz" in skill_set:
-            _check_box_subset(
-                skill_env.workspace_box_min_xyz,
-                skill_env.workspace_box_max_xyz,
-                robot_env.workspace_box_min_xyz,
-                robot_env.workspace_box_max_xyz,
-            )
-        for field in (
-            "max_ee_speed_m_s",
-            "max_ee_accel_m_s2",
-            "max_joint_speed_factor",
-            "max_force_n",
-            "max_torque_nm",
-            "contact_force_threshold_n",
-        ):
-            if field in skill_set:
-                _check_scalar_not_loosened(
-                    field, getattr(skill_env, field), getattr(robot_env, field)
-                )
-        # deadman_required: robot=True, skill=False is a loosening only
-        # when the skill *explicitly* set deadman_required=False.
-        if (
-            "deadman_required" in skill_set
-            and robot_env.deadman_required
-            and not skill_env.deadman_required
-        ):
-            raise ROSConfigError(
-                "rSkill envelope clears deadman_required while the robot "
-                "ceiling requires it; loosening rejected (ADR-0018 §5)."
-            )
+        _validate_envelope_tightens(robot_env, skill_env, skill_set, label="rSkill")
 
     # Intersection: pick the tighter of each scalar, but only consider the
     # skill value when it was explicitly set.
     def _pick_min(field: str) -> float:
-        r = getattr(robot_env, field)
+        r = getattr(merged_env, field)
         if skill_env is None or field not in skill_set:
             return float(r)
         return float(min(r, getattr(skill_env, field)))
 
-    # Workspace AABB: ``robot ∩ skill`` axis-by-axis when both corners are
-    # explicitly set on the skill; otherwise use the robot's box.
+    # Workspace AABB: ``robot/deploy ∩ skill`` axis-by-axis when both corners are
+    # explicitly set on the skill; otherwise use the deploy-tightened robot box.
     skill_set_box = (
         "workspace_box_min_xyz" in skill_set
         and "workspace_box_max_xyz" in skill_set
@@ -293,20 +354,22 @@ def compute_intersection(
         and skill_env.workspace_box_max_xyz is not None
     )
     if skill_set_box:
-        # _check_box_subset already proved skill is inside robot (or robot
-        # is unset); use the skill's box verbatim.
-        ws_min = skill_env.workspace_box_min_xyz  # type: ignore[union-attr]  # reason: skill_set_box implies non-None
-        ws_max = skill_env.workspace_box_max_xyz  # type: ignore[union-attr]  # reason: skill_set_box implies non-None
+        ws_min, ws_max = _intersect_workspace_boxes(
+            merged_env.workspace_box_min_xyz,
+            merged_env.workspace_box_max_xyz,
+            skill_env.workspace_box_min_xyz,  # type: ignore[union-attr]  # reason: skill_set_box implies non-None
+            skill_env.workspace_box_max_xyz,  # type: ignore[union-attr]  # reason: skill_set_box implies non-None
+        )
     else:
-        ws_min = robot_env.workspace_box_min_xyz
-        ws_max = robot_env.workspace_box_max_xyz
+        ws_min = merged_env.workspace_box_min_xyz
+        ws_max = merged_env.workspace_box_max_xyz
 
     # Joint-level limits — pull from JointSpec and pre-multiply velocity.
     factor = _pick_min("max_joint_speed_factor")
     pos_min, pos_max, vel_max, tau_max = _extract_joint_limits(robot, factor)
 
     # OR with the skill's deadman_required only when explicitly set.
-    deadman_required = robot_env.deadman_required or (
+    deadman_required = merged_env.deadman_required or (
         skill_env.deadman_required
         if skill_env is not None and "deadman_required" in skill_set
         else False
@@ -552,6 +615,50 @@ def collision_params_from_description(
         "collision_allowed_pairs": allowed_pairs,
         "collision_link_names": ordered,
     }
+
+
+def merge_extra_allowed_pairs(
+    params: Mapping[str, object], pairs: list[tuple[str, str]]
+) -> dict[str, object]:
+    """Append deploy-scene allowed collision pairs to kernel collision params."""
+    merged = dict(params)
+    if not pairs or not bool(merged.get("self_collision_enabled", False)):
+        return merged
+
+    raw_names = merged.get("collision_link_names")
+    if not isinstance(raw_names, list) or not all(isinstance(name, str) for name in raw_names):
+        raise ROSConfigError("collision_link_names missing from self-collision params.")
+    names = cast(list[str], raw_names)
+    index = {name: i for i, name in enumerate(names)}
+
+    existing_raw = merged.get("collision_allowed_pairs", [])
+    if not isinstance(existing_raw, list) or not all(isinstance(i, int) for i in existing_raw):
+        raise ROSConfigError("collision_allowed_pairs must be a flat list of integer indices.")
+    if len(existing_raw) % 2:
+        raise ROSConfigError("collision_allowed_pairs must contain index pairs.")
+
+    allowed_pairs = list(cast(list[int], existing_raw))
+    seen: set[tuple[int, int]] = set()
+    for i in range(0, len(allowed_pairs), 2):
+        seen.add(tuple(sorted((allowed_pairs[i], allowed_pairs[i + 1]))))
+
+    valid = ", ".join(names)
+    for a, b in pairs:
+        if a == b:
+            raise ROSConfigError(f"extra_allowed_collision_pairs cannot pair {a!r} with itself.")
+        if a not in index or b not in index:
+            raise ROSConfigError(
+                f"unknown extra_allowed_collision_pairs link {a!r}<->{b!r}; "
+                f"valid collision links: {valid}"
+            )
+        pair = tuple(sorted((index[a], index[b])))
+        if pair in seen:
+            continue
+        seen.add(pair)
+        allowed_pairs.extend([pair[0], pair[1]])
+
+    merged["collision_allowed_pairs"] = allowed_pairs
+    return merged
 
 
 def ee_link_index_from_collision_params(params: Mapping[str, object]) -> int:

@@ -259,12 +259,13 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     # Deferred import: launch files are imported by `ros2 launch` even
     # without a sourced workspace, so keep openral_core / openral_safety
     # off the module top.
-    from openral_core import RobotDescription
+    from openral_core import DeployScene, RobotDescription
     from openral_safety.envelope_loader import (
         collision_params_from_description,
         compute_intersection,
         ee_link_index_from_collision_params,
         kernel_params_from_envelope,
+        merge_extra_allowed_pairs,
     )
 
     robot_yaml = LaunchConfiguration("robot_yaml").perform(context)
@@ -423,6 +424,8 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     # on_activate so the reasoner's first tick sees the operator's goal without
     # a manual ``openral prompt`` call. Empty string = no startup prompt (idle).
     initial_task_prompt = LaunchConfiguration("initial_task_prompt").perform(context)
+    workcell_json = LaunchConfiguration("workcell_json").perform(context)
+    workcell = DeployScene.model_validate_json(workcell_json) if workcell_json else None
 
     # Synthesise the kernel envelope from the manifest. ``skill=None``
     # because ``openral deploy sim`` does not preselect an rSkill — the
@@ -431,7 +434,9 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     # kernel reload, not by mounting a different envelope at boot.
     description = RobotDescription.from_yaml(robot_yaml)
     description.validate_for_e2e_pipeline()  # loud failure on missing fields
-    envelope = compute_intersection(description, skill=None)
+    envelope = compute_intersection(
+        description, skill=None, deploy=workcell.safety if workcell is not None else None
+    )
     # ADR-0030 — self-collision model. Prefer lowering from the robot's MJCF
     # (the full kinematic tree, incl. fixed mounts + floating base, that the
     # manifest's actuated-only ``joints`` can't express); fall back to the
@@ -469,6 +474,15 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                 f"[sim_e2e] MJCF self-collision lowering failed: {exc!r}; using manifest geometry",
                 flush=True,
             )
+    if workcell is not None and workcell.extra_allowed_collision_pairs:
+        before = list(collision_params.get("collision_allowed_pairs", []))
+        collision_params = merge_extra_allowed_pairs(
+            collision_params, workcell.extra_allowed_collision_pairs
+        )
+        after = list(collision_params.get("collision_allowed_pairs", []))
+        if len(after) > len(before):
+            for a, b in workcell.extra_allowed_collision_pairs:
+                print(f"[sim_e2e] ACM +pair {a}<->{b} (deploy override)", flush=True)
     kernel_params = {**kernel_params_from_envelope(envelope), **collision_params}
     # ADR-0040 — the actuated joint order (length n_dof) so the kernel can map
     # /joint_states (named) into q_meas in the action's dof index space, the seed
@@ -1526,6 +1540,11 @@ def generate_launch_description() -> LaunchDescription:
                 "YAML parameter file for the HAL (``/**`` wildcard); the CLI "
                 "always writes one, even when empty."
             ),
+        ),
+        DeclareLaunchArgument(
+            "workcell_json",
+            default_value="",
+            description="DeployScene JSON carrying deploy-time safety/ACM overrides.",
         ),
         DeclareLaunchArgument(
             "reset_to_pose_service",

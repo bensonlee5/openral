@@ -73,7 +73,7 @@ A *supported* target is one where, for every milestone delivered on
 1. The `python/` workspace imports cleanly (`uv sync`).
 2. `openral doctor`, `openral detect`, and `openral sim run`'s pure-CPU path exit 0.
 3. Where a GPU is present, `openral deploy` against a representative
-   `RobotEnvironment` (e.g. `deployments/so100_hello_gstreamer_*`)
+   `DeployScene` (e.g. `scenes/deploy/so101_box.yaml`)
    completes with `budget_violations == 0` for ≥30 ticks.
 4. There is a CI signal — hosted runner for x86 + `ubuntu-24.04-arm`,
    self-hosted `[self-hosted, l4t]` for L4T — that catches regression

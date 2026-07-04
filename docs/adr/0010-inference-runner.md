@@ -91,9 +91,10 @@ publisher branch off the GStreamer pipeline for observability.
 4. **Schemas first (this PR).** Add the on-disk contracts to
    `openral_core` so subsequent PRs build against locked types:
 
-   - `RobotEnvironment` — the YAML artefact `openral deploy` loads.
+   - `RobotEnvironment` — legacy YAML artefact for `openral deploy` (superseded by
+     `DeployScene` in ADR-0078).
    - `HalConfig`, `SensorReaderConfig`, `SensorReaderBackend`,
-     `DeadlineOverrunPolicy` — composed inside `RobotEnvironment`.
+     `DeadlineOverrunPolicy` — legacy runner config pieces.
    - `SensorFrame`, `FrameEncoding` — runtime carrier passed from
      `SensorReader` into `WorldState.image_frames` and into traces.
      Binary payload JSON-serializes as base64 via a Pydantic field
@@ -196,7 +197,7 @@ Phased — one PR per phase. This ADR is **PR A** and ships in the same
 PR as the schemas.
 
 - **PR A (this PR)**: ADR-0010 + the schema additions
-  (`RobotEnvironment`, `HalConfig`, `SensorReaderConfig`,
+  (`RobotEnvironment` was later removed by ADR-0078; `HalConfig`, `SensorReaderConfig`,
   `SensorReaderBackend`, `DeadlineOverrunPolicy`, `SensorFrame`,
   `FrameEncoding`, `TickResult`, `RunResult`) + `WorldState.image_frames`
   extension. Hypothesis fuzz tests, JSON Schema export, repo-state-map

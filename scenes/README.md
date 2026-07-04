@@ -13,7 +13,7 @@ DeployScene  ⊆  SimScene  ⊆  BenchmarkScene
 
 | Tier              | What it pins                                                                 | CLI consumer                                   | Output                                  |
 |-------------------|------------------------------------------------------------------------------|------------------------------------------------|-----------------------------------------|
-| `DeployScene`     | scene only (env-only playground; reasoner picks the rSkill at runtime)       | `openral deploy sim --config scenes/deploy/…`  | Live ROS graph (HAL + reasoner + kernel) |
+| `DeployScene`     | workcell/deploy context: scene, robot, safety tightening, additive ACM       | `openral deploy sim/run --config scenes/deploy/…` | Live ROS graph (HAL + reasoner + kernel) |
 | `SimScene`        | scene + task (single rollout; policy supplied via `--rskill <name>`)         | `openral sim run --config scenes/sim/…`        | One or more `EpisodeResult`s            |
 | `BenchmarkScene`  | scene + task + paper metadata + `n_episodes` + `seed` (paper-comparable)     | `openral benchmark scene --config scenes/benchmark/…` | `RSkillEvalResult` JSON         |
 
@@ -23,8 +23,8 @@ Sibling resources:
   `list[BenchmarkScene]` at the YAML root, ADR-0042) that aggregate multiple
   `BenchmarkScene`s under uniform invariants.
   Consumed by `openral benchmark run --suite <id> --rskill <name>`.
-- [`deployments/`](../deployments/) — `RobotEnvironment` YAMLs for real
-  hardware. Consumed by `openral deploy run`.
+- [`deployments/`](../deployments/) — retired; real deploys use
+  `scenes/deploy/*.yaml` through `DeployScene`.
 
 ## Choosing a tier
 

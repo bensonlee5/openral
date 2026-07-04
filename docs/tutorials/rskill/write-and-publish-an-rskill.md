@@ -156,8 +156,7 @@ openral rskill list                      # see it in the local registry
 `OpenRAL/…` suggestion. Use `rskill search [QUERY] [--kind/--role/--embodiment/--license]`
 when you don't already know the id.
 
-In a `SimEnvironment` or `RobotEnvironment` YAML, reference it by its
-bare rSkill reference in `vla.weights_uri` (see the
+In a `SimScene` YAML, reference it by its bare rSkill reference in `vla.weights_uri` (see the
 [deploy tutorial](../deploy/deploy-run-and-dashboard.md)).
 
 ## See also
