@@ -17,6 +17,7 @@ this tier deploys in the lean DeepStream ds-on image.
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter_ns
 from typing import Any
 
 import structlog
@@ -32,6 +33,11 @@ from openral_runner.backends.gstreamer.trt_nvmm import TrtNvmmExecutor
 log = structlog.get_logger(__name__)
 
 __all__ = ["NvmmObjectsDetector"]
+
+
+def _ms_since(start_ns: int) -> float:
+    """Return elapsed milliseconds from a ``perf_counter_ns`` start."""
+    return (perf_counter_ns() - start_ns) / 1_000_000.0
 
 
 class NvmmObjectsDetector:
@@ -79,13 +85,19 @@ class NvmmObjectsDetector:
         if not p.exists():
             raise ROSConfigError(f"NvmmObjectsDetector: ONNX model not found at '{p}'.")
 
+        self._last_timings_ms: dict[str, float] = {}
+        started_ns = perf_counter_ns()
         runtime = TensorRTRuntime(
             device=f"cuda:{device_index}", rskill_id=model_id, quantization=quantization
         )
+        engine_started_ns = perf_counter_ns()
         engine_bytes = runtime.serialized_engine(p)
+        engine_ms = _ms_since(engine_started_ns)
+        executor_started_ns = perf_counter_ns()
         self._executor = TrtNvmmExecutor(
             engine_bytes, input_size=input_size, device_index=device_index
         )
+        executor_ms = _ms_since(executor_started_ns)
         try:
             self._logits_name, self._boxes_name = identify_rtdetr_outputs(
                 self._executor.output_shapes()
@@ -96,11 +108,26 @@ class NvmmObjectsDetector:
             # them (mirrors TrtNvmmExecutor's own __init__ guard).
             self._executor.close()
             raise
+        self._last_timings_ms = {
+            "engine_ms": engine_ms,
+            "executor_init_ms": executor_ms,
+            "init_total_ms": _ms_since(started_ns),
+        }
         self._labels = labels
         self._model_id = model_id
         self._score_threshold = score_threshold
         self.kind: str = "objects"
-        log.debug("nvmm_detector.created", model_id=model_id, input_size=input_size)
+        log.debug(
+            "nvmm_detector.created",
+            model_id=model_id,
+            input_size=input_size,
+            timings_ms=self._last_timings_ms,
+        )
+
+    @property
+    def last_timings_ms(self) -> dict[str, float]:
+        """Most recent init/detect timing breakdown in milliseconds."""
+        return dict(self._last_timings_ms)
 
     def detect_nvmm(self, handle: Any, sensor_id: str) -> ObjectsMetadata | None:  # noqa: ANN401  # reason: NvBufSurfaceHandle — avoid import at signature
         """Run zero-copy inference on an NVMM frame handle; return detections or ``None``.
@@ -115,10 +142,14 @@ class NvmmObjectsDetector:
         Returns:
             :class:`ObjectsMetadata`, or ``None`` if no detection passes threshold.
         """
+        started_ns = perf_counter_ns()
+        infer_started_ns = perf_counter_ns()
         outputs = self._executor.infer_rgba_devptr(
             handle.gpu_ptr, width=handle.width, height=handle.height, pitch=handle.pitch
         )
-        return postprocess_rtdetr(
+        infer_ms = _ms_since(infer_started_ns)
+        postprocess_started_ns = perf_counter_ns()
+        result = postprocess_rtdetr(
             outputs[self._logits_name],
             outputs[self._boxes_name],
             labels=self._labels,
@@ -128,6 +159,12 @@ class NvmmObjectsDetector:
             frame_width=handle.width,
             frame_height=handle.height,
         )
+        self._last_timings_ms = {
+            "trt_infer_ms": infer_ms,
+            "postprocess_ms": _ms_since(postprocess_started_ns),
+            "detect_total_ms": _ms_since(started_ns),
+        }
+        return result
 
     def close(self) -> None:
         """Release the executor's device buffers. Idempotent."""

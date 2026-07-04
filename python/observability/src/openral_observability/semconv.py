@@ -49,6 +49,7 @@ INFERENCE_CHUNK_INDEX: Final[str] = "inference.chunk_index"
 INFERENCE_CHUNK_SIZE: Final[str] = "inference.chunk_size"
 INFERENCE_ENGINE: Final[str] = "inference.engine"
 INFERENCE_DEVICE: Final[str] = "inference.device"
+INFERENCE_DURATION_MS: Final[str] = "inference.duration_ms"
 
 SAFETY_SEVERITY: Final[str] = "safety.severity"
 SAFETY_CHECK_NAME: Final[str] = "safety.check_name"
@@ -335,6 +336,7 @@ __all__ = [
     "INFERENCE_CHUNK_INDEX",
     "INFERENCE_CHUNK_SIZE",
     "INFERENCE_DEVICE",
+    "INFERENCE_DURATION_MS",
     "INFERENCE_ENGINE",
     "INFERENCE_KIND",
     "LABEL_CHECK_NAME",

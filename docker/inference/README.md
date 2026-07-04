@@ -52,8 +52,8 @@ The same userspace stack regardless of flavour:
   because Fast DDS' SHM transport interacts badly with pydantic v2's Rust
   core + gst-cuda plugin scan.
 - **uv-managed workspace venv** at `/workspace/.venv` with the OpenRAL
-  Python packages. `uv sync` runs **without `--extra gstreamer`** — see
-  the gi-splice note above.
+  Python packages plus the TensorRT group. `uv sync` runs **without
+  `--extra gstreamer`** — see the gi-splice note above.
 - **colcon `install/` overlay** at `/workspace/install/` (baked by the
   builder stage). Carries every ROS / C++ package the deploy graph
   needs, mirroring `just ros2-build`:
@@ -71,6 +71,8 @@ The same userspace stack regardless of flavour:
   - `openral_prompt_router` — ADR-0018 F10 prompt fan-in
   - `openral_safety`, `openral_safety_watchdog` — ADR-0018 F5 + deadman
   - `openral_human_estop` — ADR-0018 F5 forwarder
+  - `openral_foxglove_bringup` — read-only allowlists imported by
+    `openral_rskill_ros` launch files
   - `openral_rskill_ros` — ADR-0018 F1 `ExecuteSkill` action server
 
   `Python3_EXECUTABLE=/workspace/.venv/bin/python` is baked into every
@@ -98,7 +100,8 @@ DeepStream-only additions on `:x86-deepstream-latest`:
   `gstreamer1.0-plugins-base-apps` — DeepStream installer runtime deps.
 - DeepStream SDK 9.0 unpacked at `/opt/nvidia/deepstream/deepstream/`.
   Samples directory pruned to keep the image lean.
-- `LD_LIBRARY_PATH=/opt/nvidia/deepstream/deepstream/lib:...`
+- `LD_LIBRARY_PATH` includes TensorRT/CUDA wheel libs, the colcon overlay,
+  and `/opt/nvidia/deepstream/deepstream/lib`.
 - `GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins`
 - Plugins now registered: `nvvideoconvert`, `nvstreammux`, `nvtracker`,
   `nvjpegdec`, `nvv4l2decoder`, `nvmsgconv`, `nvmsgbroker`,

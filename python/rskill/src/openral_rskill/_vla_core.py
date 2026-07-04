@@ -24,13 +24,14 @@ camera handling, and post-processor pipelines stay where they are.
 
 from __future__ import annotations
 
+from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import structlog
 from numpy.typing import NDArray
 from openral_core.exceptions import ROSConfigError
-from openral_observability import inference_span
+from openral_observability import inference_span, semconv
 
 if TYPE_CHECKING:
     from openral_core import ImagePreprocessing, RSkillManifest, VLASpec
@@ -521,10 +522,15 @@ def run_inference(
     if device is not None:
         extras["device"] = str(device)
     with (
-        inference_span(chunk_index=chunk_index, kind=kind, **extras),
+        inference_span(chunk_index=chunk_index, kind=kind, **extras) as span,
         torch.no_grad(),
     ):
-        return policy.select_action(batch)
+        started_ns = perf_counter_ns()
+        try:
+            return policy.select_action(batch)
+        finally:
+            elapsed_ms = (perf_counter_ns() - started_ns) / 1_000_000.0
+            span.set_attribute(semconv.INFERENCE_DURATION_MS, elapsed_ms)
 
 
 def to_numpy_action(action_tensor: Any) -> NDArray[np.float32]:
