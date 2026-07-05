@@ -65,7 +65,6 @@ from openral_core.schemas import (
     SensorFrame,
     SensorModality,
     SensorReaderBackend,
-    SensorDeployBinding,
     SensorReaderConfig,
     SensorSpec,
     SimEnvironment,
