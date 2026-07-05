@@ -1656,9 +1656,15 @@ def _kill_orphan_openral_graph_processes() -> int:
     SIGKILL failures (permission denied, race) are silently
     skipped. Returns the count of processes killed for logging.
     """
+    proc_root = Path("/proc")
+    if not proc_root.is_dir():
+        # No procfs (macOS dev hosts) — nothing to sweep. Deployment
+        # targets are Linux; on Darwin the reap is a no-op rather than a
+        # FileNotFoundError crash inside _run_launch.
+        return 0
     me = os.getuid()
     killed = 0
-    for entry in Path("/proc").iterdir():
+    for entry in proc_root.iterdir():
         if not entry.name.isdigit():
             continue
         pid = int(entry.name)
