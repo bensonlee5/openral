@@ -66,3 +66,25 @@ sensors:
           appsink name=bh_sink emit-signals=true max-buffers=1 drop=true sync=false
           openral_cam_tee. ! queue leaky=downstream max-size-buffers=2 !
           appsink name=ros_sink emit-signals=true max-buffers=1 drop=true sync=false
+
+# ── Safety ACM override (ADR-0080 sanctioned per-deploy loosening) ───────────
+# WHY: on 2026-07-05 the C++ safety kernel latched /openral/estop on the FIRST
+# action of a live pen-pick run with:
+#   safety.collision kind=self a=base b=lower_arm step=0 min_distance_m=-0.078
+# `step=0` = the arm's CURRENT pose, before any commanded motion — the arm was
+# NOT physically colliding. The so_arm101 MJCF ships no primitive collision
+# geometry, so the kernel falls back to the robot-manifest capsule model
+# ([sim_e2e] "MJCF has no primitive collision geometry; keeping the manifest
+# self-collision model"), whose base/lower_arm capsules over-report and
+# penetrate at valid poses (the known SO-100/101 "manifest collides at home"
+# geometry bug).
+#
+# CAVEAT (§1.1 / §3): this entry DISABLES self-collision detection for the
+# base<->lower_arm pair on THIS deployment only — a *real* base<->lower_arm
+# collision during motion would go undetected. It is an expedient to unblock
+# live testing, NOT the fix. The proper fix is safety-WG territory: correct the
+# manifest base/lower_arm collision capsules (or add real MJCF collision
+# primitives) so the model is accurate, then remove this override. Watch the
+# arm on the first runs.
+extra_allowed_collision_pairs:
+  - ["base", "lower_arm"]
