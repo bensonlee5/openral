@@ -39,6 +39,7 @@ from openral_core import (
 from openral_hal import (
     HAL,
     AlohaMujocoHAL,
+    AnvilOpenArmV2MujocoHAL,
     FrankaPandaHAL,
     G1MujocoHAL,
     H1MujocoHAL,
@@ -71,6 +72,7 @@ _HAL_CLASSES = [
     AlohaMujocoHAL,
     Rizon4MujocoHAL,
     OpenArmMujocoHAL,
+    AnvilOpenArmV2MujocoHAL,
     UR5eHAL,
     UR10eHAL,
 ]

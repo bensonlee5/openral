@@ -198,6 +198,20 @@ _MuJoCo digital twin for the Enactic OpenArm **v2** bimanual humanoid arm.  Fres
 - `_openarm_arm_joint_specs(names, position_limits, side) -> list[JointSpec]`, `_openarm_gripper_joint_spec(name, side, position_limits) -> JointSpec`, `_openarm_joint_specs() -> list[JointSpec]` (L167, L190, L206)
 - const `OPENARM_DESCRIPTION = RobotDescription(...)` (L234) — sim baseline (`name="openarm_v2"`, all 16 joints revolute matching v2's hinge gripper).  `sdk_kind="open"`, `hal.sim="openral_hal.openarm:OpenArmMujocoHAL"` + `hal.real=None` (sim-only).  Drift-guarded against `robots/openarm/robot.yaml`.
 
+### `python/hal/src/openral_hal/anvil_openarm_v2.py`
+_MuJoCo digital twin for the Anvil OpenARM 2.0 — Anvil Robotics' manufactured variant of the standard OpenArm v2 (docs.anvil.bot/introduction/openarm-2.0).  Differs from the Enactic v2 twin in exactly two documented joint ranges (J1 ±135 deg; J6 -45..+70 deg radial deviation) plus the red wrist bracket that enables it — all baked into the fetched MJCF, so the HAL stays a thin manifest-driven subclass (ADR-0023)._
+
+- `class AnvilOpenArmV2MujocoHAL(MujocoArmHAL)` — 16-DoF (7 arm + 1 gripper per side) bimanual HAL driving `models/anvil_openarm_bimanual.xml` from the pinned `bensonlee5/anvil-openarm-mujoco` clone via the `openarm:anvil_v2_bimanual` ref.  All wiring lives in `ANVIL_OPENARM_V2_DESCRIPTION.sim`: joint→qpos map skipping the equality-coupled follower fingers (qpos 8, 17), two `PASSTHROUGH` hinge grippers (left jaw `[0, 0.7854]`, right jaw `[-0.7854, 0]`), `seed_ctrl_from_qpos: true` for the native `<position>` actuators.  Structurally identical to `OpenArmMujocoHAL` — the Anvil-ness is entirely in the asset. (L366)
+  - `__init__(*, mjcf_path=None, settle_steps=1, gravity_enabled=True, staleness_limit_s=0.5)` — Forwards to `self._init_from_description(ANVIL_OPENARM_V2_DESCRIPTION, …)`. (L404)
+- `_anvil_arm_joint_specs(names, position_limits, side) -> list[JointSpec]`, `_anvil_gripper_joint_spec(name, side, position_limits) -> JointSpec`, `_anvil_joint_specs() -> list[JointSpec]` (L160, L184, L204)
+- const `ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(...)` (L214) — sim baseline (`name="anvil_openarm_v2"`, all 16 joints revolute, hinge grippers; J1/J6 carry the Anvil ranges on both arms, J2 keeps the v2 mirrored asymmetry; two wrist RGB `SensorSpec`s rendering the MJCF's `camera_wrist_{left,right}` at 640×400).  `sdk_kind="open"`, `hal.sim="openral_hal.anvil_openarm_v2:AnvilOpenArmV2MujocoHAL"` + `hal.real=None` (sim-only; a wrapper around Anvil's driver stack is a tracked follow-up).  Drift-guarded against `robots/anvil_openarm_v2/robot.yaml`.
+
+### `python/hal/src/openral_hal/_anvil_openarm_v2_assets.py`
+_Vendor the Anvil OpenARM 2.0 MJCF from `bensonlee5/anvil-openarm-mujoco` — no upstream package ships the Anvil variant._
+
+- `ensure_anvil_openarm_v2_mjcf() -> str` — Idempotently clones `bensonlee5/anvil-openarm-mujoco` at a pinned SHA into `$OPENRAL_CACHE_DIR/anvil_openarm_v2/<sha>/`, initialises its `upstream/openarm_mujoco` mesh submodule (the generated MJCF's meshdir points into it), and returns the bimanual MJCF path.  Raises `ROSConfigError` when `git` is missing or the clone / submodule init fails.  Mirrors `_openarm_v2_assets.ensure_openarm_v2_mjcf` plus the submodule step. (L54)
+- module const `_ANVIL_PINNED_SHA: str` (L34) — bump when the generator or the local Anvil spec changes.
+
 ### `python/hal/src/openral_hal/_openarm_v2_assets.py`
 _Vendor the upstream `enactic/openarm_mujoco` v2 MJCF until `robot_descriptions` bumps its pin past PR #19._
 

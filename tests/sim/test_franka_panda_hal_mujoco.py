@@ -127,7 +127,7 @@ def _make_action(targets: list[float]) -> Action:
 # ── Franka-specific lifecycle ─────────────────────────────────────────────────
 #
 # Shared protocol compliance and standard lifecycle tests are consolidated in
-# tests/sim/test_hal_protocol_contracts.py (parametrized across all 9 HALs).
+# tests/sim/test_hal_protocol_contracts.py (parametrized across all MuJoCo HALs).
 # Keep only Franka-specific tests here.
 
 

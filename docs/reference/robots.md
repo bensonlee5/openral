@@ -14,6 +14,7 @@ Every embodiment is a typed `RobotDescription` manifest under `robots/<robot_id>
 | Flexiv Rizon 4 | [`robots/rizon4/`](https://github.com/OpenRAL/openral/tree/master/robots/rizon4/) | `Rizon4MujocoHAL` (`MujocoArmHAL`) | ✓ sim |
 | ALOHA bimanual (gym-aloha) | [`robots/aloha_bimanual/`](https://github.com/OpenRAL/openral/tree/master/robots/aloha_bimanual/) | `AlohaMujocoHAL` (`MujocoArmHAL`, bimanual) + real-HW `AlohaHAL` over Interbotix XS | ✓ sim · ✓ HW |
 | Enactic OpenArm v2 bimanual | [`robots/openarm/`](https://github.com/OpenRAL/openral/tree/master/robots/openarm/) | `OpenArmMujocoHAL` (`MujocoArmHAL`, 16-DoF bimanual) | ✓ sim |
+| Anvil OpenARM 2.0 bimanual | [`robots/anvil_openarm_v2/`](https://github.com/OpenRAL/openral/tree/master/robots/anvil_openarm_v2/) | `AnvilOpenArmV2MujocoHAL` (`MujocoArmHAL`, 16-DoF bimanual; v2 + Anvil J1/J6 range deltas + red wrist bracket) | ✓ sim |
 | Unitree H1 humanoid | [`robots/h1/`](https://github.com/OpenRAL/openral/tree/master/robots/h1/) | `H1MujocoHAL` (software PD loop, no S0 cerebellum) | ✓ sim |
 | Unitree G1 humanoid | [`robots/g1/`](https://github.com/OpenRAL/openral/tree/master/robots/g1/) | `G1MujocoHAL` (Menagerie MJCF) | ✓ sim |
 | Rethink Sawyer | [`robots/sawyer/`](https://github.com/OpenRAL/openral/tree/master/robots/sawyer/) | eval-only · real-HW HAL planned (#57) | ✓ sim |

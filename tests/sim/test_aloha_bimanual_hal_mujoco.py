@@ -218,7 +218,7 @@ def _home_action(horizon: int = 1) -> Action:
 # ── ALOHA-specific lifecycle tests ────────────────────────────────────────────
 #
 # Shared protocol compliance and standard lifecycle tests are consolidated in
-# tests/sim/test_hal_protocol_contracts.py (parametrized across all 9 HALs).
+# tests/sim/test_hal_protocol_contracts.py (parametrized across all MuJoCo HALs).
 # Keep only ALOHA-specific tests here.
 
 
