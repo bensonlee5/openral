@@ -27,11 +27,12 @@ from openral_core.exceptions import ROSConfigError
 
 __all__ = ["ensure_anvil_openarm_v2_mjcf"]
 
-# Pinned to anvil-openarm-mujoco main — the merge of the red-wrist-
-# bracket PR (#3).  Bump when the generator or the local Anvil spec
-# changes; keep pinned (not a branch head) so the sim contract is
-# reproducible.
-_ANVIL_PINNED_SHA: str = "0b9824a7fb106c2a7a755d4f3f2efd1272b178fa"
+# Pinned to anvil-openarm-mujoco main — PR #4 (redesigned wrist
+# bracket that attaches to the J6 hub face and the J7 motor housing,
+# plus pedestal keyframe ctrl).  Bump when the generator or the local
+# Anvil spec changes; keep pinned (not a branch head) so the sim
+# contract is reproducible.
+_ANVIL_PINNED_SHA: str = "de6dffe74b1a96a44b4d453e7acdfee52e3e4a24"
 _ANVIL_REPO_URL: str = "https://github.com/bensonlee5/anvil-openarm-mujoco.git"
 _ANVIL_MJCF_REL: str = "models/anvil_openarm_bimanual.xml"
 # The generated MJCF's meshdir points into this submodule (the pristine
