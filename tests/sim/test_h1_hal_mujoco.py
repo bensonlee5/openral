@@ -226,7 +226,7 @@ def _zero_action(horizon: int = 1) -> Action:
 # ── H1-specific lifecycle tests ───────────────────────────────────────────────
 #
 # Shared protocol compliance and standard lifecycle tests are consolidated in
-# tests/sim/test_hal_protocol_contracts.py (parametrized across all 9 HALs).
+# tests/sim/test_hal_protocol_contracts.py (parametrized across all MuJoCo HALs).
 # Keep only H1-specific tests here.
 
 

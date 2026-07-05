@@ -146,15 +146,31 @@ def _resolve_gym_aloha(scene: str, kind: AssetKind) -> Path:
 
 
 def _resolve_openarm(variant: str, kind: AssetKind) -> Path:
-    """Resolve ``openarm:<variant>`` to the vendored v2 MJCF (mjcf only)."""
+    """Resolve ``openarm:<variant>`` to a vendored OpenArm MJCF (mjcf only).
+
+    Variants (lazy imports keep the fetchers off the path for robots
+    that don't need them):
+
+    * ``bimanual`` — the Enactic OpenArm v2 bimanual MJCF, out-pinned
+      past the ``robot_descriptions`` commit by
+      :func:`openral_hal._openarm_v2_assets.ensure_openarm_v2_mjcf`.
+    * ``anvil_v2_bimanual`` — the Anvil OpenARM 2.0 bimanual MJCF (v2 plus
+      Anvil's J1/J6 range deltas and the red wrist bracket), fetched by
+      :func:`openral_hal._anvil_openarm_v2_assets.ensure_anvil_openarm_v2_mjcf`.
+    """
     if kind != "mjcf":
         raise AssetRefError(f"openarm:{variant} is mjcf-only, not {kind}")
-    # Lazy import keeps the openarm fetcher off the path for robots that
-    # don't need it. ``ensure_openarm_v2_mjcf`` takes no variant arg today —
-    # only the bimanual MJCF is wired (mirrors resolve_mjcf_uri).
-    from openral_hal._openarm_v2_assets import ensure_openarm_v2_mjcf
+    if variant == "bimanual":
+        from openral_hal._openarm_v2_assets import ensure_openarm_v2_mjcf
 
-    return Path(ensure_openarm_v2_mjcf())
+        return Path(ensure_openarm_v2_mjcf())
+    if variant == "anvil_v2_bimanual":
+        from openral_hal._anvil_openarm_v2_assets import ensure_anvil_openarm_v2_mjcf
+
+        return Path(ensure_anvil_openarm_v2_mjcf())
+    raise AssetRefError(
+        f"unknown openarm variant {variant!r}; expected 'bimanual' or 'anvil_v2_bimanual'"
+    )
 
 
 def _resolve_menagerie(model: str, kind: AssetKind) -> Path:

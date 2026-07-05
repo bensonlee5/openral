@@ -18,6 +18,7 @@ Coverage
 - ``robots/h1/robot.yaml``             ↔ ``H1_DESCRIPTION``             (HAL `h1.py`)
 - ``robots/rizon4/robot.yaml``         ↔ ``RIZON4_DESCRIPTION``         (HAL `flexiv_rizon4.py`)
 - ``robots/openarm/robot.yaml``        ↔ ``OPENARM_DESCRIPTION``        (HAL `openarm.py`)
+- ``robots/anvil_openarm_v2/robot.yaml`` ↔ ``ANVIL_OPENARM_V2_DESCRIPTION``
 
 Most covered YAMLs pin to the **real-hardware** ``*_REAL_DESCRIPTION``
 constant because those YAMLs are the production-deployment manifests.
@@ -80,6 +81,12 @@ from openral_core import RobotDescription
         ("robots/h1/robot.yaml", "H1_DESCRIPTION"),
         ("robots/rizon4/robot.yaml", "RIZON4_DESCRIPTION"),
         ("robots/openarm/robot.yaml", "OPENARM_DESCRIPTION"),
+        # The Anvil OpenARM 2.0 (standard v2 + Anvil's J1/J6 range
+        # deltas and wrist bracket) pins to its sim baseline for the
+        # same reason as the Enactic v2 arm: no real-HW HAL yet (a
+        # wrapper around Anvil's driver stack,
+        # github.com/anvil-robotics/openarm, is a tracked follow-up).
+        ("robots/anvil_openarm_v2/robot.yaml", "ANVIL_OPENARM_V2_DESCRIPTION"),
     ],
 )
 def test_robot_yaml_matches_hal_description(manifest_path: str, hal_constant_attr: str) -> None:

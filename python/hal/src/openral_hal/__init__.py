@@ -46,6 +46,15 @@ Public surface:
   let the HAL just write target → ctrl and step.  The v2 MJCF is
   fetched lazily by ``openral_hal._openarm_v2_assets``; will simplify
   back to ``robot_descriptions`` once upstream bumps its pin.
+- ``AnvilOpenArmV2MujocoHAL`` / ``ANVIL_OPENARM_V2_DESCRIPTION``: MuJoCo-backed
+  digital twin for the Anvil OpenARM 2.0 — Anvil Robotics' manufactured
+  variant of the standard OpenArm v2 (same 16-DoF surface).  Differs
+  from the Enactic v2 arm in exactly two documented ranges (J1 clamped
+  to +/-135 deg; J6 radial deviation widened to -45..+70 deg) plus the
+  red wrist bracket that enables it (visual-only meshes in the MJCF).
+  Thin manifest-driven subclass like ``OpenArmMujocoHAL``; the MJCF is
+  fetched at a pinned SHA from ``bensonlee5/anvil-openarm-mujoco`` by
+  ``openral_hal._anvil_openarm_v2_assets`` (``openarm:anvil_v2_bimanual``).
 - ``SimTransport``: typed in-memory ros2_control transport for unit tests.
 
 All ``*_REAL_DESCRIPTION`` constants are derived from their sim siblings via
@@ -60,6 +69,7 @@ from openral_hal.aloha import (
     AlohaHAL,
     AlohaMujocoHAL,
 )
+from openral_hal.anvil_openarm_v2 import ANVIL_OPENARM_V2_DESCRIPTION, AnvilOpenArmV2MujocoHAL
 from openral_hal.flexiv_rizon4 import RIZON4_DESCRIPTION, Rizon4MujocoHAL
 from openral_hal.franka_panda import (
     FRANKA_PANDA_DESCRIPTION,
@@ -112,6 +122,7 @@ from openral_hal.ur_real import (
 __all__ = [
     "ALOHA_DESCRIPTION",
     "ALOHA_REAL_DESCRIPTION",
+    "ANVIL_OPENARM_V2_DESCRIPTION",
     "FRANKA_PANDA_DESCRIPTION",
     "FRANKA_PANDA_REAL_DESCRIPTION",
     "G1_DESCRIPTION",
@@ -126,6 +137,7 @@ __all__ = [
     "SO100_DESCRIPTION",
     "AlohaHAL",
     "AlohaMujocoHAL",
+    "AnvilOpenArmV2MujocoHAL",
     "FrankaPandaHAL",
     "FrankaPandaRealHAL",
     "G1MujocoHAL",

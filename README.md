@@ -278,7 +278,7 @@ Full toolchain: [docs/contributing/toolchain.md](docs/contributing/toolchain.md)
 
 → **Full table:** [docs/reference/robots.md](docs/reference/robots.md)
 
-Quick examples: SO-100/SO-101 (HW + sim), Franka Panda, UR5e/UR10e, ALOHA bimanual/AgileX, OpenArm v2, Google Robot, Rizon4, Unitree H1/G1, Rethink Sawyer, Fourier GR1.
+Quick examples: SO-100/SO-101 (HW + sim), Franka Panda, UR5e/UR10e, ALOHA bimanual/AgileX, OpenArm v2, Anvil OpenARM 2.0, Google Robot, Rizon4, Unitree H1/G1, Rethink Sawyer, Fourier GR1.
 
 ---
 
