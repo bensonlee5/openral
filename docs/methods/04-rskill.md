@@ -164,20 +164,20 @@ _ADR-0054 — joint-space MoveGroup skill. Selected when `ros_integration.goal_b
 ### `python/rskill/src/openral_rskill/smolvla.py`
 _SmolVLA adapter — rSkillBase implementation for the SmolVLA family of VLAs._
 
-- `from openral_rskill.executor import ChunkedExecutor` — re-exported via `__all__` for back-compat (`from openral_rskill.smolvla import ChunkedExecutor` still works post-ADR-0010 PR B). (L90)
-- `class SmolVLAAdapter(rSkillBase)` — Drives any SmolVLA-family policy. (L113)
-  - `__init__(repo_id, obs_fn, prompt, *, device='cuda:0', n_dof=6, prefetch_at=5, name='smolvla', version='0.1.0', embodiment_tags=None, latency_budget_ms=None)` (L151)
-  - `on_load_weights() -> None` — Fetch checkpoint from HF Hub. (L187)
-  - `on_warmup() -> None` — Dummy inference. (L226)
-  - `_configure_impl()` — Validate IO shapes match `n_dof`. (L247)
-  - `_activate_impl()` — Reset policy, start `ChunkedExecutor`. (L263)
-  - `_deactivate_impl()` — Stop pre-fetch, keep weights. (L271)
-  - `_shutdown_impl()` — Stop threads, free GPU memory. (L277)
-  - `_step_impl(world_state) -> Action` — One S1 step. (L294)
-  - `_preprocess(raw) -> dict[str, Any]` — Lerobot preprocessor + tensor → device. (L330)
-- `class SO100SmolVLASkill(SmolVLAAdapter)` — Pre-configured for the SO-100 6-DoF arm. (L386)
-  - `__init__(prompt, *, repo_id='lerobot/smolvla_base', device='cuda:0', extra_images=None, **kwargs)` (L408)
-- `_so100_obs_fn(world_state, *, device, extra_images=None, prompt) -> dict[str, Any]` — SO-100 WorldState → SmolVLA raw input. (L344)
+- `from openral_rskill.executor import ChunkedExecutor` — re-exported via `__all__` for back-compat (`from openral_rskill.smolvla import ChunkedExecutor` still works post-ADR-0010 PR B). (L91)
+- `class SmolVLAAdapter(rSkillBase)` — Drives any SmolVLA-family policy. (L114)
+  - `__init__(repo_id, obs_fn, prompt, *, device='cuda:0', n_dof=6, prefetch_at=5, name='smolvla', version='0.1.0', embodiment_tags=None, latency_budget_ms=None)` (L152)
+  - `on_load_weights() -> None` — Fetch checkpoint from HF Hub. (L188)
+  - `on_warmup() -> None` — Dummy inference. (L241)
+  - `_configure_impl()` — Validate IO shapes match `n_dof`. (L269)
+  - `_activate_impl()` — Reset policy, start `ChunkedExecutor`. (L285)
+  - `_deactivate_impl()` — Stop pre-fetch, keep weights. (L293)
+  - `_shutdown_impl()` — Stop threads, free GPU memory. (L299)
+  - `_step_impl(world_state) -> Action` — One S1 step. (L316)
+  - `_preprocess(raw) -> dict[str, Any]` — Lerobot preprocessor + tensor → device. (L352)
+- `class SO100SmolVLASkill(SmolVLAAdapter)` — Pre-configured for the SO-100 6-DoF arm. (L408)
+  - `__init__(prompt, *, repo_id='lerobot/smolvla_base', device='cuda:0', extra_images=None, **kwargs)` (L430)
+- `_so100_obs_fn(world_state, *, device, extra_images=None, prompt) -> dict[str, Any]` — SO-100 WorldState → SmolVLA raw input. (L366)
 
 ### `python/rskill/src/openral_rskill/smolvla_export.py`
 _Split ONNX export for SmolVLA: per-camera vision-encoder graph + policy graph (prefix KV fill + unrolled flow-matching loop). Whole-model export is rejected by ORT/TRT (upstream `apply_rope` slice-assign and `SmolVLMVisionEmbeddings` boolean-mask `index_put` both export as `index_put`); the split patches both for the export's duration and keeps tokenization / image preprocessing / noise sampling host-side. Heavy deps (torch, lerobot, transformers) deferred to call time._
@@ -185,6 +185,12 @@ _Split ONNX export for SmolVLA: per-camera vision-encoder graph + policy graph (
 - `class SmolVLAOnnxPaths` [@dataclass(frozen)] — `vision_onnx`, `policy_onnx`, `image_tokens_per_camera`. (L65)
 - `class SmolVLAOnnxPaths` also carries `n_cameras` (the vision graph's batch size).
 - `export_smolvla_split_onnx(policy, out_dir, *, n_cameras=None) -> SmolVLAOnnxPaths` — Exports a loaded `SmolVLAPolicy` (converted to fp32/CPU in place) as two static-shape dynamo-ONNX graphs: `vision_encoder.onnx` (`pixel_values (n_cameras,3,H,W)` → `image_embeddings (n_cameras,T,hidden)` — all cameras ride one pass as the batch axis, exact because the SigLIP tower + pixel-shuffle connector are per-sample; host reshape `(N,T,H)→(1,N·T,H)` reproduces `embed_prefix`'s concat order; batched-vs-per-camera parity 1.1e-06 vs torch) and `policy_graph.onnx` (`img_embs`, `lang_tokens`, `lang_masks`, `state`, `noise` → `actions (1,chunk,32)`; the 10-step Euler loop has a constant trip count and unrolls at trace time; noise is an input for trace replayability §1.8). `ONNXProgram.optimize()` is deliberately not called (it constant-folds a shape tensor three Reshape nodes still reference → ORT rejects the graph). Parity vs torch `sample_actions` on the real pen checkpoint: max abs diff 1.8e-06 (tests/integration/test_smolvla_onnx_split.py). `ROSConfigError` on unsupported config (`add_image_special_tokens`) or export failure. (L287)
+
+### `python/rskill/src/openral_rskill/smolvla_trt.py`
+_TensorRT runtime for SmolVLA — swaps ``VLAFlowMatching.sample_actions`` for the split-ONNX TRT engines; everything around that seam (processor pipeline, prepare_images/state, queues, un-pad, postprocessor, ChunkedExecutor) keeps running upstream lerobot code. Opt-in from ``SmolVLAAdapter.on_load_weights`` via ``OPENRAL_SMOLVLA_TRT=1`` (+ ``OPENRAL_SMOLVLA_TRT_PRECISION``, default ``bf16``); loud log, no silent fallback. Heavy deps deferred._
+
+- `ensure_smolvla_onnx(repo_id, *, cache_dir=None) -> SmolVLAOnnxPaths` — cached split-ONNX export per checkpoint under `~/.cache/openral/smolvla_onnx/<repo>/` (first use ~7 min CPU on a separate fp32 copy — the deploy policy is untouched); cache hits recover `n_cameras`/tokens from the vision graph's static shapes. (L52)
+- `attach_trt_sample_actions(policy, repo_id, *, precision="bf16", device_index=0, cache_dir=None) -> None` — builds/loads the two `TensorRTRuntime` engines (EngineCache-keyed `<repo>#vision` / `<repo>#policy`) and replaces `policy.model.sample_actions` with the TRT-backed callable (original kept at `policy.model._openral_torch_sample_actions`). `fp16` is rejected with the measured rationale (~60% action error — flow matching amplifies fp16 layernorm overflow); `bf16` measured at 1.6% vs fp32 on a real training-set sample (PR #139). The callable enforces the graph's static contract: all cameras present, all img_masks true, lang padded to `tokenizer_max_length`; RTC kwargs rejected; noise sampled host-side when `None`. (L213)
 
 ### `python/rskill/src/openral_rskill/_vla_core.py`
 _Shared helpers for VLA adapters (Layer 3); internal — no public re-export._
