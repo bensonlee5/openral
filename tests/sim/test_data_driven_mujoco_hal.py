@@ -51,6 +51,7 @@ _MANIFEST_DRIVEN_ROBOTS = [
         marks=pytest.mark.skipif(_GYM_ALOHA_MISSING, reason="gym_aloha not installed"),
     ),
     "openarm",  # bimanual: 2 grippers + seed_ctrl_from_qpos
+    "anvil_openarm_v2",  # bimanual: openarm layout + Anvil J1/J6 ranges (openarm: scheme)
 ]
 
 
@@ -163,6 +164,7 @@ def test_python_description_matches_yaml(robot_id: str, description: RobotDescri
         "h1": ("openral_hal.h1", "H1_DESCRIPTION"),
         "aloha_bimanual": ("openral_hal.aloha", "ALOHA_DESCRIPTION"),
         "openarm": ("openral_hal.openarm", "OPENARM_DESCRIPTION"),
+        "anvil_openarm_v2": ("openral_hal.anvil_openarm_v2", "ANVIL_OPENARM_V2_DESCRIPTION"),
     }
     if robot_id not in py_map:
         pytest.skip(f"no Python-side description for {robot_id!r}")
