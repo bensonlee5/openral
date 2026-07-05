@@ -78,7 +78,6 @@ Public API
 
 from __future__ import annotations
 
-import os
 import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -225,18 +224,12 @@ class SmolVLAAdapter(rSkillBase):
         )
 
         # Opt-in TensorRT runtime (ADR-0037 follow-up): swap sample_actions for
-        # the split-ONNX TRT engines. Explicit env knob, loud log, no silent
-        # fallback (CLAUDE.md §1.4) — a TRT failure fails the load.
-        if os.environ.get("OPENRAL_SMOLVLA_TRT", "0").lower() in ("1", "true"):
-            from openral_rskill.smolvla_trt import attach_trt_sample_actions
+        # the split-ONNX TRT engines via the shared env-gated seam (identical
+        # knob to the openral_sim deploy path). Loud, no silent fallback (§1.4).
+        from openral_rskill.smolvla_trt import maybe_attach_trt_from_env
 
-            precision = os.environ.get("OPENRAL_SMOLVLA_TRT_PRECISION", "bf16")
-            attach_trt_sample_actions(
-                self._policy, self._repo_id, precision=precision
-            )
-            log.info(
-                "smolvla.runtime_tensorrt", repo_id=self._repo_id, precision=precision
-            )
+        if maybe_attach_trt_from_env(self._policy, self._repo_id, device=self._device):
+            log.info("smolvla.runtime_tensorrt", repo_id=self._repo_id)
 
     def on_warmup(self) -> None:
         """Run a dummy inference to amortize JIT and cuDNN autotune overhead."""

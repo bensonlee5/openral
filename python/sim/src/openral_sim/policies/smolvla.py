@@ -37,6 +37,7 @@ from openral_rskill._vla_core import (
     run_inference,
     to_numpy_action,
 )
+from openral_rskill.smolvla_trt import maybe_attach_trt_from_env
 
 from openral_sim.policies._policy_loading import (
     lazy_import_lerobot,
@@ -460,7 +461,14 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     # (closed-loop replan every half-chunk -- paper-faithful for the
     # validated 3/3 success run on libero_10/4).
     apply_chunk_replay(policy, spec.extra, manifest=manifest)
-    maybe_compile_chunk_forward(policy, spec.extra, device, torch)
+    # Opt-in TensorRT runtime (ADR-0037 follow-up): swaps sample_actions for the
+    # split-ONNX TRT engines. Mutually exclusive with torch.compile (both target
+    # the same forward) — TRT fully replaces the flow-matching call, so skip the
+    # compile pass when it engages. Loud, no silent fallback (§1.4).
+    if maybe_attach_trt_from_env(policy, repo_id, device=device):
+        _log.info("smolvla.runtime_tensorrt", repo_id=repo_id)
+    else:
+        maybe_compile_chunk_forward(policy, spec.extra, device, torch)
 
     preprocessor, postprocessor = _resolve_smolvla_processors(
         manifest, repo_id, policy, make_pre_post_processors
