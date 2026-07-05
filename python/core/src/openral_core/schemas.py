@@ -5447,7 +5447,7 @@ class RSkillManifest(BaseModel):
         The skill_runner converts deg↔rad at the policy boundary. When the
         manifest omits the units it falls back to a stats-magnitude heuristic
         that silently mis-detected a degrees-trained SmolVLA SO-101 checkpoint as
-        radians — feeding the policy ~57× too-small state and emitting ~57×
+        radians — feeding the policy ~57x too-small state and emitting ~57x
         too-large HAL commands, which drove a real arm into its joint limits
         (issue #135). openral's ``JointState`` / ``Action`` contract is radians,
         so getting this wrong is a hardware-safety hazard, not a nicety. Making
@@ -5467,7 +5467,7 @@ class RSkillManifest(BaseModel):
                 "Add `joint_units: degrees|radians`, verified against the checkpoint's "
                 "normalizer stats (a manipulator joint peaking above ~5 (~90°+) is "
                 "degrees; all channels under π is radians). See issue #135 — a wrong "
-                "guess sends ~57× commands and the arm slams its limits."
+                "guess sends ~57x commands and the arm slams its limits."
             )
         return self
 
