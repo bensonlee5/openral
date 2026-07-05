@@ -78,6 +78,7 @@ Public API
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -223,6 +224,20 @@ class SmolVLAAdapter(rSkillBase):
             n_params=sum(p.numel() for p in self._policy.parameters()),
         )
 
+        # Opt-in TensorRT runtime (ADR-0037 follow-up): swap sample_actions for
+        # the split-ONNX TRT engines. Explicit env knob, loud log, no silent
+        # fallback (CLAUDE.md §1.4) — a TRT failure fails the load.
+        if os.environ.get("OPENRAL_SMOLVLA_TRT", "0").lower() in ("1", "true"):
+            from openral_rskill.smolvla_trt import attach_trt_sample_actions
+
+            precision = os.environ.get("OPENRAL_SMOLVLA_TRT_PRECISION", "bf16")
+            attach_trt_sample_actions(
+                self._policy, self._repo_id, precision=precision
+            )
+            log.info(
+                "smolvla.runtime_tensorrt", repo_id=self._repo_id, precision=precision
+            )
+
     def on_warmup(self) -> None:
         """Run a dummy inference to amortize JIT and cuDNN autotune overhead."""
         import torch
@@ -230,12 +245,19 @@ class SmolVLAAdapter(rSkillBase):
         assert self._policy is not None, "call configure() before activate()"
         self._policy.reset()
         dummy_state = torch.zeros(1, self._n_dof, dtype=torch.float32, device=self._device)
-        dummy_img = torch.rand(1, 3, 256, 256, dtype=torch.float32, device=self._device)
+        # One dummy image per *configured* camera feature (post-rename keys):
+        # warming a single hardcoded camera under-exercises multi-camera
+        # checkpoints (and the TRT runtime rejects a partial camera set — its
+        # exported graph bakes all-present masks).
+        dummy_imgs = {
+            key: torch.rand(1, 3, 256, 256, dtype=torch.float32, device=self._device)
+            for key in self._policy.config.image_features
+        }
         dummy_batch = self._preprocess(
             {
                 "observation.state": dummy_state,
-                "observation.images.camera1": dummy_img,
                 "task": [self._prompt],
+                **dummy_imgs,
             }
         )
         with torch.no_grad():
