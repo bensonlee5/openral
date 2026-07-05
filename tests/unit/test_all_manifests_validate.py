@@ -43,6 +43,7 @@ import yaml
 _ROBOT_IDS: list[str] = [
     "aloha_agilex",
     "aloha_bimanual",
+    "anvil_openarm_v2",
     "franka_panda",
     "g1",
     "google_robot",

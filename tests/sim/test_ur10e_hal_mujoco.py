@@ -109,7 +109,7 @@ def connected_hal(hal: UR10eHAL) -> UR10eHAL:
 # ── UR10e-specific lifecycle tests ────────────────────────────────────────────
 #
 # Shared protocol compliance test (test_satisfies_hal_protocol) is consolidated in
-# tests/sim/test_hal_protocol_contracts.py (parametrized across all 9 HALs).
+# tests/sim/test_hal_protocol_contracts.py (parametrized across all MuJoCo HALs).
 # Keep only UR10e-specific lifecycle tests here.
 
 

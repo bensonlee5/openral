@@ -10,7 +10,7 @@ openral/                      ← THIS monorepo
 │  ├─ core/         (openral_core)        ← Pydantic v2 schemas (normative) ✓
 │  ├─ cli/          (openral_cli)         ← `openral` entry point (bare → REPL, with args → one-shot; ADR-0021) ✓
 │  ├─ detect/       (openral_detect)      ← `openral detect` auto-provisioning → robot.yaml (ADR-0008) ✓
-│  ├─ hal/          (openral_hal)         ← `HAL` Protocol + manifest-driven `MujocoArmHAL` adapters (SO-100/101, Franka, UR5e/10e, ALOHA, OpenArm, Rizon4, H1, G1, panda_mobile) ✓
+│  ├─ hal/          (openral_hal)         ← `HAL` Protocol + manifest-driven `MujocoArmHAL` adapters (SO-100/101, Franka, UR5e/10e, ALOHA, OpenArm, Anvil-OpenArm-v2, Rizon4, H1, G1, panda_mobile) ✓
 │  ├─ sensors/      (openral_sensors)     ← Sensor catalog + vendor adapters ✓
 │  ├─ world_state/  (openral_world_state) ← `WorldStateAggregator` (30 Hz snapshot, staleness latching, detected-objects fold-in) ✓
 │  ├─ rskill/       (openral_rskill)      ← `rSkillBase` ABC, `rSkill` loader, runtime adapters (PyTorch/ONNX/TensorRT), VLA + detector adapters ✓
