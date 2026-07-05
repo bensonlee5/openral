@@ -58,7 +58,7 @@ def _load(mf: Path) -> RobotDescription:
 def test_manifest_glob_is_nonempty() -> None:
     """Guard against a silent zero-parametrization (wrong cwd / moved robots/)."""
     assert MANIFESTS, f"no robots/*/robot.yaml under {_REPO_ROOT}"
-    assert len(MANIFESTS) == 17, f"expected 17 robots, found {len(MANIFESTS)}"
+    assert len(MANIFESTS) == 18, f"expected 18 robots, found {len(MANIFESTS)}"
 
 
 @pytest.mark.parametrize("mf", MANIFESTS, ids=lambda p: p.parent.name)

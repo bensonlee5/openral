@@ -54,6 +54,29 @@ class TestSimMode:
         hal = build_hal(_load("panda_mobile"), mode="sim")
         assert isinstance(hal, PandaMobileHAL)
 
+    def test_anvil_openarm_v2_explicit_sim_subclass(self) -> None:
+        """The Anvil OpenARM 2.0 manifest names its thin subclass explicitly.
+
+        Construction is lazy (the pinned MJCF clone happens at connect()),
+        so this pins the YAML ``hal.sim`` entrypoint → class seam without
+        any network access.
+        """
+        from openral_hal.anvil_openarm_v2 import AnvilOpenArmV2MujocoHAL
+
+        hal = build_hal(_load("anvil_openarm_v2"), mode="sim")
+        assert isinstance(hal, AnvilOpenArmV2MujocoHAL)
+
+    def test_anvil_openarm_v2_threads_manifest_defaults(self) -> None:
+        """``hal.parameters.defaults`` reach the constructed HAL (ADR-0029).
+
+        The manifest-driven node relies on build_hal threading these
+        kwargs; a silently-dropped default would run the sim with
+        gravity on and 1 settle step.
+        """
+        hal = build_hal(_load("anvil_openarm_v2"), mode="sim")
+        assert hal._settle_steps == 4  # type: ignore[attr-defined] # reason: sim-only introspection
+        assert hal._gravity_enabled is False  # type: ignore[attr-defined] # reason: sim-only introspection
+
 
 class TestRealMode:
     """``mode="real"`` builds the real-hardware HAL and threads ``transport``."""
