@@ -499,6 +499,7 @@ const SCHEMAS = [
   // inference runner (ADR-0010)
   { name: "HalConfig",              where: "core",  kind: "part", note: "Which HAL adapter to instantiate + transport (serial port / FCI URI / ROS namespace) + adapter-specific params. ADR-0010." },
   { name: "SensorReaderConfig",     where: "core",  kind: "part", note: "Per-sensor backend (opencv_thread / ros2_image / gstreamer) + backend params + optional ROS-tee for observability. ADR-0010." },
+  { name: "SensorDeployBinding",    where: "core",  kind: "part", note: "Optional SensorSpec.deploy_binding — reader backend + device params so `deploy run` can open the physical camera. Runtime counterpart of sim_placement; host-specific, filled by `openral detect --interactive`. ADR-0078 amendment." },
   { name: "SensorReaderBackend",    where: "core",  kind: "enum", note: "opencv_thread (default, lerobot-pattern), ros2_image, gstreamer. ADR-0010." },
   { name: "DeadlineOverrunPolicy",  where: "core",  kind: "enum", note: "warn (lerobot-style), drop (skip action), raise (test). ADR-0010." },
   { name: "SensorFrame",            where: "core",  kind: "runtime", note: "Single sensor frame — sensor_id + timestamps + encoding + dims + (data | topic | handle). Binary `data` round-trips as base64 in JSON via field_serializer / field_validator. Mutual-exclusion enforced. ADR-0010." },

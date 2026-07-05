@@ -1,11 +1,12 @@
 """Unit tests for the real-mode camera leg (``openral_rskill_ros.sensor_leg``).
 
-The leg is what `openral deploy run` uses to open the deploy config's
-``sensors:`` readers and publish every camera onto the WorldState image
-topics (``/openral/cameras/<sensor_id>/image``). Real components per
-CLAUDE.md §1.11: the GStreamer test uses a real ``videotestsrc``
-pipeline (headless, no camera hardware); ROS-touching paths skip when
-``rclpy`` isn't importable (CI runners without a sourced ROS install).
+The leg is what `openral deploy run` uses to open every deploy-bound
+``SensorSpec`` (robot manifest ∪ ``DeployScene.sensors``) and publish each
+camera onto the WorldState image topics
+(``/openral/cameras/<name>/image``). Real components per CLAUDE.md §1.11:
+the GStreamer test uses a real ``videotestsrc`` pipeline (headless, no
+camera hardware); ROS-touching paths skip when ``rclpy`` isn't importable
+(CI runners without a sourced ROS install).
 """
 
 from __future__ import annotations
@@ -13,66 +14,63 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from openral_core import SensorReaderConfig
+from openral_core import SensorDeployBinding, SensorSpec
 from openral_rskill_ros.sensor_leg import (
     SensorLeg,
     _publish_rate_hz,
-    _with_ros_tee,
+    merge_deploy_sensors,
+    open_deploy_sensor_readers,
 )
 
 
-def _write_env_yaml(tmp_path: Path, sensors_yaml: str) -> Path:
-    """A minimal, schema-valid RobotEnvironment YAML with the given sensors."""
-    out = tmp_path / "robot_env.yaml"
-    out.write_text(
-        "robot_id: so101_follower\n"
-        "hal:\n"
-        "  adapter: so101_follower\n"
-        "  transport:\n"
-        "    port: /dev/ttyACM0\n"
-        f"sensors:\n{sensors_yaml}"
-        "task:\n"
-        "  id: deploy/sensor-leg-test\n"
-        "  scene_id: deploy/sensor-leg-test\n"
-        '  instruction: "sensor leg unit test"\n'
-        "  max_steps: 30\n"
-        "rate_hz: 30.0\n"
+def _spec(name: str, *, binding: SensorDeployBinding | None, rate_hz: float = 0.0) -> SensorSpec:
+    return SensorSpec(
+        name=name,
+        modality="rgb",
+        frame_id=name,
+        rate_hz=rate_hz,
+        deploy_binding=binding,
     )
-    return out
 
 
-def test_with_ros_tee_forces_topic_and_validates() -> None:
-    """The tee-forcing copy re-runs cross-field validation with the topic set."""
-    cfg = SensorReaderConfig(
-        sensor_id="wrist",
-        backend="gstreamer",
-        backend_params={"source": "testsrc", "fps": 15},
+def test_publish_rate_binding_fps_wins_over_spec_rate() -> None:
+    """The binding's fps beats the spec's declared rate and the 10 Hz default."""
+    spec = _spec(
+        "top",
+        binding=SensorDeployBinding(backend_params={"device": "/dev/video0", "fps": 15}),
+        rate_hz=30.0,
     )
-    teed = _with_ros_tee(cfg, "/openral/cameras/wrist/image")
-    assert teed.publish_to_ros is True
-    assert teed.publish_topic == "/openral/cameras/wrist/image"
-    assert teed.publish_rate_hz == 15.0  # falls back to backend fps
-    # The original is untouched (a copy, not a mutation).
-    assert cfg.publish_to_ros is False
+    assert _publish_rate_hz(spec) == 15.0
 
 
-def test_publish_rate_explicit_wins_over_fps() -> None:
-    """An explicit publish_rate_hz beats the backend fps and the 10 Hz default."""
-    cfg = SensorReaderConfig(
-        sensor_id="top",
-        backend="gstreamer",
-        backend_params={"source": "testsrc", "fps": 30},
-        publish_to_ros=True,
-        publish_topic="/openral/cameras/top/image",
-        publish_rate_hz=5.0,
-    )
-    assert _publish_rate_hz(cfg) == 5.0
+def test_publish_rate_falls_back_to_spec_rate_then_10hz() -> None:
+    """No binding fps → the spec's rate_hz; neither → the WorldState-friendly 10 Hz."""
+    spec = _spec("top", binding=SensorDeployBinding(), rate_hz=30.0)
+    assert _publish_rate_hz(spec) == 30.0
+    bare = _spec("top", binding=SensorDeployBinding(), rate_hz=0.0)
+    assert _publish_rate_hz(bare) == 10.0
 
 
-def test_publish_rate_defaults_to_10hz_without_fps() -> None:
-    """No explicit rate and no fps → the WorldState-friendly 10 Hz default."""
-    cfg = SensorReaderConfig(sensor_id="top", backend="opencv_thread")
-    assert _publish_rate_hz(cfg) == 10.0
+def test_merge_scene_entry_wins_on_name_collision() -> None:
+    """A same-named DeployScene entry is that robot sensor's deploy binding —
+    the manifest copy is dropped so the device is never double-opened."""
+    manifest = [_spec("top", binding=None), _spec("wrist", binding=None)]
+    scene = [
+        _spec("top", binding=SensorDeployBinding(backend_params={"device": "/dev/video0"})),
+        _spec("overhead", binding=SensorDeployBinding(backend_params={"device": "/dev/video2"})),
+    ]
+    merged = merge_deploy_sensors(manifest, scene)
+    names = [s.name for s in merged]
+    assert sorted(names) == ["overhead", "top", "wrist"]
+    top = next(s for s in merged if s.name == "top")
+    assert top.deploy_binding is not None  # the scene's bound copy survived
+
+
+def test_unbound_specs_are_skipped() -> None:
+    """Committed reference manifests leave deploy_binding unset — the leg skips them."""
+    leg = open_deploy_sensor_readers([_spec("top", binding=None)])
+    assert leg.readers == []
+    assert leg.publishers == []
 
 
 def test_empty_leg_close_is_idempotent() -> None:
@@ -98,17 +96,7 @@ def test_gstreamer_testsrc_leg_publishes_frames(tmp_path: Path) -> None:
     pytest.importorskip("gi", reason="PyGObject (gstreamer extra) not installed")
     pytest.importorskip("rclpy", reason="ROS 2 not sourced")
 
-    env_yaml = _write_env_yaml(
-        tmp_path,
-        "  - sensor_id: testcam\n"
-        "    backend: gstreamer\n"
-        "    backend_params:\n"
-        "      source: testsrc\n"
-        "      width: 320\n"
-        "      height: 240\n"
-        "      fps: 10\n",
-    )
-    probe = f"""
+    probe = """
 # Production import order (mirrors scripts/runtime_node): gi + Gst.init()
 # FIRST — before numpy/pydantic/rclpy. Under Fast-DDS, rclpy.Node()
 # segfaults when numpy or pydantic were imported before Gst.init()
@@ -121,12 +109,21 @@ Gst.init(None)
 import time
 
 import rclpy
-from openral_core import RobotEnvironment
+from openral_core import SensorDeployBinding, SensorSpec
 from openral_rskill_ros.sensor_leg import open_deploy_sensor_readers
 
 rclpy.init()
-env = RobotEnvironment.from_yaml({str(env_yaml)!r})
-leg = open_deploy_sensor_readers(env)
+spec = SensorSpec(
+    name="testcam",
+    modality="rgb",
+    frame_id="testcam",
+    rate_hz=10.0,
+    deploy_binding=SensorDeployBinding(
+        backend="gstreamer",
+        backend_params={"source": "testsrc", "width": 320, "height": 240, "fps": 10},
+    ),
+)
+leg = open_deploy_sensor_readers([spec])
 try:
     assert len(leg.readers) == 1, leg.readers
     # GStreamer readers publish via their in-pipeline ROS tee — no

@@ -1292,9 +1292,10 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
     if _resolved_initial_prompt:
         argv_template.append(f"initial_task_prompt:={_resolved_initial_prompt}")
 
-    # Real deploys — forward the RobotEnvironment YAML so the runtime node
-    # opens its `sensors:` readers and publishes the physical cameras onto
-    # /openral/cameras/<sensor_id>/image (sim keeps the HAL bridge as the
+    # Real deploys — forward the DeployScene YAML so the runtime node
+    # opens every deploy-bound sensor (robot manifest + scene `sensors:`)
+    # and publishes the physical cameras onto
+    # /openral/cameras/<name>/image (sim keeps the HAL bridge as the
     # only camera source; empty default in the launch file).
     if deploy_config is not None and hal_mode == "real":
         argv_template.append(f"deploy_config:={Path(deploy_config).resolve()}")

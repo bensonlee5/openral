@@ -959,7 +959,7 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("hal_mode", "sim")
             self.declare_parameter("sim_env_yaml", "")
             # Real-HW transport overrides (ADR-0032): `openral deploy run`
-            # forwards the RobotEnvironment's hal.transport (serial `port` /
+            # forwards the robot manifest's hal transport overrides (serial `port` /
             # `robot_ip` / `fci_ip`) + hal.params (calibration `id`) via the
             # HAL params file. They MUST be declared here or rclpy silently
             # drops them and build_hal falls back to the manifest's defaults —
@@ -971,7 +971,7 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("fci_ip", "")
             self.declare_parameter("id", "")
             # Calibration directory override (ADR-0032). `deploy run` forwards
-            # the RobotEnvironment's `hal.params.calibration_dir` so a deploy can
+            # the deploy's `calibration_dir` HAL override so a deploy can
             # load a calibration committed next to its config instead of the
             # ambient HF cache (which may hold several stale `<id>.json` for one
             # arm). Empty string = unset (lerobot's default HF cache dir).

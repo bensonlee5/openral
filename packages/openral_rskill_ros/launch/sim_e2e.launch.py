@@ -279,8 +279,9 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     dataset_out = LaunchConfiguration("dataset_out").perform(context)
     dataset_repo_id = LaunchConfiguration("dataset_repo_id").perform(context)
     dataset_license = LaunchConfiguration("dataset_license").perform(context)
-    # Real deploys — RobotEnvironment YAML whose `sensors:` the runtime
-    # node opens and publishes as /openral/cameras/<sensor_id>/image.
+    # Real deploys — DeployScene YAML; the runtime node opens every
+    # deploy-bound sensor (robot manifest ∪ scene `sensors:`) and
+    # publishes each as /openral/cameras/<name>/image.
     deploy_config = LaunchConfiguration("deploy_config").perform(context)
     dashboard_port = LaunchConfiguration("dashboard_port").perform(context)
     reasoner_provider = LaunchConfiguration("reasoner_provider").perform(context)
@@ -744,6 +745,18 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     rgb_camera_names = [s.name for s in description.sensors if s.modality == "rgb"]
     if not rgb_camera_names:
         rgb_camera_names = ["top", "left_wrist", "right_wrist"]
+    # Workcell-mounted cameras (DeployScene.sensors) publish on the same
+    # `/openral/cameras/<name>/image` prefix via the real-deploy sensor
+    # leg — WorldState must subscribe to them too.
+    if deploy_config:
+        from openral_core import DeployScene
+
+        scene_rgb = [
+            s.name
+            for s in DeployScene.from_yaml(deploy_config).sensors
+            if s.modality == "rgb" and s.name not in rgb_camera_names
+        ]
+        rgb_camera_names = [*rgb_camera_names, *scene_rgb]
     runtime = Node(
         package="openral_rskill_ros",
         executable="runtime_node",
@@ -1581,9 +1594,10 @@ def generate_launch_description() -> LaunchDescription:
             default_value="",
             description=(
                 "Real deploys (`openral deploy run`) — path to the "
-                "RobotEnvironment YAML. The runtime node opens one "
-                "SensorReader per `sensors:` entry and publishes each "
-                "camera onto /openral/cameras/<sensor_id>/image (the "
+                "DeployScene YAML. The runtime node opens one "
+                "SensorReader per deploy-bound SensorSpec (robot "
+                "manifest + scene `sensors:`) and publishes each "
+                "camera onto /openral/cameras/<name>/image (the "
                 "real-hardware counterpart of the sim HAL's "
                 "SimSensorBridge). Empty (sim) leaves the HAL bridge as "
                 "the only camera source."
