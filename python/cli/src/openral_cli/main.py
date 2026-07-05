@@ -71,11 +71,13 @@ from openral_cli.prompt import prompt_command
 if TYPE_CHECKING:
     from openral_core import (
         BenchmarkScene,
+        RobotDescription,
         RSkillEvalResult,
+        SensorSpec,
         VLASpec,
     )
     from openral_core.schemas import RSkillManifest
-    from openral_detect import CompatibilityReport, RSkillCompatRow
+    from openral_detect import CompatibilityReport, DetectionReport, RSkillCompatRow
     from openral_detect.report import GpuProbeResult
 
     from openral_cli._rskill_intel import RSkillFamily, RSkillPatch
@@ -880,6 +882,22 @@ def detect(
     no_write: bool = typer.Option(
         False, "--no-write", help="Print summary and skip writing robot.yaml"
     ),
+    deployment: Path | None = typer.Option(
+        None,
+        "--deployment",
+        help="Also scaffold a DeployScene YAML at this path (robot_id + "
+        "`sensors:` bindings from the --interactive camera wizard; safety "
+        "left to the robot manifest). Paste-able as `openral deploy run --config`.",
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Camera-binding wizard: per probed /dev/video* device, grab a "
+        "thumbnail and ask which sensor it is — a robot manifest sensor name "
+        "or w:<name> for a workcell camera; either way the binding lands in "
+        "the --deployment DeployScene's sensors list.",
+    ),
     yes: bool = typer.Option(
         False, "--yes", "-y", help="Overwrite existing file without prompting"
     ),
@@ -927,6 +945,20 @@ def detect(
     except ROSConfigError as exc:
         console.print(f"[red]detect:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+    # Camera-binding wizard: every binding lands in the --deployment
+    # DeployScene (a manifest-named entry is that robot sensor's binding;
+    # `deploy run` reads the canonical robots/<id>/robot.yaml, never this
+    # detect output, so the scene is the operative home for bindings).
+    scene_sensor_specs: list[SensorSpec] = []
+    if interactive and deployment is None:
+        console.print(
+            "[yellow]--interactive has no effect without --deployment "
+            "(bindings live in the DeployScene).[/yellow]"
+        )
+    elif interactive:
+        scene_sensor_specs = _run_camera_binding_wizard(description, detection)
+
     yaml_text = _yaml.safe_dump(
         description.model_dump(mode="json"),
         sort_keys=False,
@@ -936,17 +968,160 @@ def detect(
     if no_write:
         console.print("\n[dim]--no-write set — printing yaml to stdout:[/dim]\n")
         console.print(yaml_text)
-        return
+    else:
+        if output.exists() and not yes:
+            overwrite = typer.confirm(f"{output} already exists. Overwrite?", default=False)
+            if not overwrite:
+                console.print("[yellow]Aborted.[/yellow]")
+                raise typer.Exit(code=0)
 
-    if output.exists() and not yes:
-        overwrite = typer.confirm(f"{output} already exists. Overwrite?", default=False)
+        output.write_text(yaml_text, encoding="utf-8")
+        console.print(f"\n[green]Wrote[/green] {output} (RobotDescription, {description.name})")
+        console.print(f"[dim]Next step:[/dim] openral rskill check --robot {output}")
+
+    if deployment is not None:
+        _write_deploy_scene_scaffold(deployment, description, scene_sensor_specs, assume_yes=yes)
+
+
+def _run_camera_binding_wizard(
+    description: RobotDescription, detection: DetectionReport
+) -> list[SensorSpec]:
+    """Per probed ``/dev/video*``: thumbnail + ask which sensor it is.
+
+    Every answer becomes a ``DeployScene.sensors`` entry: a manifest RGB
+    sensor name yields a same-named entry (that robot sensor's deploy-time
+    binding — identity fields copied from the manifest, which stays
+    authoritative for frames/intrinsics); ``w:<name>`` yields a new
+    workcell camera. Enter skips the device.
+    """
+    import tempfile
+
+    from openral_core import SensorDeployBinding, SensorSpec
+
+    manifest_rgb = {s.name: s for s in description.sensors if s.modality == "rgb"}
+    scene_specs: list[SensorSpec] = []
+    thumb_dir = Path(tempfile.mkdtemp(prefix="openral_detect_cams_"))
+
+    for cam in detection.cameras.v4l2:
+        thumb = _grab_camera_thumbnail(cam.device_path, thumb_dir)
+        console.print(
+            f"\n[bold]{cam.device_path}[/bold] — {cam.name}"
+            + (f"  [dim](thumbnail: {thumb})[/dim]" if thumb else "  [dim](no thumbnail)[/dim]")
+        )
+        options = ", ".join(manifest_rgb) if manifest_rgb else "<none in manifest>"
+        hint = f"[{options}] or w:<name> for a workcell camera"
+        answer = typer.prompt(
+            f"  Which sensor is this? {hint} (Enter = skip)", default="", show_default=False
+        ).strip()
+        if not answer:
+            continue
+        fps = 30
+        binding = SensorDeployBinding(
+            backend_params={"device": cam.device_path, "fps": fps},
+        )
+        if answer in manifest_rgb:
+            ref = manifest_rgb[answer]
+            scene_specs.append(
+                SensorSpec(
+                    name=ref.name,
+                    modality=ref.modality,
+                    frame_id=ref.frame_id,
+                    rate_hz=float(fps),
+                    deploy_binding=binding,
+                )
+            )
+            console.print(f"  [green]bound[/green] {answer} → {cam.device_path} (robot sensor)")
+        elif answer.startswith("w:") and answer.removeprefix("w:").strip():
+            name = answer.removeprefix("w:").strip()
+            scene_specs.append(
+                SensorSpec(
+                    name=name,
+                    modality="rgb",
+                    frame_id=name,
+                    rate_hz=float(fps),
+                    deploy_binding=binding,
+                )
+            )
+            console.print(f"  [green]workcell[/green] {name} → {cam.device_path}")
+        else:
+            console.print(f"  [yellow]{answer!r} is not a listed sensor — skipping.[/yellow]")
+
+    return scene_specs
+
+
+def _grab_camera_thumbnail(device_path: str, out_dir: Path) -> Path | None:
+    """Grab one JPEG frame from ``device_path`` so the operator can SEE the camera.
+
+    Best-effort: returns ``None`` when opencv is missing or the device won't
+    deliver a frame (in use, no permission). Never raises — a thumbnail is a
+    convenience, not a requirement.
+    """
+    try:
+        import cv2  # reason: optional `opencv` extra
+    except ImportError:
+        return None
+    cap = cv2.VideoCapture(device_path)
+    try:
+        ok, frame = cap.read()
+    finally:
+        cap.release()
+    if not ok or frame is None:
+        return None
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / (device_path.strip("/").replace("/", "_") + ".jpg")
+    if not cv2.imwrite(str(out), frame):
+        return None
+    return out
+
+
+def _write_deploy_scene_scaffold(
+    path: Path,
+    description: RobotDescription,
+    sensor_specs: list[SensorSpec],
+    *,
+    assume_yes: bool,
+) -> None:
+    """Scaffold a ``DeployScene`` YAML next to the detected robot.
+
+    Carries ``robot_id`` + the wizard's ``sensors:`` bindings (manifest-named
+    = robot-sensor binding, new name = workcell camera); ``safety`` is left
+    unset so the robot manifest's own envelope applies. Validated through
+    :class:`DeployScene` before writing so a malformed scaffold fails here,
+    not on ``deploy run``.
+    """
+    import yaml as _yaml
+    from openral_core import DeployScene, SceneSpec
+
+    robot_id = str(description.name)
+    scene = DeployScene(
+        scene=SceneSpec(id=f"{robot_id}_workcell"),
+        robot_id=robot_id,
+        sensors=list(sensor_specs),
+    )
+    if path.exists() and not assume_yes:
+        overwrite = typer.confirm(f"{path} already exists. Overwrite?", default=False)
         if not overwrite:
-            console.print("[yellow]Aborted.[/yellow]")
-            raise typer.Exit(code=0)
-
-    output.write_text(yaml_text, encoding="utf-8")
-    console.print(f"\n[green]Wrote[/green] {output} (RobotDescription, {description.name})")
-    console.print(f"[dim]Next step:[/dim] openral rskill check --robot {output}")
+            console.print("[yellow]Deployment scaffold aborted.[/yellow]")
+            return
+    banner = (
+        "# DeployScene scaffolded by `openral detect --deployment` — review before\n"
+        "# `openral deploy run --config <this file>`.\n"
+        "# - safety: unset → the robot manifest's envelope applies as-is.\n"
+        "# - sensors: deploy-time camera bindings (manifest-named entry = that robot\n"
+        "#   sensor's binding; new name = workcell camera).\n"
+        "# - No rSkill is pinned here: the reasoner selects it at runtime.\n"
+    )
+    path.write_text(
+        banner
+        + _yaml.safe_dump(
+            scene.model_dump(mode="json", exclude_none=True),
+            sort_keys=False,
+            default_flow_style=False,
+        ),
+        encoding="utf-8",
+    )
+    console.print(f"[green]Wrote[/green] {path} (DeployScene, {robot_id})")
+    console.print(f"[dim]Next step:[/dim] openral deploy run --config {path}")
 
 
 def _render_detection_summary(detection: object) -> None:

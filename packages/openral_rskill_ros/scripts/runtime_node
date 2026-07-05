@@ -97,10 +97,11 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
     bootstrap.declare_parameter("dataset_repo_id", "")
     bootstrap.declare_parameter("dataset_license", "CC-BY-4.0")
     # Real deploys only (`openral deploy run --config …`): path to the
-    # RobotEnvironment YAML. When set, the runtime opens one SensorReader
-    # per `sensors:` entry and publishes each camera onto
-    # `/openral/cameras/<sensor_id>/image` (the WorldState subscription) —
-    # the real-hardware counterpart of the sim HAL's SimSensorBridge.
+    # DeployScene YAML. When set, the runtime opens one SensorReader per
+    # deploy-bound SensorSpec (robot manifest ∪ scene `sensors:`) and
+    # publishes each camera onto `/openral/cameras/<name>/image` (the
+    # WorldState subscription) — the real-hardware counterpart of the sim
+    # HAL's SimSensorBridge.
     # Empty (sim deploys) leaves the HAL bridge as the only camera source.
     bootstrap.declare_parameter("deploy_config", "")
     robot_yaml: str = bootstrap.get_parameter("robot_yaml").get_parameter_value().string_value
@@ -204,12 +205,19 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
     # autostart guards against).
     sensor_leg = None
     if deploy_config:
-        from openral_core import RobotEnvironment
-        from openral_rskill_ros.sensor_leg import open_deploy_sensor_readers
+        from openral_core import DeployScene
+        from openral_rskill_ros.sensor_leg import (
+            merge_deploy_sensors,
+            open_deploy_sensor_readers,
+        )
 
         try:
+            scene = DeployScene.from_yaml(deploy_config)
+            # Robot-manifest ∪ scene sensors (scene wins on name collision —
+            # a same-named scene entry is that robot sensor's deploy binding);
+            # the leg opens only those carrying a `deploy_binding`.
             sensor_leg = open_deploy_sensor_readers(
-                RobotEnvironment.from_yaml(deploy_config),
+                merge_deploy_sensors(runtime.description.sensors, scene.sensors),
             )
         except Exception as exc:  # surface as exit code, not stack trace
             print(f"runtime_node: sensor leg failed to open: {exc!s}", file=sys.stderr)

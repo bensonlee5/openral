@@ -503,6 +503,13 @@ class SensorSpec(BaseModel):
     vendor: str | None = None
     model: str | None = None
     driver_pkg: str | None = None
+    # Real-device binding for `openral deploy run` — the runtime counterpart to
+    # `sim_placement`. Host-specific, so committed reference manifests leave it
+    # unset (`openral detect` fills it per host). Robot-mounted sensors carry it
+    # in robot.yaml; workcell-mounted sensors carry it on a DeployScene.sensors
+    # entry. See `SensorDeployBinding`. Forward ref (defined with the reader
+    # schemas below) resolved by the `SensorSpec.model_rebuild()` after it.
+    deploy_binding: SensorDeployBinding | None = None
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
@@ -6475,6 +6482,24 @@ class DeployScene(BaseModel):
     composition: SceneComposition | None = None
     safety: SafetyEnvelope | None = None
     extra_allowed_collision_pairs: list[tuple[str, str]] = Field(default_factory=list)
+    sensors: list[SensorSpec] = Field(default_factory=list)
+    """Deploy-time sensor bindings for this workcell (ADR-0078 amendment).
+
+    Two kinds of entry, distinguished by name:
+
+    * A name **matching** a robot-manifest sensor (``top`` / ``wrist``) is the
+      deploy-time binding for that robot sensor — the manifest keeps frames /
+      intrinsics authoritative; this entry carries the host-specific
+      :attr:`SensorSpec.deploy_binding` (``deploy run`` loads the robot manifest
+      from the canonical ``robots/<robot_id>/`` dir, so a detect-scaffolded
+      local robot.yaml is never on that path — the scene is where a committed
+      workcell binds the robot's cameras). On a name collision the scene entry
+      wins over the manifest entry.
+    * A **new** name is a workcell-mounted camera (overhead / front) —
+      physically part of the cell, not the robot.
+
+    Entries whose ``deploy_binding`` is set are opened by the real-deploy
+    sensor leg and published on ``/openral/cameras/<name>/image``."""
     memory_dir: str | None = None
     """ADR-0072 Decision 3b — path to a per-robot deploy memory bundle directory
     holding any of ``MEMORY.md`` (self-maintained semantic memory), ``scene_graph.json``
@@ -6767,6 +6792,52 @@ class SensorReaderConfig(BaseModel):
                 f"set but publish_to_ros is False; enable publish_to_ros "
                 f"explicitly or drop the topic."
             )
+
+
+class SensorDeployBinding(BaseModel):
+    """Real-device binding that lets ``openral deploy run`` open a sensor.
+
+    The runtime counterpart to :attr:`SensorSpec.sim_placement`: ``sim_placement``
+    says how the **sim** renders a camera; ``deploy_binding`` says how a **real**
+    deploy opens it — which :class:`SensorReaderBackend` and its
+    ``/dev/video*`` / pipeline parameters. It is host/site-specific (a
+    ``/dev/video*`` index differs per machine), so committed reference manifests
+    leave it unset and ``openral detect`` fills it per host.
+
+    A :class:`SensorSpec` carries this wherever the sensor is *physically
+    mounted*: robot-mounted cameras (wrist / head) declare it in
+    ``robots/<id>/robot.yaml``; workcell-mounted cameras (overhead / front)
+    declare it on a :attr:`DeployScene.sensors` entry. Either way the deploy
+    sensor leg (``openral_rskill_ros.sensor_leg``) opens every
+    :class:`SensorSpec` that carries one and publishes it on
+    ``/openral/cameras/<name>/image``.
+
+    Attributes:
+        backend: Which :class:`SensorReaderBackend` opens the device.
+        backend_params: Backend-specific reader kwargs, e.g.
+            ``{"device": "/dev/video0", "fps": 30}`` for ``opencv_thread`` or a
+            ``{"pipeline": ...}`` string for ``gstreamer``.
+        max_age_ms: How stale a frame may be before the reader raises.
+
+    Example:
+        >>> SensorDeployBinding(
+        ...     backend=SensorReaderBackend.OPENCV_THREAD,
+        ...     backend_params={"device": "/dev/video0", "fps": 30},
+        ... ).backend.value
+        'opencv_thread'
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    backend: SensorReaderBackend = SensorReaderBackend.OPENCV_THREAD
+    backend_params: dict[str, object] = Field(default_factory=dict)
+    max_age_ms: int = Field(default=100, gt=0)
+
+
+# `SensorSpec.deploy_binding` forward-references `SensorDeployBinding`, which the
+# reader schemas (and their `SensorReaderBackend` enum) define here rather than
+# up at `SensorSpec`. Resolve that annotation now that the target exists.
+SensorSpec.model_rebuild()
 
 
 class HalConfig(BaseModel):

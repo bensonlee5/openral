@@ -1,23 +1,21 @@
-"""Real-mode camera leg: open the deploy config's sensor readers and publish to ROS.
+"""Real-mode camera leg: open every deploy-bound sensor and publish to ROS.
 
 ``openral deploy run`` composes the same launch graph as ``deploy sim``,
 but where the sim HAL publishes camera frames itself (``SimSensorBridge``
 renders MuJoCo cameras onto ``/openral/cameras/<name>/image``), real
-hardware has no camera publisher: the physical ``/dev/video*`` devices
-are described in the :class:`~openral_core.RobotEnvironment`'s
-``sensors:`` list (one :class:`~openral_core.SensorReaderConfig` per
-camera, scaffolded by ``openral detect --deployment``) but nothing
-opened them after the runner-factory removal.
+hardware has no camera publisher. The physical ``/dev/video*`` devices are
+described by :attr:`~openral_core.SensorSpec.deploy_binding` — on the robot
+manifest for robot-mounted cameras (wrist / head) and on
+:attr:`~openral_core.DeployScene.sensors` for workcell-mounted ones
+(overhead / front).
 
 This module is that leg. :func:`open_deploy_sensor_readers` builds one
-reader per config via the runner's ``SENSOR_BACKEND_REGISTRY`` and
+reader per bound spec via the runner's ``SENSOR_BACKEND_REGISTRY`` and
 guarantees every camera ends up on the WorldState subscription topic
-``<topic_prefix>/<sensor_id>/image``:
+``<topic_prefix>/<name>/image``:
 
 * ``gstreamer`` backend — the reader's built-in ROS tee publishes
-  directly from the pipeline (``pipeline._build_ros_tee_branch``); the
-  config is re-issued with ``publish_to_ros=True`` when the scaffold
-  left it unset.
+  directly from the pipeline (``pipeline._build_ros_tee_branch``).
 * ``opencv_thread`` (and any backend without a native tee) — the open
   reader is wrapped in a polling
   :class:`~openral_sensors.ros_publisher.SensorRosPublisher`.
@@ -39,16 +37,18 @@ from typing import TYPE_CHECKING, Protocol
 import structlog
 
 if TYPE_CHECKING:
-    from openral_core import RobotEnvironment, SensorReaderConfig
+    from collections.abc import Iterable
 
-__all__ = ["SensorLeg", "open_deploy_sensor_readers"]
+    from openral_core import SensorSpec
+
+__all__ = ["SensorLeg", "merge_deploy_sensors", "open_deploy_sensor_readers"]
 
 log = structlog.get_logger(__name__)
 
 #: WorldState's camera subscription prefix (`<prefix>/<name>/image`).
 DEFAULT_TOPIC_PREFIX = "/openral/cameras"
 
-#: Publish cadence when neither the config nor its backend_params carry one.
+#: Publish cadence when the binding's backend_params carry no fps.
 #: Matches the WorldStateAggregator staleness-gate expectation (10 Hz cameras).
 _DEFAULT_PUBLISH_RATE_HZ = 10.0
 
@@ -64,9 +64,9 @@ class SensorLeg:
     """Open readers + started publishers for one deploy session.
 
     Attributes:
-        readers: Open :class:`SensorReader` instances, one per
-            ``RobotEnvironment.sensors`` entry (gstreamer readers
-            publish via their internal ROS tee).
+        readers: Open :class:`SensorReader` instances, one per deploy-bound
+            :class:`SensorSpec` (gstreamer readers publish via their
+            internal ROS tee).
         publishers: Started :class:`SensorRosPublisher` pumps for the
             readers without a native ROS tee. Parallel list, NOT
             index-aligned with ``readers``.
@@ -96,58 +96,60 @@ class SensorLeg:
         self.readers.clear()
 
 
-def _publish_rate_hz(cfg: SensorReaderConfig) -> float:
-    """The ROS publish cadence for ``cfg`` — explicit, else backend fps, else 10 Hz."""
-    if cfg.publish_rate_hz is not None:
-        return float(cfg.publish_rate_hz)
-    fps = cfg.backend_params.get("fps")
+def merge_deploy_sensors(
+    manifest_sensors: Iterable[SensorSpec],
+    scene_sensors: Iterable[SensorSpec],
+) -> list[SensorSpec]:
+    """Robot-manifest sensors ∪ ``DeployScene.sensors``, scene wins on name collision.
+
+    A scene entry named like a manifest sensor is that sensor's deploy-time
+    binding (ADR-0078 amendment) — keeping both would double-open the device
+    and publish the same topic twice.
+    """
+    scene = list(scene_sensors)
+    scene_names = {s.name for s in scene}
+    return [s for s in manifest_sensors if s.name not in scene_names] + scene
+
+
+def _publish_rate_hz(spec: SensorSpec) -> float:
+    """The ROS publish cadence for ``spec`` — binding fps, else spec rate, else 10 Hz."""
+    assert spec.deploy_binding is not None  # reason: caller filters on binding
+    fps = spec.deploy_binding.backend_params.get("fps")
     if isinstance(fps, (int, float)) and fps > 0:
         return float(fps)
+    if spec.rate_hz > 0:
+        return float(spec.rate_hz)
     return _DEFAULT_PUBLISH_RATE_HZ
 
 
-def _with_ros_tee(cfg: SensorReaderConfig, topic: str) -> SensorReaderConfig:
-    """A copy of ``cfg`` with the ROS tee forced onto ``topic``.
-
-    ``model_copy`` skips ``model_post_init`` cross-field checks, so build a
-    fresh instance through the validator instead.
-    """
-    updates = dict(
-        publish_to_ros=True,
-        publish_topic=topic,
-        publish_rate_hz=_publish_rate_hz(cfg),
-    )
-    return type(cfg)(**{**cfg.model_dump(), **updates})
-
-
 def open_deploy_sensor_readers(
-    env: RobotEnvironment,
+    sensors: Iterable[SensorSpec],
     *,
     topic_prefix: str = DEFAULT_TOPIC_PREFIX,
 ) -> SensorLeg:
-    """Open every ``env.sensors`` reader and publish each onto ROS.
+    """Open every deploy-bound sensor in ``sensors`` and publish each onto ROS.
 
     Args:
-        env: The deploy config (``openral deploy run --config``). One
-            reader per :class:`SensorReaderConfig`; ``sensor_id`` names
-            the WorldState topic segment and MUST match the robot
-            manifest's :attr:`SensorSpec.name` (``top`` / ``wrist`` on
-            the SO-101) for the aggregator to pick the frames up.
+        sensors: Robot-manifest sensors plus :attr:`DeployScene.sensors`
+            (the caller concatenates). Specs without a
+            :attr:`~openral_core.SensorSpec.deploy_binding` are skipped —
+            committed reference manifests leave the binding unset.
         topic_prefix: WorldState's ``camera_topic_prefix``. The final
-            topic is ``<topic_prefix>/<sensor_id>/image``.
+            topic is ``<topic_prefix>/<spec.name>/image``.
 
     Returns:
         A :class:`SensorLeg` holding the open readers + started
         publishers. Call :meth:`SensorLeg.close` on shutdown.
 
     Raises:
-        ROSConfigError: A config names an unknown backend, or a backend's
+        ROSConfigError: A binding names an unknown backend, or a backend's
             optional dependency (PyGObject / opencv-python) is missing.
 
     Example:
-        >>> from openral_core import RobotEnvironment
-        >>> env = RobotEnvironment.from_yaml("deployments/so101.yaml")  # doctest: +SKIP
-        >>> leg = open_deploy_sensor_readers(env)  # doctest: +SKIP
+        >>> from openral_core import DeployScene, RobotDescription
+        >>> desc = RobotDescription.from_yaml("robots/so101_follower/robot.yaml")  # doctest: +SKIP
+        >>> scene = DeployScene.from_yaml("scenes/deploy/so101_bench.yaml")  # doctest: +SKIP
+        >>> leg = open_deploy_sensor_readers([*desc.sensors, *scene.sensors])  # doctest: +SKIP
         >>> try:  # doctest: +SKIP
         ...     ...  # spin the graph
         ... finally:
@@ -155,17 +157,28 @@ def open_deploy_sensor_readers(
     """
     # Deferred imports — openral_runner pulls torch-adjacent modules; keep
     # this module importable for AST/shape tests on minimal hosts.
-    from openral_core import SensorReaderBackend
+    from openral_core import SensorReaderBackend, SensorReaderConfig
     from openral_runner.factory import SENSOR_BACKEND_REGISTRY
 
     leg = SensorLeg()
     try:
-        for cfg in env.sensors:
-            topic = cfg.publish_topic or f"{topic_prefix}/{cfg.sensor_id}/image"
-            if cfg.backend == SensorReaderBackend.GSTREAMER:
+        for spec in sensors:
+            binding = spec.deploy_binding
+            if binding is None:
+                continue
+            topic = f"{topic_prefix}/{spec.name}/image"
+            if binding.backend == SensorReaderBackend.GSTREAMER:
                 # Native in-pipeline tee: force it on so the frames reach ROS.
-                reader_cfg = cfg if cfg.publish_to_ros else _with_ros_tee(cfg, topic)
-                reader = SENSOR_BACKEND_REGISTRY[reader_cfg.backend.value](reader_cfg)
+                cfg = SensorReaderConfig(
+                    sensor_id=spec.name,
+                    backend=binding.backend,
+                    backend_params=binding.backend_params,
+                    max_age_ms=binding.max_age_ms,
+                    publish_to_ros=True,
+                    publish_topic=topic,
+                    publish_rate_hz=_publish_rate_hz(spec),
+                )
+                reader = SENSOR_BACKEND_REGISTRY[cfg.backend.value](cfg)
                 reader.open()
                 leg.readers.append(reader)
             else:
@@ -173,20 +186,26 @@ def open_deploy_sensor_readers(
                 # attach the polling ROS publisher pump.
                 from openral_sensors.ros_publisher import SensorRosPublisher
 
+                cfg = SensorReaderConfig(
+                    sensor_id=spec.name,
+                    backend=binding.backend,
+                    backend_params=binding.backend_params,
+                    max_age_ms=binding.max_age_ms,
+                )
                 reader = SENSOR_BACKEND_REGISTRY[cfg.backend.value](cfg)
                 reader.open()
                 leg.readers.append(reader)
                 publisher = SensorRosPublisher(
                     reader=reader,
                     topic=topic,
-                    rate_hz=_publish_rate_hz(cfg),
+                    rate_hz=_publish_rate_hz(spec),
                 )
                 publisher.start()
                 leg.publishers.append(publisher)
             log.info(
                 "sensor_leg.camera_open",
-                sensor_id=cfg.sensor_id,
-                backend=cfg.backend.value,
+                sensor_id=spec.name,
+                backend=binding.backend.value,
                 topic=topic,
             )
     except Exception:

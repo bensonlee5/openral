@@ -110,6 +110,7 @@ _DEPLOY_STEMS: list[str] = [
     "robocasa_baguette",
     "robocasa_navigate",
     "robocasa_pnp",
+    "so101_bench",
     "so101_box",
 ]
 
