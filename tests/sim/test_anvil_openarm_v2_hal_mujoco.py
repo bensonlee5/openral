@@ -533,3 +533,31 @@ class TestFullLifecycle:
             hal.disconnect()
         with pytest.raises(ROSRuntimeError):
             hal.read_state()
+
+
+# ── Wrist cameras (manifest SensorSpec → MJCF camera wiring) ─────────────────
+
+
+class TestWristCameras:
+    def test_read_images_renders_both_wrists(self, connected_hal: AnvilOpenArmV2MujocoHAL) -> None:
+        """``read_images`` renders the manifest's two wrist sensors.
+
+        Pins the ``sim_camera_name`` → MJCF camera wiring and the
+        640x400 sensor intrinsics (sized to fit MuJoCo's default
+        offscreen framebuffer — the MJCF declares no ``offwidth``).
+        Offscreen GL is host-specific, so probe it with a real
+        Renderer first and skip honestly when absent (CLAUDE.md
+        §1.11) rather than asserting on the HAL's failure fallback.
+        """
+        assert connected_hal._model is not None
+        try:
+            probe = mujoco.Renderer(connected_hal._model, 64, 64)
+        except Exception as exc:  # GL probe is env-specific
+            pytest.skip(f"offscreen renderer unavailable: {exc}")
+        probe.close()
+
+        images = connected_hal.read_images()
+        assert set(images) == {"wrist_left", "wrist_right"}
+        for name, frame in images.items():
+            assert frame.shape == (400, 640, 3), (name, frame.shape)
+            assert frame.dtype.name == "uint8", (name, frame.dtype)

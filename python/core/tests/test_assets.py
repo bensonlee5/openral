@@ -35,5 +35,20 @@ def test_unknown_scheme_raises() -> None:
         resolve_asset("python:robot_descriptions.panda_description:URDF_PATH", "urdf")
 
 
+def test_unknown_openarm_variant_raises() -> None:
+    """``openarm:<variant>`` dispatches explicitly; a typo'd variant must not
+    silently resolve to some other arm's MJCF (the pre-Anvil resolver ignored
+    the variant string entirely — this pins the stricter behaviour)."""
+    with pytest.raises(AssetRefError, match="unknown openarm variant"):
+        resolve_asset("openarm:anvil_bimanual", "mjcf")
+
+
+def test_openarm_variants_are_mjcf_only() -> None:
+    """Both wired variants reject non-mjcf kinds before any fetch happens."""
+    for ref in ("openarm:bimanual", "openarm:anvil_v2_bimanual"):
+        with pytest.raises(AssetRefError, match="mjcf-only"):
+            resolve_asset(ref, "urdf")
+
+
 def test_ros2_marker_is_passthrough_not_a_file() -> None:
     assert resolve_asset("ros2://robot_description", "urdf") is None
