@@ -6500,6 +6500,23 @@ class DeployScene(BaseModel):
 
     Entries whose ``deploy_binding`` is set are opened by the real-deploy
     sensor leg and published on ``/openral/cameras/<name>/image``."""
+    hal: HalParameters | None = None
+    """Deploy-time HAL binding for this workcell (ADR-0078 amendment).
+
+    The scene's host-specific HAL construction defaults — serial ``port``,
+    lerobot calibration identity (``id`` + ``calibration_dir``),
+    ``calibrate_on_connect`` — the same shape as the robot manifest's
+    :attr:`HalEntrypoints.parameters`. This is the HAL analogue of the
+    per-sensor :attr:`SensorSpec.deploy_binding`: the robot manifest stays
+    authoritative for the HAL *adapter* + generic defaults, while the committed
+    workcell scene carries the host-specific transport + calibration so
+    ``openral deploy run --config <scene>`` is self-contained (no ``--hal``
+    overrides needed). ``deploy run`` resolves a **relative** ``calibration_dir``
+    against this scene file's directory (mirroring the ``--hal`` behaviour) and
+    merges these defaults into the HAL params *above* the robot-manifest
+    defaults but *below* any explicit ``--hal`` override, so the precedence is
+    ``--hal`` > scene ``hal`` > ``robot.yaml`` ``hal.parameters.defaults``.
+    ``None`` = fall back to the manifest defaults + ``--hal`` overrides."""
     memory_dir: str | None = None
     """ADR-0072 Decision 3b — path to a per-robot deploy memory bundle directory
     holding any of ``MEMORY.md`` (self-maintained semantic memory), ``scene_graph.json``

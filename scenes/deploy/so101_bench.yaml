@@ -6,18 +6,31 @@
 # authoritative for frames/intrinsics). Host-specific by nature — retune the
 # /dev/video* paths per host with `openral detect --deployment -i`.
 #
-# HAL facts (serial port + lerobot calibration identity) are --hal overrides,
-# not scene fields. The calibration is COMMITTED next to this scene
-# (scenes/deploy/calibration/so_follower.json) so the deploy owns it instead of
-# depending on whatever `<id>.json` is in the ambient HF cache; `deploy run`
-# resolves a relative calibration_dir against THIS file's directory.
+# HAL facts (serial port + lerobot calibration identity) live in the `hal:`
+# binding below (ADR-0078) — the HAL analogue of a sensor `deploy_binding` — so
+# this scene is self-contained and needs no `--hal` overrides:
 #
-#   openral deploy run --config scenes/deploy/so101_bench.yaml \
-#     --hal port=/dev/ttyACM0 --hal id=so_follower --hal calibration_dir=calibration \
-#     --hal calibrate_on_connect=false
+#   openral deploy run --config scenes/deploy/so101_bench.yaml
+#
+# The calibration is COMMITTED next to this scene
+# (scenes/deploy/calibration/so_follower.json) so the deploy owns it instead of
+# depending on whatever `<id>.json` is in the ambient HF cache; a relative
+# `calibration_dir` resolves against THIS file's directory. `--hal` still wins
+# over these for one-off host overrides (precedence: --hal > scene hal > robot.yaml).
 scene:
   id: so101_bench
 robot_id: so101_follower
+# Host-specific HAL binding (ADR-0078). port: this arm enumerates on
+# /dev/ttyACM0 (robot.yaml's generic default is /dev/ttyUSB0). id +
+# calibration_dir load the committed Feetech calibration
+# (calibration/so_follower.json, relative to this file); without it every
+# send_action/read_state raises "has no calibration registered".
+hal:
+  defaults:
+    port: "/dev/ttyACM0"
+    id: "so_follower"
+    calibration_dir: "calibration"
+    calibrate_on_connect: false
 sensors:
   - name: top
     modality: rgb
