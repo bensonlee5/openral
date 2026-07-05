@@ -25,6 +25,7 @@ sibling runtime modules.
 
 from __future__ import annotations
 
+import os
 import re
 import time
 from pathlib import Path
@@ -38,15 +39,60 @@ from openral_rskill.smolvla_export import SmolVLAOnnxPaths, export_smolvla_split
 
 log = structlog.get_logger(__name__)
 
-__all__ = ["attach_trt_sample_actions", "ensure_smolvla_onnx"]
+__all__ = ["attach_trt_sample_actions", "ensure_smolvla_onnx", "maybe_attach_trt_from_env"]
 
 _DEFAULT_ONNX_CACHE = Path.home() / ".cache" / "openral" / "smolvla_onnx"
 _PRECISIONS = ("bf16", "fp32")
+_ENV_ENABLE = "OPENRAL_SMOLVLA_TRT"
+_ENV_PRECISION = "OPENRAL_SMOLVLA_TRT_PRECISION"
 
 
 def _slug(repo_id: str) -> str:
     """Filesystem-safe cache-directory name for a HF repo id."""
     return re.sub(r"[^A-Za-z0-9._-]", "--", repo_id)
+
+
+def _device_index(device: str) -> int:
+    """Parse a torch device string (``"cuda:1"`` / ``"cuda"`` / ``"cpu"``) to an ordinal."""
+    if ":" in device:
+        return int(device.rsplit(":", 1)[1])
+    return 0
+
+
+def maybe_attach_trt_from_env(
+    policy: Any,  # noqa: ANN401  # reason: lerobot SmolVLAPolicy; deferred import
+    repo_id: str,
+    *,
+    device: str = "cuda:0",
+) -> bool:
+    """Attach the TRT runtime iff ``OPENRAL_SMOLVLA_TRT`` is truthy.
+
+    The single opt-in seam shared by both SmolVLA load paths (the
+    ``openral_rskill`` rSkill adapter and the ``openral_sim`` deploy/sim policy
+    factory), so the env knob behaves identically wherever a SmolVLA policy is
+    built. Reads ``OPENRAL_SMOLVLA_TRT_PRECISION`` (default ``bf16``).
+
+    Args:
+        policy: A loaded ``SmolVLAPolicy``.
+        repo_id: Checkpoint id (keys the ONNX + engine caches).
+        device: torch device string; the CUDA ordinal is parsed from it.
+
+    Returns:
+        ``True`` if the TRT runtime was attached, ``False`` if the env knob is
+        off (caller keeps the torch path, e.g. ``torch.compile``).
+
+    Raises:
+        ROSConfigError / ROSRuntimeError: Propagated from
+            :func:`attach_trt_sample_actions` — no silent fallback (§1.4).
+    """
+    if os.environ.get(_ENV_ENABLE, "0").lower() not in ("1", "true"):
+        return False
+    precision = os.environ.get(_ENV_PRECISION, "bf16")
+    attach_trt_sample_actions(
+        policy, repo_id, precision=precision, device_index=_device_index(device)
+    )
+    log.info("smolvla_trt.enabled_from_env", repo_id=repo_id, precision=precision, device=device)
+    return True
 
 
 def ensure_smolvla_onnx(
