@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pathlib
 
-import pytest
 import yaml
 from openral_cli._rskill_readme import (
     build_rskill_frontmatter,

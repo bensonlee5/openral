@@ -23,11 +23,10 @@ Coverage
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from openral_cli.main import app
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
-from openral_core.schemas import JointState
 from typer.testing import CliRunner
 
 from tests.unit.fakes.fake_so100_hal import FakeSO100FollowerHAL

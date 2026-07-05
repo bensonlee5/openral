@@ -24,10 +24,10 @@ Example:
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 import yaml
-
 from openral_core.schemas import RSkillLicensePosture, RSkillManifest
 
 __all__ = ["build_rskill_frontmatter", "build_rskill_readme", "render_frontmatter"]
@@ -69,7 +69,7 @@ _FRONTMATTER_RE = re.compile(r"^---\n(?P<fm>.*?)\n---\n+", re.DOTALL)
 
 
 def _strip_frontmatter(body: str) -> str:
-    """Drop a leading ``---\\n…\\n---\\n`` YAML front-matter block if present."""
+    r"""Drop a leading ``---\\n…\\n---\\n`` YAML front-matter block if present."""
     m = _FRONTMATTER_RE.match(body)
     return body[m.end() :] if m else body.lstrip("\n")
 
@@ -145,7 +145,8 @@ def build_rskill_frontmatter(manifest: RSkillManifest) -> dict[str, Any]:
         fm["base_model"] = [base]
         # relation reflects what the packaging did to the upstream: quantized when
         # a real quantization block is present, else a plain finetune/wrapper.
-        is_quantized = q is not None and str(getattr(q.dtype, "value", q.dtype)) not in _NON_QUANTIZED_DTYPES
+        dtype = str(getattr(q.dtype, "value", q.dtype)) if q is not None else ""
+        is_quantized = q is not None and dtype not in _NON_QUANTIZED_DTYPES
         fm["base_model_relation"] = "quantized" if is_quantized else "finetune"
 
     ds = _hf_repo(getattr(manifest, "dataset_uri", None))
@@ -185,8 +186,6 @@ def build_rskill_readme(manifest: RSkillManifest, body: str) -> str:
 
 def _demo() -> None:
     """Runnable self-check: front-matter derives the expected best-of-both fields."""
-    from pathlib import Path
-
     root = Path(__file__).resolve()
     while root != root.parent and not (root / "rskills").is_dir():
         root = root.parent
@@ -206,7 +205,8 @@ def _demo() -> None:
     merged = _parse_frontmatter(card)
     assert "hand-tag" in merged["tags"] and merged.get("custom_field") == "keep", merged
     assert merged["library_name"] == "lerobot", "derived field lost in merge"
-    assert card.count("---\n") >= 2 and "\n# body" in card
+    n_fences = card.count("---\n")
+    assert n_fences >= 2 and "\n# body" in card, n_fences  # noqa: PLR2004  # reason: yaml front-matter has exactly two fences
     # detector uses the object-detection pipeline
     d = RSkillManifest.from_yaml(str(root / "rskills" / "rtdetr-coco-r18" / "rskill.yaml"))
     assert build_rskill_frontmatter(d)["pipeline_tag"] == "object-detection"
