@@ -102,3 +102,36 @@ def test_real_mode_forwards_deploy_config_for_sensor_leg(
     assert result.exit_code == 0, result.output
     inv = captured["inv"]
     assert f"deploy_config:={config.resolve()}" in inv.argv_template
+
+
+def test_deploy_validate_flags_missing_calibration(tmp_path: Path) -> None:
+    """`deploy validate` errors when a serial HAL has no calibration (the exact
+    gap that fails at runtime with 'has no calibration registered')."""
+    config = tmp_path / "scene.yaml"
+    config.write_text(
+        "scene:\n  id: so101_bench\n"
+        "robot_id: so101_follower\n"
+        "hal:\n  defaults:\n    port: /dev/ttyACM0\n    calibrate_on_connect: false\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["deploy", "validate", "--config", str(config)])
+    assert result.exit_code != 0, result.output
+    assert "calibration" in result.output.lower()
+
+
+def test_deploy_validate_ready_with_committed_calibration(tmp_path: Path) -> None:
+    """A scene `hal:` binding with a committed calibration passes validation
+    (no --hal needed); a not-attached device is a warning, not an error."""
+    (tmp_path / "calibration").mkdir()
+    (tmp_path / "calibration" / "so_follower.json").write_text("{}", encoding="utf-8")
+    config = tmp_path / "scene.yaml"
+    config.write_text(
+        "scene:\n  id: so101_bench\n"
+        "robot_id: so101_follower\n"
+        "hal:\n  defaults:\n    port: /dev/ttyACM0\n    id: so_follower\n"
+        "    calibration_dir: calibration\n    calibrate_on_connect: false\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["deploy", "validate", "--config", str(config)])
+    assert result.exit_code == 0, result.output
+    assert "ready" in result.output.lower()

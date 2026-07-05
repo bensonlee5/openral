@@ -1124,6 +1124,25 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
         )
 
     hal_params: dict[str, object] = {**hal.default_params}
+    # ADR-0078 — a DeployScene ``hal:`` binding carries the workcell's
+    # host-specific HAL defaults (serial ``port`` + lerobot ``id`` /
+    # ``calibration_dir`` + ``calibrate_on_connect``), the HAL analogue of a
+    # sensor ``deploy_binding``, so ``deploy run --config <scene>`` is
+    # self-contained (no ``--hal`` needed). Merged above the robot-manifest
+    # defaults (which the HAL node reads from ``robot.yaml``) but below any
+    # explicit ``--hal`` override. A relative ``calibration_dir`` resolves
+    # against the scene file's dir — mirrors the ``--hal calibration_dir=``
+    # handling in ``main.deploy_run`` so a committed calibration works from any CWD.
+    if deploy_scene is not None and deploy_scene.hal is not None and config is not None:
+        scene_hal = dict(deploy_scene.hal.defaults)
+        _scene_cal_dir = scene_hal.get("calibration_dir")
+        if (
+            isinstance(_scene_cal_dir, str)
+            and _scene_cal_dir
+            and not Path(_scene_cal_dir).is_absolute()
+        ):
+            scene_hal["calibration_dir"] = str((config.parent / _scene_cal_dir).resolve())
+        hal_params.update(scene_hal)
     if hal_param_overrides:
         hal_params.update(hal_param_overrides)
 

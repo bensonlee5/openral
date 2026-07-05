@@ -1090,12 +1090,23 @@ def _write_deploy_scene_scaffold(
     not on ``deploy run``.
     """
     import yaml as _yaml
-    from openral_core import DeployScene, SceneSpec
+    from openral_core import DeployScene, HalParameters, SceneSpec
 
     robot_id = str(description.name)
+    # Seed the scene's HAL binding (ADR-0078) from the robot manifest's own
+    # hal.parameters.defaults (e.g. serial port) + lerobot calibration
+    # placeholders, so the scaffolded scene is a self-contained `deploy run`
+    # target (no `--hal` needed once the operator fills the real port + commits
+    # the calibration). Only serial (`port`) HALs get the calibration stub.
+    hal_defaults: dict[str, object] = dict(description.hal.parameters.defaults)
+    if "port" in hal_defaults:
+        hal_defaults.setdefault("id", f"{robot_id}")
+        hal_defaults.setdefault("calibration_dir", "calibration")
+        hal_defaults.setdefault("calibrate_on_connect", False)
     scene = DeployScene(
         scene=SceneSpec(id=f"{robot_id}_workcell"),
         robot_id=robot_id,
+        hal=HalParameters(defaults=hal_defaults) if hal_defaults else None,
         sensors=list(sensor_specs),
     )
     if path.exists() and not assume_yes:
@@ -1107,6 +1118,9 @@ def _write_deploy_scene_scaffold(
         "# DeployScene scaffolded by `openral detect --deployment` — review before\n"
         "# `openral deploy run --config <this file>`.\n"
         "# - safety: unset → the robot manifest's envelope applies as-is.\n"
+        "# - hal: host-specific HAL binding — set the real serial `port` for this\n"
+        "#   host and commit the lerobot calibration to `<scene dir>/calibration/`\n"
+        "#   (a relative `calibration_dir` resolves against this file's directory).\n"
         "# - sensors: deploy-time camera bindings (manifest-named entry = that robot\n"
         "#   sensor's binding; new name = workcell camera).\n"
         "# - No rSkill is pinned here: the reasoner selects it at runtime.\n"
@@ -3435,6 +3449,137 @@ def deploy_run(
 
     returncode = run_launch_invocation(invocation)
     raise typer.Exit(code=returncode)
+
+
+@deploy_app.command("validate")
+def deploy_validate(
+    config: Path = typer.Option(  # reason: typer Option idiom
+        ...,
+        "--config",
+        "-c",
+        exists=True,
+        readable=True,
+        dir_okay=False,
+        help="DeployScene YAML to check for real-run readiness.",
+    ),
+    robot: str | None = typer.Option(
+        None,
+        "--robot",
+        help="Override the robot_id resolved from --config.",
+    ),
+    hal: list[str] | None = typer.Option(
+        None,
+        "--hal",
+        help="HAL overrides applied before validation (same precedence as deploy run).",
+    ),
+) -> None:
+    """Pre-run readiness check for `openral deploy run` — no hardware, no ROS launch.
+
+    Validates the DeployScene + robot manifest resolve, then checks the
+    runtime-required inputs a real run needs are present *before* the launch —
+    the exact gaps that otherwise fail late at HAL configure / sensor leg:
+
+    * **HAL transport** — a serial `port` is declared, and its device exists now.
+    * **Calibration** — a serial HAL with `calibrate_on_connect=false` has an
+      `id` + `calibration_dir`, and the `<calibration_dir>/<id>.json` file exists
+      (missing → "has no calibration registered" at every send_action).
+    * **Camera bindings** — each scene sensor has a `deploy_binding` (else it is
+      never published and a camera VLA gets an empty observation), and any
+      `/dev/*` device path exists now.
+
+    Reports ERROR (missing committed data — exits non-zero) vs WARN (device just
+    not attached right now). HAL param precedence matches `deploy run`
+    (`--hal` > scene `hal` > `robot.yaml`).
+    """
+    from openral_core import DeployScene  # reason: defer schema import
+    from openral_core.exceptions import ROSCapabilityMismatch  # reason: defer
+    from pydantic import ValidationError  # reason: defer CLI import
+
+    from openral_cli.deploy_sim import (  # reason: defer heavy CLI import
+        _parse_hal_overrides,
+        resolve_launch_invocation,
+    )
+
+    try:
+        deploy_scene = DeployScene.from_yaml(str(config))
+    except (FileNotFoundError, ROSConfigError, ValidationError) as exc:
+        console.print(f"[red]✗ config:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    overrides = _parse_hal_overrides(hal)
+    cal_dir_override = overrides.get("calibration_dir")
+    if (
+        isinstance(cal_dir_override, str)
+        and cal_dir_override
+        and not Path(cal_dir_override).is_absolute()
+    ):
+        overrides["calibration_dir"] = str((config.parent / cal_dir_override).resolve())
+
+    # Reuse the deploy-run resolver: raises on sim-only robot, name mismatch,
+    # unknown HAL, missing manifest — and produces the merged hal_params
+    # (registry → scene hal → --hal) we then inspect for readiness.
+    try:
+        invocation = resolve_launch_invocation(
+            config=config,
+            robot_override=robot or deploy_scene.robot_id,
+            dashboard_port=4318,
+            reset_to_pose_service=None,
+            deploy_config=config,
+            hal_param_overrides=overrides,
+            hal_mode="real",
+            enable_dashboard=False,
+        )
+    except (ROSConfigError, ROSCapabilityMismatch) as exc:
+        console.print(f"[red]✗ resolve:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    errors: list[str] = []
+    warns: list[str] = []
+    hp = invocation.hal_params
+
+    port = hp.get("port")
+    if isinstance(port, str) and port and not Path(port).exists():
+        warns.append(f"serial port {port!r} does not exist now (arm not attached?)")
+
+    if isinstance(port, str) and port and not bool(hp.get("calibrate_on_connect", False)):
+        cal_id = hp.get("id")
+        cal_dir = hp.get("calibration_dir")
+        if not cal_id or not cal_dir:
+            errors.append(
+                "serial HAL with calibrate_on_connect=false but no id/calibration_dir "
+                "→ every send_action/read_state raises 'has no calibration registered'. "
+                "Add a scene `hal:` binding with id + calibration_dir."
+            )
+        else:
+            cal_file = Path(str(cal_dir)) / f"{cal_id}.json"
+            if not cal_file.exists():
+                errors.append(f"calibration file {cal_file} does not exist (id={cal_id!r}).")
+
+    if not deploy_scene.sensors:
+        warns.append("scene declares no sensors → a camera VLA will get an empty observation")
+    for sensor in deploy_scene.sensors:
+        binding = sensor.deploy_binding
+        if binding is None:
+            warns.append(
+                f"sensor {sensor.name!r} has no deploy_binding → not published, VLA won't see it"
+            )
+            continue
+        dev = binding.backend_params.get("device")
+        if isinstance(dev, str) and dev.startswith("/dev/") and not Path(dev).exists():
+            warns.append(f"sensor {sensor.name!r} device {dev!r} does not exist now")
+
+    console.print(f"[cyan]deploy validate[/cyan] {invocation.robot_id} ← {config}")
+    for warn in warns:
+        console.print(f"  [yellow]⚠ {warn}[/yellow]")
+    for err in errors:
+        console.print(f"  [red]✗ {err}[/red]")
+    if errors:
+        console.print(
+            f"[red]{len(errors)} error(s), {len(warns)} warning(s) — "
+            "not ready for `deploy run`.[/red]"
+        )
+        raise typer.Exit(code=1)
+    console.print(f"[green]✓ ready for `deploy run` ({len(warns)} warning(s)).[/green]")
 
 
 # ── openral replay — bag↔OTel correlator (ADR-0018 F7) ──────────────────────────
