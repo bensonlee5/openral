@@ -1417,7 +1417,7 @@ class BoxShape(BaseModel):
     Attributes:
         shape: Discriminator (always ``"box"``).
         half_extents_m: Half-sizes ``(hx, hy, hz)`` along the local x/y/z axes
-            in metres (the full box is ``2*hx × 2*hy × 2*hz``).
+            in metres (the full box is ``2*hx x 2*hy x 2*hz``).
 
     Example:
         >>> BoxShape(half_extents_m=(0.055, 0.048, 0.036)).shape
