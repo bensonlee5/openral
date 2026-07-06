@@ -52,7 +52,13 @@ The same userspace stack regardless of flavour:
   because Fast DDS' SHM transport interacts badly with pydantic v2's Rust
   core + gst-cuda plugin scan.
 - **uv-managed workspace venv** at `/workspace/.venv` with the OpenRAL
-  Python packages plus the TensorRT group. `uv sync` runs **without
+  Python packages plus the `tensorrt`, `sim`, and `robometer` groups
+  and `feetech-servo-sdk`. The `sim` group carries the lerobot /
+  transformers / accelerate / bitsandbytes stack the VLA policy
+  adapters import at load time (needed on real hardware too);
+  `robometer` adds the reward monitor's ZMQ + msgpack sidecar client
+  (ADR-0057); `feetech-servo-sdk` is the Feetech motor driver the
+  so100 / so101 real HAL needs. `uv sync` runs **without
   `--extra gstreamer`** — see the gi-splice note above.
 - **colcon `install/` overlay** at `/workspace/install/` (baked by the
   builder stage). Carries every ROS / C++ package the deploy graph
@@ -74,6 +80,18 @@ The same userspace stack regardless of flavour:
   - `openral_foxglove_bringup` — read-only allowlists imported by
     `openral_rskill_ros` launch files
   - `openral_rskill_ros` — ADR-0018 F1 `ExecuteSkill` action server
+  - `openral_octomap_bridge` — ADR-0030 octree → world-voxels bridge
+  - `openral_perception_ros` — ADR-0035/0047/0057 detector +
+    scene-VLM + reward-monitor nodes (the reward monitor drives the
+    dashboard's rSkill-card reward bar)
+
+  The non-ROS trees the launch resolves from its `_REPO_ROOT`
+  (`/workspace/install`) — `tools/` (autostart driver +
+  Robometer sidecar scripts), `rskills/`, `scenes/`, and `.venv` —
+  are COPY'd to `/workspace` and symlinked under `install/`, so
+  `deploy run --config scenes/deploy/<workcell>.yaml` needs no host
+  bind-mount. `git` is installed in the runtime stage for the
+  Robometer sidecar's first-use venv provisioning.
 
   `Python3_EXECUTABLE=/workspace/.venv/bin/python` is baked into every
   ament-python package's `CTestTestfile.cmake` so the lifecycle nodes
