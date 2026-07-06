@@ -86,7 +86,7 @@ the vision encoder first (the policy expert stays on its current runtime):
 |---|---|---|
 | 1 | x86-DS NVMM source tier in `pipeline.py` + container smoke | live camera → NVMM appsink frames in-container — **done 2026-07-06** (`smoke_nvmm_source.py`: real bench cam → `SensorFrame.handle`, CUDA_RGBA) |
 | 2 | `NvmmVisionEncoder` (multi-slot `TrtNvmmExecutor.infer_rgba_devptrs` + `resize_pad_pm1` + vision TRT on devptr) | embeddings compared vs the host-numpy path on the same cached engine — **done 2026-07-06** (real pen-skill bf16 vision engine: max-rel 1.1%, per-token cosine > 0.999, 26.6 ms/2-cam; `tests/unit/test_nvmm_vision_encoder.py`). The executor *is* the devptr I/O; a parallel `TensorRTRuntime` devptr API was dropped as redundant — the device-side embedding handoff (DLPack) lands with Phase 3. |
-| 3 | co-located runtime_node; DLPack embedding → policy; retire host-numpy vision leg in deploy | live SO-101 pen deploy, zero per-frame DtoH on the vision leg |
+| 3 | in-process handle path + NVMM vision leg in deploy | live SO-101 pen deploy — **done 2026-07-06, goal SUCCEEDED** (~2100 policy steps in the DS container on the real arm; 0 e-stops, 0 collisions, 0 camera drops; no decoded pixel on the CPU). See the dated amendment below for what shipped vs the original sketch. |
 | 4 | reasoner attach/detach of tee consumers (ExecuteSkill ↔ TeeManager) | live add/remove of the detector branch during a deploy run |
 
 ## Alternatives considered
@@ -120,6 +120,52 @@ the vision encoder first (the policy expert stays on its current runtime):
   already solves the N-camera pattern for the detector and is reused.
 - Follow-ups: policy-graph TRT joining the co-located process; Tegra
   (`nvv4l2camerasrc`/CSI) tier reusing the same consumer unchanged.
+
+## Amendment — 2026-07-06 (Phase 3 landed + live-validated)
+
+What shipped differs from the original sketch in two informed ways:
+
+- **No new co-located process was needed.** The `runtime_node` *already*
+  hosts the sensor readers + WorldState aggregator + skill runner in one OS
+  process (ADR-0037 Decision-1 / ADR-0018 §3); the zero-copy handle was dying
+  at a pointless **intra-process ROS round trip** (reader ROS tee →
+  `sensor_msgs/Image` → `_on_image` rebuilds a data-only frame). Phase 3
+  therefore added a direct in-process path instead: `sensor_leg` gains an
+  `_AggregatorPump` per reader writing `read_latest()` frames (handles
+  intact) straight into the shared aggregator, and WorldState's new
+  `direct_image_frame_sensors` parameter stops `_on_image` from
+  double-writing those sensors (its ROS reconstruction keeps serving
+  observability — dashboard thumbnails, detectors).
+- **Buffer lifetime**: a latched NVMM `gpu_ptr` is only valid until the next
+  frame swaps the Gst buffer — an async consumer racing that swap would read
+  recycled memory. `StableSurfaceMirror` (reader-owned GPU double buffer)
+  DtoD-copies each surface inside the appsink callback while the map is
+  provably valid; worst cross-thread outcome is a torn frame, never a
+  use-after-free.
+- The VLA side: `obs["image_handles"]` (NVMM descriptors, VLA-slot-keyed)
+  travels next to `obs["images"]`; `_SmolVLAAdapter` orders handles by the
+  checkpoint's `image_features`, encodes via `NvmmVisionEncoder` (same cached
+  engine as the TRT runtime), stashes embeddings via
+  `set_precomputed_img_embs`, and feeds device-resident placeholder pixels to
+  lerobot's plumbing. Handles without TRT, or partial camera coverage, raise
+  — no silent blind fallback.
+- **Live result (real SO-101, DS container, 2026-07-06):** "Pick up the pen"
+  goal **SUCCEEDED** after ~2100 policy steps; 0 e-stops, 0 collisions,
+  0 camera drops; one first-step latency overrun (954 ms — one-time lazy
+  encoder build), in-budget after. The only per-frame PCIe crossing is the
+  compressed JPEG; embeddings cross host once per chunk inference (~0.5 MB —
+  device-side chaining into the policy engine remains an optional follow-up).
+- **Field fixes from the container bring-up** (all landed): `jpegparse !
+  nvjpegdec max-errors=-1` (a corrupt UVC MJPG frame — routine on the wrist
+  cam — fatals nvjpegdec where CPU jpegdec just dropped it);
+  `scenes/deploy/so101_bench.yaml` cameras moved to the spec-driven
+  `jpeg: true` form (retiring the raw-pipeline workaround). Known image gaps
+  an operator must cover until the Dockerfile grows them: `tools/` +
+  `scenes/` not baked (bind-mount), `feetech-servo-sdk` + the `sim`
+  dependency group not installed (the committed `openral:x86-ds-pen`
+  derivative carries both), skill ids resolve by manifest `name`
+  (`OpenRAL/rskill-smolvla-so101-pen`), and `HF_HUB_OFFLINE=1` for the gated
+  upstream checkpoint.
 
 ## Process gates
 

@@ -95,9 +95,7 @@ def maybe_attach_trt_from_env(
     return True
 
 
-def ensure_smolvla_onnx(
-    repo_id: str, *, cache_dir: Path | None = None
-) -> SmolVLAOnnxPaths:
+def ensure_smolvla_onnx(repo_id: str, *, cache_dir: Path | None = None) -> SmolVLAOnnxPaths:
     """Return cached split-ONNX graphs for ``repo_id``, exporting on first use.
 
     The export needs a **separate fp32/CPU copy** of the checkpoint
@@ -138,9 +136,7 @@ def ensure_smolvla_onnx(
             SmolVLAPolicy,
         )
     except ImportError as exc:  # pragma: no cover - import guard
-        raise ROSConfigError(
-            "ensure_smolvla_onnx requires 'lerobot' (uv add lerobot)."
-        ) from exc
+        raise ROSConfigError("ensure_smolvla_onnx requires 'lerobot' (uv add lerobot).") from exc
 
     log.info("smolvla_trt.exporting_onnx", repo_id=repo_id, out_dir=str(root))
     t0 = time.perf_counter()
@@ -157,7 +153,16 @@ def ensure_smolvla_onnx(
 
 
 class _TrtSampleActions:
-    """``VLAFlowMatching.sample_actions``-compatible callable backed by TRT."""
+    """``VLAFlowMatching.sample_actions``-compatible callable backed by TRT.
+
+    ADR-0082 Phase 3: a caller that already holds the image embeddings (the
+    zero-copy NVMM vision leg — ``NvmmVisionEncoder`` ran the *same* vision
+    engine directly on the camera's device pointer) can stash them via
+    :meth:`set_precomputed_img_embs`; the next ``__call__`` then skips the
+    host-numpy image round-trip and the vision engine entirely, feeding the
+    policy graph those embeddings. The slot is one-shot (cleared on use) so a
+    stale frame's embeddings can never leak into a later chunk.
+    """
 
     def __init__(
         self,
@@ -174,12 +179,16 @@ class _TrtSampleActions:
 
         self._policy = policy
         self._paths = paths
+        self._precomputed_img_embs: Any = None  # one-shot (n_cameras, T, hidden) np.float32
+        self._device_index = device_index
         quant = QuantizationConfig(
             dtype=QuantizationDtype(precision),
             backend=QuantizationBackend.TENSORRT,
         )
         device = f"cuda:{device_index}"
         repo_tag = _slug(repo_id)
+        self._quant = quant
+        self._vision_rskill_id = f"{repo_tag}#vision"
         t0 = time.perf_counter()
         self._vision = TensorRTRuntime(
             device=device, rskill_id=f"{repo_tag}#vision", quantization=quant
@@ -195,6 +204,53 @@ class _TrtSampleActions:
             n_cameras=paths.n_cameras,
             seconds=round(time.perf_counter() - t0, 1),
         )
+
+    @property
+    def n_cameras(self) -> int:
+        """Camera count the vision graph was exported for."""
+        return self._paths.n_cameras
+
+    @property
+    def vision_onnx(self) -> Path:
+        """Path to the split-export vision graph (shared with ``NvmmVisionEncoder``)."""
+        return Path(self._paths.vision_onnx)
+
+    @property
+    def vision_rskill_id(self) -> str:
+        """Engine-cache id of the vision engine.
+
+        Reuse it so ``NvmmVisionEncoder`` cache-hits the exact engine this
+        runtime built.
+        """
+        return self._vision_rskill_id
+
+    @property
+    def quantization(self) -> QuantizationConfig:
+        """The build-time quantization both engines were built with."""
+        return self._quant
+
+    @property
+    def device_index(self) -> int:
+        """CUDA device ordinal the engines run on."""
+        return self._device_index
+
+    def set_precomputed_img_embs(self, embs: Any) -> None:  # noqa: ANN401  # reason: np.ndarray; numpy deferred with torch
+        """Stash ``(n_cameras, T_img, hidden)`` image embeddings for the next call.
+
+        The zero-copy NVMM vision leg (ADR-0082) produces these by running the
+        same vision engine on the camera's device pointer; ``__call__`` then
+        skips its own image round-trip + vision inference. One-shot: consumed
+        and cleared by the next ``__call__``.
+
+        Raises:
+            ROSRuntimeError: If the leading dim does not match ``n_cameras``.
+        """
+        if embs.shape[0] != self._paths.n_cameras:
+            raise ROSRuntimeError(
+                f"smolvla_trt: precomputed embeddings have {embs.shape[0]} camera "
+                f"slots, engine exported for {self._paths.n_cameras}."
+            )
+        self._precomputed_img_embs = embs
 
     def __call__(
         self,
@@ -241,8 +297,15 @@ class _TrtSampleActions:
         def _np(t: Any, dtype: Any) -> Any:  # noqa: ANN401  # reason: torch->numpy bridge
             return np.ascontiguousarray(t.detach().to("cpu", torch.float32).numpy(), dtype=dtype)
 
-        pixels = np.concatenate([_np(img, np.float32) for img in images], axis=0)
-        (embs,) = self._vision.infer({"pixel_values": pixels}).values()
+        if self._precomputed_img_embs is not None:
+            # Zero-copy NVMM vision leg (ADR-0082): embeddings were produced by
+            # NvmmVisionEncoder straight from the camera device pointers — the
+            # `images` tensors in this call are placeholders and are ignored.
+            embs = np.asarray(self._precomputed_img_embs, dtype=np.float32)
+            self._precomputed_img_embs = None  # one-shot; never reuse a stale frame
+        else:
+            pixels = np.concatenate([_np(img, np.float32) for img in images], axis=0)
+            (embs,) = self._vision.infer({"pixel_values": pixels}).values()
         img_embs = embs.reshape(1, -1, embs.shape[-1])
         (actions,) = self._policy_rt.infer(
             {

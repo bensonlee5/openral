@@ -23,6 +23,18 @@ guarantees every camera ends up on the WorldState subscription topic
 Publishers use the CLAUDE.md §2 sensor-stream QoS (BEST_EFFORT); the
 WorldState image subscription requests BEST_EFFORT so both match.
 
+**Direct aggregator path (ADR-0082 Phase 3).** The reader, WorldState
+aggregator, and skill runner share one OS process (``compose_runtime``), yet
+frames historically took an intra-process ROS round trip (reader tee →
+``sensor_msgs/Image`` → ``_on_image`` rebuilds a data-only ``SensorFrame``) —
+which both re-serializes every pixel and destroys the zero-copy NVMM
+``SensorFrame.handle``. When the caller passes the shared ``aggregator``,
+an :class:`_AggregatorPump` per reader writes ``read_latest()`` frames
+straight into ``WorldStateAggregator.update_image_frame`` — handles intact.
+The ROS tee stays on for observability (dashboard thumbnails, detectors);
+WorldState's ``direct_image_frame_sensors`` parameter stops ``_on_image``
+from double-writing those sensors into the aggregator.
+
 The caller owns teardown: :meth:`SensorLeg.close` stops publishers and
 closes readers idempotently. ``runtime_node`` wires this in when its
 ``deploy_config`` parameter is set (real deploys only — sim keeps the
@@ -31,8 +43,9 @@ HAL bridge as its single camera source).
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
 
@@ -59,6 +72,58 @@ class _Closeable(Protocol):
     def close(self) -> None: ...  # pragma: no cover — Protocol
 
 
+class _AggregatorPump:
+    """Poll a reader's latest frame straight into the shared aggregator.
+
+    The in-process sibling of ``SensorRosPublisher``: same start/stop shape,
+    but the destination is ``WorldStateAggregator.update_image_frame`` — the
+    frame object (including a zero-copy NVMM ``handle``) reaches the skill
+    runner without a ROS serialize/deserialize (ADR-0082 Phase 3).
+
+    A frame is written only when its monotonic stamp changed, so re-polling
+    the same latched frame never refreshes the aggregator's staleness stamp.
+    """
+
+    # reader/aggregator duck-typed (SensorReader / WorldStateAggregator): imports stay deferred.
+    def __init__(self, reader: Any, sensor_name: str, aggregator: Any, rate_hz: float) -> None:
+        """Stash config; the polling thread starts in :meth:`start`."""
+        self._reader = reader
+        self._sensor_name = sensor_name
+        self._aggregator = aggregator
+        self._period_s = 1.0 / max(rate_hz, 1.0)
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._last_stamp_ns: int | None = None
+
+    def start(self) -> None:
+        """Spawn the polling daemon thread. Idempotent."""
+        if self._thread is not None:
+            return
+        self._thread = threading.Thread(
+            target=self._run, name=f"agg-pump-{self._sensor_name}", daemon=True
+        )
+        self._thread.start()
+
+    def stop(self) -> None:
+        """Signal and join the polling thread. Idempotent."""
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+    def _run(self) -> None:
+        """Poll ``read_latest`` at the configured rate; write new frames only."""
+        while not self._stop_event.wait(self._period_s):
+            try:
+                frame = self._reader.read_latest(max_age_ms=None)
+            except Exception:  # reason: no frame yet / transient staleness — keep polling
+                continue
+            if frame.stamp_monotonic_ns == self._last_stamp_ns:
+                continue
+            self._last_stamp_ns = frame.stamp_monotonic_ns
+            self._aggregator.update_image_frame(self._sensor_name, frame)
+
+
 @dataclass
 class SensorLeg:
     """Open readers + started publishers for one deploy session.
@@ -74,6 +139,10 @@ class SensorLeg:
 
     readers: list[object] = field(default_factory=list)
     publishers: list[object] = field(default_factory=list)
+    #: Sensors written straight into the shared aggregator (ADR-0082 Phase 3).
+    #: WorldState's ``direct_image_frame_sensors`` parameter must list these
+    #: so ``_on_image`` doesn't double-write them from the ROS tee.
+    direct_sensors: list[str] = field(default_factory=list)
 
     def close(self) -> None:
         """Stop publishers first (they poll the readers), then close readers.
@@ -126,6 +195,7 @@ def open_deploy_sensor_readers(
     sensors: Iterable[SensorSpec],
     *,
     topic_prefix: str = DEFAULT_TOPIC_PREFIX,
+    aggregator: Any | None = None,  # reason: WorldStateAggregator — deferred import
 ) -> SensorLeg:
     """Open every deploy-bound sensor in ``sensors`` and publish each onto ROS.
 
@@ -136,6 +206,12 @@ def open_deploy_sensor_readers(
             committed reference manifests leave the binding unset.
         topic_prefix: WorldState's ``camera_topic_prefix``. The final
             topic is ``<topic_prefix>/<spec.name>/image``.
+        aggregator: The composed runtime's shared ``WorldStateAggregator``.
+            When set, every opened reader also gets an in-process
+            :class:`_AggregatorPump` writing frames (zero-copy NVMM handles
+            intact) straight into it, and the sensor is recorded in
+            :attr:`SensorLeg.direct_sensors` — forward that list to
+            WorldState's ``direct_image_frame_sensors`` parameter.
 
     Returns:
         A :class:`SensorLeg` holding the open readers + started
@@ -202,11 +278,20 @@ def open_deploy_sensor_readers(
                 )
                 publisher.start()
                 leg.publishers.append(publisher)
+            if aggregator is not None:
+                # ADR-0082 Phase 3: in-process reader → aggregator, no ROS hop
+                # for the policy leg (NVMM handles survive). The ROS tee above
+                # keeps serving observability consumers.
+                pump = _AggregatorPump(reader, spec.name, aggregator, _publish_rate_hz(spec))
+                pump.start()
+                leg.publishers.append(pump)
+                leg.direct_sensors.append(spec.name)
             log.info(
                 "sensor_leg.camera_open",
                 sensor_id=spec.name,
                 backend=binding.backend.value,
                 topic=topic,
+                direct_to_aggregator=aggregator is not None,
             )
     except Exception:
         # Half-open leg → close what we already opened before re-raising;

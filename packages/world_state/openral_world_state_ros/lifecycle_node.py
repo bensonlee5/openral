@@ -186,6 +186,12 @@ if _ROS2_AVAILABLE:
             # `left_wrist`, `right_wrist`).
             self.declare_parameter("camera_names", [""])
             self.declare_parameter("camera_topic_prefix", "/openral/cameras")
+            # ADR-0082 Phase 3 — sensors whose frames the co-located sensor
+            # leg writes straight into the shared aggregator (zero-copy NVMM
+            # handles intact). ``_on_image`` keeps serving observability
+            # (thumbnail span) for them but must NOT double-write the
+            # aggregator with its handle-less reconstruction.
+            self.declare_parameter("direct_image_frame_sensors", [""])
             self.declare_parameter("object_lift_enabled", True)
             self.declare_parameter("object_detections_topic", "/openral/perception/objects")
             self.declare_parameter("object_voxels_topic", "/openral/world_voxels")
@@ -649,7 +655,18 @@ if _ROS2_AVAILABLE:
                     age_ms=age_ms,
                     thumbnail_bytes=thumb,
                 )
-                self._aggregator.update_image_frame(sensor_name, frame)
+                # ADR-0082 Phase 3: sensors fed straight into the aggregator by
+                # the co-located sensor leg keep their zero-copy handle frames —
+                # this ROS reconstruction serves observability only for them.
+                direct = {
+                    str(s)
+                    for s in (
+                        self.get_parameter("direct_image_frame_sensors").value or []
+                    )
+                    if s
+                }
+                if sensor_name not in direct:
+                    self._aggregator.update_image_frame(sensor_name, frame)
 
         def _on_joint_state(self, msg: object) -> None:
             """Convert ROS JointState → Pydantic JointState and update aggregator."""

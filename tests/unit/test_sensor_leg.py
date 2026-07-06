@@ -123,12 +123,31 @@ spec = SensorSpec(
         backend_params={"source": "testsrc", "width": 320, "height": 240, "fps": 10},
     ),
 )
-leg = open_deploy_sensor_readers([spec])
+# ADR-0082 Phase 3: the shared aggregator receives frames straight from
+# the reader (no ROS hop). Subclass the REAL aggregator only to observe
+# the write (super() still runs) — no behaviour is faked.
+from openral_core import RobotDescription
+from openral_world_state import WorldStateAggregator
+
+description = RobotDescription.from_yaml("robots/so101_follower/robot.yaml")
+
+class _CountingAggregator(WorldStateAggregator):
+    def __init__(self, desc):
+        super().__init__(desc)
+        self.image_writes = []
+
+    def update_image_frame(self, sensor_name, frame):
+        super().update_image_frame(sensor_name, frame)
+        self.image_writes.append((sensor_name, frame))
+
+aggregator = _CountingAggregator(description)
+leg = open_deploy_sensor_readers([spec], aggregator=aggregator)
 try:
     assert len(leg.readers) == 1, leg.readers
-    # GStreamer readers publish via their in-pipeline ROS tee — no
-    # polling SensorRosPublisher pump is attached for them.
-    assert leg.publishers == [], leg.publishers
+    # The direct-aggregator pump is registered as a publisher-shaped pump;
+    # the sensor is recorded for WorldState's direct_image_frame_sensors.
+    assert leg.direct_sensors == ["testcam"], leg.direct_sensors
+    assert len(leg.publishers) == 1, leg.publishers
     deadline = time.time() + 10.0
     frame = None
     while time.time() < deadline:
@@ -140,6 +159,18 @@ try:
             break
         time.sleep(0.1)
     assert frame is not None, "videotestsrc produced no frame within 10 s"
+
+    # The pump delivered the same frames in-process, pixels intact.
+    deadline = time.time() + 10.0
+    while time.time() < deadline and not aggregator.image_writes:
+        time.sleep(0.1)
+    assert aggregator.image_writes, "aggregator pump wrote no frame within 10 s"
+    written_name, written_frame = aggregator.image_writes[0]
+    assert written_name == "testcam"
+    # CPU hosts deliver inline data; the DeepStream tier delivers a zero-copy
+    # NVMM handle (SensorFrame's data/handle exclusivity) — both are the point.
+    assert written_frame.data is not None or written_frame.handle is not None
+    assert written_frame.width == 320
 
     # And the WorldState side of the contract: a BEST_EFFORT subscriber
     # on the leg's topic (same profile world_state requests) receives a

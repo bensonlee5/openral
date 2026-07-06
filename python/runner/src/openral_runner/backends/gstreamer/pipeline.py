@@ -542,8 +542,14 @@ def _build_decode(spec: PipelineSpec, platform: Platform) -> str:
             fields.append(f"height={spec.height}")
         fields.append(f"framerate={spec.fps}/1")
         jpeg_caps = f"image/jpeg,{','.join(fields)}"
-        decoder = "nvjpegdec" if platform is Platform.NVIDIA_DEEPSTREAM else "jpegdec"
-        return f"{jpeg_caps} ! {decoder}"
+        if platform is Platform.NVIDIA_DEEPSTREAM:
+            # jpegparse frame-aligns the UVC MJPG stream and max-errors=-1
+            # keeps a corrupt camera frame (routine on cheap UVC cams — the
+            # icspring wrist cam emits one every ~minute) from fataling the
+            # pipeline: nvjpegdec errors out the whole stream by default,
+            # where CPU jpegdec just drops the frame. Live-observed 2026-07-06.
+            return f"{jpeg_caps} ! jpegparse ! nvjpegdec max-errors=-1"
+        return f"{jpeg_caps} ! jpegdec"
     h264_decoder = {
         Platform.TEGRA: "nvv4l2decoder",
         Platform.NVIDIA_DEEPSTREAM: "nvv4l2decoder",

@@ -388,7 +388,10 @@ def test_build_pipeline_string_usb_jpeg_deepstream_is_nvmm_rgba() -> None:
     spec = PipelineSpec(source=Source.USB, device="/dev/video4", width=640, height=480, jpeg=True)
     result = build_pipeline_string(spec, platform=Platform.NVIDIA_DEEPSTREAM)
     assert "v4l2src device=/dev/video4" in result
-    assert "image/jpeg,width=640,height=480,framerate=30/1 ! nvjpegdec" in result
+    jpeg_chain = (
+        "image/jpeg,width=640,height=480,framerate=30/1 ! jpegparse ! nvjpegdec max-errors=-1"
+    )
+    assert jpeg_chain in result
     assert " ! nvvideoconvert ! " in result
     assert "video/x-raw(memory:NVMM),format=RGBA,width=640,height=480" in result
     assert "videoconvert !" not in result.replace("nvvideoconvert !", ""), (

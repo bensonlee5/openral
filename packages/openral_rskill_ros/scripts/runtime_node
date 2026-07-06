@@ -215,10 +215,26 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
             scene = DeployScene.from_yaml(deploy_config)
             # Robot-manifest ∪ scene sensors (scene wins on name collision —
             # a same-named scene entry is that robot sensor's deploy binding);
-            # the leg opens only those carrying a `deploy_binding`.
+            # the leg opens only those carrying a `deploy_binding`. The shared
+            # aggregator gets frames straight from the readers (ADR-0082
+            # Phase 3 — zero-copy NVMM handles survive; no intra-process ROS
+            # round trip on the policy leg).
             sensor_leg = open_deploy_sensor_readers(
                 merge_deploy_sensors(runtime.description.sensors, scene.sensors),
+                aggregator=runtime.aggregator,
             )
+            if sensor_leg.direct_sensors:
+                from rclpy.parameter import Parameter
+
+                runtime.world_state_node.set_parameters(
+                    [
+                        Parameter(
+                            "direct_image_frame_sensors",
+                            Parameter.Type.STRING_ARRAY,
+                            list(sensor_leg.direct_sensors),
+                        )
+                    ],
+                )
         except Exception as exc:  # surface as exit code, not stack trace
             print(f"runtime_node: sensor leg failed to open: {exc!s}", file=sys.stderr)
             rclpy.try_shutdown()

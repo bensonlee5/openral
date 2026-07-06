@@ -1646,7 +1646,8 @@ def _decode_image_frames(
     (:func:`_sensor_name_to_vla_slot`). Sensors absent from
     ``sensor_to_slot`` pass through under their own name. Frames without
     inline pixels (``data is None`` — topic / handle delivery) are
-    skipped.
+    skipped — zero-copy handle frames travel via
+    :func:`_collect_image_handles` instead (ADR-0082 Phase 3).
     """
     import numpy as np
 
@@ -1661,6 +1662,46 @@ def _decode_image_frames(
         )
         images[sensor_to_slot.get(name, name)] = arr
     return images
+
+
+def _assemble_obs_images(
+    obs: dict[str, Any],
+    image_frames: dict[str, Any] | None,
+    sensor_to_slot: dict[str, str],
+) -> None:
+    """Populate ``obs["images"]`` (+ ``obs["image_handles"]`` when present).
+
+    ADR-0082 Phase 3: zero-copy GPU frames (co-located sensor leg) travel as
+    NVMM descriptors alongside the decoded CPU frames; a TRT-attached SmolVLA
+    adapter runs its vision encoder straight on the device pointers.
+    """
+    obs["images"] = _decode_image_frames(image_frames, sensor_to_slot) if image_frames else {}
+    if image_frames and (handles := _collect_image_handles(image_frames, sensor_to_slot)):
+        obs["image_handles"] = handles
+
+
+def _collect_image_handles(
+    image_frames: dict[str, Any],
+    sensor_to_slot: dict[str, str],
+) -> dict[str, Any]:
+    """Collect zero-copy GPU frames into a VLA-slot-keyed ``obs["image_handles"]``.
+
+    ADR-0082 Phase 3: a :class:`~openral_core.schemas.SensorFrame` delivered
+    by the co-located sensor leg carries ``handle`` (a CUDA device pointer
+    into the reader's stable mirror) plus the ``nvbufsurface`` descriptor in
+    ``metadata``. The descriptor dict (``gpu_ptr``/``width``/``height``/
+    ``pitch``/…) is what the VLA's NVMM vision encoder consumes — pixels
+    never touch host memory.
+    """
+    handles: dict[str, Any] = {}
+    for name, frame in image_frames.items():
+        if frame.handle is None:
+            continue
+        descriptor = (frame.metadata or {}).get("nvbufsurface")
+        if descriptor is None:
+            continue
+        handles[sensor_to_slot.get(name, name)] = descriptor
+    return handles
 
 
 def _build_runtime_skill_from_manifest(
@@ -2396,11 +2437,7 @@ def _make_policy_adapter_skill(
             # slot (camera1/camera2/...). `sensor_to_slot` realigns the two
             # so the adapter + `openral sim run` agree (see
             # `_sensor_name_to_vla_slot` / `_decode_image_frames`).
-            obs["images"] = (
-                _decode_image_frames(world_state.image_frames, sensor_to_slot)
-                if world_state.image_frames
-                else {}
-            )
+            _assemble_obs_images(obs, world_state.image_frames, sensor_to_slot)
 
             action_array = self._adapter.step(obs, self._prompt)  # type: ignore[attr-defined]
             # Reorder policy-order action → robot-order action so the

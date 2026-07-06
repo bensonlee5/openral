@@ -207,13 +207,14 @@ class GStreamerSensorReader:
         self._frame_lock = threading.Lock()
         self._latest_data: bytes | None = None
         self._latest_handle: int | None = None
-        # The NvBufSurfaceHandle / Gst.Buffer / Gst.MapInfo are kept alive
-        # for the duration of the latest-frame slot so a downstream CUDA
-        # consumer doesn't read freed GPU memory. Released in close() and
-        # whenever a new NVMM frame replaces the slot.
+        # NVMM frames are DtoD-mirrored into the reader-owned
+        # StableSurfaceMirror double buffer (ADR-0082 Phase 3), so the latched
+        # handle never points into the Gst buffer pool; the buffer/map slots
+        # below remain only as defensive cleanup for a pre-mirror frame.
         self._latest_handle_descriptor: Any | None = None
         self._latest_buffer_ref: Any | None = None
         self._latest_map_info: Any | None = None
+        self._nvmm_mirror: Any | None = None  # StableSurfaceMirror, lazy
         self._latest_stamp_monotonic_ns: int | None = None
         self._latest_stamp_wall_ns: int | None = None
         self._latest_width: int | None = None
@@ -353,6 +354,9 @@ class GStreamerSensorReader:
         if buffer_ref is not None and map_info is not None:
             with contextlib.suppress(Exception):  # reason: defensive cleanup
                 buffer_ref.unmap(map_info)
+        if self._nvmm_mirror is not None:
+            self._nvmm_mirror.close()
+            self._nvmm_mirror = None
         self.is_open = False
 
     def __enter__(self) -> GStreamerSensorReader:
@@ -535,6 +539,7 @@ class GStreamerSensorReader:
         from openral_runner.backends.gstreamer.nvbufsurface import (  # noqa: PLC0415
             NvBufSurfaceColorFormat,
             NvBufSurfaceLibraryError,
+            StableSurfaceMirror,
             load,
             wrap_buffer,
         )
@@ -561,24 +566,29 @@ class GStreamerSensorReader:
             # small surface-descriptor struct (NOT the GPU frame — dataPtr still
             # points at device memory, so this stays zero-copy for the frame).
             # ``struct_bytes`` must outlive the wrap_buffer call: wrap_buffer derefs
-            # surface_list, whose pointer indexes back into the still-mapped buffer
-            # (this handler holds the map alive across frames, below). Validated for
-            # the detector NVMM path against real DeepStream buffers in the ds-on
-            # container (see DetectorRunner._on_sample_nvmm).
+            # surface_list, whose pointer indexes back into the still-mapped buffer.
+            # Validated for the detector NVMM path against real DeepStream buffers
+            # in the ds-on container (see DetectorRunner._on_sample_nvmm).
             struct_bytes = (ctypes.c_uint8 * map_info.size).from_buffer_copy(map_info.data)
             buffer_address = ctypes.cast(struct_bytes, ctypes.c_void_p).value
             if buffer_address is None:
                 raise ValueError("NVMM mapped buffer has NULL base address")
-            handle = wrap_buffer(buffer_address)
-        except (ValueError, OSError) as exc:
+            pool_handle = wrap_buffer(buffer_address)
+            # Decouple the latched handle from the Gst buffer pool (ADR-0082
+            # Phase 3): DtoD-copy the surface into a reader-owned double buffer
+            # while the map is provably valid. Consumers (VLA vision leg /
+            # detector) then read stable memory — an async read racing the next
+            # frame is at worst a torn frame, never a use-after-free — and the
+            # Gst buffer can be unmapped immediately below (no held maps).
+            if self._nvmm_mirror is None:
+                self._nvmm_mirror = StableSurfaceMirror()
+            handle = self._nvmm_mirror.mirror(pool_handle)
+        except (ValueError, OSError, NvBufSurfaceLibraryError) as exc:
             with self._frame_lock:
                 self._bus_error = f"NVMM buffer unwrap failed: {exc}"
             buffer.unmap(map_info)
             return int(Gst.FlowReturn.ERROR)
-        finally:
-            # Keep the NvBufSurface readable until the next frame replaces
-            # us — unmap below in the slot swap.
-            pass
+        buffer.unmap(map_info)
 
         mono_ns = time.monotonic_ns()
         wall_ns = time.time_ns()
@@ -591,14 +601,14 @@ class GStreamerSensorReader:
         encoding = FrameEncoding.CUDA_RGBA if is_rgba else FrameEncoding.CUDA_NV12
         channels = 4 if is_rgba else 3
         with self._frame_lock:
-            # Release the previous buffer's map BEFORE overwriting the slot.
+            # The mirror owns the frame memory — no Gst buffer / map to hold.
             prev_buffer = self._latest_buffer_ref
             prev_map = self._latest_map_info
             self._latest_data = None
             self._latest_handle = handle.gpu_ptr
             self._latest_handle_descriptor = handle
-            self._latest_buffer_ref = buffer
-            self._latest_map_info = map_info
+            self._latest_buffer_ref = None
+            self._latest_map_info = None
             self._latest_stamp_monotonic_ns = mono_ns
             self._latest_stamp_wall_ns = wall_ns
             self._latest_width = handle.width
@@ -606,6 +616,7 @@ class GStreamerSensorReader:
             self._latest_channels = channels
             self._latest_encoding = encoding
         if prev_buffer is not None and prev_map is not None:
+            # A held map from a pre-mirror frame (defensive; first swap only).
             with contextlib.suppress(Exception):  # reason: defensive cleanup
                 prev_buffer.unmap(prev_map)
         return int(Gst.FlowReturn.OK)

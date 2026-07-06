@@ -313,6 +313,96 @@ def wrap_buffer(buffer_address: int) -> NvBufSurfaceHandle:
     )
 
 
+class StableSurfaceMirror:
+    """Reader-owned GPU double buffer decoupling a handle from the Gst pool.
+
+    A latched ``NvBufSurfaceHandle`` points into a GStreamer buffer-pool
+    surface, which is only guaranteed valid while the mapped ``Gst.Buffer``
+    ref is held — an asynchronous consumer (the VLA vision leg, ADR-0082
+    Phase 3) racing the next frame's swap would read recycled memory.
+    ``mirror()`` DtoD-copies the surface into one of two reader-owned
+    ``cudaMalloc`` buffers (alternating) and returns a handle to the copy,
+    so the Gst buffer can be unmapped immediately and the worst cross-thread
+    outcome is a *torn frame* (write overlapping a slow read two frames
+    later), never a use-after-free.
+
+    Requires ``cuda-python`` (present wherever NVMM consumers run — the
+    DeepStream image ships it).
+
+    Example:
+        >>> # Exercised live in the ds-on container (smoke_nvmm_source.py)
+        >>> # and tests/unit; doctest skipped: cuda-python optional here.
+        >>> pass
+    """
+
+    # ponytail: double buffer = 2-frame grace (66 ms @30 fps) for consumers;
+    # a consumer slower than that sees a torn frame — triple-buffer if it matters.
+    _N_BUFFERS = 2
+
+    def __init__(self) -> None:
+        """Defer all CUDA work to the first :meth:`mirror` call."""
+        self._cudart: Any = None
+        self._buffers: list[int] = []
+        self._buf_size = 0
+        self._index = 0
+
+    def mirror(self, handle: NvBufSurfaceHandle) -> NvBufSurfaceHandle:
+        """DtoD-copy ``handle``'s surface into an owned buffer; return the copy's handle.
+
+        Args:
+            handle: A live pool-surface handle (must still be mapped/valid
+                for the duration of this call — call from the appsink
+                callback while the buffer is mapped).
+
+        Returns:
+            A handle identical to ``handle`` except ``gpu_ptr`` points at the
+            reader-owned copy.
+
+        Raises:
+            NvBufSurfaceLibraryError: When ``cuda-python`` is unavailable.
+            OSError: When a CUDA allocation / copy fails.
+        """
+        if self._cudart is None:
+            try:
+                from cuda.bindings import runtime as cudart  # noqa: PLC0415,I001  # reason: optional GPU dep
+            except ImportError as exc:
+                raise NvBufSurfaceLibraryError(
+                    "StableSurfaceMirror requires cuda-python (the tensorrt group / "
+                    "the DeepStream runtime image) to DtoD-copy NVMM surfaces."
+                ) from exc
+            self._cudart = cudart
+        cudart = self._cudart
+        if handle.size > self._buf_size:
+            self._free_buffers()
+            for _ in range(self._N_BUFFERS):
+                err, ptr = cudart.cudaMalloc(handle.size)
+                if int(err) != 0:
+                    raise OSError(f"StableSurfaceMirror: cudaMalloc({handle.size}) failed: {err}")
+                self._buffers.append(int(ptr))
+            self._buf_size = handle.size
+        dst = self._buffers[self._index]
+        self._index = (self._index + 1) % self._N_BUFFERS
+        (err,) = cudart.cudaMemcpy(
+            dst, handle.gpu_ptr, handle.size, cudart.cudaMemcpyKind.cudaMemcpyDeviceToDevice
+        )
+        if int(err) != 0:
+            raise OSError(f"StableSurfaceMirror: DtoD copy failed: {err}")
+        return handle.model_copy(update={"gpu_ptr": dst})
+
+    def _free_buffers(self) -> None:
+        """Free owned device buffers; best-effort."""
+        if self._cudart is not None:
+            for ptr in self._buffers:
+                self._cudart.cudaFree(ptr)
+        self._buffers = []
+        self._buf_size = 0
+        self._index = 0
+
+    def close(self) -> None:
+        """Release the device buffers. Idempotent."""
+        self._free_buffers()
+
+
 def _reset_loader_for_tests() -> None:
     """Reset the memoised loader so tests can re-probe under monkeypatch."""
     global _loaded, _load_attempted  # noqa: PLW0603

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import structlog
 from numpy.typing import NDArray
-from openral_core.exceptions import ROSConfigError
+from openral_core.exceptions import ROSConfigError, ROSRuntimeError
 from openral_rskill._diagnostics import phase_timer
 from openral_rskill._vla_core import (
     apply_chunk_replay,
@@ -205,6 +205,10 @@ class _SmolVLAAdapter:
     # Last image fed to the policy, post-flip — populated by step() for the
     # eval-layer video helper. Not part of the public API.
     _last_input_frame: NDArray[np.uint8] | None = None
+    # Zero-copy NVMM vision leg (ADR-0082 Phase 3) — lazily built on the first
+    # observation carrying image_handles; shares the TRT runtime's cached
+    # vision engine.
+    _nvmm_encoder: Any = None
 
     def last_input_frame(self) -> NDArray[np.uint8] | None:
         return self._last_input_frame
@@ -214,7 +218,8 @@ class _SmolVLAAdapter:
             self._policy.reset()
 
     def step(self, observation: Observation, instruction: str) -> NDArray[np.float32]:
-        batch = self._build_batch(observation, instruction)
+        used_handles = self._maybe_encode_image_handles(observation)
+        batch = self._build_batch(observation, instruction, gpu_frames=used_handles)
         batch = self._preprocessor(batch)
         # Belt-and-suspenders device move (preprocessor sometimes returns CPU tensors).
         device_kind = self.device.split(":", 1)[0]
@@ -248,18 +253,109 @@ class _SmolVLAAdapter:
     def close(self) -> None:
         # lerobot policies do not expose an explicit close — rely on GC.
         # Free GPU memory on CUDA to avoid leaks across configs in long-running drivers.
+        if self._nvmm_encoder is not None:
+            self._nvmm_encoder.close()
+            self._nvmm_encoder = None
         if self.device.startswith("cuda"):
             import contextlib
 
             with contextlib.suppress(Exception):
                 self._torch.cuda.empty_cache()
 
-    def _build_batch(self, observation: Observation, instruction: str) -> dict[str, Any]:
+    def _maybe_encode_image_handles(self, observation: Observation) -> bool:
+        """Run the zero-copy NVMM vision leg when the observation carries it.
+
+        ADR-0082 Phase 3: the co-located sensor leg delivers frames as NVMM
+        descriptors in ``observation["image_handles"]``. When the TRT runtime
+        is attached and every camera slot has a handle, encode them with
+        :class:`NvmmVisionEncoder` (same cached vision engine, straight on the
+        device pointers) and stash the embeddings on the sampler — the pixel
+        tensors in the batch are then placeholders.
+
+        Returns:
+            ``True`` when embeddings were stashed (build placeholder pixels),
+            ``False`` for the normal CPU-pixel path.
+
+        Raises:
+            ROSRuntimeError: When handles are flowing but the TRT runtime is
+                not attached — pixels are unavailable on the NVMM tier, so a
+                silent fallback would starve the policy (§1.4).
+        """
+        handles = observation.get("image_handles") or {}
+        if not handles:
+            return False
+        sampler = getattr(self._policy.model, "sample_actions", None)
+        if sampler is None or not hasattr(sampler, "set_precomputed_img_embs"):
+            # Handle frames carry no pixels; without the TRT vision leg there
+            # is nothing to feed the policy. Fail loudly, never blind.
+            raise ROSRuntimeError(
+                "smolvla: observation carries NVMM image_handles but the TRT "
+                "runtime is not attached (set OPENRAL_SMOLVLA_TRT=1) — the "
+                "zero-copy frames have no CPU pixels to fall back to."
+            )
+        ordered = self._handles_in_engine_order(handles)
+        if ordered is None:
+            raise ROSRuntimeError(
+                f"smolvla: image_handles {sorted(handles)} do not cover every "
+                f"camera slot {list(self._camera_keys)} — the vision engine "
+                "needs all cameras (partial NVMM tiers are unsupported)."
+            )
+        if self._nvmm_encoder is None:
+            from openral_runner.backends.gstreamer.nvmm_vision_encoder import (
+                NvmmVisionEncoder,
+            )
+
+            self._nvmm_encoder = NvmmVisionEncoder(
+                sampler.vision_onnx,
+                model_id=sampler.vision_rskill_id,
+                device_index=sampler.device_index,
+                quantization=sampler.quantization,
+            )
+            _log.info(
+                "smolvla.nvmm_vision_leg_active",
+                n_cameras=self._nvmm_encoder.n_cameras,
+                model_id=sampler.vision_rskill_id,
+            )
+        from openral_runner.backends.gstreamer.nvbufsurface import NvBufSurfaceHandle
+
+        embs = self._nvmm_encoder.encode_nvmm(
+            [NvBufSurfaceHandle.model_validate(d) for d in ordered]
+        )
+        sampler.set_precomputed_img_embs(embs)
+        return True
+
+    def _handles_in_engine_order(self, handles: dict[str, Any]) -> list[Any] | None:
+        """Order per-slot handles by the checkpoint's ``image_features`` order.
+
+        The vision graph's batch slots were exported in
+        ``policy.config.image_features`` iteration order (what lerobot's
+        ``prepare_images`` produces); a swapped camera order would silently
+        feed each camera into the other's embedding slot. Returns ``None``
+        when any feature's camera slot has no handle.
+        """
+        alias_to_cam = {self._cam_alias.get(ck, ck): ck for ck in self._camera_keys}
+        ordered: list[Any] = []
+        for feat in self._policy.config.image_features:
+            alias = str(feat).rsplit(".", 1)[-1]
+            cam_key = alias_to_cam.get(alias, alias)
+            if cam_key not in handles:
+                return None
+            ordered.append(handles[cam_key])
+        return ordered if ordered else None
+
+    def _build_batch(
+        self, observation: Observation, instruction: str, *, gpu_frames: bool = False
+    ) -> dict[str, Any]:
         """Convert the eval-layer Observation into a lerobot batch dict.
 
         Args:
             observation: Eval-layer observation (``images`` dict + ``state``).
             instruction: Task instruction string.
+            gpu_frames: ``True`` when the NVMM vision leg already stashed the
+                image embeddings (ADR-0082) — the image tensors emitted here
+                are then device-resident placeholders that only keep lerobot's
+                ``prepare_images``/tokenizer plumbing satisfied; the sampler
+                ignores them.
 
         Returns:
             Dict with ``observation.images.*`` tensors, ``observation.state``,
@@ -269,27 +365,38 @@ class _SmolVLAAdapter:
         torch = self._torch
         batch: dict[str, Any] = {"task": instruction or observation.get("task", "")}
 
-        images = observation.get("images", {})
-        # Preserve the original LIBERO key naming so the stored preprocessor
-        # rename step (image → camera1, image2 → camera2) lines up.
-        from openral_sim.policies._video_capture import tile_input_frames, to_input_frame
+        if gpu_frames:
+            # Placeholder pixels (never leave the GPU, never read): sized at the
+            # policy's resize target so resize_with_pad is a no-op.
+            h, w = getattr(self._policy.config, "resize_imgs_with_padding", None) or (512, 512)
+            for cam_key in self._camera_keys:
+                key = self._image_input_template.format(cam=self._cam_alias.get(cam_key, cam_key))
+                batch[key] = torch.zeros(1, 3, h, w, dtype=torch.float32, device=self.device)
+            self._last_input_frame = None  # no CPU pixels — no debug preview
+        else:
+            images = observation.get("images", {})
+            # Preserve the original LIBERO key naming so the stored preprocessor
+            # rename step (image → camera1, image2 → camera2) lines up.
+            from openral_sim.policies._video_capture import tile_input_frames, to_input_frame
 
-        # Record every camera the policy consumed so the debug video does not
-        # collapse multi-camera input to only the last stream in the loop.
-        preview_frames: list[NDArray[np.uint8]] = []
-        for cam_key in self._camera_keys:
-            img = images.get(cam_key)
-            if img is None:
-                continue
-            preview = to_input_frame(img, flip_180=self._flip_images_180)
-            if preview is not None:
-                preview_frames.append(preview)
-            t = torch.from_numpy(np.asarray(img)).float().div(255.0).permute(2, 0, 1)
-            if self._flip_images_180:
-                t = torch.flip(t, dims=[1, 2])
-            t = t.unsqueeze(0).to(self.device)
-            batch[self._image_input_template.format(cam=self._cam_alias.get(cam_key, cam_key))] = t
-        self._last_input_frame = tile_input_frames(preview_frames)
+            # Record every camera the policy consumed so the debug video does not
+            # collapse multi-camera input to only the last stream in the loop.
+            preview_frames: list[NDArray[np.uint8]] = []
+            for cam_key in self._camera_keys:
+                img = images.get(cam_key)
+                if img is None:
+                    continue
+                preview = to_input_frame(img, flip_180=self._flip_images_180)
+                if preview is not None:
+                    preview_frames.append(preview)
+                t = torch.from_numpy(np.asarray(img)).float().div(255.0).permute(2, 0, 1)
+                if self._flip_images_180:
+                    t = torch.flip(t, dims=[1, 2])
+                t = t.unsqueeze(0).to(self.device)
+                batch[
+                    self._image_input_template.format(cam=self._cam_alias.get(cam_key, cam_key))
+                ] = t
+            self._last_input_frame = tile_input_frames(preview_frames)
 
         state = observation.get("state")
         if state is not None:
