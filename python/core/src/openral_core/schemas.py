@@ -19,6 +19,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PositiveFloat,
     field_serializer,
     field_validator,
     model_validator,
@@ -843,6 +844,16 @@ class SafetyEnvelope(BaseModel):
         max_base_angular_speed_rad_s: ADR-0028b — BODY_TWIST angular
             bound (Euclidean over wx,wy,wz; for planar bases only
             wz is non-zero). ``None`` skips the check.
+        self_collision_margin_m: ADR-0081 — clearance margin (m) for the
+            kernel's self/world/voxel geometric checks; a pair closer than
+            this fires. Default ``0.0`` (collide on touch). A small
+            **negative** value tolerates the grazing contact inherent to a
+            compact arm's in-distribution operating envelope (e.g. the
+            SO-101 pen VLA, whose links graze at true ≈ 0) while still
+            catching a real jam (deeper penetration). Loosening this is a
+            safety-WG decision and must be justified against the true
+            (non-convex mesh) envelope clearance, not the conservative
+            primitive distance.
     """
 
     workspace_box_min_xyz: tuple[float, float, float] | None = None
@@ -869,6 +880,7 @@ class SafetyEnvelope(BaseModel):
     max_ee_angular_speed_rad_s: float | None = None
     max_base_linear_speed_m_s: float | None = None
     max_base_angular_speed_rad_s: float | None = None
+    self_collision_margin_m: float = 0.0  # ADR-0081; negative tolerates grazing
 
 
 # ─── VLA observation / action specs ────────────────────────────────────────────
@@ -1387,7 +1399,38 @@ class CapsuleShape(BaseModel):
     length_m: float = Field(ge=0.0)
 
 
-CollisionShape: TypeAlias = CapsuleShape | SphereShape
+class BoxShape(BaseModel):
+    """Oriented box (OBB) collision primitive — a rectangular convex block.
+
+    An axis-aligned box in the primitive's local frame (placed and oriented by
+    the owning frame's ``origin_xyz_rpy`` / ``pose``), spanning
+    ``[-half_extents_m[k], +half_extents_m[k]]`` along each local axis ``k``.
+
+    A box fits a *blocky* link (a near-cubic housing, e.g. the SO-ARM100/101
+    ``base``) far tighter than a capsule: a capsule's circular cross-section
+    must bulge past the block's flat faces, so it over-reports clearance at
+    poses where the flat faces are what actually face a neighbour. That bulge
+    is what makes the manifest capsule model false-E-stop the SO-101 at its
+    home pose (base↔lower_arm / base↔wrist reported penetrating while the true
+    mesh clearance is +0.16 m / +0.24 m). See ADR-0081 and issue #84.
+
+    Attributes:
+        shape: Discriminator (always ``"box"``).
+        half_extents_m: Half-sizes ``(hx, hy, hz)`` along the local x/y/z axes
+            in metres (the full box is ``2*hx × 2*hy × 2*hz``).
+
+    Example:
+        >>> BoxShape(half_extents_m=(0.055, 0.048, 0.036)).shape
+        'box'
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    shape: Literal["box"] = "box"
+    half_extents_m: tuple[PositiveFloat, PositiveFloat, PositiveFloat]
+
+
+CollisionShape: TypeAlias = CapsuleShape | SphereShape | BoxShape
 """Discriminated union of convex collision primitives (ADR-0030).
 
 The discriminator field is ``shape``. Used by

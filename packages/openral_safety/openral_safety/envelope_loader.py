@@ -33,6 +33,7 @@ from collections.abc import Mapping
 from typing import cast
 
 from openral_core import (
+    BoxShape,
     CapsuleShape,
     JointSpec,
     JointType,
@@ -514,7 +515,7 @@ def _capsules_by_link(
 
 
 def collision_params_from_description(
-    robot: RobotDescription, *, margin_m: float = 0.0
+    robot: RobotDescription, *, margin_m: float | None = None
 ) -> dict[str, object]:
     """Flatten a robot's collision geometry into safety_kernel ROS parameters.
 
@@ -551,6 +552,11 @@ def collision_params_from_description(
     if not robot.collision_geometry:
         return {"self_collision_enabled": False}
 
+    # ADR-0081 — an explicit margin_m arg overrides; otherwise use the manifest's
+    # safety.self_collision_margin_m (default 0.0 = collide on touch).
+    if margin_m is None:
+        margin_m = float(getattr(robot.safety, "self_collision_margin_m", 0.0) or 0.0)
+
     ordered, index, joint_of_child = _ordered_collision_links(list(robot.joints))
     capsule_of = _capsules_by_link(robot, index)
 
@@ -577,29 +583,38 @@ def collision_params_from_description(
             origin_xyzrpy.extend([float(v) for v in (*j.origin_xyz, *j.origin_rpy)])
             axis.extend([float(v) for v in j.axis_xyz])
 
-    # Capsules are a flat per-capsule list tagged with their link index (a link
-    # may carry zero or — once the manifest supports it — several).
+    # Each link's primitive is routed by shape: capsules/spheres to the capsule
+    # arrays (sphere = zero-length capsule), boxes to the OBB arrays (ADR-0081 /
+    # issue #84). Both are flat per-primitive lists tagged with the link index.
     capsule_link: list[int] = []
     capsule_radius: list[float] = []
     capsule_half_length: list[float] = []
     capsule_origin_xyzrpy: list[float] = []
+    box_link: list[int] = []
+    box_half_extents: list[float] = []
+    box_origin_xyzrpy: list[float] = []
     for name in ordered:
-        cap = capsule_of.get(name)
-        if cap is None:
+        geom = capsule_of.get(name)
+        if geom is None:
             continue
-        shape = cap.shape
-        half_length = shape.length_m / 2.0 if isinstance(shape, CapsuleShape) else 0.0
-        capsule_link.append(index[name])
-        capsule_radius.append(float(shape.radius_m))
-        capsule_half_length.append(float(half_length))
-        capsule_origin_xyzrpy.extend([float(v) for v in cap.origin_xyz_rpy])
+        shape = geom.shape
+        if isinstance(shape, BoxShape):
+            box_link.append(index[name])
+            box_half_extents.extend([float(h) for h in shape.half_extents_m])
+            box_origin_xyzrpy.extend([float(v) for v in geom.origin_xyz_rpy])
+        else:
+            half_length = shape.length_m / 2.0 if isinstance(shape, CapsuleShape) else 0.0
+            capsule_link.append(index[name])
+            capsule_radius.append(float(shape.radius_m))
+            capsule_half_length.append(float(half_length))
+            capsule_origin_xyzrpy.extend([float(v) for v in geom.origin_xyz_rpy])
 
     allowed_pairs: list[int] = []
     for a, b in robot.allowed_collision_pairs:
         if a in index and b in index:
             allowed_pairs.extend([index[a], index[b]])
 
-    return {
+    params: dict[str, object] = {
         "self_collision_enabled": True,
         "self_collision_margin_m": float(margin_m),
         "collision_n_links": len(ordered),
@@ -608,13 +623,26 @@ def collision_params_from_description(
         "collision_dof_index": dof_index,
         "collision_origin_xyzrpy": origin_xyzrpy,
         "collision_axis": axis,
-        "collision_capsule_link": capsule_link,
-        "collision_capsule_radius": capsule_radius,
-        "collision_capsule_half_length": capsule_half_length,
-        "collision_capsule_origin_xyzrpy": capsule_origin_xyzrpy,
-        "collision_allowed_pairs": allowed_pairs,
         "collision_link_names": ordered,
     }
+    # Per-primitive arrays (capsules, boxes) and the allowed-pair list are omitted
+    # when empty: launch_ros collapses an empty Python list to ``()`` and
+    # ensure_argument_type rejects it. An all-box robot (SO-101) has zero
+    # capsules; a capsule-only robot has zero boxes; both are valid. The kernel
+    # declares its own ``[]`` default for each (same guard as
+    # ``collision_base_dofs`` in sim_e2e.launch.py).
+    if capsule_link:
+        params["collision_capsule_link"] = capsule_link
+        params["collision_capsule_radius"] = capsule_radius
+        params["collision_capsule_half_length"] = capsule_half_length
+        params["collision_capsule_origin_xyzrpy"] = capsule_origin_xyzrpy
+    if box_link:
+        params["collision_box_link"] = box_link
+        params["collision_box_half_extents"] = box_half_extents
+        params["collision_box_origin_xyzrpy"] = box_origin_xyzrpy
+    if allowed_pairs:
+        params["collision_allowed_pairs"] = allowed_pairs
+    return params
 
 
 def merge_extra_allowed_pairs(

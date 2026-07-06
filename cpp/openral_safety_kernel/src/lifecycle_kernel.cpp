@@ -143,6 +143,13 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
                                                std::vector<double>{});
   this->declare_parameter<std::vector<double>>("collision_capsule_origin_xyzrpy",
                                                std::vector<double>{});
+  // ADR-0081 / issue #84 — OBB primitive for blocky links (e.g. SO-ARM base).
+  this->declare_parameter<std::vector<std::int64_t>>("collision_box_link",
+                                                     std::vector<std::int64_t>{});
+  this->declare_parameter<std::vector<double>>("collision_box_half_extents",
+                                               std::vector<double>{});
+  this->declare_parameter<std::vector<double>>("collision_box_origin_xyzrpy",
+                                               std::vector<double>{});
   this->declare_parameter<std::vector<std::int64_t>>("collision_allowed_pairs",
                                                      std::vector<std::int64_t>{});
   this->declare_parameter<std::vector<std::string>>("collision_link_names",
@@ -1011,17 +1018,21 @@ bool SafetyKernelLifecycleNode::load_collision_model(std::string& error) {
   const auto cap_r = this->get_parameter("collision_capsule_radius").as_double_array();
   const auto cap_h = this->get_parameter("collision_capsule_half_length").as_double_array();
   const auto cap_o = this->get_parameter("collision_capsule_origin_xyzrpy").as_double_array();
+  const auto box_link = this->get_parameter("collision_box_link").as_integer_array();
+  const auto box_he = this->get_parameter("collision_box_half_extents").as_double_array();
+  const auto box_o = this->get_parameter("collision_box_origin_xyzrpy").as_double_array();
   const auto pairs = this->get_parameter("collision_allowed_pairs").as_integer_array();
   const auto names = this->get_parameter("collision_link_names").as_string_array();
 
-  // Per-link arrays are sized to n_links; capsule arrays are sized to the
-  // (independent) capsule count — a link may carry zero, one, or several.
+  // Per-link arrays are sized to n_links; capsule/box arrays are sized to the
+  // (independent) primitive count — a link may carry zero, one, or several.
   const std::size_t n_caps = cap_r.size();
+  const std::size_t n_boxes = box_link.size();
   if (parent.size() != n_links || kind.size() != n_links || dof.size() != n_links ||
       origin.size() != 6 * n_links || axis.size() != 3 * n_links || names.size() != n_links ||
       cap_link.size() != n_caps || cap_h.size() != n_caps || cap_o.size() != 6 * n_caps ||
-      pairs.size() % 2 != 0) {
-    error = "collision_* array shapes disagree with collision_n_links / capsule count";
+      box_he.size() != 3 * n_boxes || box_o.size() != 6 * n_boxes || pairs.size() % 2 != 0) {
+    error = "collision_* array shapes disagree with collision_n_links / primitive count";
     return false;
   }
 
@@ -1060,6 +1071,21 @@ bool SafetyKernelLifecycleNode::load_collision_model(std::string& error) {
     m.capsules[c].origin =
         transform_from_xyz_rpy(cap_o[6 * c + 0], cap_o[6 * c + 1], cap_o[6 * c + 2],
                                cap_o[6 * c + 3], cap_o[6 * c + 4], cap_o[6 * c + 5]);
+  }
+  m.box_link.resize(n_boxes);
+  m.boxes.resize(n_boxes);
+  for (std::size_t b = 0; b < n_boxes; ++b) {
+    const int link = static_cast<int>(box_link[b]);
+    if (link < 0 || static_cast<std::size_t>(link) >= n_links) {
+      error = "collision_box_link out of range";
+      return false;
+    }
+    m.box_link[b] = link;
+    m.boxes[b].half_extents =
+        Vec3{box_he[3 * b + 0], box_he[3 * b + 1], box_he[3 * b + 2]};
+    m.boxes[b].origin =
+        transform_from_xyz_rpy(box_o[6 * b + 0], box_o[6 * b + 1], box_o[6 * b + 2],
+                               box_o[6 * b + 3], box_o[6 * b + 4], box_o[6 * b + 5]);
   }
   for (std::size_t k = 0; k + 1 < pairs.size(); k += 2) {
     m.allowed_pairs.emplace_back(static_cast<int>(pairs[k]), static_cast<int>(pairs[k + 1]));

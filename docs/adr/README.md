@@ -122,6 +122,7 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0030](0030-geometric-safety-collision-checking.md) | Geometric safety — self/world-collision checking in the kernel | Proposed | amends 0024; extended by 0040, 0053 |
 | [0040](0040-geometric-collision-all-control-modes.md) | Geometric collision checking for every control mode | Proposed | extends 0030 |
 | [0053](0053-collision-aware-approach-to-pose.md) | Collision-aware "approach to pose" before rSkill activation | Accepted | builds on 0030; related 0054 |
+| [0081](0081-box-obb-collision-primitive.md) | Box/OBB collision primitive for blocky links (SO-ARM base) | Proposed | extends 0030; fixes #84; safety-WG gate |
 
 ## H · Perception & spatial memory
 

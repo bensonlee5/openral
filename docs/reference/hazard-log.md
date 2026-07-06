@@ -415,3 +415,74 @@ the 17.55%/896-pose evidence, and (b) prioritise the box/OBB primitive (issue
 #84) that is the real fix — multi-capsule was proven insufficient (above).
 
 - [ ] **PENDING: safety-WG reviewer sign-off** (human gate — not author-clearable).
+
+### Entry 005 — SO-101 same class, and the box/OBB fix (2026-07-05, ADR-0081)
+
+The **SO-101** hit the identical failure mode live: an `openral deploy run` on
+the real arm latched `/openral/estop` on the **first commanded action** of a
+pen-pick, at the measured rest pose, with
+
+```
+safety.collision kind=self a=base b=lower_arm step=0 min_distance_m=-0.0779
+```
+
+and, once a per-pair ACM entry suppressed that pair, `a=base b=wrist` tripped at
+the **same** −0.0779 m — the fat `base` capsule (radius 0.075 m) over-reports
+every `base↔<distal>` pair. MuJoCo `mj_geomDistance` over the so101 collision
+meshes is the oracle: true `base↔lower_arm` clearance at home is **+0.162 m**,
+`base↔wrist` **+0.239 m** — no physical collision. Same near-cubic `base` block
+as so100 (`0.111 × 0.096 × 0.072 m`).
+
+**Fix (ADR-0081, this change):** the box/OBB primitive from Entry 004's
+resolution path is now **implemented** — `BoxShape` in the `CollisionShape`
+union; allocation-free `box_capsule_distance` (exact) + `box_box_distance`
+(conservative SAT) in the C++ hot path; box params plumbed through the kernel +
+`collision_params_from_description`; the so101 `base` lowered to a tight OBB (the
+base-frame mesh AABB); the `so101_bench.yaml` ACM override **removed** (full base
+self-collision restored). Offline verification (no `deploy run`): 36 kernel
+gtests + full `ctest` green (incl. the `NoAlloc` box path); a MuJoCo-oracle test
+(`tests/unit/test_so101_base_box_collision.py`) proves the home pose is
+collision-free, the box clears where the capsule fired, the OBB encloses the base
+mesh, and a driven-in penetration is still caught. Visual review via
+`tools/viz_collision.py`.
+
+**Update (2026-07-06) — full scope + live validation.** Boxing only the base
+surfaced the *next* over-conservative pair (`shoulder↔lower_arm`): the SO-101 arm
+links are rectangular brackets a single capsule over-reports by ~7–9 cm at the
+pen VLA's compact folded operating poses. Root-caused with an **fcl non-convex
+mesh oracle**: the true self-clearance across the VLA's whole distribution is
+≈ 0 — the arm operates in **light self-contact by design** — so no zero-margin
+geometric self-check can pass it. Final fix, all offline-verified then
+**live-validated on the real SO-101**:
+
+- **Every** so101 link is now an OBB (base + shoulder/upper_arm/lower_arm/wrist);
+  over-report cut to ~1–4 cm. Each OBB encloses its link mesh (unit-tested).
+- **`safety.self_collision_margin_m: -0.06`** (new `SafetyEnvelope` field)
+  tolerates the grazing envelope while gross over-folds (elbow ≳ 125°, far OOD)
+  still fire. The kernel's self / world / voxel margins are **separate** — this
+  negative margin does NOT loosen arm-vs-world/octomap collision (verified in
+  `lifecycle_kernel.cpp`). The real self-contact protection is the arm's
+  force/torque limits (`max_torque_nm` / `contact_force_threshold_n`).
+- **World/voxel checks extended to boxes** (`check_world_collision`,
+  `check_voxel_collision`) so a boxed link stays visible to obstacle/octomap
+  collision — closing a gap that boxing arm links would otherwise open.
+- **Live result (2026-07-06):** pen VLA ran **452 chunks under TRT** with
+  **zero `safety.collision` events**, unfolding the arm to reach the workspace;
+  ended only on operator e-stop. Tests: 38 kernel gtests (self+world+voxel box)
+  + the all-box offline oracle + schema/collision regression — all green.
+
+**Conservatism (§3):** `box↔capsule` exact; `box↔box` / `box↔voxel` distance
+lower bounds (never under-report); every OBB contains its link mesh; world/voxel
+margins stay conservative + positive. The negative self-margin is a deliberate,
+evidence-backed trade for a contact-operating arm.
+
+- [ ] **PENDING: safety-WG reviewer sign-off on ADR-0081** — approve (a) the
+  Layer-6 hot-path OBB + world/voxel box change, (b) the all-OBB so101 model +
+  OBB-encloses-mesh evidence, and (c) the `self_collision_margin_m: -0.06` trade
+  (justified vs the fcl true-envelope clearance + force/torque as primary contact
+  protection + the deliberate self-vs-world margin split). Human gate — not
+  author-clearable.
+- Follow-up (non-blocking): teach `openral collision lower` to emit OBBs for
+  blocky links so the so101 entries are regenerable rather than hand-authored,
+  and have `mjcf_lowering` emit boxes for MJCF box geoms instead of
+  down-converting them to capsules.

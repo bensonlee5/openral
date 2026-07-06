@@ -11,6 +11,11 @@ _One-shot wall-time breakdown of a single policy load. Drives `openral_sim.facto
 - `_render(pairs, total_s) -> str` — Formats the captured pairs as `phase / elapsed_s / share` columns plus an `(unaccounted)` row when phase coverage misses >1 s. (L141)
 - `main(argv=None) -> int` — Late-imports `openral_sim.factory.make_policy` so the import cost lands inside the profiled total; reports `HF_HUB_OFFLINE` status alongside the result.
 
+### `tools/viz_collision.py`
+_Overlays a robot's **kernel** collision primitives (the box/capsule geometry the C++ safety kernel checks, lowered by `collision_params_from_description`) on its real MJCF meshes at any joint pose — the offline way to eyeball whether the SO-101 `base` OBB (ADR-0081 / issue #84) hugs the housing and clears the folded distal links without a `deploy run`. Standalone inspection tool, not a pytest test. Run the venv python with `PYTHONPATH=packages/openral_safety`._
+
+- `--viewer` — interactive MuJoCo window (`MUJOCO_GL=glfw`). `--screenshot PATH` — offscreen PNG (`MUJOCO_GL=egl`). `--rviz` — real RViz (spawns `robot_state_publisher` for RobotModel + TF and publishes the primitives as a latched `/collision_markers` MarkerArray; needs ROS sourced). `--robot <id>` (default `so101_follower`), `--deg <j...>` sets the pose in degrees (manifest joint order). Box = translucent red, capsules = translucent blue (cylinder + end spheres in RViz).
+
 ### `tools/schema_export.py`
 _Generates JSON Schema files for every public `openral_core` model._
 

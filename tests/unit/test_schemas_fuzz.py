@@ -23,6 +23,7 @@ from openral_core.schemas import (
     ActuatorRequirement,
     ApproachViewpoint,
     BenchmarkName,
+    BoxShape,
     CameraSimPlacement,
     CapsuleShape,
     ClockAuthority,
@@ -259,7 +260,11 @@ _capsule_shape_st = st.builds(
     length_m=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0, max_value=2.0),
 )
 _sphere_shape_st = st.builds(SphereShape, radius_m=_radius)
-_collision_shape_st = st.one_of(_capsule_shape_st, _sphere_shape_st)
+_box_shape_st = st.builds(
+    BoxShape,
+    half_extents_m=st.tuples(*([_radius] * 3)),
+)
+_collision_shape_st = st.one_of(_capsule_shape_st, _sphere_shape_st, _box_shape_st)
 
 _link_collision_geometry_st = st.builds(
     LinkCollisionGeometry,

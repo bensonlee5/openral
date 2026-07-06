@@ -496,6 +496,12 @@ TEST(NoAlloc, ForwardKinematicsAndSelfCollisionAreAllocationFree) {
   c.origin = identity();
   m.capsule_link = {0, 1, 2};
   m.capsules = {c, c, c};
+  // A box on link 0 exercises the box↔capsule / box↔box paths under the counter.
+  osk::Obb obb;
+  obb.half_extents = {0.05, 0.05, 0.05};
+  obb.origin = identity();
+  m.box_link = {0};
+  m.boxes = {obb};
   m.allowed_pairs = {{0, 1}, {1, 2}};
 
   osk::CollisionScratch scratch;
@@ -562,4 +568,190 @@ TEST(NoAlloc, JacobianDlsStepIsAllocationFree) {
   g_count_enabled.store(false, std::memory_order_relaxed);
   EXPECT_EQ(g_alloc_count.load(std::memory_order_relaxed), 0U)
       << "jacobian_dls_step allocated; the predictive Cartesian path must be allocation-free.";
+}
+
+// ── Box/OBB primitive (ADR-0081 / issue #84) ──────────────────────────────────
+//
+// A blocky link (SO-ARM100/101 `base`) carries an OBB instead of a capsule so
+// its flat faces don't over-report clearance. Ground truth here is hand-computed
+// analytically; the real-geometry reproduction (fat capsule false-E-stops the
+// SO-101 home pose, box clears) lives in the Python MuJoCo-oracle test.
+
+TEST(BoxCapsuleDistance, DisjointAlongFaceNormalIsExact) {
+  // Box [-0.05,0.05]^3 at the origin; capsule central segment at x=0.2 (well
+  // clear), running vertically. Nearest box face is x=+0.05 → segment↔box gap
+  // 0.2-0.05=0.15; minus the 0.02 capsule radius → 0.13.
+  const osk::Vec3 h{0.05, 0.05, 0.05};
+  const double d =
+      osk::box_capsule_distance(identity(), h, translate(0.2, 0.0, 0.0), 0.02, 0.1);
+  EXPECT_NEAR(d, 0.13, 1e-6);
+}
+
+TEST(BoxCapsuleDistance, SegmentOnSurfaceGivesNegativeRadius) {
+  // Capsule segment lies on the box's +x face (x=0.05) → segment↔box gap 0;
+  // minus the radius → -0.02 (interpenetration by the radius).
+  const osk::Vec3 h{0.05, 0.05, 0.05};
+  const double d =
+      osk::box_capsule_distance(identity(), h, translate(0.05, 0.0, 0.0), 0.02, 0.1);
+  EXPECT_NEAR(d, -0.02, 1e-6);
+}
+
+TEST(BoxCapsuleDistance, ClosestFeatureIsTopFace) {
+  // Capsule above the top face; nearest endpoint at z=0.1 → gap 0.1-0.05=0.05,
+  // minus radius 0.01 → 0.04.
+  const osk::Vec3 h{0.05, 0.05, 0.05};
+  const double d =
+      osk::box_capsule_distance(identity(), h, translate(0.0, 0.0, 0.2), 0.01, 0.1);
+  EXPECT_NEAR(d, 0.04, 1e-6);
+}
+
+TEST(BoxBoxDistance, SeparatedAlongAxis) {
+  const osk::Vec3 h{0.05, 0.05, 0.05};
+  const double d = osk::box_box_distance(identity(), h, translate(0.2, 0.0, 0.0), h);
+  EXPECT_NEAR(d, 0.1, 1e-9);
+}
+
+TEST(BoxBoxDistance, OverlapIsNegative) {
+  const osk::Vec3 h{0.05, 0.05, 0.05};
+  const double d = osk::box_box_distance(identity(), h, translate(0.08, 0.0, 0.0), h);
+  EXPECT_LT(d, 0.0);
+  EXPECT_NEAR(d, -0.02, 1e-9);
+}
+
+TEST(BoxBoxDistance, RotatedBoxIsPositiveAndConservative) {
+  // B rotated 45° about z, centre 0.2 away. SAT max-gap stays a positive lower
+  // bound on the true (corner-to-face) distance — never under-reports.
+  const osk::Vec3 h{0.05, 0.05, 0.05};
+  const osk::Transform b = osk::transform_from_xyz_rpy(0.2, 0.0, 0.0, 0.0, 0.0, kPi / 4.0);
+  const double d = osk::box_box_distance(identity(), h, b, h);
+  EXPECT_GT(d, 0.0);
+  EXPECT_NEAR(d, 0.2 - 0.05 - 0.05 * std::sqrt(2.0), 1e-6);
+}
+
+namespace {
+// One box on link 0, one capsule on link 1 (non-adjacent, not allowed). Frames
+// are set directly on the scratch by each test.
+osk::CollisionModel box_plus_capsule_model() {
+  osk::CollisionModel m;
+  m.n_links = 2;
+  m.parent = {-1, 0};
+  m.joint_kind = {osk::JointKind::kFixed, osk::JointKind::kFixed};
+  m.dof_index = {-1, -1};
+  m.origin = {identity(), identity()};
+  m.axis = {{0, 0, 1}, {0, 0, 1}};
+  m.box_link = {0};
+  m.boxes = {osk::Obb{{0.055, 0.048, 0.036}, translate(0.0, 0.0, 0.05)}};
+  m.capsule_link = {1};
+  m.capsules = {osk::Capsule{0.05, 0.05, identity()}};
+  m.allowed_pairs = {};
+  return m;
+}
+}  // namespace
+
+TEST(SelfCollisionBox, BoxClearsDistantCapsule) {
+  // Capsule 0.13 m out (like the SO-101 home lower_arm): the tight box clears it
+  // where the old fat r=0.075 base capsule would have false-fired.
+  const auto m = box_plus_capsule_model();
+  osk::CollisionScratch s;
+  s.link_world = {identity(), translate(0.13, 0.0, 0.10)};
+  const auto hit = osk::check_self_collision(m, s, 0.0);
+  EXPECT_FALSE(hit.hit);
+  EXPECT_GT(hit.min_distance, 0.0);
+}
+
+TEST(SelfCollisionBox, BoxFiresOnRealPenetration) {
+  // Capsule driven into the block → box↔capsule distance negative → hit.
+  const auto m = box_plus_capsule_model();
+  osk::CollisionScratch s;
+  s.link_world = {identity(), translate(0.07, 0.0, 0.05)};
+  const auto hit = osk::check_self_collision(m, s, 0.0);
+  EXPECT_TRUE(hit.hit);
+  EXPECT_EQ(hit.link_a, 0);
+  EXPECT_EQ(hit.link_b, 1);
+  EXPECT_LT(hit.min_distance, 0.0);
+}
+
+TEST(SelfCollisionBox, AllowedPairSkipsBoxCapsule) {
+  auto m = box_plus_capsule_model();
+  m.allowed_pairs = {{0, 1}};  // sanction the pair → never fires
+  osk::CollisionScratch s;
+  s.link_world = {identity(), translate(0.07, 0.0, 0.05)};
+  const auto hit = osk::check_self_collision(m, s, 0.0);
+  EXPECT_FALSE(hit.hit);
+}
+
+TEST(SelfCollisionBox, BoxBoxPairFiresAndClears) {
+  // Two blocky links: box↔box path exercised through check_self_collision.
+  osk::CollisionModel m;
+  m.n_links = 2;
+  m.parent = {-1, 0};
+  m.joint_kind = {osk::JointKind::kFixed, osk::JointKind::kFixed};
+  m.dof_index = {-1, -1};
+  m.origin = {identity(), identity()};
+  m.axis = {{0, 0, 1}, {0, 0, 1}};
+  m.box_link = {0, 1};
+  m.boxes = {osk::Obb{{0.05, 0.05, 0.05}, identity()},
+             osk::Obb{{0.05, 0.05, 0.05}, identity()}};
+  m.allowed_pairs = {};
+
+  osk::CollisionScratch s;
+  s.link_world = {identity(), translate(0.2, 0.0, 0.0)};
+  EXPECT_FALSE(osk::check_self_collision(m, s, 0.0).hit);  // 0.1 m apart
+  s.link_world = {identity(), translate(0.08, 0.0, 0.0)};
+  const auto hit = osk::check_self_collision(m, s, 0.0);
+  EXPECT_TRUE(hit.hit);  // overlapping
+}
+
+// ── Box link vs world / voxel (ADR-0081 — blocky links stay world-visible) ────
+
+namespace {
+osk::CollisionModel one_box_model() {
+  osk::CollisionModel m;
+  m.n_links = 1;
+  m.parent = {-1};
+  m.joint_kind = {osk::JointKind::kFixed};
+  m.dof_index = {-1};
+  m.origin = {identity()};
+  m.axis = {{0, 0, 1}};
+  m.box_link = {0};
+  m.boxes = {osk::Obb{{0.05, 0.05, 0.05}, identity()}};
+  return m;
+}
+}  // namespace
+
+TEST(WorldCollisionBox, BoxLinkIsCheckedAgainstWorldObstacle) {
+  const auto m = one_box_model();
+  osk::CollisionScratch s;
+  s.link_world = {identity()};
+  // Obstacle capsule (radius 0.1) at x=0.10: box +x face at 0.05 → gap 0.05,
+  // minus the obstacle radius → -0.05 (a hit the capsule-only loop would miss).
+  const auto hit = osk::check_world_collision(m, s, world_obstacle_at(0.10), 0.0);
+  EXPECT_TRUE(hit.hit);
+  EXPECT_EQ(hit.link_a, 0);
+  EXPECT_EQ(hit.link_b, 0);
+  EXPECT_NEAR(hit.min_distance, -0.05, 1e-6);
+  EXPECT_FALSE(osk::check_world_collision(m, s, world_obstacle_at(1.0), 0.0).hit);
+}
+
+TEST(VoxelCollisionBox, BoxLinkIsCheckedAgainstOccupiedVoxel) {
+  const auto m = one_box_model();
+  osk::CollisionScratch s;
+  s.link_world = {identity()};
+  std::vector<std::uint8_t> occ(8 * 8 * 8, 0);
+  osk::VoxelGrid grid;
+  grid.origin = {-0.4, -0.4, -0.4};
+  grid.resolution = 0.1;
+  grid.sx = 8;
+  grid.sy = 8;
+  grid.sz = 8;
+  grid.occupancy = occ.data();
+  // Empty grid: no hit.
+  EXPECT_FALSE(osk::check_voxel_collision(m, s, grid, 0.0).hit);
+  // Occupy the voxel centred at (0.05,0.05,0.05) — inside the box → hit.
+  const int i = 4;  // floor((0.05-(-0.4))/0.1)=4 ; centre (-0.4+4.5*0.1)=0.05
+  occ[static_cast<std::size_t>(i + 8 * (i + 8 * i))] = 1;
+  const auto hit = osk::check_voxel_collision(m, s, grid, 0.0);
+  EXPECT_TRUE(hit.hit);
+  EXPECT_EQ(hit.link_a, 0);
+  EXPECT_LT(hit.min_distance, 0.0);
 }
