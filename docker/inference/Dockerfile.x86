@@ -228,8 +228,19 @@ COPY python/ python/
 # gi is loaded. Instead we splice the apt-managed `python3-gi` into
 # the venv in the runtime stage so both gi and rclpy share the same
 # glib link.
+# Groups needed for a real VLA deploy with the reward monitor:
+#   tensorrt  — torch + TensorRT runtime (SmolVLA TRT engines, ADR-0080/0082).
+#   sim       — the lerobot / transformers / accelerate / bitsandbytes stack the
+#               VLA policy adapters import at load time (needed on REAL hardware
+#               too; the VLA runtime deps happen to live in this group).
+#   robometer — the node-side ZMQ + msgpack client the reward_monitor_node uses
+#               to talk to the out-of-process Robometer sidecar (ADR-0057).
+# feetech-servo-sdk is the Feetech motor driver the so100/so101 REAL HAL needs
+# (`scservo_sdk`); it is not in the lock, so it goes in as a post-sync pip add.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --all-packages --group tensorrt
+    uv sync --frozen --all-packages \
+        --group tensorrt --group sim --group robometer \
+    && uv pip install --python /workspace/.venv/bin/python feetech-servo-sdk
 
 # Copy the colcon-buildable trees AFTER the venv resolve so a
 # packages/ tweak doesn't bust the (much larger) Python dep layer.
@@ -246,6 +257,13 @@ COPY cpp/ cpp/
 COPY robots/ robots/
 COPY rskills/ rskills/
 COPY benchmarks/ benchmarks/
+# tools/ carries the launch's autostart driver (tools/lifecycle_autostart.py,
+# resolved via the launch's _REPO_ROOT) + the Robometer reward sidecar
+# (tools/robometer_sidecar.py, _robometer_server.py). scenes/ carries the
+# committed DeployScene workcells so `deploy run --config scenes/deploy/*.yaml`
+# needs no host bind-mount. Both are symlinked under install/ after colcon (below).
+COPY tools/ tools/
+COPY scenes/ scenes/
 
 # Splice apt-managed python3-gi into the workspace venv BEFORE colcon
 # build runs, because some ament-python tests import `gi` at
@@ -310,11 +328,22 @@ RUN bash -lc 'set -eo pipefail \
                           openral_foxglove_bringup \
                           openral_rskill_ros \
                           openral_octomap_bridge \
+                          openral_perception_ros \
         --cmake-args -DPython3_EXECUTABLE=/workspace/.venv/bin/python \
                      -DCMAKE_C_COMPILER=/usr/bin/gcc \
                      -DCMAKE_CXX_COMPILER=/usr/bin/g++ \
                      -DCMAKE_BUILD_TYPE=Release \
     && rm -rf build log'
+
+# The launch resolves its _REPO_ROOT as parents[3] of the installed
+# sim_e2e.launch.py — i.e. /workspace/install — and from there looks up
+# tools/lifecycle_autostart.py, rskills/, scenes/, and .venv/bin/openral.
+# colcon does not install the non-ROS trees, so link them into install/ (the
+# runtime stage copies /workspace wholesale, so these relative links survive).
+RUN ln -sfn /workspace/tools   /workspace/install/tools \
+    && ln -sfn /workspace/rskills /workspace/install/rskills \
+    && ln -sfn /workspace/scenes  /workspace/install/scenes \
+    && ln -sfn /workspace/.venv   /workspace/install/.venv
 
 # ── Stage 2: runtime-base ────────────────────────────────────────────
 
@@ -324,8 +353,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG ROS_DISTRO=jazzy
 
 # Re-add the ROS apt repo for the runtime layer (only runtime libs).
+# `git` is a RUNTIME dep: the Robometer reward sidecar provisions its own
+# pinned venv on first use with `uv pip install <robometer git URL>`
+# (tools/robometer_sidecar.py), so git must be present in the deploy image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl gnupg2 lsb-release software-properties-common \
+        ca-certificates curl gnupg2 lsb-release software-properties-common git \
     && add-apt-repository universe \
     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         -o /usr/share/keyrings/ros-archive-keyring.gpg \

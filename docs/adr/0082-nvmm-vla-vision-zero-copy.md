@@ -159,13 +159,19 @@ What shipped differs from the original sketch in two informed ways:
   nvjpegdec max-errors=-1` (a corrupt UVC MJPG frame — routine on the wrist
   cam — fatals nvjpegdec where CPU jpegdec just dropped it);
   `scenes/deploy/so101_bench.yaml` cameras moved to the spec-driven
-  `jpeg: true` form (retiring the raw-pipeline workaround). Known image gaps
-  an operator must cover until the Dockerfile grows them: `tools/` +
-  `scenes/` not baked (bind-mount), `feetech-servo-sdk` + the `sim`
-  dependency group not installed (the committed `openral:x86-ds-pen`
-  derivative carries both), skill ids resolve by manifest `name`
-  (`OpenRAL/rskill-smolvla-so101-pen`), and `HF_HUB_OFFLINE=1` for the gated
-  upstream checkpoint.
+  `jpeg: true` form (retiring the raw-pipeline workaround) and then to stable
+  `/dev/v4l/by-id|by-path` device symlinks (a USB replug renumbers `/dev/videoN`
+  and the bare node dies with v4l2 `-5`). The image gaps that once needed
+  hand-patching are now **baked into `docker/inference/Dockerfile.x86`**: it
+  builds `openral_perception_ros` (the reward/detector nodes), syncs the
+  `tensorrt` + `sim` + `robometer` groups + `feetech-servo-sdk` (real so101
+  HAL), COPYs `tools/` + `scenes/` and symlinks them (plus `rskills/` + `.venv`)
+  under `/workspace/install` for the launch's `_REPO_ROOT`, and installs `git`
+  for the Robometer sidecar's runtime venv provisioning. Skill ids still resolve
+  by manifest `name` (`OpenRAL/rskill-smolvla-so101-pen`), and `HF_HUB_OFFLINE=1`
+  is still needed for the gated upstream checkpoint. The first reward-enabled
+  run provisions the Robometer sidecar venv (needs network or a pre-provisioned
+  `OPENRAL_ROBOMETER_SIDECAR_VENV`).
 
 ## Process gates
 
