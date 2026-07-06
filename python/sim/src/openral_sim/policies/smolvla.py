@@ -332,10 +332,16 @@ class _SmolVLAAdapter:
         ``prepare_images`` produces); a swapped camera order would silently
         feed each camera into the other's embedding slot. Returns ``None``
         when any feature's camera slot has no handle.
+
+        Only the first ``len(_camera_keys)`` features are engine slots: the
+        engine is exported for the deploy's resolved camera count, which drops
+        any ``smolvla_base`` slots this checkpoint declares but never fills
+        (``empty_cameras=0``). Iterating the full ``image_features`` would
+        demand a handle for a phantom camera and always return ``None``.
         """
         alias_to_cam = {self._cam_alias.get(ck, ck): ck for ck in self._camera_keys}
         ordered: list[Any] = []
-        for feat in self._policy.config.image_features:
+        for feat in self._policy.config.image_features[: len(self._camera_keys)]:
             alias = str(feat).rsplit(".", 1)[-1]
             cam_key = alias_to_cam.get(alias, alias)
             if cam_key not in handles:
@@ -532,6 +538,13 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     torch.set_default_dtype(torch.float32)
     try:
         with _smolvla_phase("from_pretrained", repo=repo_id):
+            # Strip config keys a differently-versioned lerobot rejected at save
+            # time (e.g. `pretrained_revision`) before draccus parses the config.
+            from openral_rskill._lerobot_compat import (
+                sanitize_smolvla_config,
+            )
+
+            sanitize_smolvla_config(repo_id, revision=revision)
             policy = SmolVLAPolicy.from_pretrained(repo_id, revision=revision)
         with _smolvla_phase("to_device", device=device):
             policy = policy.to(device)
@@ -568,12 +581,23 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     # (closed-loop replan every half-chunk -- paper-faithful for the
     # validated 3/3 success run on libero_10/4).
     apply_chunk_replay(policy, spec.extra, manifest=manifest)
+
+    # Resolve the deploy's camera set *before* attaching TRT: the split-ONNX
+    # engine must be exported for exactly the cameras this robot supplies, not
+    # the checkpoint's declared `image_features`. SmolVLA checkpoints inherit
+    # 3 camera slots from `smolvla_base`; a 2-camera SO-101 checkpoint with
+    # `empty_cameras=0` drops the 3rd at inference (lerobot `prepare_images`),
+    # so a 3-slot engine would attend a phantom camera. `_camera_keys` is the
+    # single source of truth for the count everywhere downstream.
+    scene_cameras = getattr(env_cfg.scene, "cameras", None)
+    cam_keys = resolve_camera_keys(manifest, spec.extra, scene_cameras=scene_cameras)
+
     # Opt-in TensorRT runtime (ADR-0037 follow-up): swaps sample_actions for the
     # split-ONNX TRT engines. Mutually exclusive with torch.compile (both target
     # the same forward) — TRT fully replaces the flow-matching call, so skip the
     # compile pass when it engages. Loud, no silent fallback (§1.4).
-    if maybe_attach_trt_from_env(policy, repo_id, device=device):
-        _log.info("smolvla.runtime_tensorrt", repo_id=repo_id)
+    if maybe_attach_trt_from_env(policy, repo_id, device=device, n_cameras=len(cam_keys)):
+        _log.info("smolvla.runtime_tensorrt", repo_id=repo_id, n_cameras=len(cam_keys))
     else:
         maybe_compile_chunk_forward(policy, spec.extra, device, torch)
 
@@ -588,8 +612,6 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     # tells the user to update their manifest.
     ip = resolve_image_preprocessing(manifest, spec.extra)
     state_dim = resolve_state_dim(manifest, spec.extra)
-    scene_cameras = getattr(env_cfg.scene, "cameras", None)
-    cam_keys = resolve_camera_keys(manifest, spec.extra, scene_cameras=scene_cameras)
 
     return _SmolVLAAdapter(
         spec=spec,

@@ -51,6 +51,7 @@ binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 | `smolvla-maniskill-franka` | smolvla | franka_panda |
 | `smolvla-metaworld` | smolvla | sawyer |
 | `smolvla-robotwin` | smolvla | aloha_agilex |
+| `smolvla-so101-pick-place-pen` | smolvla | so101_follower |
 | `xvla-libero` | xvla | franka_panda |
 
 **Auxiliary skills — run alongside a policy or on deploy scenes,

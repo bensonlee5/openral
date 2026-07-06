@@ -64,6 +64,7 @@ def maybe_attach_trt_from_env(
     repo_id: str,
     *,
     device: str = "cuda:0",
+    n_cameras: int | None = None,
 ) -> bool:
     """Attach the TRT runtime iff ``OPENRAL_SMOLVLA_TRT`` is truthy.
 
@@ -76,6 +77,12 @@ def maybe_attach_trt_from_env(
         policy: A loaded ``SmolVLAPolicy``.
         repo_id: Checkpoint id (keys the ONNX + engine caches).
         device: torch device string; the CUDA ordinal is parsed from it.
+        n_cameras: Camera slots to export the engine for. ``None`` defaults to
+            ``len(policy.config.image_features)``. Pass the deploy's *resolved*
+            camera count (the manifest's ``sensors_required`` / ``_camera_keys``)
+            for checkpoints that inherit unused camera slots from
+            ``smolvla_base`` (declared 3, but ``empty_cameras=0`` makes lerobot
+            drop the absent ones) — else the engine attends a phantom camera.
 
     Returns:
         ``True`` if the TRT runtime was attached, ``False`` if the env knob is
@@ -89,13 +96,16 @@ def maybe_attach_trt_from_env(
         return False
     precision = os.environ.get(_ENV_PRECISION, "bf16")
     attach_trt_sample_actions(
-        policy, repo_id, precision=precision, device_index=_device_index(device)
+        policy, repo_id, precision=precision, device_index=_device_index(device),
+        n_cameras=n_cameras,
     )
     log.info("smolvla_trt.enabled_from_env", repo_id=repo_id, precision=precision, device=device)
     return True
 
 
-def ensure_smolvla_onnx(repo_id: str, *, cache_dir: Path | None = None) -> SmolVLAOnnxPaths:
+def ensure_smolvla_onnx(
+    repo_id: str, *, cache_dir: Path | None = None, n_cameras: int | None = None
+) -> SmolVLAOnnxPaths:
     """Return cached split-ONNX graphs for ``repo_id``, exporting on first use.
 
     The export needs a **separate fp32/CPU copy** of the checkpoint
@@ -106,6 +116,12 @@ def ensure_smolvla_onnx(repo_id: str, *, cache_dir: Path | None = None) -> SmolV
     Args:
         repo_id: HF checkpoint id (must resolve from cache when offline).
         cache_dir: Override for the ONNX cache root (tests).
+        n_cameras: Camera slots to bake into the graphs. ``None`` defaults to
+            ``len(config.image_features)``. A checkpoint that inherits unused
+            slots from ``smolvla_base`` (declares 3, but ``empty_cameras=0`` so
+            lerobot drops the absent ones at inference) must pass its true count
+            or the engine would attend a phantom camera. Keyed into the cache
+            slug so 2- and 3-camera engines for the same repo never collide.
 
     Returns:
         :class:`SmolVLAOnnxPaths` pointing into the cache directory.
@@ -113,7 +129,8 @@ def ensure_smolvla_onnx(repo_id: str, *, cache_dir: Path | None = None) -> SmolV
     Raises:
         ROSConfigError: If the checkpoint or lerobot deps are unavailable.
     """
-    root = (cache_dir or _DEFAULT_ONNX_CACHE) / _slug(repo_id)
+    slug = _slug(repo_id) + (f"-{n_cameras}cam" if n_cameras is not None else "")
+    root = (cache_dir or _DEFAULT_ONNX_CACHE) / slug
     vision = root / "vision_encoder.onnx"
     policy_graph = root / "policy_graph.onnx"
     if vision.exists() and policy_graph.exists():
@@ -140,8 +157,11 @@ def ensure_smolvla_onnx(repo_id: str, *, cache_dir: Path | None = None) -> SmolV
 
     log.info("smolvla_trt.exporting_onnx", repo_id=repo_id, out_dir=str(root))
     t0 = time.perf_counter()
+    from openral_rskill._lerobot_compat import sanitize_smolvla_config  # noqa: PLC0415
+
+    sanitize_smolvla_config(repo_id)
     export_policy = SmolVLAPolicy.from_pretrained(repo_id)
-    paths = export_smolvla_split_onnx(export_policy, root)
+    paths = export_smolvla_split_onnx(export_policy, root, n_cameras=n_cameras)
     del export_policy
     log.info(
         "smolvla_trt.onnx_exported",
@@ -326,6 +346,7 @@ def attach_trt_sample_actions(
     precision: str = "bf16",
     device_index: int = 0,
     cache_dir: Path | None = None,
+    n_cameras: int | None = None,
 ) -> None:
     """Replace ``policy.model.sample_actions`` with the TRT-backed runner.
 
@@ -341,6 +362,8 @@ def attach_trt_sample_actions(
             ``fp16`` is deliberately rejected (60% action error, measured).
         device_index: CUDA device ordinal.
         cache_dir: ONNX cache override (tests).
+        n_cameras: Camera slots to export for; ``None`` = the checkpoint's
+            declared ``image_features`` count. See :func:`ensure_smolvla_onnx`.
 
     Raises:
         ROSConfigError: Unknown precision, missing deps, or export failure.
@@ -358,7 +381,7 @@ def attach_trt_sample_actions(
             "fp16 is deliberately unsupported: flow matching amplifies fp16 "
             "layernorm overflow to ~60% action error (measured 2026-07-04)."
         )
-    paths = ensure_smolvla_onnx(repo_id, cache_dir=cache_dir)
+    paths = ensure_smolvla_onnx(repo_id, cache_dir=cache_dir, n_cameras=n_cameras)
     runner = _TrtSampleActions(
         policy, paths, repo_id, precision=precision, device_index=device_index
     )
