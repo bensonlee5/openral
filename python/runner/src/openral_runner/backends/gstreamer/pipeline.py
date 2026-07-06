@@ -30,7 +30,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 __all__ = [
     "LEAKY_BRANCH_QUEUE",
@@ -110,22 +110,26 @@ class Platform(str, Enum):
     flow in ``video/x-raw(memory:NVMM)`` caps and can be lifted to
     CUDA zero-copy via ``libnvbufsurface.so``.
 
+    ``NVIDIA_DEEPSTREAM`` is x86_64 with a full DeepStream install —
+    the opt-in ``ds-on`` (DS9) image (``docker/inference/Dockerfile.x86``,
+    ``WITH_DEEPSTREAM_STAGE=on``, shipped as
+    ``openral:x86-deepstream-latest``). Detected by the presence of
+    **both** ``nvjpegdec`` and ``nvvideoconvert``. On this tier the main
+    reader pipeline is NVMM-native (ADR-0082): ``nvjpegdec`` decodes
+    MJPG **directly into** ``video/x-raw(memory:NVMM)`` (the decoded
+    frame is born in GPU memory; only the compressed JPEG crosses PCIe)
+    and ``nvvideoconvert`` colour-converts on-GPU, so the appsink
+    receives NVMM buffers the reader lifts to a CUDA device pointer via
+    ``libnvbufsurface.so``.
+
     ``NVIDIA_DESKTOP`` is x86_64 with an NVIDIA GPU and the
-    ``gstreamer1.0-plugins-bad`` ``nvcodec`` family installed.
-    The nvcodec plugin ships the H.264 / H.265 / JPEG / AV1 dec/enc
-    family (``nvh264dec``, ``nvh264enc``, ``nvh265dec``, ``nvjpegdec``,
-    …) and the ``cudaupload`` / ``cudadownload`` data-movement
-    elements, but **not** ``nvvideoconvert`` in the open-core image.
-    The pipeline builder (``_build_convert``) falls back to stock
-    ``videoconvert`` on this branch; the GPU path covers decode/encode
-    only. Note: the opt-in ``ds-on`` (DS9) image
-    (``docker/inference/Dockerfile.x86``, ``WITH_DEEPSTREAM_STAGE=on``)
-    **does** install ``nvvideoconvert`` + NVMM caps on x86; the detector
-    NVMM aggregator tier (ADR-0037 PR5b) uses it via
-    :func:`nvmm_convert_element`. The ``_build_convert`` / ``_build_caps``
-    functions are for the main reader pipeline and remain DeepStream-free
-    on open-core; the detector branch builds its own NVMM capsfilter
-    independently.
+    ``gstreamer1.0-plugins-bad`` ``nvcodec`` family installed but **no**
+    DeepStream. nvcodec ships the H.264 / H.265 / AV1 dec/enc family
+    (``nvh264dec``, ``nvh264enc``, …) and ``cudaupload`` /
+    ``cudadownload``, but not ``nvvideoconvert``. The pipeline builder
+    (``_build_convert``) falls back to stock ``videoconvert`` on this
+    branch; the GPU path covers decode/encode only, and no element in
+    the reader pipeline produces ``memory:NVMM`` caps.
 
     ``CPU_ONLY`` is the fallback: stock GStreamer plugins, no
     NVIDIA-specific elements. Frames flow in system memory; the
@@ -133,6 +137,7 @@ class Platform(str, Enum):
     """
 
     TEGRA = "tegra"
+    NVIDIA_DEEPSTREAM = "nvidia_deepstream"
     NVIDIA_DESKTOP = "nvidia_desktop"
     CPU_ONLY = "cpu_only"
 
@@ -185,6 +190,13 @@ class PipelineSpec(BaseModel):
         encoded: ``True`` when the upstream stream is compressed
             (H.264 / HEVC, e.g. typical USB-UVC H.264 or RTSP). Drives
             decoder selection.
+        jpeg: ``True`` when the USB camera delivers MJPG (the common
+            UVC compressed mode; e.g. the icspring wrist cam exposes no
+            raw modes at all). Inserts an ``image/jpeg`` capsfilter +
+            JPEG decoder after ``v4l2src``: ``nvjpegdec`` on
+            :attr:`Platform.NVIDIA_DEEPSTREAM` (decodes straight into
+            NVMM — ADR-0082), stock ``jpegdec`` elsewhere. USB source
+            only; mutually exclusive with ``encoded``.
         enable_nvmm: Hint to keep frames in ``memory:NVMM`` caps for
             NVMM→CUDA handoff. Honored only when the platform is
             :attr:`Platform.TEGRA` or :attr:`Platform.NVIDIA_DESKTOP`.
@@ -225,6 +237,7 @@ class PipelineSpec(BaseModel):
     height: int | None = Field(default=None, gt=0)
     fps: int = Field(default=30, gt=0)
     encoded: bool = False
+    jpeg: bool = False
     enable_nvmm: bool = True
     enable_ros_tee: bool = False
     enable_event_tee: bool = False
@@ -245,6 +258,17 @@ class PipelineSpec(BaseModel):
             )
         return value
 
+    @model_validator(mode="after")
+    def _validate_jpeg(self) -> PipelineSpec:
+        """``jpeg`` describes a UVC MJPG mode — USB only, and not also H.264."""
+        if self.jpeg and self.source is not Source.USB:
+            raise ValueError(
+                f"jpeg=True requires source=usb (MJPG is a UVC mode), got {self.source}"
+            )
+        if self.jpeg and self.encoded:
+            raise ValueError("jpeg and encoded are mutually exclusive (MJPG vs H.264 upstream)")
+        return self
+
 
 @functools.lru_cache(maxsize=1)
 def detect_platform() -> Platform:
@@ -255,10 +279,13 @@ def detect_platform() -> Platform:
     1. If ``/etc/nv_tegra_release`` exists, this is a Tegra host
        (Jetson Nano / NX / AGX / Thor / Spark). Return
        :attr:`Platform.TEGRA`.
-    2. Else, if ``gst-inspect-1.0`` reports the ``nvh264dec`` element
+    2. Else, if ``gst-inspect-1.0`` reports **both** ``nvjpegdec`` and
+       ``nvvideoconvert``, this is an x86 DeepStream install (the
+       ``ds-on`` image). Return :attr:`Platform.NVIDIA_DEEPSTREAM`.
+    3. Else, if ``gst-inspect-1.0`` reports the ``nvh264dec`` element
        present, this is a desktop NVIDIA host with the ``nvcodec``
        plugin family installed. Return :attr:`Platform.NVIDIA_DESKTOP`.
-    3. Otherwise return :attr:`Platform.CPU_ONLY`.
+    4. Otherwise return :attr:`Platform.CPU_ONLY`.
 
     The result is cached for the lifetime of the Python process via
     :func:`functools.lru_cache`; platform never changes mid-run.
@@ -272,6 +299,8 @@ def detect_platform() -> Platform:
     """
     if _TEGRA_RELEASE_PATH.exists():
         return Platform.TEGRA
+    if inspect_element_present("nvjpegdec") and inspect_element_present("nvvideoconvert"):
+        return Platform.NVIDIA_DEEPSTREAM
     if inspect_element_present("nvh264dec"):
         return Platform.NVIDIA_DESKTOP
     return Platform.CPU_ONLY
@@ -387,18 +416,18 @@ def build_pipeline_string(spec: PipelineSpec, platform: Platform | None = None) 
     * Source: ``v4l2src`` for USB on every platform; ``nvarguscamerasrc``
       for CSI on Tegra (raises on non-Tegra); ``rtspsrc`` for RTSP;
       ``filesrc`` for file; ``videotestsrc`` for synthetic.
-    * Decode (when ``spec.encoded`` is True): ``nvv4l2decoder`` on Tegra,
-      ``nvh264dec`` on desktop NVIDIA, ``avdec_h264`` on CPU-only.
-    * Colour convert: ``nvvidconv`` on Tegra; ``videoconvert`` on
-      desktop NVIDIA (the open-core image does not bundle NVIDIA
-      DeepStream, so ``nvvideoconvert`` is not used here — H.264 dec
-      stays on the GPU but colour conversion runs on the CPU; the
-      opt-in ``ds-on`` image does provide ``nvvideoconvert`` on x86
-      but that is used only by the detector NVMM branch, not this
-      builder); and ``videoconvert`` on CPU-only.
+    * Decode: MJPG USB (``spec.jpeg``) → ``image/jpeg`` caps +
+      ``nvjpegdec`` (DeepStream tier, decodes straight into NVMM —
+      ADR-0082) or ``jpegdec`` elsewhere; H.264 (``spec.encoded``) →
+      ``nvv4l2decoder`` on Tegra / DeepStream, ``nvh264dec`` on desktop
+      NVIDIA, ``avdec_h264`` on CPU-only.
+    * Colour convert: ``nvvidconv`` on Tegra; ``nvvideoconvert`` on the
+      DeepStream tier (on-GPU, NVMM-native); ``videoconvert`` on desktop
+      NVIDIA (open-core bundles no DeepStream — H.264 dec stays on the
+      GPU but colour conversion runs on the CPU) and CPU-only.
     * Memory: ``video/x-raw(memory:NVMM)`` caps when
-      ``spec.enable_nvmm`` AND the platform supports it; ``video/x-raw``
-      (system memory) otherwise.
+      ``spec.enable_nvmm`` AND the platform supports it (Tegra → NV12,
+      DeepStream → RGBA); ``video/x-raw`` (system memory) otherwise.
     * ROS tee: when ``spec.enable_ros_tee``, a second branch is inserted
       that lifts NVMM frames to system memory before the ROS-side appsink.
 
@@ -495,14 +524,29 @@ def _build_head(spec: PipelineSpec, platform: Platform) -> str:
 def _build_decode(spec: PipelineSpec, platform: Platform) -> str:
     """Return the decoder + parser when the upstream stream is encoded.
 
-    File source defers to ``decodebin`` (auto-picks decoder); RTSP and
-    encoded USB share a per-platform H.264 decoder lookup, with RTSP
-    prefixing the depay element.
+    File source defers to ``decodebin`` (auto-picks decoder); MJPG USB
+    cameras (``spec.jpeg``) get an ``image/jpeg`` capsfilter (pinning
+    width/height/framerate *before* the decoder so v4l2 negotiates the
+    MJPG mode) followed by ``nvjpegdec`` on the DeepStream tier — which
+    decodes **directly into NVMM** (ADR-0082) — or stock ``jpegdec``
+    elsewhere; RTSP and encoded USB share a per-platform H.264 decoder
+    lookup, with RTSP prefixing the depay element.
     """
     if spec.source is Source.FILE:
         return "decodebin"
+    if spec.jpeg:
+        fields: list[str] = []
+        if spec.width is not None:
+            fields.append(f"width={spec.width}")
+        if spec.height is not None:
+            fields.append(f"height={spec.height}")
+        fields.append(f"framerate={spec.fps}/1")
+        jpeg_caps = f"image/jpeg,{','.join(fields)}"
+        decoder = "nvjpegdec" if platform is Platform.NVIDIA_DEEPSTREAM else "jpegdec"
+        return f"{jpeg_caps} ! {decoder}"
     h264_decoder = {
         Platform.TEGRA: "nvv4l2decoder",
+        Platform.NVIDIA_DEEPSTREAM: "nvv4l2decoder",
         Platform.NVIDIA_DESKTOP: "nvh264dec",
         Platform.CPU_ONLY: "avdec_h264",
     }[platform]
@@ -519,26 +563,19 @@ def _build_convert(spec: PipelineSpec, platform: Platform) -> str:
     """Return the colour-conversion element appropriate for the platform.
 
     ``nvvidconv`` exists on Tegra (L4T multimedia stack, NVMM-aware).
-    ``nvvideoconvert`` is a NVIDIA DeepStream element — it is **not**
-    in the open-source ``gstreamer1.0-plugins-bad`` ``nvcodec`` plugin
-    family. ADR-0010 Amendment 2026-05-12 rejected bundling DeepStream
-    into open-core; the corollary is that ``Platform.NVIDIA_DESKTOP``
-    falls back to stock ``videoconvert`` (CPU) for the main reader
-    pipeline. The H.264 / H.265 dec/enc steps still run on the GPU via
-    ``nvh264dec`` / ``nvh264enc``; only the colour-space convert step
-    runs on the CPU.
-
-    Note: the opt-in ``ds-on`` (DS9) image
-    (``docker/inference/Dockerfile.x86``, ``WITH_DEEPSTREAM_STAGE=on``)
-    **does** provide ``nvvideoconvert`` + NVMM caps on x86. The detector
-    NVMM aggregator tier (ADR-0037 PR5b) uses it via the separate
-    :func:`nvmm_convert_element` resolver, which is called by
-    :class:`~openral_runner.backends.gstreamer.detector_runner.DetectorRunner`
-    when building the NVMM branch — not by this function. The main
-    reader pipeline (this function) remains DeepStream-free on open-core.
+    ``nvvideoconvert`` is a NVIDIA DeepStream element used on
+    :attr:`Platform.NVIDIA_DEEPSTREAM` (the ``ds-on`` image, ADR-0082) —
+    it converts on-GPU and negotiates ``memory:NVMM`` caps on x86. It is
+    **not** in the open-source ``gstreamer1.0-plugins-bad`` ``nvcodec``
+    plugin family; ADR-0010 Amendment 2026-05-12 rejected bundling
+    DeepStream into open-core, so ``Platform.NVIDIA_DESKTOP`` falls back
+    to stock ``videoconvert`` (CPU) — H.264 dec/enc stays on GPU there,
+    only the colour-space convert runs on CPU.
     """
     if platform is Platform.TEGRA:
         return "nvvidconv"
+    if platform is Platform.NVIDIA_DEEPSTREAM:
+        return "nvvideoconvert"
     return "videoconvert"
 
 
@@ -547,22 +584,21 @@ def _build_caps(spec: PipelineSpec, platform: Platform) -> str:
 
     The format is pinned to ``BGR`` on the CPU path so the appsink callback
     sees a known per-pixel encoding (the CPU branch of the reader rejects
-    NV12 / I420). On NVMM paths the format defaults to ``NV12`` which is
-    what ``nvvidconv`` outputs by default on Tegra and what the
-    NvBufSurface ctypes wrapper expects.
+    NV12 / I420). On NVMM paths the format is ``NV12`` on Tegra (what
+    ``nvvidconv`` outputs by default and the NvBufSurface ctypes wrapper
+    expects) and ``RGBA`` on :attr:`Platform.NVIDIA_DEEPSTREAM` (what the
+    NVMM→CUDA consumers — ``TrtNvmmExecutor`` and the detector NVMM
+    branch — take as input; ADR-0082).
 
-    NVMM caps are only emitted for ``Platform.TEGRA`` on the main
-    reader pipeline. On ``Platform.NVIDIA_DESKTOP`` the open-core image
-    does not bundle DeepStream, so no element in the standard reader
-    pipeline produces ``memory:NVMM`` caps after ``videoconvert``;
-    claiming NVMM there would fail caps negotiation. (The opt-in
-    ``ds-on`` (DS9) image does provide NVMM on x86, but the detector
-    NVMM aggregator tier (ADR-0037 PR5b) builds its own NVMM branch via
-    :func:`nvmm_convert_element` independently of this function.)
+    NVMM caps are emitted for ``Platform.TEGRA`` and
+    ``Platform.NVIDIA_DEEPSTREAM``. On ``Platform.NVIDIA_DESKTOP`` the
+    open-core image does not bundle DeepStream, so no element in the
+    standard reader pipeline produces ``memory:NVMM`` caps after
+    ``videoconvert``; claiming NVMM there would fail caps negotiation.
     """
-    use_nvmm = spec.enable_nvmm and platform is Platform.TEGRA
+    use_nvmm = spec.enable_nvmm and platform in (Platform.TEGRA, Platform.NVIDIA_DEEPSTREAM)
     raw = "video/x-raw(memory:NVMM)" if use_nvmm else "video/x-raw"
-    fmt = "NV12" if use_nvmm else "BGR"
+    fmt = ("RGBA" if platform is Platform.NVIDIA_DEEPSTREAM else "NV12") if use_nvmm else "BGR"
     fields: list[str] = [f"format={fmt}"]
     if spec.width is not None:
         fields.append(f"width={spec.width}")
@@ -595,7 +631,7 @@ def _build_ros_tee_branch(spec: PipelineSpec, platform: Platform) -> str:
     appsink so that the publisher and the ral appsink don't share
     NVMM buffer ownership.
     """
-    convert = "nvvidconv" if platform is Platform.TEGRA else "videoconvert"
+    convert = _lift_convert(platform)
     # Force system memory caps on the ROS side regardless of upstream.
     return (
         f"{convert} ! video/x-raw,format=BGR ! "
@@ -617,7 +653,7 @@ def _build_event_tee_branch(spec: PipelineSpec, platform: Platform) -> str:
     :attr:`PipelineSpec.event_rate_hz` so a 30 Hz policy leg coexists
     with a 5 Hz detector loop.
     """
-    convert = "nvvidconv" if platform is Platform.TEGRA else "videoconvert"
+    convert = _lift_convert(platform)
     # event_rate_hz is float; render as Gst fraction (rate/1) by rounding to int.
     # ``videorate`` then drops or duplicates frames as needed to honour the cap.
     rate = max(1, round(spec.event_rate_hz))
@@ -627,6 +663,22 @@ def _build_event_tee_branch(spec: PipelineSpec, platform: Platform) -> str:
         f"appsink name={spec.event_appsink_name} emit-signals=true "
         f"max-buffers=1 drop=true sync=false"
     )
+
+
+def _lift_convert(platform: Platform) -> str:
+    """Return the converter that lifts a tee-leg frame to system memory.
+
+    Tee legs (ROS / event) always terminate in system-memory ``BGR`` for
+    CPU consumers. When the policy leg runs NVMM (Tegra / DeepStream),
+    stock ``videoconvert`` cannot accept ``memory:NVMM`` caps — the lift
+    needs the platform's NVMM-aware converter (both emit system-memory
+    ``BGR`` directly; verified against DS 9 ``nvvideoconvert`` src caps).
+    """
+    if platform is Platform.TEGRA:
+        return "nvvidconv"
+    if platform is Platform.NVIDIA_DEEPSTREAM:
+        return "nvvideoconvert"
+    return "videoconvert"
 
 
 def _coerce_device_str(device: int | str | None, *, default: str | None) -> str | None:

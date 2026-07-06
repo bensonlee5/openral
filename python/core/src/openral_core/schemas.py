@@ -2077,9 +2077,11 @@ class FrameEncoding(str, Enum):
     """How the bytes inside a :class:`SensorFrame` are interpreted.
 
     The first four values are raw per-pixel layouts. ``JPEG`` / ``PNG`` are
-    compressed forms; the runner decodes lazily. ``CUDA_NV12`` and ``RAW``
-    mark frames whose payload is an opaque handle (NVMM pointer, DMA-BUF fd)
-    — the ``data`` field is empty and the consumer must read via ``handle``.
+    compressed forms; the runner decodes lazily. ``CUDA_NV12`` /
+    ``CUDA_RGBA`` and ``RAW`` mark frames whose payload is an opaque handle
+    (NVMM pointer, DMA-BUF fd) — the ``data`` field is empty and the consumer
+    must read via ``handle``. ``CUDA_NV12`` is the Tegra NVMM default;
+    ``CUDA_RGBA`` is the x86 DeepStream NVMM layout (ADR-0082).
     """
 
     BGR8 = "bgr8"
@@ -2089,6 +2091,7 @@ class FrameEncoding(str, Enum):
     JPEG = "jpeg"
     PNG = "png"
     CUDA_NV12 = "cuda_nv12"
+    CUDA_RGBA = "cuda_rgba"
     RAW = "raw"
 
 

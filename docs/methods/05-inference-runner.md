@@ -68,21 +68,22 @@ _Per-backend `SensorReader` implementations. Default `OpenCVThreadSensorReader` 
 - `__getattr__(name) -> Any` — PEP 562 attribute hook; resolves `OpenCVThreadSensorReader` on first access via `importlib.import_module`. (L27)
 
 ### `python/runner/src/openral_runner/backends/gstreamer/pipeline.py`
-_GStreamer pipeline-string builder + platform detection (ADR-0010 PR I/1, ADR-0011, ADR-0018 F6). Pure-Python — does **not** import `gi` at module load._
+_GStreamer pipeline-string builder + platform detection (ADR-0010 PR I/1, ADR-0011, ADR-0018 F6, ADR-0082). Pure-Python — does **not** import `gi` at module load._
 
 - `TEE_NAME: Final[str]` (L60) — `"openral_cam_tee"`. Name of the per-camera `tee` — the **perception-bus attach point** (ADR-0037) the runtime `TeeManager` looks up via `Gst.Bin.get_by_name` to request pads for reasoner-activated consumers at runtime.
 - `LEAKY_BRANCH_QUEUE: Final[str]` (L67) — `"queue leaky=downstream max-size-buffers=2"`. The single definition of the per-branch isolation policy (ADR-0018 §3), shared by the static builder and the runtime `TeeManager`.
 - `leaky_branch(elements, *, tee_name=TEE_NAME) -> str` (L70) — Returns one `tee` branch `<tee>. ! <leaky queue> ! <elements>`. The shared branch-construction primitive so the static builder and the dynamic `TeeManager` (ADR-0037) build branches identically.
-- `class PipelineSpec(BaseModel)` (L164) — Validated description of a GStreamer ingest pipeline. Fields: `source, device, width, height, fps, encoded, enable_nvmm, enable_ros_tee, enable_event_tee, appsink_name, ros_appsink_name, event_appsink_name, event_rate_hz, max_buffers`. ADR-0018 F6 added the three event-tee fields; the validator on `event_appsink_name` enforces valid GStreamer element names.
-- `class Platform(str, Enum)` (L104) — `TEGRA | NVIDIA_DESKTOP | CPU_ONLY`.
-- `class Source(str, Enum)` (L140) — `USB | CSI | RTSP | FILE | TESTSRC`.
-- `detect_platform() -> Platform` (L250) — `lru_cache`d; reads `/etc/nv_tegra_release`, probes `gst-inspect-1.0 nvh264dec`.
-- `inspect_element_present(element_name) -> bool` (L280) — Generic `gst-inspect-1.0 --exists` probe with timeout.
-- `nvmm_convert_element() -> str | None` (L310) — Probes for the host's NVMM colour-convert element: `nvvideoconvert` (DeepStream/x86) preferred, else `nvvidconv` (Tegra/L4T), else `None`.
-- `ensure_appsink_name(pipeline, name) -> str` (L330) — Rewrites a trailing `appsink` to carry `name=<name>`.
-- `build_pipeline_string(spec, platform=None) -> str` (L382) — Materialises the pipeline string; emits a 2- or 3-leg `tee name=openral_cam_tee` when `enable_ros_tee` / `enable_event_tee` are set, assembling each leg via `leaky_branch` so a stalled observability / detector branch never backpressures the policy.
-- `_build_event_tee_branch(spec, platform) -> str` (L607) — ADR-0018 F6 — Returns the event leg of the `tee`: lifts NVMM to system memory, pins `format=BGR`, rate-caps via `videorate` to `event_rate_hz`, terminates in `appsink name=event_sink`.
-- `_build_ros_tee_branch(spec, platform) -> str` (L591) — Returns the observability leg (system memory BGR `appsink name=ros_sink`).
+- `class PipelineSpec(BaseModel)` (L169) — Validated description of a GStreamer ingest pipeline. Fields: `source, device, width, height, fps, encoded, jpeg, enable_nvmm, enable_ros_tee, enable_event_tee, appsink_name, ros_appsink_name, event_appsink_name, event_rate_hz, max_buffers`. ADR-0018 F6 added the three event-tee fields; ADR-0082 added `jpeg` (MJPG UVC cameras — USB-only, exclusive with `encoded`); the validator on `event_appsink_name` enforces valid GStreamer element names.
+- `class Platform(str, Enum)` (L104) — `TEGRA | NVIDIA_DEEPSTREAM | NVIDIA_DESKTOP | CPU_ONLY`. `NVIDIA_DEEPSTREAM` (ADR-0082) is the x86 `ds-on` image: the main reader pipeline goes NVMM-native (`nvjpegdec` decodes MJPG straight into NVMM, `nvvideoconvert` converts on-GPU, appsink negotiates `memory:NVMM` RGBA).
+- `class Source(str, Enum)` (L145) — `USB | CSI | RTSP | FILE | TESTSRC`.
+- `detect_platform() -> Platform` (L272) — `lru_cache`d; reads `/etc/nv_tegra_release`, probes `gst-inspect-1.0` for `nvjpegdec`+`nvvideoconvert` (DeepStream) then `nvh264dec` (desktop nvcodec).
+- `inspect_element_present(element_name) -> bool` (L307) — Generic `gst-inspect-1.0 --exists` probe with timeout.
+- `nvmm_convert_element() -> str | None` (L337) — Probes for the host's NVMM colour-convert element: `nvvideoconvert` (DeepStream/x86) preferred, else `nvvidconv` (Tegra/L4T), else `None`.
+- `ensure_appsink_name(pipeline, name) -> str` (L357) — Rewrites a trailing `appsink` to carry `name=<name>`.
+- `build_pipeline_string(spec, platform=None) -> str` (L409) — Materialises the pipeline string; emits a 2- or 3-leg `tee name=openral_cam_tee` when `enable_ros_tee` / `enable_event_tee` are set, assembling each leg via `leaky_branch` so a stalled observability / detector branch never backpressures the policy.
+- `_build_event_tee_branch(spec, platform) -> str` (L641) — ADR-0018 F6 — Returns the event leg of the `tee`: lifts NVMM to system memory, pins `format=BGR`, rate-caps via `videorate` to `event_rate_hz`, terminates in `appsink name=event_sink`.
+- `_build_ros_tee_branch(spec, platform) -> str` (L625) — Returns the observability leg (system memory BGR `appsink name=ros_sink`).
+- `_lift_convert(platform) -> str` (L666) — The converter a tee leg uses to lift NVMM → system-memory BGR: `nvvidconv` (Tegra) / `nvvideoconvert` (DeepStream) / `videoconvert` (else). ADR-0082.
 
 ### `python/runner/src/openral_runner/backends/gstreamer/perception_tee.py`
 _Perception event tee for `GStreamerSensorReader` (ADR-0018 F6). Pulls frames from the event leg's `appsink`, runs `EventDetector`s, publishes `openral_msgs/PromptStamped` on `/openral/perception/<kind>`. `rclpy` lazy-imported in `start()` so the module stays import-safe on hosts without a sourced ROS env._
@@ -174,7 +175,7 @@ _Public surface of the inference runner. Imports are PEP 562 lazy (M8 PR I/8): h
 _Library deploy runner used by runtime nodes; the public deploy CLI now shells the ROS graph from a `DeployScene`._
 
 - `SKILL_REGISTRY: dict[str, Callable[[dict[str, object]], rSkillBase]]` — `vla.id` → skill factory. Today: `hello`, `gpu_passthrough` (M8 PR I/10). (L84)
-- `SENSOR_BACKEND_REGISTRY: dict[str, Callable[[SensorReaderConfig], SensorReader]]` — `backend` id → reader factory. Today: `opencv_thread`, `gstreamer`. (L245)
+- `SENSOR_BACKEND_REGISTRY: dict[str, Callable[[SensorReaderConfig], SensorReader]]` — `backend` id → reader factory. Today: `opencv_thread`, `gstreamer`. (L246)
 - `_to_int(value, *, field, sensor_id) -> int` — YAML `object` → `int` coercion helper used across factories; rejects bools explicitly. (L40)
 - `_make_gpu_passthrough_skill(extra) -> rSkillBase` — Builds `GpuPassthroughSkill`; recognised `extra`: `sensor_id` (default `"wrist_rgb"`), `n_joints`, `horizon`, `device` (default `"cuda"`, raises if unavailable). (L61)
 - `_make_opencv_thread_reader(cfg) -> SensorReader` — Builds `OpenCVThreadSensorReader` from a `SensorReaderConfig`; requires `backend_params.device`. (L90)

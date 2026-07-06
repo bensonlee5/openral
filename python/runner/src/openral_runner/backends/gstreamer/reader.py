@@ -24,9 +24,9 @@ requirement and is import-safe everywhere.
 The CPU path here delivers system-memory frames as
 :class:`~openral_core.SensorFrame` with ``data=bytes`` and
 ``encoding`` ∈ {BGR8, RGB8, MONO8}. The NVMM / CUDA zero-copy path
-(commit #3) populates ``handle`` + ``encoding=CUDA_NV12`` instead and
-is grafted into :meth:`_on_new_sample` without changing the Protocol
-surface.
+(commit #3) populates ``handle`` + ``encoding`` ∈ {CUDA_NV12 on Tegra,
+CUDA_RGBA on x86 DeepStream — ADR-0082} instead and is grafted into
+:meth:`_on_new_sample` without changing the Protocol surface.
 """
 
 from __future__ import annotations
@@ -533,6 +533,7 @@ class GStreamerSensorReader:
         """
         # Lazy import: keeps the CPU path independent of libnvbufsurface.
         from openral_runner.backends.gstreamer.nvbufsurface import (  # noqa: PLC0415
+            NvBufSurfaceColorFormat,
             NvBufSurfaceLibraryError,
             load,
             wrap_buffer,
@@ -581,6 +582,14 @@ class GStreamerSensorReader:
 
         mono_ns = time.monotonic_ns()
         wall_ns = time.time_ns()
+        # Label the handle by the surface's actual colour format: RGBA on the
+        # x86 DeepStream tier (nvjpegdec/nvvideoconvert emit packed RGBA —
+        # ADR-0082), NV12 on Tegra. NV12 is semi-planar Y + UV interleaved
+        # (1.5 bytes/pixel) reported as 3 channels because consumers typically
+        # want a 3-channel CUDA view.
+        is_rgba = handle.color_format == NvBufSurfaceColorFormat.RGBA
+        encoding = FrameEncoding.CUDA_RGBA if is_rgba else FrameEncoding.CUDA_NV12
+        channels = 4 if is_rgba else 3
         with self._frame_lock:
             # Release the previous buffer's map BEFORE overwriting the slot.
             prev_buffer = self._latest_buffer_ref
@@ -594,10 +603,8 @@ class GStreamerSensorReader:
             self._latest_stamp_wall_ns = wall_ns
             self._latest_width = handle.width
             self._latest_height = handle.height
-            # NV12 is semi-planar Y + UV interleaved → 1.5 bytes/pixel; reported
-            # as 3 channels because consumers typically want a 3-channel CUDA view.
-            self._latest_channels = 3
-            self._latest_encoding = FrameEncoding.CUDA_NV12
+            self._latest_channels = channels
+            self._latest_encoding = encoding
         if prev_buffer is not None and prev_map is not None:
             with contextlib.suppress(Exception):  # reason: defensive cleanup
                 prev_buffer.unmap(prev_map)

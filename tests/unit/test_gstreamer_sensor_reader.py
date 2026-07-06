@@ -346,3 +346,26 @@ def test_holoscan_backend_value_is_reserved_but_unimplemented() -> None:
 
 # Ensure Gst is initialised so the test module load itself doesn't leak.
 Gst.init(None)
+
+
+def test_factory_spec_passes_jpeg_through() -> None:
+    """backend_params.jpeg reaches PipelineSpec (MJPG cameras, ADR-0082)."""
+    from openral_runner.factory import _gstreamer_spec_from_params
+
+    cfg = SensorReaderConfig.model_validate(
+        {
+            "sensor_id": "wrist",
+            "backend": "gstreamer",
+            "backend_params": {
+                "source": "usb",
+                "device": "/dev/video4",
+                "width": 640,
+                "height": 480,
+                "fps": 30,
+                "jpeg": True,
+            },
+        },
+    )
+    spec = _gstreamer_spec_from_params(cfg, cfg.backend_params["source"])
+    assert spec.jpeg is True
+    assert spec.source is Source.USB
