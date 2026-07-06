@@ -299,6 +299,26 @@ if _ROS2_AVAILABLE:
             )
             self._episode_pub = self.create_publisher(Episode, "/openral/episode", episode_qos)
 
+            # ADR-0057 — announce the executing instruction on
+            # /openral/reward/active_task so the reward monitor's scoring heartbeat
+            # gates on real execution even with no reasoner in the loop (a direct
+            # `execute_rskill` dispatch). The reasoner publishes the same topic in a
+            # mission-driven deploy; both agree on the active prompt and this is a
+            # latched-intent, advisory signal (never actuation). Matches the reward
+            # monitor's subscription QoS (RELIABLE / VOLATILE / KEEP_LAST 1).
+            from std_msgs.msg import String as _String
+
+            self._active_task_msg_cls: Any = _String
+            self._active_task_pub = self.create_publisher(
+                _String,
+                "/openral/reward/active_task",
+                QoSProfile(
+                    reliability=QoSReliabilityPolicy.RELIABLE,
+                    durability=QoSDurabilityPolicy.VOLATILE,
+                    depth=1,
+                ),
+            )
+
             # F8 heartbeat.
             robot_name = self._description.name
 
@@ -533,6 +553,8 @@ if _ROS2_AVAILABLE:
                 self._active_skill_revision = revision
                 self._chunks_published = 0
                 self._cancel_requested = False
+            # Reward-gate signal: this instruction is now executing.
+            self._publish_active_task(req.prompt)
 
             result = ExecuteRskill.Result()
             with rskill_span("rskill.execute", rskill_id=rskill_id) as span:
@@ -1212,6 +1234,17 @@ if _ROS2_AVAILABLE:
             if int(phase) == Episode.PHASE_END:
                 self._episode_counter += 1
 
+        def _publish_active_task(self, text: str) -> None:
+            """Announce (or clear with "") the executing instruction for the reward gate.
+
+            Advisory-only (never actuation); a publish failure must never disturb the
+            skill, so it is fully suppressed.
+            """
+            with contextlib.suppress(Exception):
+                msg = self._active_task_msg_cls()
+                msg.data = text
+                self._active_task_pub.publish(msg)
+
         def _reset_active_goal(self) -> None:
             """Clear the per-goal state under the lock."""
             with self._goal_lock:
@@ -1221,6 +1254,8 @@ if _ROS2_AVAILABLE:
                 self._active_skill_revision = ""
                 self._cancel_requested = False
                 self._current_tick_index = 0
+            # Reward-gate signal: nothing executing now.
+            self._publish_active_task("")
 
         def _on_estop(self, _msg: object) -> None:
             """``/openral/estop`` callback: latch + abort the active goal.

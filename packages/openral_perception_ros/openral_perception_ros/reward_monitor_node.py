@@ -28,14 +28,21 @@ Parameters:
     image_topic (str): single-camera fallback topic.
     manifest_path (str): rSkill manifest path (``kind: "reward"``). Required.
     task (str): default task instruction (used when a request leaves ``task`` empty).
-    enable_critic_score (bool): also publish a generic ``openral_msgs/CriticScore``
-        per window (ADR-0064) to feed the Tier-C critic producer. Default False
-        (query-only).
+    score_period_s (float): reward-score heartbeat cadence — how often the timer
+        scores the recent window and emits the ``reward.score`` span that drives the
+        dashboard reward bar. Default 2.0 s. The timer runs while a VLA is executing
+        (``gate_scoring_on_execution``) or the critic leg is on.
+    score_window_s (float): seconds of RECENT footage the heartbeat scores. Kept
+        small (default 2.0 s ≈ 6 frames) so the reward forward fits beside a VLA on
+        an 8 GB card; the full 40 s buffer would OOM. Raise on a bigger GPU.
+    enable_critic_score (bool): additionally publish a generic
+        ``openral_msgs/CriticScore`` per heartbeat (ADR-0064) to feed the Tier-C
+        critic producer. Default False. Gates ONLY the publish — the scoring +
+        dashboard bar run regardless.
     critic_score_topic (str): topic for the CriticScore stream. Default
         ``/openral/critic/score``.
     critic_score_threshold (float): pass bar stamped on each CriticScore (the
         producer's watchdog fires when progress stays below it). Default 0.8.
-    critic_score_period_s (float): CriticScore publish cadence. Default 1.0 s.
 """
 
 from __future__ import annotations
@@ -79,7 +86,15 @@ def main(args: Any = None) -> None:
             self.declare_parameter("enable_critic_score", False)
             self.declare_parameter("critic_score_topic", "/openral/critic/score")
             self.declare_parameter("critic_score_threshold", 0.8)
-            self.declare_parameter("critic_score_period_s", 1.0)
+            # Reward-score heartbeat: how often to score (period) and over how much
+            # RECENT footage (window). The window is deliberately small — the full
+            # 40 s buffer subsampled to max_frames=8 OOMs the reward forward when
+            # co-resident with a VLA on an 8 GB card; a ~2 s slice (≈6 frames at
+            # 3 fps) fits and still tracks the live progress arc. Raise on a bigger
+            # GPU. (The reasoner's mission-verify query keeps the full-buffer window
+            # for the calibrated completion verdict — a separate path.)
+            self.declare_parameter("score_period_s", 2.0)
+            self.declare_parameter("score_window_s", 2.0)
 
             gp = self.get_parameter
             manifest_path = gp("manifest_path").get_parameter_value().string_value
@@ -152,17 +167,22 @@ def main(args: Any = None) -> None:
                     ),
                 )
 
-            # ADR-0064 — optional CriticScore publishing leg (Tier-C source).
+            enable_critic = gp("enable_critic_score").get_parameter_value().bool_value
+            self._score_window_s = gp("score_window_s").get_parameter_value().double_value
+            score_period = gp("score_period_s").get_parameter_value().double_value
+
+            # ADR-0064 — optional CriticScore PUBLISHER leg (Tier-C producer feed).
+            # `enable_critic_score` gates ONLY this publish; the scoring itself runs
+            # on the heartbeat timer below regardless, so the dashboard reward bar
+            # never depends on the critic being wired.
             self._critic_pub = None
-            self._critic_timer = None
             self._critic_msg_cls: Any = None
             self._critic_threshold = 0.0
-            if gp("enable_critic_score").get_parameter_value().bool_value:
+            if enable_critic:
                 self._critic_threshold = (
                     gp("critic_score_threshold").get_parameter_value().double_value
                 )
                 critic_topic = gp("critic_score_topic").get_parameter_value().string_value
-                critic_period = gp("critic_score_period_s").get_parameter_value().double_value
                 try:
                     from openral_msgs.msg import CriticScore
 
@@ -174,23 +194,35 @@ def main(args: Any = None) -> None:
                     )
                     self._critic_msg_cls = CriticScore
                     self._critic_pub = self.create_publisher(CriticScore, critic_topic, critic_qos)
-                    self._critic_timer = self.create_timer(
-                        critic_period, self._publish_critic_score
-                    )
                     self.get_logger().info(
                         f"critic_score: publishing progress on {critic_topic!r} "
-                        f"(threshold={self._critic_threshold}, every {critic_period}s)"
+                        f"(threshold={self._critic_threshold})"
                     )
                 except ImportError:
                     self.get_logger().warning(
                         "openral_msgs/CriticScore not built; critic_score publishing disabled"
                     )
 
+            # Reward-score heartbeat: scores a bounded recent window on a timer so the
+            # dashboard rSkill card shows a live progress/success bar the whole time a
+            # skill runs — INDEPENDENT of the CriticScore leg and of whether a reasoner
+            # is polling query_task_progress. `_score_tick` self-limits to
+            # `_vla_active` (the runner/reasoner publishes /openral/reward/active_task
+            # around each execute_rskill), so it never grinds the GPU on an idle scene.
+            # Created only when execution-gating bounds it, or the critic leg needs it;
+            # ungated + no-critic keeps the legacy on-demand-only behaviour.
+            self._score_timer = None
+            if self._gate_scoring or enable_critic:
+                self._score_timer = self.create_timer(score_period, self._score_tick)
+
+            heartbeat = (
+                f"every {score_period}s/win {self._score_window_s}s" if self._score_timer else "off"
+            )
             self.get_logger().info(
                 f"reward_monitor: cameras={self._cameras} primary={self._primary_id!r} "
                 f"window_s={window_s} fps={fps} manifest={manifest_path}, "
                 f"query_task_progress={'on' if self._srv else 'off'}, "
-                f"critic_score={'on' if self._critic_pub else 'off'}"
+                f"score_heartbeat={heartbeat}, critic_score={'on' if self._critic_pub else 'off'}"
             )
 
         def _resolve_cameras(self) -> dict[str, str]:
@@ -319,15 +351,15 @@ def main(args: Any = None) -> None:
             self._active_task = task
             self._vla_active = bool(task)
 
-        def _publish_critic_score(self) -> None:
-            """Timer (ADR-0064): score the buffer, publish a generic CriticScore.
+        def _score_tick(self) -> None:
+            """Timer: score a bounded recent window → reward.score span (+ optional CriticScore).
 
-            Best-effort and advisory — skips quietly when there is no task or the
-            buffer is stale/empty, and never crashes the timer on an assess error.
-            The producer's watchdog detects the stall from the score stream.
+            Drives the dashboard rSkill card's live reward bar via the span it emits;
+            the ADR-0064 CriticScore publish is an optional add-on when the Tier-C
+            producer leg is wired. Best-effort and advisory — skips quietly when gated
+            off / no task / stale-or-empty buffer, and never crashes the timer on an
+            assess error.
             """
-            if self._critic_pub is None:
-                return
             if not self._vla_active:
                 return  # gated: no VLA executing → don't score an idle scene
             # Score the instruction the VLA is actually running (gated mode), not the
@@ -338,31 +370,32 @@ def main(args: Any = None) -> None:
             if not task or buf.is_stale(now_ns) or len(buf) == 0:
                 return
             try:
-                a = self._monitor.assess(buf.window(1e9), task)
+                # Bounded RECENT window (not the full buffer) so the reward forward
+                # fits beside the VLA on an 8 GB card — see score_window_s.
+                a = self._monitor.assess(buf.window(self._score_window_s), task)
             except Exception as exc:  # best-effort; never crash the timer
-                self.get_logger().debug(f"critic_score assess failed: {exc}")
+                self.get_logger().debug(f"reward score_tick assess failed: {exc}")
                 return
-            from openral_observability.propagation import current_traceparent
+            self._emit_score_span(a, task)  # dashboard reward bar — ALWAYS
+            # ADR-0064 Tier-C CriticScore — only when the publisher leg is enabled.
+            if self._critic_pub is not None:
+                from openral_observability.propagation import current_traceparent
 
-            self._emit_score_span(a, task)
-            score, threshold = critic_score_from_assessment(a, threshold=self._critic_threshold)
-            msg = self._critic_msg_cls()
-            msg.header.stamp = self.get_clock().now().to_msg()
-            msg.header.frame_id = self._critic_id
-            msg.critic_id = self._critic_id
-            msg.score = score
-            msg.threshold = threshold
-            msg.trace_id = current_traceparent() or ""
-            self._critic_pub.publish(msg)
-            # Trace the reward stream: without this the continuous score is only
-            # observable on the wire (the producer logs nothing until it detects a
-            # stall), so a run leaves no reward-progress record. INFO is correct —
-            # this is advisory operator signal at the critic's ~1 Hz cadence, not a
-            # hot loop.
+                score, threshold = critic_score_from_assessment(a, threshold=self._critic_threshold)
+                msg = self._critic_msg_cls()
+                msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = self._critic_id
+                msg.critic_id = self._critic_id
+                msg.score = score
+                msg.threshold = threshold
+                msg.trace_id = current_traceparent() or ""
+                self._critic_pub.publish(msg)
+            # INFO: advisory operator signal at the heartbeat cadence, not a hot loop.
             self.get_logger().info(
-                f"critic_score: score={score:.3f} threshold={threshold:.3f} "
-                f"progress={float(a['progress_now']):.3f} success={float(a['success_now']):.3f} "
-                f"progress_trend={float(a['progress_trend']):+.3f} frames={int(a['frames_seen'])}"
+                f"reward score: progress={float(a['progress_now']):.3f} "
+                f"success={float(a['success_now']):.3f} "
+                f"trend={float(a['progress_trend']):+.3f} frames={int(a['frames_seen'])}"
+                + (" critic=on" if self._critic_pub is not None else "")
             )
 
         def destroy_node(self) -> None:
