@@ -82,8 +82,12 @@ def test_load_skips_when_library_missing(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(nvbufsurface.ctypes.util, "find_library", lambda _name: None)
     monkeypatch.setattr(nvbufsurface, "_FALLBACK_LIBRARY_PATHS", ())
     nvbufsurface._reset_loader_for_tests()
-    with pytest.raises(NvBufSurfaceLibraryError, match="not found on this host"):
-        nvbufsurface.load()
+    try:
+        with pytest.raises(NvBufSurfaceLibraryError, match="not found on this host"):
+            nvbufsurface.load()
+    finally:
+        # Un-memoise the simulated failure so later tests re-probe the real host.
+        nvbufsurface._reset_loader_for_tests()
 
 
 def test_load_memoises_failure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -91,11 +95,14 @@ def test_load_memoises_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(nvbufsurface.ctypes.util, "find_library", lambda _name: None)
     monkeypatch.setattr(nvbufsurface, "_FALLBACK_LIBRARY_PATHS", ())
     nvbufsurface._reset_loader_for_tests()
-    with pytest.raises(NvBufSurfaceLibraryError):
-        nvbufsurface.load()
-    # Memoised failure — error message reflects the second-call path.
-    with pytest.raises(NvBufSurfaceLibraryError, match="probed earlier"):
-        nvbufsurface.load()
+    try:
+        with pytest.raises(NvBufSurfaceLibraryError):
+            nvbufsurface.load()
+        # Memoised failure — error message reflects the second-call path.
+        with pytest.raises(NvBufSurfaceLibraryError, match="probed earlier"):
+            nvbufsurface.load()
+    finally:
+        nvbufsurface._reset_loader_for_tests()
 
 
 def test_load_returns_cdll_on_jetson() -> None:
