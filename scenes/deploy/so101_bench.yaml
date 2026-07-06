@@ -66,6 +66,31 @@ sensors:
         fps: 30
         jpeg: true
 
+# Committed deploy posture (DeployRuntime) — every runtime leg pinned
+# explicitly so nothing depends on hidden CLI defaults. Precedence:
+# CLI flag > this block > auto. The SO-101 bench is a fixed-base arm with two
+# RGB cameras: no lidar/depth → SLAM/Nav2/octomap off; the continuous
+# open-vocab detector stays on for locate_in_view; the reward monitor is on
+# by default (ADR-0077 §4 auto-pairs Robometer from the VLA's
+# reward_rskill_name; it scores /openral/cameras/top/image, which the
+# ADR-0082 NVMM tier keeps publishing via the observability tee).
+runtime:
+  enable_slam: false
+  enable_nav2: false
+  enable_octomap: false
+  enable_octomap_kernel_check: true
+  enable_object_detector: true
+  object_detector_onnx: null
+  object_detector_manifest: null
+  object_detector_query: null
+  object_detector_locators: null
+  enable_reward_monitor: true
+  reward_monitor_manifest: null
+  reward_monitor_task: null
+  enable_critic: false
+  spatial_memory_ingest: true
+  approach_skill_id: null
+
 # NOTE: an earlier `extra_allowed_collision_pairs: [[base, lower_arm]]` ACM
 # override lived here to suppress a self-collision false-E-stop at the home pose
 # (base<->lower_arm reported -0.078 m while the true clearance is +0.16 m). That

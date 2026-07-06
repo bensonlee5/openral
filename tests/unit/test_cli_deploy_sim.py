@@ -1832,3 +1832,58 @@ def test_deploy_sim_help_includes_initial_task_flag() -> None:
     result = runner.invoke(app, ["deploy", "sim", "--help"])
     assert result.exit_code == 0, result.output
     assert "--initial-task" in result.output
+
+
+_SO101_BENCH_CONFIG = _REPO_ROOT / "scenes" / "deploy" / "so101_bench.yaml"
+
+
+def test_deploy_scene_runtime_block_parses_from_so101_bench() -> None:
+    """so101_bench pins its full DeployRuntime posture explicitly (real fixture)."""
+    from openral_core import DeployScene
+
+    scene = DeployScene.from_yaml(str(_SO101_BENCH_CONFIG))
+    rt = scene.runtime
+    assert rt is not None
+    assert rt.enable_slam is False
+    assert rt.enable_nav2 is False
+    assert rt.enable_octomap is False
+    assert rt.enable_octomap_kernel_check is True
+    assert rt.enable_object_detector is True
+    assert rt.enable_reward_monitor is True
+    assert rt.enable_critic is False
+    assert rt.spatial_memory_ingest is True
+
+
+def test_deploy_sim_scene_runtime_applies_when_cli_unset() -> None:
+    """DeployScene.runtime pins the posture when no CLI flag is passed.
+
+    so101_bench pins ``enable_reward_monitor: true`` — the resolver must bring
+    the reward leg up (auto-pairing the manifest) with no CLI flag at all.
+    """
+    invocation = resolve_launch_invocation(
+        config=_SO101_BENCH_CONFIG,
+        robot_override=None,
+        dashboard_port=4318,
+        reset_to_pose_service=None,
+        hal_param_overrides=None,
+    )
+    joined = " ".join(invocation.argv_template)
+    assert "enable_reward_monitor:=true" in joined
+    assert "reward_monitor_manifest:=" in joined  # auto-paired / default in-tree manifest
+    assert "enable_slam:=false" in joined
+    assert "enable_critic:=false" in joined
+
+
+def test_deploy_sim_cli_flag_overrides_scene_runtime() -> None:
+    """An explicit CLI flag beats the scene's runtime block (CLI > scene > auto)."""
+    invocation = resolve_launch_invocation(
+        config=_SO101_BENCH_CONFIG,
+        robot_override=None,
+        dashboard_port=4318,
+        reset_to_pose_service=None,
+        hal_param_overrides=None,
+        enable_reward_monitor=False,
+    )
+    joined = " ".join(invocation.argv_template)
+    assert "enable_reward_monitor:=false" in joined
+    assert "reward_monitor_manifest:=" not in joined

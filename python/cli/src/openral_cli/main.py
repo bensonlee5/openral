@@ -3378,15 +3378,16 @@ def deploy_run(
         "--dashboard-port",
         help="Dashboard OTLP port.",
     ),
-    enable_reward_monitor: bool = typer.Option(
-        False,
+    enable_reward_monitor: bool | None = typer.Option(
+        None,
         "--enable-reward-monitor/--no-enable-reward-monitor",
         help=(
             "ADR-0057/0077 — bring up the Robometer reward monitor parallel to the "
             "VLA (same leg `deploy sim` exposes): it scores the robot's first RGB "
             "camera topic and serves /openral/perception/query_task_progress. The "
             "manifest is auto-paired from the VLA palette's reward_rskill_name "
-            "(ADR-0077 §4); override with --reward-monitor-manifest. Default off."
+            "(ADR-0077 §4); override with --reward-monitor-manifest. Unset = the "
+            "scene's runtime.enable_reward_monitor, else off."
         ),
     ),
     reward_monitor_manifest: str | None = typer.Option(

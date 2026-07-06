@@ -886,15 +886,15 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
     enable_slam: bool | None = None,
     enable_nav2: bool | None = None,
     enable_octomap: bool | None = None,
-    enable_octomap_kernel_check: bool = True,
+    enable_octomap_kernel_check: bool | None = None,
     enable_object_detector: bool | None = None,
     object_detector_onnx: Path | None = None,
     object_detector_manifest: str | None = None,
     object_detector_query: str | None = None,
-    enable_reward_monitor: bool = False,
+    enable_reward_monitor: bool | None = None,
     reward_monitor_manifest: str | None = None,
     reward_monitor_task: str | None = None,
-    enable_critic: bool = False,
+    enable_critic: bool | None = None,
     object_detector_locators: list[str] | None = None,
     spatial_memory_ingest: bool | None = None,
     memory_dir: str | None = None,
@@ -939,6 +939,55 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
     # a live /openral/prompt). Deploy never reads sim-predefined scene tasks —
     # that is `sim run`'s job (ADR-0073 amendment / deploy ≠ benchmark).
     _resolved_initial_prompt: str = initial_task_prompt or ""
+
+    # DeployScene.runtime — the committed deploy posture. Field-by-field
+    # precedence: explicit CLI flag > scene runtime > auto/built-in default
+    # (the per-feature autos below). None on both = auto, as before.
+    rt = deploy_scene.runtime if deploy_scene is not None else None
+    if rt is not None:
+        scene_dir = config.parent if config is not None else None
+
+        def _scene_path(value: str | None) -> str | None:
+            # A relative path that exists next to the scene YAML resolves
+            # against it (CWD-independent committed workcells); anything else
+            # (alias, repo-relative default, hf:// URI) passes through verbatim.
+            if value and scene_dir is not None and not Path(value).is_absolute():
+                cand = (scene_dir / value).resolve()
+                if cand.exists():
+                    return str(cand)
+            return value
+
+        enable_slam = enable_slam if enable_slam is not None else rt.enable_slam
+        enable_nav2 = enable_nav2 if enable_nav2 is not None else rt.enable_nav2
+        enable_octomap = enable_octomap if enable_octomap is not None else rt.enable_octomap
+        if enable_octomap_kernel_check is None:
+            enable_octomap_kernel_check = rt.enable_octomap_kernel_check
+        if enable_object_detector is None:
+            enable_object_detector = rt.enable_object_detector
+        if object_detector_onnx is None and rt.object_detector_onnx:
+            object_detector_onnx = Path(_scene_path(rt.object_detector_onnx) or "")
+        object_detector_manifest = object_detector_manifest or _scene_path(
+            rt.object_detector_manifest
+        )
+        object_detector_query = object_detector_query or rt.object_detector_query
+        if object_detector_locators is None:
+            object_detector_locators = rt.object_detector_locators
+        if enable_reward_monitor is None:
+            enable_reward_monitor = rt.enable_reward_monitor
+        reward_monitor_manifest = reward_monitor_manifest or _scene_path(rt.reward_monitor_manifest)
+        reward_monitor_task = reward_monitor_task or rt.reward_monitor_task
+        if enable_critic is None:
+            enable_critic = rt.enable_critic
+        if spatial_memory_ingest is None:
+            spatial_memory_ingest = rt.spatial_memory_ingest
+        approach_skill_id = approach_skill_id or rt.approach_skill_id
+    # Built-in defaults for the tri-state flags nothing pinned.
+    if enable_octomap_kernel_check is None:
+        enable_octomap_kernel_check = True
+    if enable_reward_monitor is None:
+        enable_reward_monitor = False
+    if enable_critic is None:
+        enable_critic = False
 
     # ADR-0034 — a --robot override that differs from the scene's declared robot
     # composes a different arm than the scene was authored for. The scene's cameras
@@ -2153,8 +2202,8 @@ def deploy_sim_command(
             "colcon-built."
         ),
     ),
-    enable_octomap_kernel_check: bool = typer.Option(
-        True,
+    enable_octomap_kernel_check: bool | None = typer.Option(
+        None,
         "--enable-octomap-kernel-check/--no-enable-octomap-kernel-check",
         help=(
             "ADR-0030/0035 — when --no-enable-octomap-kernel-check, the octomap "
@@ -2163,18 +2212,20 @@ def deploy_sim_command(
             "capsule-vs-voxel check stays OFF (its --no-enable-octomap posture: "
             "envelope + self-collision only). Use with --enable-octomap to let "
             "perception use the world map without the dense-scene false-positive "
-            "E-stop. Default on (bundled ADR-0030 behaviour)."
+            "E-stop. Unset = the scene's runtime block, else on (bundled "
+            "ADR-0030 behaviour)."
         ),
     ),
-    enable_object_detector: bool = typer.Option(
-        True,
+    enable_object_detector: bool | None = typer.Option(
+        None,
         "--object-detector/--no-object-detector",
         help=(
             "ADR-0035 — bring up the ROS-Image object detector "
             "(openral_perception_ros/ros_image_detector_node): publishes "
             "ObjectsMetadata to /openral/perception/objects, which the "
             "world-state node's object-lift raises into /openral/world_voxels. "
-            "**On by default.** The default backend is the open-vocabulary "
+            "**On by default** (unset = the scene's runtime block, else on). "
+            "The default backend is the open-vocabulary "
             "omdet-turbo-indoor continuous detector (falls back to the in-tree "
             "RT-DETR COCO ONNX when the omdet deps are absent). Pass "
             "--no-object-detector to turn the leg off. Requires the "
@@ -2214,8 +2265,8 @@ def deploy_sim_command(
             "/openral/perception/detector_query."
         ),
     ),
-    enable_reward_monitor: bool = typer.Option(
-        False,
+    enable_reward_monitor: bool | None = typer.Option(
+        None,
         "--enable-reward-monitor/--no-enable-reward-monitor",
         help=(
             "ADR-0057 — bring up the Robometer reward monitor "
@@ -2223,14 +2274,15 @@ def deploy_sim_command(
             "buffers the agentview RGB stream and serves "
             "/openral/perception/query_task_progress, and the reasoner is told "
             "task_progress_available=True so its LLM may poll per-frame "
-            "progress/success whenever it sees fit. Advisory-only. Default off. "
+            "progress/success whenever it sees fit. Advisory-only. Unset = the "
+            "scene's runtime block, else off. "
             "Needs the openral_perception_ros package colcon-built and "
             "Robometer/TOPReward deps in the current env; "
             "co-resident with a VLA wants a small NF4 VLA on an 8 GB GPU (~3.3 GB)."
         ),
     ),
-    enable_critic: bool = typer.Option(
-        False,
+    enable_critic: bool | None = typer.Option(
+        None,
         "--enable-critic/--no-enable-critic",
         help=(
             "ADR-0064 — bring up the Tier-C critic producer "
@@ -2238,7 +2290,8 @@ def deploy_sim_command(
             "/openral/critic/score topic that reward models publish (Robometer, a "
             "future SARM, success classifiers) and emits a Tier-C FailureTrigger on "
             "/openral/failure/critic when a critic stalls — the reasoner already maps "
-            "that to a forced Tier-C tick (replanning). Advisory-only. Default off."
+            "that to a forced Tier-C tick (replanning). Advisory-only. Unset = "
+            "the scene's runtime block, else off."
         ),
     ),
     reward_monitor_manifest: str | None = typer.Option(

@@ -6515,6 +6515,46 @@ class BenchmarkMetadata(BaseModel):
     simulator: str | None = None
 
 
+class DeployRuntime(BaseModel):
+    """Committed deploy-posture toggles for a workcell scene.
+
+    Every runtime leg ``openral deploy sim`` / ``deploy run`` can bring up is
+    declared here so a committed :class:`DeployScene` pins its posture
+    explicitly instead of relying on per-invocation CLI flags. Precedence is
+    ``CLI flag > scene runtime > auto`` — an explicit CLI flag always wins,
+    and ``None`` means "auto" (the manifest-derived / built-in default the CLI
+    documents for that flag: SLAM from ``capabilities.has_lidar``/vision-SLAM,
+    Nav2 tracks SLAM, octomap from a depth SensorSpec, detector on,
+    kernel-check on, reward monitor / critic off).
+
+    Host-operational knobs (dashboard, foxglove, ports, dataset recording,
+    ``--initial-task``, ``--dry-run``) stay CLI-only — they describe the
+    invocation, not the workcell.
+
+    Relative ``*_manifest`` / ``object_detector_onnx`` paths that exist next
+    to the scene YAML are resolved against the scene's directory; otherwise
+    the value is passed through verbatim (repo-relative default / alias).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enable_slam: bool | None = None
+    enable_nav2: bool | None = None
+    enable_octomap: bool | None = None
+    enable_octomap_kernel_check: bool | None = None
+    enable_object_detector: bool | None = None
+    object_detector_onnx: str | None = None
+    object_detector_manifest: str | None = None
+    object_detector_query: str | None = None
+    object_detector_locators: list[str] | None = None
+    enable_reward_monitor: bool | None = None
+    reward_monitor_manifest: str | None = None
+    reward_monitor_task: str | None = None
+    enable_critic: bool | None = None
+    spatial_memory_ingest: bool | None = None
+    approach_skill_id: str | None = None
+
+
 class DeployScene(BaseModel):
     """Unified deploy/workcell scene for ``openral deploy sim`` and ``deploy run``.
 
@@ -6586,6 +6626,9 @@ class DeployScene(BaseModel):
     by convention (each artifact loaded by its correct consumer). ``--memory-dir`` on
     the CLI overrides this. ``None`` = no bundle (the reasoner starts with empty
     memory). Advisory only — never a safety-kernel input (§1.1)."""
+    runtime: DeployRuntime | None = None
+    """Committed deploy-posture toggles (see :class:`DeployRuntime`). ``None``
+    = every leg on its CLI/auto default. CLI flags override field-by-field."""
 
     @model_validator(mode="before")
     @classmethod

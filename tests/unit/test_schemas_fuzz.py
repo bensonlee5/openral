@@ -32,6 +32,7 @@ from openral_core.schemas import (
     ComputeSpec,
     ControlMode,
     ControlModeSemantics,
+    DeployRuntime,
     DetectedObject,
     DeviceInfo,
     EmbodimentKind,
@@ -306,6 +307,26 @@ _clock_authority_st = st.one_of(
         clock_id=_name,
         epoch=st.sampled_from([ClockEpoch.UNIX, ClockEpoch.HARDWARE]),
     ),
+)
+
+_opt_bool = st.none() | st.booleans()
+_deploy_runtime_st = st.builds(
+    DeployRuntime,
+    enable_slam=_opt_bool,
+    enable_nav2=_opt_bool,
+    enable_octomap=_opt_bool,
+    enable_octomap_kernel_check=_opt_bool,
+    enable_object_detector=_opt_bool,
+    object_detector_onnx=st.none() | _name,
+    object_detector_manifest=st.none() | _name,
+    object_detector_query=st.none() | _name,
+    object_detector_locators=st.none() | st.lists(_name, max_size=3),
+    enable_reward_monitor=_opt_bool,
+    reward_monitor_manifest=st.none() | _name,
+    reward_monitor_task=st.none() | _name,
+    enable_critic=_opt_bool,
+    spatial_memory_ingest=_opt_bool,
+    approach_skill_id=st.none() | _name,
 )
 
 _collision_evidence_st = st.builds(
@@ -1181,3 +1202,10 @@ def test_fuzz_recall_object_tool(instance: RecallObjectTool) -> None:
 def test_fuzz_resolve_place_tool(instance: ResolvePlaceTool) -> None:
     """ResolvePlaceTool round-trips through JSON and validates against its schema."""
     _round_trip_and_validate(ResolvePlaceTool, instance)
+
+
+@_FUZZ_SETTINGS
+@given(_deploy_runtime_st)
+def test_fuzz_deploy_runtime(instance: DeployRuntime) -> None:
+    """DeployRuntime round-trips through JSON and validates against its schema."""
+    _round_trip_and_validate(DeployRuntime, instance)
