@@ -1090,6 +1090,24 @@
   .mission-task .mbar.band-ambiguous > i { background: var(--warn); }
   .mission-task .mbar.band-fail > i { background: var(--err); }
   .mission-task .att { font-variant-numeric: tabular-nums; }
+  /* ADR-0057 reward bars on the rSkill card: latest reward.score span as
+     progress/success rows, fill colour banded by value (>=0.7 ok, >=0.4
+     amber, else red). */
+  .reward-bars { margin-top: 6px; }
+  .reward-bars .rrow { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .reward-bars .rlabel { flex: 0 0 52px; font-size: 10px; color: var(--fg-dim); }
+  .reward-bars .rbar {
+    flex: 1 1 auto; height: 6px; border-radius: 3px;
+    background: var(--accent-soft); overflow: hidden;
+  }
+  .reward-bars .rbar > i { display: block; height: 100%; background: var(--ok); }
+  .reward-bars .rbar.band-ambiguous > i { background: var(--warn); }
+  .reward-bars .rbar.band-fail > i { background: var(--err); }
+  .reward-bars .rpct {
+    flex: 0 0 32px; text-align: right; font-size: 10px;
+    font-variant-numeric: tabular-nums; color: var(--fg-dim);
+  }
+  .reward-bars .rmeta { margin-top: 3px; font-size: 10px; color: var(--fg-dim); }
   /* mission-complete-with-failures banner: a run that finished but abandoned
      ≥1 task is a FAILED mission — call it out at the top of the card. */
   .mission-failed {

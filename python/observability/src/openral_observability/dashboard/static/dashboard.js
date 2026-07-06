@@ -115,6 +115,48 @@
     el.textContent = parts.join("  ·  ");
   }
 
+  // ADR-0057 — latest reward-monitor assessment (reward.score span) as two
+  // colour-banded bars on the rSkill card. Numeric banding (unlike the
+  // mission checklist's verdict-text banding): >=0.7 green, >=0.4 orange,
+  // else red — the value IS the signal here, no reasoner verdict to defer to.
+  function rewardValueBand(v) {
+    if (v >= 0.7) return "band-ok";
+    if (v >= 0.4) return "band-ambiguous";
+    return "band-fail";
+  }
+
+  function renderRewardScore(rw) {
+    const el = $("rskill-reward");
+    if (!el) return;
+    // Hide when nothing scored yet or the last score is stale (>60 s: reward
+    // queries are reasoner-paced, so allow long gaps before hiding).
+    if (!rw || !rw.ts_unix || (Date.now() / 1000 - rw.ts_unix) > 60) {
+      el.style.display = "none";
+      return;
+    }
+    const attrs = rw.attrs || {};
+    el.innerHTML = "";
+    for (const [label, key] of [["progress", "reward.progress"], ["success", "reward.success"]]) {
+      const v = Math.max(0, Math.min(1, Number(attrs[key] || 0)));
+      const row = document.createElement("div"); row.className = "rrow";
+      const lb = document.createElement("span"); lb.className = "rlabel"; lb.textContent = label;
+      const bar = document.createElement("span"); bar.className = "rbar " + rewardValueBand(v);
+      bar.title = "reward " + label + " " + Math.round(v * 100) + "%";
+      const fill = document.createElement("i"); fill.style.width = Math.round(v * 100) + "%";
+      bar.appendChild(fill);
+      const pct = document.createElement("span"); pct.className = "rpct";
+      pct.textContent = Math.round(v * 100) + "%";
+      row.appendChild(lb); row.appendChild(bar); row.appendChild(pct);
+      el.appendChild(row);
+    }
+    const meta = document.createElement("div"); meta.className = "rmeta";
+    meta.textContent = "reward · " + fmtAge(rw.ts_unix) +
+      (attrs["reward.stalled"] ? " · stalled" : "") +
+      (attrs["reward.succeeded"] ? " · succeeded" : "");
+    el.appendChild(meta);
+    el.style.display = "block";
+  }
+
   function renderRobotState(rs, cmd) {
     const el = $("joints");
     $("robot-state-age").textContent = fmtAge(rs && rs.ts_unix);
@@ -1367,6 +1409,7 @@
     const liveSkill = cards.rskill_execute || cards.rskill_tick || cards.rskill_activate || null;
     renderCard("rskill_execute", liveSkill);
     foldInference(liveSkill, cards.inference || null);
+    renderRewardScore(cards.reward_score || null);
     if (liveSkill) pulseIfNew("card-rskill_execute", liveSkill.ts_unix);
 
     const topics = state.topics || {};

@@ -56,6 +56,14 @@ SAFETY_CHECK_NAME: Final[str] = "safety.check_name"
 SAFETY_KERNEL: Final[str] = "safety.kernel"
 SAFETY_CLAMPED: Final[str] = "safety.clamped"
 
+# ── reward.* — task-progress reward monitor scores (ADR-0057/0064) ─────────
+REWARD_PROGRESS: Final[str] = "reward.progress"
+REWARD_SUCCESS: Final[str] = "reward.success"
+REWARD_STALLED: Final[str] = "reward.stalled"
+REWARD_SUCCEEDED: Final[str] = "reward.succeeded"
+REWARD_FRAMES: Final[str] = "reward.frames"
+REWARD_TASK: Final[str] = "reward.task"
+
 # ── openral.run.* — CLI invocation ─────────────────────────────────────────
 
 RUN_ID: Final[str] = "openral.run.id"
@@ -171,6 +179,8 @@ SPAN_SENSORS_READ_LATEST: Final[str] = "sensors.read_latest"
 SPAN_WORLD_STATE_SNAPSHOT: Final[str] = "world_state.snapshot"
 SPAN_WORLD_SCENE_OBJECTS: Final[str] = "world.scene_objects"
 SPAN_SAFETY_CHECK: Final[str] = "safety.check"
+SPAN_REWARD_SCORE: Final[str] = "reward.score"
+"""ADR-0057 — one span per reward-monitor assessment (service query or critic tick)."""
 SPAN_REASONER_TICK: Final[str] = "reasoner.tick"
 """ADR-0018 F4 — one span per :meth:`openral_reasoner.ReasonerCore.tick`."""
 
@@ -387,6 +397,12 @@ __all__ = [
     "REASONER_TICK_IDX",
     "REASONER_TIER",
     "REASONER_TOOL",
+    "REWARD_FRAMES",
+    "REWARD_PROGRESS",
+    "REWARD_STALLED",
+    "REWARD_SUCCEEDED",
+    "REWARD_SUCCESS",
+    "REWARD_TASK",
     "RSKILL_ACTION_APPLIED",
     "RSKILL_ACTION_HORIZON",
     "RSKILL_EPISODE_IDX",
@@ -432,6 +448,7 @@ __all__ = [
     "SPAN_HAL_SEND_ACTION",
     "SPAN_PHYSICS_STEP",
     "SPAN_REASONER_TICK",
+    "SPAN_REWARD_SCORE",
     "SPAN_RSKILL_ACTIVATE",
     "SPAN_RSKILL_CHUNK_INFERENCE",
     "SPAN_RSKILL_CONFIGURE",

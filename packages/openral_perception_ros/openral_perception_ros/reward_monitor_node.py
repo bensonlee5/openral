@@ -239,6 +239,30 @@ def main(args: Any = None) -> None:
 
             return _cb
 
+        def _emit_score_span(self, a: dict[str, Any], task: str) -> None:
+            """Trace one assessment as a ``reward.score`` span (ADR-0057).
+
+            The dashboard's rSkill card renders the latest score as a live
+            progress/success bar; without this span a scored run leaves no
+            reward record in the trace stream. No-op when OTel is unconfigured.
+            """
+            from openral_observability import semconv
+            from opentelemetry import trace
+
+            tracer = trace.get_tracer("openral_perception_ros")
+            with tracer.start_as_current_span(
+                semconv.SPAN_REWARD_SCORE,
+                attributes={
+                    semconv.REWARD_PROGRESS: float(a["progress_now"]),
+                    semconv.REWARD_SUCCESS: float(a["success_now"]),
+                    semconv.REWARD_STALLED: bool(a["stalled"]),
+                    semconv.REWARD_SUCCEEDED: bool(a["succeeded"]),
+                    semconv.REWARD_FRAMES: int(a["frames_seen"]),
+                    semconv.REWARD_TASK: task,
+                },
+            ):
+                pass
+
         def _on_query_task_progress(self, request: Any, response: Any) -> Any:
             """Service (ADR-0057): assess task progress/success over a window."""
             task = request.task.strip() or self._default_task
@@ -274,6 +298,7 @@ def main(args: Any = None) -> None:
             response.succeeded = bool(a["succeeded"])
             response.frames_seen = int(a["frames_seen"])
             response.stale = False
+            self._emit_score_span(a, task)
             self.get_logger().info(
                 f"query_task_progress: progress={response.progress_now:.3f} "
                 f"success={response.success_now:.3f} stalled={response.stalled} "
@@ -319,6 +344,7 @@ def main(args: Any = None) -> None:
                 return
             from openral_observability.propagation import current_traceparent
 
+            self._emit_score_span(a, task)
             score, threshold = critic_score_from_assessment(a, threshold=self._critic_threshold)
             msg = self._critic_msg_cls()
             msg.header.stamp = self.get_clock().now().to_msg()
@@ -347,6 +373,12 @@ def main(args: Any = None) -> None:
             with contextlib.suppress(Exception):
                 self._monitor.close()
             super().destroy_node()
+
+    from openral_observability import configure_observability
+
+    # Idempotent + no-op when OTEL_EXPORTER_OTLP_ENDPOINT is unset. Lets the
+    # ``reward.score`` spans reach the dashboard's rSkill card.
+    configure_observability(service_name="openral.reward_monitor")
 
     rclpy.init(args=args)
     node = RewardMonitorNode()

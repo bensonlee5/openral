@@ -1184,6 +1184,9 @@ _HEADLINE_FAMILIES: dict[str, str] = {
     "rskill.configure": "rskill_configure",
     "rskill.chunk_inference": "inference",
     "safety.check": "safety",
+    # ADR-0057 — reward monitor assessment (query or critic tick); the rSkill
+    # card renders the latest progress/success as a colour-banded bar.
+    "reward.score": "reward_score",
     "hal.send_action": "hal_send_action",
     "hal.read_state": "hal_read_state",
     "sensors.read_latest": "sensors_read",
