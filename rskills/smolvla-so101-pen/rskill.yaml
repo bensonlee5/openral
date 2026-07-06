@@ -73,6 +73,12 @@ runtime: "pytorch"
 quantization:
   dtype: "bf16"
   backend: "pytorch"
+# ADR-0077 §4 — pair this VLA with its task-progress reward monitor so a
+# reward-enabled deploy auto-resolves the Robometer NF4 manifest (the launch's
+# _resolve_reward_monitor_manifest reads this across the capability-matched
+# palette). The monitor scores the camera ROS topic (/openral/cameras/top/image)
+# — alive on the NVMM/gstreamer tier too via the observability tee (ADR-0082).
+reward_rskill_name: "OpenRAL/rskill-robometer-4b-nf4"
 weights_uri: "hf://sapanostic/so_101_smolvla_pen_placement"
 
 # ── Preprocessing (all knobs needed to interpret IO) ───────────────────────

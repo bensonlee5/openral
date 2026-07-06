@@ -3378,6 +3378,26 @@ def deploy_run(
         "--dashboard-port",
         help="Dashboard OTLP port.",
     ),
+    enable_reward_monitor: bool = typer.Option(
+        False,
+        "--enable-reward-monitor/--no-enable-reward-monitor",
+        help=(
+            "ADR-0057/0077 — bring up the Robometer reward monitor parallel to the "
+            "VLA (same leg `deploy sim` exposes): it scores the robot's first RGB "
+            "camera topic and serves /openral/perception/query_task_progress. The "
+            "manifest is auto-paired from the VLA palette's reward_rskill_name "
+            "(ADR-0077 §4); override with --reward-monitor-manifest. Default off."
+        ),
+    ),
+    reward_monitor_manifest: str | None = typer.Option(
+        None,
+        "--reward-monitor-manifest",
+        help=(
+            "ADR-0057 — path to a kind:reward rSkill manifest. Empty auto-pairs "
+            "from the VLA palette, falling back to rskills/robometer-4b. Ignored "
+            "unless --enable-reward-monitor."
+        ),
+    ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
@@ -3429,6 +3449,8 @@ def deploy_run(
             hal_param_overrides=overrides,
             hal_mode="real",
             enable_dashboard=dashboard,
+            enable_reward_monitor=enable_reward_monitor,
+            reward_monitor_manifest=reward_monitor_manifest,
         )
     except (ROSConfigError, ROSCapabilityMismatch) as exc:
         console.print(f"[red]deploy run:[/red] {exc}")
