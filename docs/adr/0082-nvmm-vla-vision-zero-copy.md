@@ -84,8 +84,8 @@ the vision encoder first (the policy expert stays on its current runtime):
 
 | Phase | Deliverable | Proof |
 |---|---|---|
-| 1 | x86-DS NVMM source tier in `pipeline.py` + container smoke | live camera → NVMM appsink frames in-container |
-| 2 | `VisionEncoderRunner` (resize_pad_pm1 + vision TRT on devptr) + `TensorRTRuntime` devptr I/O | embeddings bit-compared vs the host-numpy path |
+| 1 | x86-DS NVMM source tier in `pipeline.py` + container smoke | live camera → NVMM appsink frames in-container — **done 2026-07-06** (`smoke_nvmm_source.py`: real bench cam → `SensorFrame.handle`, CUDA_RGBA) |
+| 2 | `NvmmVisionEncoder` (multi-slot `TrtNvmmExecutor.infer_rgba_devptrs` + `resize_pad_pm1` + vision TRT on devptr) | embeddings compared vs the host-numpy path on the same cached engine — **done 2026-07-06** (real pen-skill bf16 vision engine: max-rel 1.1%, per-token cosine > 0.999, 26.6 ms/2-cam; `tests/unit/test_nvmm_vision_encoder.py`). The executor *is* the devptr I/O; a parallel `TensorRTRuntime` devptr API was dropped as redundant — the device-side embedding handoff (DLPack) lands with Phase 3. |
 | 3 | co-located runtime_node; DLPack embedding → policy; retire host-numpy vision leg in deploy | live SO-101 pen deploy, zero per-frame DtoH on the vision leg |
 | 4 | reasoner attach/detach of tee consumers (ExecuteSkill ↔ TeeManager) | live add/remove of the detector branch during a deploy run |
 

@@ -32,6 +32,7 @@ executor operates on the device's primary context (``cudaSetDevice`` +
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
@@ -291,9 +292,7 @@ class TrtNvmmExecutor:
             if self._preprocess == "scale"
             else (_RESIZE_KERNEL_SRC, _RESIZE_KERNEL_NAME)
         )
-        (prog,) = nv(
-            nvrtc.nvrtcCreateProgram(src, self._kernel_name + b".cu", 0, [], []), nvrtc
-        )
+        (prog,) = nv(nvrtc.nvrtcCreateProgram(src, self._kernel_name + b".cu", 0, [], []), nvrtc)
         try:
             opts = [f"--gpu-architecture=sm_{cc}".encode()]
             nv(nvrtc.nvrtcCompileProgram(prog, len(opts), opts), nvrtc, prog)
@@ -329,16 +328,39 @@ class TrtNvmmExecutor:
             if engine.get_tensor_mode(name) == trt.TensorIOMode.INPUT:
                 if input_name is not None:
                     raise ROSConfigError(
-                        "TrtNvmmExecutor: engine has >1 input; detector expects one image input."
+                        "TrtNvmmExecutor: engine has >1 input; expects one image input."
                     )
                 input_name = name
         if input_name is None:
             raise ROSConfigError("TrtNvmmExecutor: engine has no input tensor.")
-        self._context.set_input_shape(input_name, (1, 3, self._h, self._w))
+
+        # Batch = the engine input's static leading dim (e.g. the SmolVLA vision
+        # graph is (n_cameras, 3, H, W) — ADR-0082); a dynamic dim keeps the
+        # original single-frame contract.
+        engine_shape = tuple(int(d) for d in engine.get_tensor_shape(input_name))
+        if len(engine_shape) != 4 or engine_shape[1] != 3:  # noqa: PLR2004  # reason: NCHW rank
+            raise ROSConfigError(
+                f"TrtNvmmExecutor: engine input must be NCHW with 3 channels; got {engine_shape}."
+            )
+        if engine_shape[0] < 0:
+            self._batch = 1
+            self._context.set_input_shape(input_name, (1, 3, self._h, self._w))
+        else:
+            self._batch = engine_shape[0]
+            if (engine_shape[2], engine_shape[3]) != (self._h, self._w):
+                raise ROSConfigError(
+                    f"TrtNvmmExecutor: engine input is {engine_shape[2]}x{engine_shape[3]} "
+                    f"but input_size={self._h}x{self._w}."
+                )
 
         in_dtype = np.dtype(trt.nptype(engine.get_tensor_dtype(input_name)))
-        in_bytes = int(in_dtype.itemsize) * 1 * 3 * self._h * self._w
-        (self._in_dev,) = self._rt(cudart.cudaMalloc(in_bytes), cudart)
+        if in_dtype != np.dtype(np.float32):
+            raise ROSConfigError(
+                f"TrtNvmmExecutor: engine input dtype {in_dtype} unsupported; the "
+                "preprocess kernels write float32 (build the engine with fp32 I/O)."
+            )
+        self._slot_bytes = int(in_dtype.itemsize) * 3 * self._h * self._w
+        (self._in_dev,) = self._rt(cudart.cudaMalloc(self._slot_bytes * self._batch), cudart)
         self._context.set_tensor_address(input_name, int(self._in_dev))
 
         # Output shapes resolve only after set_input_shape above.
@@ -392,33 +414,19 @@ class TrtNvmmExecutor:
         """Return ``(name, shape)`` for each engine output (for output identification)."""
         return [(name, tuple(host.shape)) for name, (host, _dev) in self._outputs.items()]
 
-    def infer_rgba_devptr(
-        self, src_ptr: int, *, width: int, height: int, pitch: int
-    ) -> dict[str, Any]:
-        """Run inference on a device-pointer RGBA frame; return host output arrays.
+    @property
+    def batch(self) -> int:
+        """Number of image slots the engine input takes (1, or e.g. n_cameras)."""
+        return self._batch
 
-        Args:
-            src_ptr: CUDA device pointer to the RGBA frame (``NvBufSurface.dataPtr``).
-            width: Frame width. In ``"scale"`` mode must equal the configured
-                network width; in ``"resize_pad_pm1"`` mode any size.
-            height: Frame height (same rule as ``width``).
-            pitch: Row pitch in bytes (NVMM frames are pitch-padded).
-
-        Returns:
-            Map of engine-output name -> ``numpy.ndarray``.
-
-        Raises:
-            ROSConfigError: If ``(height, width)`` violates the preprocess
-                mode's size rule.
-            ROSRuntimeError: If a CUDA call or ``execute_async_v3`` fails.
-        """
-        cuda = self._cuda
-        cudart = self._cudart
-
+    def _enqueue_preprocess(
+        self, slot: int, src_ptr: int, *, width: int, height: int, pitch: int
+    ) -> None:
+        """Enqueue the preprocess kernel writing batch slot ``slot`` of the input buffer."""
         # Pack kernel args as host pointers to single-element numpy scalars; the
         # arg array passes their addresses to the driver. Keep every array alive
         # (referenced locally) until the launch is enqueued.
-        p_dst = np.array([int(self._in_dev)], dtype=np.uint64)
+        p_dst = np.array([int(self._in_dev) + slot * self._slot_bytes], dtype=np.uint64)
         p_src = np.array([int(src_ptr)], dtype=np.uint64)
         if self._preprocess == "scale":
             if (height, width) != (self._h, self._w):
@@ -435,21 +443,25 @@ class TrtNvmmExecutor:
                 height, width, self._h, self._w
             )
             scalars = [
-                height, width, pitch,
-                self._h, self._w,
-                resized_h, resized_w,
-                pad_h, pad_w,
+                height,
+                width,
+                pitch,
+                self._h,
+                self._w,
+                resized_h,
+                resized_w,
+                pad_h,
+                pad_w,
             ]
             gx = (self._w + _BLOCK_X - 1) // _BLOCK_X
             gy = (self._h + _BLOCK_Y - 1) // _BLOCK_Y
         scalar_arrs = [np.array([s], dtype=np.int32) for s in scalars]
         kargs = np.array(
-            [p_dst.ctypes.data, p_src.ctypes.data]
-            + [a.ctypes.data for a in scalar_arrs],
+            [p_dst.ctypes.data, p_src.ctypes.data] + [a.ctypes.data for a in scalar_arrs],
             dtype=np.uint64,
         )
         self._dr(
-            cuda.cuLaunchKernel(
+            self._cuda.cuLaunchKernel(
                 self._func,
                 gx,
                 gy,
@@ -462,8 +474,62 @@ class TrtNvmmExecutor:
                 kargs.ctypes.data,
                 0,
             ),
-            cuda,
+            self._cuda,
         )
+
+    def infer_rgba_devptr(
+        self, src_ptr: int, *, width: int, height: int, pitch: int
+    ) -> dict[str, Any]:
+        """Run inference on a single device-pointer RGBA frame; return host output arrays.
+
+        Single-slot convenience over :meth:`infer_rgba_devptrs`; requires a
+        batch-1 engine.
+
+        Args:
+            src_ptr: CUDA device pointer to the RGBA frame (``NvBufSurface.dataPtr``).
+            width: Frame width. In ``"scale"`` mode must equal the configured
+                network width; in ``"resize_pad_pm1"`` mode any size.
+            height: Frame height (same rule as ``width``).
+            pitch: Row pitch in bytes (NVMM frames are pitch-padded).
+
+        Returns:
+            Map of engine-output name -> ``numpy.ndarray``.
+
+        Raises:
+            ROSConfigError: If ``(height, width)`` violates the preprocess
+                mode's size rule, or the engine batch is not 1.
+            ROSRuntimeError: If a CUDA call or ``execute_async_v3`` fails.
+        """
+        return self.infer_rgba_devptrs([(src_ptr, width, height, pitch)])
+
+    def infer_rgba_devptrs(self, frames: Sequence[tuple[int, int, int, int]]) -> dict[str, Any]:
+        """Run inference on one RGBA device pointer per batch slot (ADR-0082).
+
+        The SmolVLA vision graph takes a static ``(n_cameras, 3, H, W)`` input;
+        each camera's frame is preprocessed by its own kernel launch writing
+        straight into that camera's batch slot of the engine input buffer —
+        still no host copy of any pixel.
+
+        Args:
+            frames: One ``(src_ptr, width, height, pitch)`` per batch slot, in
+                engine slot order (for the vision graph: the checkpoint's
+                camera order). Must have exactly :attr:`batch` entries.
+
+        Returns:
+            Map of engine-output name -> ``numpy.ndarray``.
+
+        Raises:
+            ROSConfigError: On a frame-count mismatch or a size-rule violation.
+            ROSRuntimeError: If a CUDA call or ``execute_async_v3`` fails.
+        """
+        if len(frames) != self._batch:
+            raise ROSConfigError(
+                f"TrtNvmmExecutor: got {len(frames)} frames but the engine input "
+                f"takes {self._batch} slot(s)."
+            )
+        cudart = self._cudart
+        for slot, (src_ptr, width, height, pitch) in enumerate(frames):
+            self._enqueue_preprocess(slot, src_ptr, width=width, height=height, pitch=pitch)
         if not self._context.execute_async_v3(int(self._stream)):
             raise ROSRuntimeError("TrtNvmmExecutor: execute_async_v3 returned False.")
         for _name, (host, dev) in self._outputs.items():
