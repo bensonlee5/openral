@@ -73,6 +73,12 @@ runtime: "pytorch"
 quantization:
   dtype: "bf16"
   backend: "pytorch"
+# ADR-0077 — VRAM the deployed policy needs resident (SmolVLA ~450M bf16
+# weights + TRT vision/policy engines + activations; sibling smolvla-libero
+# declares 1.2, +0.3 TRT engine margin). Feeds the VLA↔reward co-residency
+# preflight: 1.5 + Robometer NF4 3.6 + 0.5 margin = 5.6 GB on an 8 GB card.
+min_vram_gb:
+  bf16: 1.5
 # ADR-0077 §4 — pair this VLA with its task-progress reward monitor so a
 # reward-enabled deploy auto-resolves the Robometer NF4 manifest (the launch's
 # _resolve_reward_monitor_manifest reads this across the capability-matched
