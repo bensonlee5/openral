@@ -218,7 +218,18 @@ def _build_act(env_cfg: Any) -> _ACTAdapter:
     # chunked execution.
     apply_chunk_replay(policy, spec.extra, manifest=manifest, default_n_action_steps=1)
     _apply_temporal_ensemble(policy, spec.extra)
-    maybe_compile_chunk_forward(policy, spec.extra, device, torch)
+
+    # Optional whole-model ONNX / TensorRT inference (OPENRAL_ACT_TRT=1), the ACT
+    # analogue of OPENRAL_SMOLVLA_TRT. When it attaches it swaps
+    # ``predict_action_chunk``, so torch.compile of the eager forward is moot —
+    # only compile the torch path when TRT is off.
+    from openral_rskill.act_trt import maybe_attach_act_trt_from_env
+
+    onnx_uri = manifest.policy_extras.get("act_onnx_uri") if manifest is not None else None
+    if not maybe_attach_act_trt_from_env(
+        policy, repo_id, onnx_uri=onnx_uri if isinstance(onnx_uri, str) else None, device=device
+    ):
+        maybe_compile_chunk_forward(policy, spec.extra, device, torch)
 
     # Two ACT shapes coexist in tree:
     #
