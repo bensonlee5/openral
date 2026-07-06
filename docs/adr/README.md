@@ -135,6 +135,7 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0052](0052-cross-frame-object-lift.md) | Cross-frame object-lift (RGB optical TF + octomap/kernel decoupling) | Proposed | refines 0035 |
 | [0056](0056-on-demand-detectors-as-promptable-reasoner-tools.md) | On-demand detectors as prompt-able read-only reasoner tools | Accepted | extends 0043, 0051 |
 | [0076](0076-detection-identity-and-camera-space-enumeration.md) | Detection-time object identity + camera-space `in_view` enumeration | Accepted | extends 0035, 0075; amended 2026-06-29 |
+| [0082](0082-nvmm-vla-vision-zero-copy.md) | NVMM-native camera → in-pipeline TRT vision encoder (zero-download VLA vision) | Proposed | extends 0011, 0037 |
 
 ## I · Sensors & observability
 
