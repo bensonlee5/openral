@@ -5897,7 +5897,7 @@ def assert_vla_reward_fits(
             does not fit; the deploy must not run a VLA without its reward signal.
 
     See ``tests/unit/test_vla_reward_pairing.py`` for fixture-backed coverage
-    (smolvla-libero + robometer-4b-nf4 = 4.8 GB, fits 8 GB, OOMs a 4 GB card).
+    (smolvla-libero + robometer-4b-nf4 = 6.7 GB, fits 8 GB, OOMs a 4 GB card).
     """
     vla_gb = vla.active_min_vram_gb()
     reward_gb = reward.active_min_vram_gb()

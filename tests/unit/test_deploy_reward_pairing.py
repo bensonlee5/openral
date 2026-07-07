@@ -73,13 +73,13 @@ def test_default_resolves_from_vla_pairing() -> None:
     assert _DEFAULT_REWARD_RSKILL_DIR in resolved
 
 
-def test_preflight_skipped_when_gpu_total_unreadable() -> None:
-    """gpu_total_gb <= 0 (no nvidia-smi) → defer to the reasoner's runtime check, no exit."""
+def test_preflight_skipped_when_gpu_budget_unreadable() -> None:
+    """gpu_budget_gb <= 0 (no nvidia-smi) → defer to the reasoner's runtime check, no exit."""
     _preflight_reward_vram_fit(
         repo_root=_REPO_ROOT,
         description=_franka(),
         reward_manifest_path=str(_ROBOMETER),
-        gpu_total_gb=0.0,
+        gpu_budget_gb=0.0,
     )  # returns None / does not raise
 
 
@@ -89,29 +89,29 @@ def test_preflight_skipped_when_no_reward_active() -> None:
         repo_root=_REPO_ROOT,
         description=_franka(),
         reward_manifest_path="",
-        gpu_total_gb=8.0,
+        gpu_budget_gb=8.0,
     )
 
 
 def test_preflight_passes_on_8gb_card() -> None:
-    """On an 8 GB card at least one VLA (smolvla 1.2 + robometer 3.6 = 4.8) fits, so the
+    """On an 8 GB card at least one VLA (smolvla 1.2 + robometer 5.5 = 6.7) fits, so the
     preflight proceeds (some larger VLAs are warned about, but the deploy is runnable)."""
     _preflight_reward_vram_fit(
         repo_root=_REPO_ROOT,
         description=_franka(),
         reward_manifest_path=str(_ROBOMETER),
-        gpu_total_gb=8.0,
+        gpu_budget_gb=8.0,
     )  # does not raise
 
 
 def test_preflight_hard_exits_when_no_vla_fits() -> None:
-    """On a 4 GB card no franka VLA can co-reside with robometer (smolvla 1.2 + 3.6 =
-    4.8 > 4.0), so the deploy could dispatch nothing → fail fast BEFORE ROS."""
+    """On a 4 GB card no franka VLA can co-reside with robometer (smolvla 1.2 + 5.5 =
+    6.7 > 4.0), so the deploy could dispatch nothing → fail fast BEFORE ROS."""
     with pytest.raises(typer.Exit) as exc:
         _preflight_reward_vram_fit(
             repo_root=_REPO_ROOT,
             description=_franka(),
             reward_manifest_path=str(_ROBOMETER),
-            gpu_total_gb=4.0,
+            gpu_budget_gb=4.0,
         )
     assert exc.value.exit_code == 1

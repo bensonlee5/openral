@@ -43,37 +43,37 @@ def test_smolvla_manifest_declares_its_reward_pairing_and_size() -> None:
 
 
 def test_robometer_active_vram_is_its_nf4_int4_footprint() -> None:
-    """The reward model's active dtype is int4 (nf4) → 3.6 GB, not the bf16 9.0."""
+    """The reward model's active dtype is int4 (nf4) → 5.5 GB measured runtime, not bf16 9.0."""
     reward = _reward()
     assert reward.kind == "reward"
     assert reward.quantization.dtype == QuantizationDtype.INT4
-    assert reward.active_min_vram_gb() == pytest.approx(3.6)
+    assert reward.active_min_vram_gb() == pytest.approx(5.5)
 
 
 def test_pair_fits_8gb_card() -> None:
-    """smolvla (1.2) + robometer (3.6) = 4.8 GB fits a 7.62 GB usable 8 GB card."""
+    """smolvla (1.2) + robometer (5.5) = 6.7 GB fits a 7.62 GB usable 8 GB card."""
     combined = assert_vla_reward_fits(_vla(), _reward(), gpu_total_gb=7.62)
-    assert combined == pytest.approx(4.8)
+    assert combined == pytest.approx(6.7)
 
 
 def test_pair_does_not_fit_4gb_card_raises_gpu_memory_error() -> None:
-    """The pair (4.8 GB + margin) exceeds a 4 GB card → fail fast, do not run blind."""
+    """The pair (6.7 GB + margin) exceeds a 4 GB card → fail fast, do not run blind."""
     with pytest.raises(ROSGPUMemoryError) as exc:
         assert_vla_reward_fits(_vla(), _reward(), gpu_total_gb=4.0)
     msg = str(exc.value)
     assert "robometer" in msg.lower() and "smolvla" in msg.lower()
-    assert "4.80 GB" in msg  # the combined footprint is reported
+    assert "6.70 GB" in msg  # the combined footprint is reported
 
 
 def test_margin_is_enforced() -> None:
-    """4.8 GB just under a 5.0 GB card still fails once the default 0.5 GB margin
-    is added (4.8 + 0.5 = 5.3 > 5.0) — the headroom is real, not cosmetic."""
+    """6.7 GB just under a 7.0 GB card still fails once the default 0.5 GB margin
+    is added (6.7 + 0.5 = 7.2 > 7.0) — the headroom is real, not cosmetic."""
     with pytest.raises(ROSGPUMemoryError):
-        assert_vla_reward_fits(_vla(), _reward(), gpu_total_gb=5.0)
+        assert_vla_reward_fits(_vla(), _reward(), gpu_total_gb=7.0)
     # With a generous card and no margin it passes.
     assert assert_vla_reward_fits(
-        _vla(), _reward(), gpu_total_gb=5.0, margin_gb=0.0
-    ) == pytest.approx(4.8)
+        _vla(), _reward(), gpu_total_gb=7.0, margin_gb=0.0
+    ) == pytest.approx(6.7)
 
 
 def test_undeclared_vram_cannot_be_verified_raises_config_error() -> None:

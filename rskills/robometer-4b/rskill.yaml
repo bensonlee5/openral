@@ -38,10 +38,18 @@ quantization:
     # openral_runner.backends.reward.robometer_reward.
     loader: "lerobot.rewards.robometer.RobometerRewardModel"
 
+# MEASURED runtime footprint of the loaded sidecar (nvidia-smi on the resident
+# robometer-sidecar process), NOT weights-only. The NF4 packed weights are
+# ~3.6 GB, but the live sidecar also holds a CUDA context + the Qwen3-VL-4B
+# backbone's VLM-scoring activations over its frame window, measured at ~5.34 GB
+# steady-state → declare 5.5 GB so the ADR-0077 co-residency preflight budgets
+# the real footprint (a 3.6 GB figure under-counted it and greenlit a pair that
+# OOM-crashed the runner beside it on an 8 GB card). fp32/bf16 stay weights-only
+# estimates — they carry the same context/activation overhead, unmeasured here.
 min_vram_gb:
   fp32: 18.0
   bf16: 9.0
-  int4: 3.6
+  int4: 5.5
 
 # Pre-quantized NF4 checkpoint (ADR-0057): the runtime loads the packed weights
 # DIRECTLY on the meta device via Params4bit.from_prequantized — no bf16

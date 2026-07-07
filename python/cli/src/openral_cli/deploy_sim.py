@@ -621,19 +621,18 @@ def _memory_bundle_launch_args(memory_dir: str) -> list[str]:
 _DEFAULT_REWARD_RSKILL_DIR = "robometer-4b"
 
 
-def _detect_gpu_total_vram_gb() -> float:
-    """Total VRAM (GB) of GPU 0 via ``nvidia-smi``, or ``0.0`` when unavailable.
+def _detect_gpu_vram_gb(field: str) -> float:
+    """VRAM (GB) of GPU 0 for an ``nvidia-smi`` field, or ``0.0`` when unavailable.
 
-    Torch-free probe (the CLI must not import torch just to size the GPU) — a
-    deliberate mirror of ``openral_reasoner_ros.reasoner_node._detect_gpu_total_vram_gb``
-    (a private, ROS-package-local helper the CLI cannot import without pulling in
-    rclpy). Used by the ADR-0077 deploy preflight. Any failure (no nvidia-smi, no
-    GPU, parse error) returns ``0.0`` → the caller skips the pair check rather than
-    blocking a launch on a host where the budget cannot be read.
+    Torch-free probe (the CLI must not import torch just to size the GPU). Any
+    failure (no nvidia-smi, no GPU, parse error) returns ``0.0`` → the caller
+    skips the pair check rather than blocking a launch on a host where the budget
+    cannot be read. ``field`` is a ``--query-gpu`` column, e.g. ``memory.total`` or
+    ``memory.free``.
     """
     try:
         out = subprocess.run(
-            ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+            ["nvidia-smi", f"--query-gpu={field}", "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
             timeout=5.0,
@@ -648,6 +647,19 @@ def _detect_gpu_total_vram_gb() -> float:
         return float(lines[0].strip()) / 1024.0  # MiB → GiB
     except ValueError:
         return 0.0
+
+
+def _detect_gpu_free_vram_gb() -> float:
+    """Free VRAM (GB) of GPU 0 at launch — the real pre-load budget for the ADR-0077 pair.
+
+    The launch preflight runs before any OpenRAL model is loaded, so *free* VRAM
+    (not total) is the honest headroom the VLA + reward pair must fit into. On a
+    shared dev box a desktop compositor or a sibling worktree's process can hold
+    GBs the pair will never see; budgeting against total would greenlight a pair
+    that OOMs the moment both models load (the failure mode `--no-enable-reward-monitor`
+    masks by dropping the reward model).
+    """
+    return _detect_gpu_vram_gb("memory.free")
 
 
 def _capability_matched_manifests(
@@ -763,7 +775,7 @@ def _preflight_reward_vram_fit(  # noqa: PLR0912  # reason: linear per-VLA class
     repo_root: Path,
     description: RobotDescription,
     reward_manifest_path: str,
-    gpu_total_gb: float,
+    gpu_budget_gb: float,
     commercial_deployment: bool = False,
 ) -> None:
     """Fail fast before launch when no VLA can co-reside with the reward model (ADR-0077 §4).
@@ -782,11 +794,16 @@ def _preflight_reward_vram_fit(  # noqa: PLR0912  # reason: linear per-VLA class
     actuate nothing, so we notify and ``typer.Exit(1)`` before bringing up ROS
     instead of booting a graph that dispatches a VLA blind or OOMs mid-run.
 
-    Skipped (returns) when ``gpu_total_gb <= 0.0`` (budget unreadable — defer to the
+    ``gpu_budget_gb`` is *free* VRAM at launch (nothing of ours is loaded yet), not
+    total — so a desktop compositor or a sibling worktree's process holding GBs is
+    counted against the pair, which is the whole point (it's the difference between
+    a preflight that greenlights an OOM and one that catches it).
+
+    Skipped (returns) when ``gpu_budget_gb <= 0.0`` (budget unreadable — defer to the
     reasoner's runtime check), when no reward model is active, or when the robot has
     no capability-matched VLA palette to check.
     """
-    if gpu_total_gb <= 0.0 or not reward_manifest_path:
+    if gpu_budget_gb <= 0.0 or not reward_manifest_path:
         return
     from openral_core import RSkillManifest
     from openral_core.exceptions import ROSGPUMemoryError
@@ -816,7 +833,7 @@ def _preflight_reward_vram_fit(  # noqa: PLR0912  # reason: linear per-VLA class
     undeclared: list[str] = []
     for vla in vlas:
         try:
-            combined = assert_vla_reward_fits(vla, reward, gpu_total_gb)
+            combined = assert_vla_reward_fits(vla, reward, gpu_budget_gb)
         except ROSGPUMemoryError as exc:
             oom.append(f"{vla.name}: {exc}")
         except ROSConfigError:
@@ -831,8 +848,8 @@ def _preflight_reward_vram_fit(  # noqa: PLR0912  # reason: linear per-VLA class
         _console.print(
             "[red]preflight failed:[/red] no capability-matched VLA can co-reside with "
             f"the reward model {reward.name!r} on this GPU "
-            f"({gpu_total_gb:.2f} GB total) — every paired policy would be refused at "
-            "dispatch, so the deploy could actuate nothing (ADR-0077)."
+            f"({gpu_budget_gb:.2f} GB free at launch) — every paired policy would be "
+            "refused at dispatch, so the deploy could actuate nothing (ADR-0077)."
         )
         for line in oom:
             _console.print(f"  • too large: {line}")
@@ -852,7 +869,7 @@ def _preflight_reward_vram_fit(  # noqa: PLR0912  # reason: linear per-VLA class
     if oom:
         _console.print(
             f"[yellow]preflight:[/yellow] {len(oom)} VLA(s) cannot fit beside the reward "
-            f"model {reward.name!r} on {gpu_total_gb:.2f} GB and will be refused at "
+            f"model {reward.name!r} in {gpu_budget_gb:.2f} GB free and will be refused at "
             "dispatch (ADR-0077):"
         )
         for line in oom:
@@ -866,7 +883,7 @@ def _preflight_reward_vram_fit(  # noqa: PLR0912  # reason: linear per-VLA class
         )
     _console.print(
         f"[green]preflight:[/green] {len(fits)} VLA(s) fit beside reward "
-        f"{reward.name!r} on {gpu_total_gb:.2f} GB: {fits!r}"
+        f"{reward.name!r} in {gpu_budget_gb:.2f} GB free: {fits!r}"
     )
 
 
@@ -1454,7 +1471,7 @@ def run_launch_invocation(invocation: LaunchInvocation, *, run_preflight: bool =
                 repo_root=repo_root,
                 description=RobotDescription.from_yaml(str(invocation.robot_yaml)),
                 reward_manifest_path=invocation.reward_monitor_manifest,
-                gpu_total_gb=_detect_gpu_total_vram_gb(),
+                gpu_budget_gb=_detect_gpu_free_vram_gb(),
             )
     hal_params_tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115  # reason: HAL reads after this scope
         mode="w",
@@ -2576,7 +2593,7 @@ def deploy_sim_command(
             repo_root=_repo_root_from(Path(__file__)),
             description=RobotDescription.from_yaml(str(invocation.robot_yaml)),
             reward_manifest_path=invocation.reward_monitor_manifest,
-            gpu_total_gb=_detect_gpu_total_vram_gb(),
+            gpu_budget_gb=_detect_gpu_free_vram_gb(),
         )
 
     # Write the ephemeral HAL params YAML (lifetime = subprocess) and
