@@ -38,12 +38,18 @@ If the robot is plugged in, let detection write or refresh the robot manifest:
 ```bash
 # A bare detect resolves a plugged-in Feetech arm to so101_follower by default.
 openral detect \
-    --output robots/so101_follower/robot.yaml
+    --output robots/so101_follower/robot.yaml \
+    --deployment scenes/deploy/so101_bench.yaml \
+    --interactive
 ```
 
 Detection records robot-owned facts in `robot.yaml`; it does not create a
-deploy scene. The rSkill that drives the robot is **not** set in deploy config —
-the reasoner selects it at runtime from the installed `rskills/` registry.
+deploy scene unless `--deployment` is passed. `--interactive` opens the camera
+binding wizard so robot cameras and workcell cameras land in that deploy scene.
+Use `--include usb,gpu,cameras_v4l2,cameras_realsense` to limit probes, and
+`--report detect.json --no-write` when you only want the raw detection report.
+The rSkill that drives the robot is **not** set in deploy config — the reasoner
+selects it at runtime from the installed `rskills/` registry.
 
 > The SO-101 is electrically identical to the SO-100 over USB (same Feetech
 > controller), so the bus alone can't distinguish them — the current SO-101 is
@@ -145,6 +151,54 @@ What happens:
 - The C++ safety kernel sits between the policy and the motors: Python
   proposes, C++ disposes, and `ROSSafetyViolation` is never silently caught.
   Keep your E-stop within reach.
+
+### SO-101 SmolVLA TensorRT fast path
+
+For the public SO-101 pen-pick skill, the real deploy scene and rSkill are:
+
+```bash
+openral rskill install OpenRAL/rskill-smolvla-so101-pick-place-pen
+OPENRAL_SMOLVLA_TRT=1 openral deploy run \
+  --config scenes/deploy/so101_bench.yaml
+```
+
+`OPENRAL_SMOLVLA_TRT=1` switches the SmolVLA runner to its split ONNX/TensorRT
+engines and keeps the GStreamer camera leg on the NVMM zero-copy path. Pre-build
+the engines once on the target host before a real run; cold export inside the ROS
+runner can contend with the executor. The shortest pre-build is:
+
+```bash
+python - <<'PY'
+import torch
+from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
+from openral_rskill._lerobot_compat import sanitize_smolvla_config
+from openral_rskill.smolvla_trt import attach_trt_sample_actions
+
+repo = "OpenRAL/rskill-smolvla-so101-pick-place-pen"
+torch.set_default_dtype(torch.float32)
+sanitize_smolvla_config(repo)
+policy = SmolVLAPolicy.from_pretrained(repo)
+policy.model = policy.model.to("cuda:0").eval()
+attach_trt_sample_actions(policy, repo, precision="bf16", device_index=0, n_cameras=2)
+PY
+```
+
+Without `OPENRAL_SMOLVLA_TRT`, the policy runs in PyTorch. For the SO-101 NVMM
+camera path, either use the TRT engines or disable NVMM for the relevant cameras
+in the deploy scene.
+
+### Optional reward monitor
+
+`deploy run` can bring up the same reward/progress monitor as `deploy sim`:
+
+```bash
+openral deploy run \
+  --config scenes/deploy/so101_bench.yaml \
+  --enable-reward-monitor
+```
+
+The monitor is advisory only; it serves `/openral/perception/query_task_progress`
+for the reasoner and never gates motors.
 
 ## 4. Open the dashboard
 

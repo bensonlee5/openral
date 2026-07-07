@@ -46,7 +46,9 @@ All entries are published under `OpenRAL/rskill-*` on HuggingFace Hub and exerci
 | [`smolvla-maniskill-franka`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-maniskill-franka/) | SmolVLA × ManiSkill3 `PickCube-v1` | `franka_panda` | Apache-2.0 |
 | [`xvla-libero`](https://github.com/OpenRAL/openral/tree/master/rskills/xvla-libero/) | xVLA (Florence-2) | `franka_panda` | Apache-2.0 |
 | [`act-libero`](https://github.com/OpenRAL/openral/tree/master/rskills/act-libero/) | ACT | `franka_panda` | Apache-2.0 |
+| [`act-so101-pen`](https://github.com/OpenRAL/openral/tree/master/rskills/act-so101-pen/) | ACT pen checkpoint | `so101_follower` | Apache-2.0 |
 | [`molmoact2-libero-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/molmoact2-libero-nf4/) | MolmoAct2 NF4 (Molmo2-ER VLM + flow-matching, ~5.5 B) | `franka_panda` | Apache-2.0 |
+| [`molmoact2-so101-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/molmoact2-so101-nf4/) | MolmoAct2 NF4 SO-101 checkpoint | `so101_follower` | Apache-2.0 |
 | [`pi05-libero-int8`](https://github.com/OpenRAL/openral/tree/master/rskills/pi05-libero-int8/) | π0.5 NF4 | `franka_panda` | Permissive research (weights non-Apache) |
 | [`act-aloha`](https://github.com/OpenRAL/openral/tree/master/rskills/act-aloha/) | ACT (Action Chunking Transformer) | `aloha_bimanual` | MIT |
 | [`act-aloha-insertion`](https://github.com/OpenRAL/openral/tree/master/rskills/act-aloha-insertion/) | ACT insertion checkpoint — *custom example* | `aloha_bimanual` | MIT |
@@ -58,6 +60,8 @@ All entries are published under `OpenRAL/rskill-*` on HuggingFace Hub and exerci
 | [`rldx1-ft-simpler-widowx-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/rldx1-ft-simpler-widowx-nf4/) | RLDX-1 (SimplerEnv WidowX fine-tune) | `widowx` | RLWRLD non-commercial — sidecar runtime |
 | [`openvla-oft-simpler-widowx-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/openvla-oft-simpler-widowx-nf4/) | OpenVLA-OFT (RLinf PPO ManiSkill3 PutOnPlateInScene25; NF4) | `widowx` | MIT — transformers custom-code; validated 2/5 on SimplerEnv carrot |
 | [`gr00t-n17-libero`](https://github.com/OpenRAL/openral/tree/master/rskills/gr00t-n17-libero/) | NVIDIA Isaac GR00T N1.7 (3B, Cosmos-Reason2-2B VLM backbone) | `franka_panda` | NVIDIA Open Model License (commercial OK) — in-process lerobot 0.6.0 `GrootPolicy`, backbone-only NF4 (ADR-0046) |
+| [`smolvla-so101-pen`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-so101-pen/) | SmolVLA SO-101 pen checkpoint | `so101_follower` | Apache-2.0 |
+| [`smolvla-so101-pick-place-pen`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-so101-pick-place-pen/) | SmolVLA SO-101 pick/place pen checkpoint; optional split ONNX/TensorRT fast path | `so101_follower` | Apache-2.0 |
 
 ## Perception rSkills (`kind: detector`)
 

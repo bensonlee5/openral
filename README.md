@@ -234,6 +234,7 @@ uv run openral doctor
 
 # Discovery
 uv run openral detect                        # auto-detect robot + sensors → robot.yaml
+uv run openral detect --deployment scenes/deploy/<workcell>.yaml --interactive
 uv run openral sensor list                   # browse the sensor catalog
 uv run openral rskill search aloha           # discover rSkills on the OpenRAL Hub org
 uv run openral rskill list                   # list installed rSkills
@@ -250,6 +251,8 @@ uv run openral dashboard                     # OTLP receiver at :4318
 
 # Hardware deployment
 uv run openral deploy run --config scenes/deploy/<your-workcell>.yaml
+OPENRAL_SMOLVLA_TRT=1 uv run openral deploy run --config scenes/deploy/so101_bench.yaml
+uv run openral deploy run --config scenes/deploy/<your-workcell>.yaml --enable-reward-monitor
 uv run openral deploy sim --config scenes/deploy/openarm_tabletop.yaml
 just hil so100                               # SO-100 HIL (USB + servos)
 

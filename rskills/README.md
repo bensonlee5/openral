@@ -36,6 +36,7 @@ binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 | --- | --- | --- |
 | `act-aloha` / `act-aloha-insertion` | act | aloha |
 | `act-libero` | act | franka_panda |
+| `act-so101-pen` | act | so101_follower |
 | `diffusion-pusht` | diffusion | pusht |
 | `3d-diffuser-actor-rlbench` | diffuser_actor | franka_panda |
 | `gr00t-n17-libero` | gr00t | franka_panda |
@@ -51,6 +52,7 @@ binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 | `smolvla-maniskill-franka` | smolvla | franka_panda |
 | `smolvla-metaworld` | smolvla | sawyer |
 | `smolvla-robotwin` | smolvla | aloha_agilex |
+| `smolvla-so101-pen` | smolvla | so101_follower |
 | `smolvla-so101-pick-place-pen` | smolvla | so101_follower |
 | `xvla-libero` | xvla | franka_panda |
 
@@ -63,7 +65,7 @@ embodiment-agnostic.**
 | `omdet-turbo-indoor` / `omdet-turbo-locator` | detector (open-vocab) |
 | `rtdetr-coco-r18` / `rtdetr-v2-r50vd` | detector (ONNX, `local://`) |
 | `qwen35-4b-nf4` | vlm |
-| `robometer-4b` | reward |
+| `robometer-4b` / `topreward-qwen3vl-4b-nf4` | reward |
 | `rskill-moveit-eef-pose` / `rskill-moveit-joints` / `rskill-moveit-look-at` | ros_action (MoveIt) |
 | `rskill-nav2-navigate-to-pose` | ros_action (Nav2) |
 

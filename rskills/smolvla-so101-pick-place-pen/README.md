@@ -43,11 +43,12 @@ pkg = rSkill.from_yaml("rskills/smolvla-so101-pick-place-pen/rskill.yaml")
 
 ```bash
 # Real SO-101 deploy (weights are public Apache-2.0):
-uv run openral deploy run --robot so101 --rskill rskills/smolvla-so101-pick-place-pen
+uv run openral rskill install OpenRAL/rskill-smolvla-so101-pick-place-pen
+uv run openral deploy run --config scenes/deploy/so101_bench.yaml
 
 # Zero-copy NVMM TensorRT vision leg inside the GStreamer pipeline (ADR-0082):
-OPENRAL_SMOLVLA_TRT=1 uv run openral deploy run --robot so101 \
-    --rskill rskills/smolvla-so101-pick-place-pen
+OPENRAL_SMOLVLA_TRT=1 uv run openral deploy run \
+    --config scenes/deploy/so101_bench.yaml
 ```
 
 ## Upstream model / training
