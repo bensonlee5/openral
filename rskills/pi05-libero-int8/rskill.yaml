@@ -78,13 +78,12 @@ min_vram_gb:
 weights_uri: "hf://lerobot/pi05_libero_finetuned_v044"
 
 # ── Preprocessing (all knobs needed to interpret IO) ───────────────────────
-# int8 loads the bf16 source weights directly, so the processors come from the
-# same source checkpoint (byte-identical to the local bundled copies). Pointing
-# at the source repo keeps the rSkill loadable before OpenRAL/rskill-pi05-libero-int8
-# is published to the Hub.
+# Processors are self-hosted in the OpenRAL rSkill repo (published copies of the
+# source checkpoint's processors), so the rSkill does not depend on the upstream
+# lerobot/pi05_libero_finetuned_v044 repo to resolve them.
 processors:
-  preprocessor_uri: "hf://lerobot/pi05_libero_finetuned_v044/policy_preprocessor.json"
-  postprocessor_uri: "hf://lerobot/pi05_libero_finetuned_v044/policy_postprocessor.json"
+  preprocessor_uri: "hf://OpenRAL/rskill-pi05-libero-int8/policy_preprocessor.json"
+  postprocessor_uri: "hf://OpenRAL/rskill-pi05-libero-int8/policy_postprocessor.json"
 # The pi05 LIBERO finetune wants the default LIBERO image preprocessing
 # (180° rotation + camera1/2 alias remap to image/image2) and the canonical
 # LIBERO 8-D proprio state.
