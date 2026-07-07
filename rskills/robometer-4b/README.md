@@ -43,7 +43,6 @@ bowl is grasped and placed:
 > last-frame value (`success_now`) — exactly what this preview reproduces. HF
 > cards render images but not HTML5 `<video>`; the full overlay is
 > **[`media/progress.mp4`](media/progress.mp4)** (20 frames, downloadable).
-> Regenerate with `tools/robometer_per_frame_demo.py --media-dir media`.
 >
 > Runs the lerobot 0.6.0 in-tree `RobometerRewardModel` (plain `transformers`,
 > no `robometer` git package, no `transformers==4.57.1` pin) — ADR-0057 (amended).

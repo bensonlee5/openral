@@ -188,9 +188,9 @@ def _import_molmoact2() -> tuple[Any, Any, Any]:
     transformers ship strict stubs in this workspace — same convention the
     lerobot adapters use for their inline policy-class imports.
 
-    This function is the single model-class seam: ``scripts/parity_molmoact2.py``
-    monkeypatches it (returning the upstream remote-code class instead) to
-    capture the old-path golden and prove old == new before the migration.
+    This function is the single model-class seam — isolating the model-class
+    import in one place keeps the load path swappable (e.g. for an A/B check
+    against the old remote-code class).
 
     Raises:
         ROSConfigError: If lerobot / transformers / torch are not installed.
