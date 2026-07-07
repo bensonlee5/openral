@@ -1,7 +1,7 @@
 ---
 name: pi05-libero-int8
 description: >-
-  S1 Vision-Language-Action policy. Capabilities: pick, place, open, close on bowl, cup, drawer, object. π0.5 fine-tuned on LIBERO (v0.44), loaded from the upstream LeRobot checkpoint and packed to int8 at runtime so 8 GB GPUs can run the rollout without the NF4 competence regression observed under LeRobot 0.6.0. π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/libero.json (pending). Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S1 Vision-Language-Action policy. Capabilities: pick, place, open, close on bowl, cup, drawer, object. π0.5 fine-tuned on LIBERO (v0.44), loaded from the upstream LeRobot checkpoint and LLM.int8-packed at runtime so 8 GB GPUs can run the rollout without the NF4 competence regression (NF4 scored 0/5 on libero_spatial; int8 scores ~0.5–0.7). π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/scene_libero_spatial.json for the locally-reproduced result. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -20,7 +20,7 @@ metadata:
   action_representation: delta_ee_6d_plus_gripper
   runtime: pytorch
   quantization: int8/pytorch
-  min_vram_gb: {fp32: 14.0, bf16: 7.0, int4: 4.0}
+  min_vram_gb: {fp32: 14.0, bf16: 7.0, int8: 6.0}
   chunk_size: 50
   n_action_steps: 25
   latency_budget: {per_chunk_ms: 200.0}
@@ -41,7 +41,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **Vision-Language-Action policy** (`role: s1`, `kind: vla`). π0.5 fine-tuned on LIBERO (v0.44), loaded from the upstream LeRobot checkpoint and packed to int8 at runtime so 8 GB GPUs can run the rollout without the NF4 competence regression observed under LeRobot 0.6.0. π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/libero.json (pending).
+An OpenRAL **Vision-Language-Action policy** (`role: s1`, `kind: vla`). π0.5 fine-tuned on LIBERO (v0.44), loaded from the upstream LeRobot checkpoint and LLM.int8-packed at runtime so 8 GB GPUs can run the rollout without the NF4 competence regression (NF4 scored 0/5 on libero_spatial; int8 scores ~0.5–0.7). π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/scene_libero_spatial.json for the locally-reproduced result.
 
 ## Capabilities
 
