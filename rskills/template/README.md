@@ -27,6 +27,26 @@ surfacing, latency budgets, and local registry integration. It does
 > a publish-blocking error — read each section, fill it in, and delete
 > this note when you are done.
 
+## Preview
+
+<!-- REQUIRED media: every published rSkill README must show what the skill
+     does. The publish gate (openral_cli._rskill_doc_validator) warns if this
+     README has no image or video. Add at least one of:
+
+       * a still or diagram:  ![demo](media/demo.png)
+       * a <img> tag:         <img src="media/demo.png" width="360" />
+
+     For a demo VIDEO: HF model cards render images but do NOT embed HTML5
+     <video>, so commit the clip as media/<name>.mp4 AND show three stills
+     side by side (start / middle / end) so the card still previews it:
+
+         | Start | Middle | End |
+         | :---: | :---: | :---: |
+         | ![start](media/frame_start.png) | ![mid](media/frame_mid.png) | ![end](media/frame_end.png) |
+
+     Then link the full clip: [media/demo.mp4](media/demo.mp4).
+     See rskills/topreward-qwen3vl-4b-nf4/README.md for a worked example. -->
+
 ## What this skill does
 
 <!-- TODO: 1–3 sentences naming the action verbs, objects, and scenes.
