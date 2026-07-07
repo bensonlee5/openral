@@ -1,4 +1,4 @@
-"""Stateless Robometer reward-scoring server (ADR-0057), run in the sidecar venv.
+"""Stateless Robometer reward-scoring server (ADR-0057), run in a sidecar process.
 
 ZMQ REQ/REP + msgpack. Loads the NF4 Robometer reward model once, then scores
 clips on demand. Stateless — the rolling frame buffer / windowing lives node-side

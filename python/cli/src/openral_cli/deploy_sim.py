@@ -2203,8 +2203,8 @@ def deploy_sim_command(
             "/openral/perception/query_task_progress, and the reasoner is told "
             "task_progress_available=True so its LLM may poll per-frame "
             "progress/success whenever it sees fit. Advisory-only. Default off. "
-            "Needs the openral_perception_ros package colcon-built and a "
-            "provisioned Robometer sidecar venv (OPENRAL_ROBOMETER_SIDECAR_VENV); "
+            "Needs the openral_perception_ros package colcon-built and "
+            "Robometer/TOPReward deps in the current env; "
             "co-resident with a VLA wants a small NF4 VLA on an 8 GB GPU (~3.3 GB)."
         ),
     ),

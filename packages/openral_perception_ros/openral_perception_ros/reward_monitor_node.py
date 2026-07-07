@@ -5,8 +5,7 @@ Subscribes the co-active VLA's camera ``sensor_msgs/Image`` stream(s), buffers
 recent frames in a rolling time window, and serves
 ``/openral/perception/query_task_progress`` (``openral_msgs/srv/QueryTaskProgress``):
 a read-only, on-demand "how is the task progressing / succeeding over the last
-N seconds?" backed by a ``kind: "reward"`` rSkill (Robometer-4B NF4) running in
-the out-of-process sidecar (:mod:`tools.robometer_sidecar`).
+N seconds?" backed by a ``kind: "reward"`` rSkill (Robometer-4B NF4 by default).
 
 Driven by the reasoner's ``query_task_progress`` tool: the reasoner co-activates
 this monitor with a VLA and queries it to decide whether to continue, escalate
@@ -15,7 +14,7 @@ to ``query_scene``, advance, or enter the replanning ladder. The signal is
 
 This is the reward counterpart of the scene-VLM node
 (:mod:`openral_perception_ros.scene_vlm_node`, which serves ``query_scene``).
-The rolling buffer lives here, node-side; the sidecar is a stateless scorer.
+The rolling buffer lives here, node-side; reward backends score on demand.
 
 **Frame-source agnostic.** It subscribes the same camera image topic the VLA
 consumes — fed by the GStreamer tee on real hardware or the sim HAL camera
@@ -29,8 +28,8 @@ Parameters:
     image_topic (str): single-camera fallback topic.
     manifest_path (str): rSkill manifest path (``kind: "reward"``). Required.
     task (str): default task instruction (used when a request leaves ``task`` empty).
-    sidecar_host (str): ZMQ host of the reward sidecar. Default 127.0.0.1.
-    sidecar_port (int): ZMQ port of the reward sidecar. Default 5769.
+    sidecar_host (str): ZMQ host for the temporary Robometer sidecar fallback.
+    sidecar_port (int): ZMQ port for the temporary Robometer sidecar fallback.
     enable_critic_score (bool): also publish a generic ``openral_msgs/CriticScore``
         per window (ADR-0064) to feed the Tier-C critic producer. Default False
         (query-only).
@@ -68,7 +67,7 @@ def main(args: Any = None) -> None:
     class RewardMonitorNode(Node):  # type: ignore[misc]
         """Subscribe camera Image(s), buffer frames, serve query_task_progress."""
 
-        def __init__(self) -> None:  # noqa: PLR0915  # reason: node ctor wires cameras + sidecar + critic + scoring-gate in one place
+        def __init__(self) -> None:  # noqa: PLR0915  # reason: node ctor wires cameras + reward backend + critic + scoring-gate in one place
             super().__init__("openral_reward_monitor")
             self.declare_parameter("cameras", [""])
             self.declare_parameter("primary_camera", "default")
@@ -350,12 +349,10 @@ def main(args: Any = None) -> None:
             )
 
         def destroy_node(self) -> None:
-            """Terminate the out-of-process reward sidecar before tearing down.
+            """Release the reward backend before tearing down.
 
-            ``RobometerReward.close()`` signals the sidecar's process group so
-            its forked torch-inductor ``compile_worker`` children die with it.
-            Without this the sidecar (and ~one compile_worker per CPU) orphaned
-            on every shutdown, pinning the GPU until manually killed.
+            ``RobometerReward.close()`` still handles the temporary sidecar fallback;
+            in-process reward backends release their VLM and CUDA cache.
             """
             with contextlib.suppress(Exception):
                 self._monitor.close()

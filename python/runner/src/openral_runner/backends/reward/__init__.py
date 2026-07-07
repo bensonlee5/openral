@@ -5,12 +5,12 @@ rollout: per-frame normalized progress + per-frame success probability. This
 package holds the **node-side** pieces — a transport-agnostic rolling frame
 buffer (:class:`~openral_runner.backends.reward.frame_source.RollingFrameBuffer`,
 fed by the same ``sensor_msgs/Image`` topic the VLA uses, in sim or real) and a
-ZMQ client to a stateless scoring sidecar
-(:class:`~openral_runner.backends.reward.robometer_reward.RobometerReward`).
+ZMQ client to a stateless scoring sidecar process
+(:class:`~openral_runner.backends.reward.robometer_reward.RobometerInProcessReward`).
 
-The heavy NF4 model runs out-of-process in its own venv
-(``tools/robometer_sidecar.py``); nothing here imports torch / transformers, so
-the package stays importable on any host.
+The heavy NF4 model runs out-of-process via ``tools/robometer_sidecar.py``;
+nothing here imports torch / transformers, so the package stays importable on
+any host.
 """
 
 from __future__ import annotations
@@ -20,11 +20,23 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from openral_runner.backends.reward.frame_source import RollingFrameBuffer
     from openral_runner.backends.reward.robometer_reward import (
+        RobometerInProcessReward,
         RobometerReward,
         build_reward_monitor,
     )
+    from openral_runner.backends.reward.topreward_reward import (
+        TOPRewardMonitor,
+        build_topreward_monitor,
+    )
 
-__all__ = ["RobometerReward", "RollingFrameBuffer", "build_reward_monitor"]
+__all__ = [
+    "RobometerInProcessReward",
+    "RobometerReward",
+    "RollingFrameBuffer",
+    "TOPRewardMonitor",
+    "build_reward_monitor",
+    "build_topreward_monitor",
+]
 
 
 def __getattr__(name: str) -> Any:  # noqa: ANN401 — lazy re-export; concrete types are in the submodules
@@ -35,8 +47,12 @@ def __getattr__(name: str) -> Any:  # noqa: ANN401 — lazy re-export; concrete 
         )
 
         return RollingFrameBuffer
-    if name in {"RobometerReward", "build_reward_monitor"}:
+    if name in {"RobometerInProcessReward", "RobometerReward", "build_reward_monitor"}:
         from openral_runner.backends.reward import robometer_reward  # noqa: PLC0415
 
         return getattr(robometer_reward, name)
+    if name in {"TOPRewardMonitor", "build_topreward_monitor"}:
+        from openral_runner.backends.reward import topreward_reward  # noqa: PLC0415
+
+        return getattr(topreward_reward, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

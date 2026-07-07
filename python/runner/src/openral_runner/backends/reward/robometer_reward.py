@@ -1,22 +1,24 @@
-"""Node-side ZMQ client for the Robometer reward-monitor sidecar (ADR-0057).
+"""Robometer reward-monitor backends (ADR-0057).
 
-Mirrors :class:`openral_runner.backends.gstreamer.qwen_scene_vlm.QwenSceneVlm`:
-ping → auto-spawn the sidecar if absent → talk msgpack over a strict REQ/REP
-socket → tear down only the child we started. The sidecar is **stateless** — it
-scores a clip of frames + a task instruction and returns per-frame progress +
-success arrays. The rolling buffer / windowing lives node-side
-(:class:`~openral_runner.backends.reward.frame_source.RollingFrameBuffer`).
+Default path: :class:`RobometerInProcessReward` loads lerobot 0.6.0's native
+Robometer model inside ``reward_monitor_node`` and scores clips on demand. That
+keeps the heavy VLM out of the VLA runner / reasoner / HAL processes without a
+second ZMQ process boundary.
 
-Nothing here imports torch / transformers / numpy at module load; the heavy
-model runs in the sidecar venv.
+Temporary fallback: :class:`RobometerReward` is the legacy sidecar client
+(``OPENRAL_ROBOMETER_BACKEND=sidecar``) kept until deploy-sim validates the
+in-process path. Nothing here imports torch / transformers / numpy at module
+load.
 """
 
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import os
 import signal
 import subprocess
+import sys
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -27,11 +29,13 @@ from openral_core.exceptions import ROSConfigError
 
 if TYPE_CHECKING:
     from openral_runner.backends.reward.frame_source import Frame
+    from openral_runner.backends.reward.topreward_reward import TOPRewardMonitor
 
 # Default sidecar port — distinct from the scene-VLM (5759) and detector ports.
 _DEFAULT_PORT = 5769
 # |progress trend per sample| below this reads as "stalled" (no meaningful change).
 _STALL_TREND_EPS = 0.002
+_INPROCESS_FALLBACK_ENV = "OPENRAL_ROBOMETER_INPROCESS_FALLBACK"
 
 
 def critic_score_from_assessment(
@@ -97,6 +101,158 @@ def _find_sidecar_script() -> Path:
     raise ROSConfigError(
         "could not locate tools/robometer_sidecar.py; set OPENRAL_ROBOMETER_SIDECAR to its path"
     )
+
+
+def _find_robometer_server_script() -> Path:
+    """Locate ``tools/_robometer_server.py`` (same checkout as the sidecar wrapper)."""
+    for parent in Path(__file__).resolve().parents:
+        cand = parent / "tools" / "_robometer_server.py"
+        if cand.exists():
+            return cand
+    raise ROSConfigError("could not locate tools/_robometer_server.py")
+
+
+def _load_inprocess_scorer_class() -> type:
+    """Load the existing Robometer NF4 scorer without starting the ZMQ server."""
+    server = _find_robometer_server_script()
+    tools_dir = str(server.parent)
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    spec = importlib.util.spec_from_file_location("_openral_robometer_server", server)
+    if spec is None or spec.loader is None:
+        raise ROSConfigError(f"could not import Robometer server from {server}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    scorer = getattr(module, "_Scorer", None)
+    if scorer is None:
+        raise ROSConfigError(f"Robometer server {server} does not expose _Scorer")
+    return scorer
+
+
+def _bgr_frames_to_rgb_array(frames: list[Frame]) -> object:
+    """Convert validated BGR888 frames to the RGB ndarray Robometer expects."""
+    import numpy as np  # type: ignore[import-not-found,import-untyped,unused-ignore]  # noqa: PLC0415
+
+    w, h = frames[0].width, frames[0].height
+    bgr = np.frombuffer(b"".join(f.bgr for f in frames), dtype=np.uint8).reshape(
+        len(frames), h, w, 3
+    )
+    return np.ascontiguousarray(bgr[:, :, :, ::-1])
+
+
+def _validate_and_bound_frames(
+    frames: list[Frame], task: str, *, max_frames: int, label: str
+) -> list[Frame]:
+    """Shared Robometer pre-flight: input guards + frame budget."""
+    if not frames:
+        raise ROSConfigError("reward score requires at least one frame")
+    if not task.strip():
+        raise ROSConfigError("reward score requires a non-empty task instruction")
+    if len(frames) > max_frames:
+        idx = _evenly_spaced_indices(len(frames), max_frames)
+        print(
+            f"[{label}] subsampling {len(frames)} -> {len(idx)} frames "
+            f"(max_frames={max_frames}) to bound activation memory",
+            flush=True,
+        )
+        frames = [frames[i] for i in idx]
+    w, h = frames[0].width, frames[0].height
+    if any(f.width != w or f.height != h for f in frames):
+        raise ROSConfigError("all frames in a clip must share width/height")
+    return frames
+
+
+class RobometerInProcessReward:
+    """In-process Robometer scorer for ``reward_monitor_node``.
+
+    Reuses ``tools/_robometer_server.py::_Scorer`` so deploy-sim/run get the same
+    native lerobot 0.6.0 + NF4 loader without the extra ZMQ process boundary.
+    """
+
+    def __init__(
+        self,
+        *,
+        model_id: str,
+        weights_source: str = "OpenRAL/rskill-robometer-4b-nf4",
+        num_bins: int = 100,
+        success_threshold: float = 0.5,
+        max_frames: int = 8,
+        device: str = "cuda",
+        fallback: RobometerReward | None = None,
+    ) -> None:
+        """Store config; the VLM is loaded lazily on first score."""
+        self._model_id = model_id
+        self._weights_source = weights_source
+        self._num_bins = num_bins
+        self._success_threshold = success_threshold
+        self._max_frames = max(1, max_frames)
+        self._device = device
+        self._scorer: object | None = None
+        self._fallback_candidate = fallback
+        self._fallback: RobometerReward | None = None
+
+    def _ensure_ready(self) -> None:
+        if self._scorer is not None or self._fallback is not None:
+            return
+        try:
+            scorer_cls = _load_inprocess_scorer_class()
+            self._scorer = scorer_cls(self._weights_source, device=self._device)
+        except (ImportError, ModuleNotFoundError, OSError) as exc:
+            if os.environ.get(_INPROCESS_FALLBACK_ENV, "1").strip().lower() in {"0", "false", "no"}:
+                raise ROSConfigError(f"Robometer in-process backend unavailable: {exc}") from exc
+            print(
+                f"[robometer] in-process backend unavailable ({type(exc).__name__}: {exc}); "
+                "falling back to sidecar",
+                flush=True,
+            )
+            self._fallback = self._fallback_candidate or RobometerReward(
+                model_id=self._model_id,
+                weights_source=self._weights_source,
+                num_bins=self._num_bins,
+                success_threshold=self._success_threshold,
+                max_frames=self._max_frames,
+            )
+
+    def score(self, frames: list[Frame], task: str) -> tuple[list[float], list[float]]:
+        """Score a clip in-process; sidecar fallback is temporary until deploy-sim passes."""
+        frames = _validate_and_bound_frames(
+            frames, task, max_frames=self._max_frames, label="robometer"
+        )
+        self._ensure_ready()
+        if self._fallback is not None:
+            return self._fallback.score(frames, task)
+        assert self._scorer is not None
+        progress, success = self._scorer.score(
+            _bgr_frames_to_rgb_array(frames), task.strip(), self._num_bins
+        )
+        return [float(x) for x in progress], [float(x) for x in success]
+
+    def assess(self, frames: list[Frame], task: str) -> dict[str, Any]:
+        """Score ``frames`` and summarize the window for the Reasoner."""
+        from openral_runner.backends.reward.frame_source import trend  # noqa: PLC0415
+
+        progress, success = self.score(frames, task)
+        p_trend = trend(progress)
+        return {
+            "progress_now": progress[-1],
+            "success_now": success[-1],
+            "progress_trend": p_trend,
+            "success_trend": trend(success),
+            "stalled": abs(p_trend) < _STALL_TREND_EPS,
+            "succeeded": success[-1] >= self._success_threshold,
+            "frames_seen": len(frames),
+        }
+
+    def close(self) -> None:
+        """Release the model or the temporary sidecar fallback."""
+        if self._fallback is not None:
+            self._fallback.close()
+            self._fallback = None
+        self._scorer = None
+        with contextlib.suppress(ImportError):
+            import torch  # noqa: PLC0415
+
+            torch.cuda.empty_cache()
 
 
 class RobometerReward:
@@ -251,22 +407,10 @@ class RobometerReward:
         Raises:
             ROSConfigError: empty clip / empty task / sidecar error.
         """
-        if not frames:
-            raise ROSConfigError("reward score requires at least one frame")
-        if not task.strip():
-            raise ROSConfigError("reward score requires a non-empty task instruction")
-        # Bound activation memory: evenly subsample to <= max_frames.
-        if len(frames) > self._max_frames:
-            idx = _evenly_spaced_indices(len(frames), self._max_frames)
-            print(
-                f"[robometer] subsampling {len(frames)} -> {len(idx)} frames "
-                f"(max_frames={self._max_frames}) to bound activation memory",
-                flush=True,
-            )
-            frames = [frames[i] for i in idx]
+        frames = _validate_and_bound_frames(
+            frames, task, max_frames=self._max_frames, label="robometer"
+        )
         w, h = frames[0].width, frames[0].height
-        if any(f.width != w or f.height != h for f in frames):
-            raise ROSConfigError("all frames in a clip must share width/height")
 
         self._ensure_ready()
         reply = self._rpc(
@@ -344,17 +488,17 @@ def build_reward_monitor(
     *,
     host: str = "127.0.0.1",
     port: int = _DEFAULT_PORT,
-) -> RobometerReward:
-    """Build a :class:`RobometerReward` from a ``kind: "reward"`` rSkill manifest.
+) -> RobometerInProcessReward | RobometerReward | TOPRewardMonitor:
+    """Build a reward monitor from a ``kind: "reward"`` rSkill manifest.
 
     Args:
         manifest: A validated rSkill manifest with ``kind == "reward"``.
-        host: Sidecar host to connect to.
-        port: Sidecar port to connect to.
+        host: Sidecar fallback host to connect to.
+        port: Sidecar fallback port to connect to.
 
     Returns:
-        A lazily-connecting :class:`RobometerReward` (no sidecar spawned until
-        the first :meth:`RobometerReward.score`).
+        Robometer defaults to the in-process backend; ``OPENRAL_ROBOMETER_BACKEND=sidecar``
+        keeps the old ZMQ path as a temporary deploy-sim fallback.
 
     Raises:
         ROSConfigError: If the manifest is not ``kind == "reward"`` or lacks a
@@ -367,6 +511,15 @@ def build_reward_monitor(
         )
     if manifest.reward is None:  # pragma: no cover — validator guarantees this
         raise ROSConfigError(f"reward manifest {manifest.name!r} has no `reward` block")
+    # Backend dispatch (ADR-0057): TOPReward and Robometer run in the reward
+    # monitor process; Robometer's ZMQ sidecar remains an opt-in fallback until
+    # deploy-sim validates the in-process path.
+    if manifest.reward.backend == "topreward":
+        from openral_runner.backends.reward.topreward_reward import (  # noqa: PLC0415
+            build_topreward_monitor,
+        )
+
+        return build_topreward_monitor(manifest)
     raw = manifest.weights_uri or manifest.source_repo or "OpenRAL/rskill-robometer-4b-nf4"
     # hf://org/repo[@rev] -> "org/repo[@rev]" (sidecar resolves rev); local:///path
     # -> "/path" (a pre-quantized checkpoint dir loaded directly as 4-bit).
@@ -374,11 +527,15 @@ def build_reward_monitor(
         weights_source = raw.removeprefix("local://")
     else:
         weights_source = raw.removeprefix("hf://").split("@", 1)[0]
-    return RobometerReward(
-        model_id=manifest.name,
-        weights_source=weights_source,
-        host=host,
-        port=port,
-        num_bins=manifest.reward.num_bins,
-        success_threshold=manifest.reward.success_threshold,
+    kwargs = {
+        "model_id": manifest.name,
+        "weights_source": weights_source,
+        "num_bins": manifest.reward.num_bins,
+        "success_threshold": manifest.reward.success_threshold,
+    }
+    if os.environ.get("OPENRAL_ROBOMETER_BACKEND", "").strip().lower() == "sidecar":
+        return RobometerReward(host=host, port=port, **kwargs)
+    return RobometerInProcessReward(
+        fallback=RobometerReward(host=host, port=port, **kwargs),
+        **kwargs,
     )

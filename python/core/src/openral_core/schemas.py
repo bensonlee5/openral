@@ -4782,6 +4782,13 @@ class RewardContract(BaseModel):
         preference: Whether the model also exposes a trajectory-preference
             head (Robometer does). Default ``False`` — the progress/success
             path is the Reasoner-facing contract; preference is future work.
+        backend: Which reward runtime scores this skill (ADR-0057). ``"robometer"``
+            (default) → the fine-tuned Robometer RewardModel via the ZMQ scoring
+            sidecar; ``"topreward"`` → the zero-shot TOPReward monitor (lerobot
+            ``TOPRewardModel``, per-frame progress from a prefix sweep of
+            ``P("True" | video, instruction)``), run in-process. Selects the
+            backend in ``build_reward_monitor``; existing manifests default to
+            ``"robometer"`` so behavior is unchanged.
         frame_window_s: Length of the rolling frame buffer in seconds. The
             sidecar evicts frames older than this relative to the newest.
             Must be > 0.
@@ -4821,6 +4828,7 @@ class RewardContract(BaseModel):
     progress_range: tuple[float, float] = (0.0, 1.0)
     success_threshold: float = Field(ge=0.0, le=1.0, default=0.5)
     preference: bool = False
+    backend: Literal["robometer", "topreward"] = "robometer"
     frame_window_s: float = Field(gt=0.0)
     target_fps: float = Field(gt=0.0)
     num_bins: int = Field(gt=0, default=100)

@@ -1,8 +1,7 @@
-"""Unit tests for the Robometer reward client factory + input guards (ADR-0057).
+"""Unit tests for the Robometer reward backend factory + input guards (ADR-0057).
 
-No GPU / sidecar needed — these cover manifest→client wiring and the client's
-pre-flight validation (the live ZMQ scoring path is validated separately on a
-GPU host, see rskills/robometer-4b/PHASE0.md Phase 3).
+No GPU needed for most tests — these cover manifest wiring and pre-flight
+validation. The live scoring path is gated on local GPU/deps.
 
 Run with:
     uv run pytest tests/unit/test_reward_monitor_client.py -v
@@ -10,7 +9,7 @@ Run with:
 
 from __future__ import annotations
 
-import os
+import importlib.util
 import pathlib
 import shutil
 
@@ -20,6 +19,7 @@ from openral_core.exceptions import ROSConfigError
 from openral_core.schemas import RSkillManifest
 from openral_runner.backends.reward.frame_source import Frame
 from openral_runner.backends.reward.robometer_reward import (
+    RobometerInProcessReward,
     RobometerReward,
     build_reward_monitor,
 )
@@ -37,7 +37,7 @@ def test_build_reward_monitor_propagates_contract() -> None:
     """The factory carries num_bins + success_threshold + weights from the manifest."""
     manifest = _load_manifest()
     mon = build_reward_monitor(manifest, port=5769)
-    assert isinstance(mon, RobometerReward)
+    assert isinstance(mon, RobometerInProcessReward)
     assert mon._num_bins == manifest.reward.num_bins
     assert mon._success_threshold == manifest.reward.success_threshold
     # hf:// scheme stripped from the weights source; the manifest now points at the
@@ -50,8 +50,14 @@ def test_build_reward_monitor_local_scheme() -> None:
     manifest = _load_manifest()
     local = manifest.model_copy(update={"weights_uri": "local:///tmp/robometer-nf4-ckpt"})
     mon = build_reward_monitor(local, port=5769)
-    # local:// stripped to the absolute dir; the sidecar meta-loads it directly.
+    # local:// stripped to the absolute dir; the in-process loader meta-loads it directly.
     assert mon._weights_source == "/tmp/robometer-nf4-ckpt"
+
+
+def test_build_reward_monitor_sidecar_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Temporary fallback: operators can still force the old ZMQ sidecar."""
+    monkeypatch.setenv("OPENRAL_ROBOMETER_BACKEND", "sidecar")
+    assert isinstance(build_reward_monitor(_load_manifest(), port=5769), RobometerReward)
 
 
 def test_evenly_spaced_indices_bounds_frames() -> None:
@@ -79,15 +85,15 @@ def test_build_reward_monitor_rejects_wrong_kind() -> None:
 
 
 def test_score_rejects_empty_clip() -> None:
-    """Scoring with no frames is a config error (never reaches the sidecar)."""
-    mon = RobometerReward(model_id="t", auto_spawn=False)
+    """Scoring with no frames is a config error (never loads the model)."""
+    mon = RobometerInProcessReward(model_id="t")
     with pytest.raises(ROSConfigError, match="at least one frame"):
         mon.score([], "do the task")
 
 
 def test_score_rejects_empty_task() -> None:
     """Scoring with a blank task is a config error."""
-    mon = RobometerReward(model_id="t", auto_spawn=False)
+    mon = RobometerInProcessReward(model_id="t")
     f = Frame(stamp_ns=0, bgr=b"\x00\x00\x00", width=1, height=1)
     with pytest.raises(ROSConfigError, match="non-empty task"):
         mon.score([f], "   ")
@@ -95,7 +101,7 @@ def test_score_rejects_empty_task() -> None:
 
 def test_score_rejects_mismatched_frame_sizes() -> None:
     """All frames in a clip must share width/height."""
-    mon = RobometerReward(model_id="t", auto_spawn=False)
+    mon = RobometerInProcessReward(model_id="t")
     frames = [
         Frame(stamp_ns=0, bgr=b"\x00\x00\x00", width=1, height=1),
         Frame(stamp_ns=1, bgr=b"\x00" * 12, width=2, height=2),
@@ -108,18 +114,23 @@ def _gpu_present() -> bool:
     return shutil.which("nvidia-smi") is not None
 
 
-@pytest.mark.skipif(
-    not os.environ.get("OPENRAL_ROBOMETER_SIDECAR_VENV") or not _gpu_present(),
-    reason="needs a provisioned Robometer sidecar venv + a local GPU "
-    "(set OPENRAL_ROBOMETER_SIDECAR_VENV).",
-)
-def test_e2e_score_clip_over_zmq() -> None:
-    """The real NF4 Robometer sidecar scores a clip end-to-end via build_reward_monitor.
+def _missing_live_deps() -> list[str]:
+    return [
+        mod
+        for mod in ("bitsandbytes", "huggingface_hub", "lerobot", "msgpack", "torch", "zmq")
+        if importlib.util.find_spec(mod) is None
+    ]
 
-    Exercises the production wire (manifest → client → auto-spawned sidecar → ZMQ
-    score) and asserts per-frame progress/success arrays of the right shape and
-    range. Semantic correctness (progress ramping on a real rollout) is validated
-    separately — see rskills/robometer-4b/PHASE0.md Phase 3.
+
+@pytest.mark.skipif(
+    not _gpu_present() or _missing_live_deps(),
+    reason="needs a local GPU plus Robometer deps in the current env",
+)
+def test_e2e_score_clip_in_process() -> None:
+    """The real NF4 Robometer backend scores a clip end-to-end via build_reward_monitor.
+
+    Exercises the production path (manifest → in-process lerobot scorer) and
+    asserts per-frame progress/success arrays of the right shape and range.
     """
     import numpy as np
 

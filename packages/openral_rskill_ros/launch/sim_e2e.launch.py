@@ -1360,8 +1360,8 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     if enable_reward_monitor:
         # ADR-0057 — reward monitor runs PARALLEL to the VLA (not a lifecycle/VRAM
         # peer the reasoner frees before a policy; it stays co-active). Plain Node:
-        # subscribes the agentview RGB stream, buffers a rolling window, auto-spawns
-        # the Robometer NF4 sidecar from the manifest, and serves
+        # subscribes the agentview RGB stream, buffers a rolling window, loads
+        # the reward backend from the manifest, and serves
         # /openral/perception/query_task_progress for the reasoner to poll.
         reward_manifest = reward_monitor_manifest or str(
             pathlib.Path(_RSKILLS_DIR) / "robometer-4b" / "rskill.yaml"
@@ -1411,7 +1411,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     "enable_critic_score": enable_critic,
                     # 2026-06-29 — only score while a VLA is executing (the reasoner
                     # publishes /openral/reward/active around each execute_rskill), so
-                    # the GPU sidecar doesn't grind on an idle scene and the Tier-C
+                    # the reward VLM doesn't grind on an idle scene and the Tier-C
                     # watchdog isn't fed idle noise.
                     "gate_scoring_on_execution": True,
                     "use_sim_time": use_sim_time,
@@ -1819,8 +1819,8 @@ def generate_launch_description() -> LaunchDescription:
                 "task_progress_available=True so its LLM may poll per-frame "
                 "progress/success whenever it sees fit. Advisory-only — never "
                 "actuates. Default off. Requires the openral_perception_ros package "
-                "built and a provisioned Robometer sidecar venv "
-                "(OPENRAL_ROBOMETER_SIDECAR_VENV); co-resident with a VLA needs ~3.3 GB "
+                "built and Robometer/TOPReward deps in the current env; "
+                "co-resident with a VLA needs ~3.3 GB "
                 "free VRAM (use a small NF4 VLA on an 8 GB GPU)."
             ),
         ),
@@ -1879,8 +1879,8 @@ def generate_launch_description() -> LaunchDescription:
             "reward_monitor_sidecar_port",
             default_value="5769",
             description=(
-                "ADR-0057 — ZMQ port for the Robometer reward sidecar the monitor "
-                "auto-spawns. Ignored unless enable_reward_monitor."
+                "ADR-0057 — ZMQ port for the temporary Robometer sidecar fallback. "
+                "Ignored unless enable_reward_monitor."
             ),
         ),
         DeclareLaunchArgument(

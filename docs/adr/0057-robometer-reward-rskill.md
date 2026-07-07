@@ -179,16 +179,13 @@ with plain `transformers` (>=5).
 
 **What changed:**
 
-- `tools/_robometer_server.py` now loads `RobometerRewardModel` from lerobot's
-  native module. There is **no** pinned `robometer` git package, **no**
-  `transformers==4.57.1` force-pin, and **no** dedicated venv. `tools/robometer_sidecar.py`
-  boots straight into the server with the **current interpreter** (the node's own
-  env, provisioned by `uv sync --group robometer`); the deleted `ensure_venv`
-  helper is replaced by `_resolve_python`, which defaults to `sys.executable` and
-  honours `$OPENRAL_ROBOMETER_SIDECAR_VENV` / `--venv` only for operators who
-  want full isolation. The process boundary is retained **only** for VRAM
-  isolation + 8 GB alloc tuning (`PYTORCH_ALLOC_CONF=expandable_segments:True`),
-  not for a dependency conflict.
+- `RobometerInProcessReward` now loads `RobometerRewardModel` from lerobot's
+  native module inside `reward_monitor_node`. There is **no** pinned `robometer`
+  git package, **no** `transformers==4.57.1` force-pin, and **no** dedicated venv.
+  The reward model is still isolated from the VLA runner / reasoner / HAL by the
+  reward-monitor ROS process boundary. The old `tools/robometer_sidecar.py` ZMQ
+  path remains as an opt-in fallback (`OPENRAL_ROBOMETER_BACKEND=sidecar`) until a
+  deploy-sim validation pass lets us delete it.
 - The NF4 pre-quantized weights (`OpenRAL/rskill-robometer-4b-nf4`, ~3.3 GB
   resident) are kept: the server meta-builds the native `RobometerRewardModel`
   skeleton and drops the packed 4-bit weights in directly (remapped into the
