@@ -27,7 +27,7 @@ base_model:
 > the task instruction is, conditioned on the rollout video, and reads
 > `log P("True")` back as the signal. Per-frame **progress (0–1)** comes from a
 > prefix sweep. **No actuators. Advisory-only.** Apache-2.0 packaging (upstream
-> method MIT; Qwen3-VL weights keep the Qwen license).
+> method MIT; Qwen3-VL-4B-Instruct weights are also Apache-2.0).
 
 ## Preview
 
@@ -172,7 +172,8 @@ See [`rskill.yaml`](rskill.yaml) for the full manifest.
 ## License
 
 rSkill **packaging** is **Apache-2.0** (ADR-0012 — all OpenRAL code is uniformly
-Apache-2.0). The TOPReward **method** is MIT. The wrapped **Qwen3-VL-4B weights**
-keep their upstream **Qwen license** — a third-party weight-lineage note, not a
-gate on this Apache-2.0 package (CLAUDE.md §9). Cite the
+Apache-2.0). The TOPReward **method** is MIT. The wrapped
+**Qwen3-VL-4B-Instruct weights are also Apache-2.0** (`Qwen/Qwen3-VL-4B-Instruct`,
+`license: apache-2.0`), so an NF4-quantized copy is freely redistributable — the
+whole stack is Apache-2.0 / MIT. Cite the
 [TOPReward paper](https://arxiv.org/abs/2602.19313) (Chen et al., 2026).

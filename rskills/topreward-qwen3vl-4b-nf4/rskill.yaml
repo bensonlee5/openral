@@ -2,8 +2,9 @@ schema_version: "0.1"
 name: "OpenRAL/rskill-topreward-qwen3vl-4b-nf4"
 version: "0.1.0"
 # rSkill packaging is Apache-2.0 (ADR-0012). The TOPReward *method* is MIT and
-# the wrapped Qwen3-VL-4B *weights* keep the upstream Qwen license — documented
-# in README.md, not gating this Apache-2.0 package (CLAUDE.md §9).
+# the wrapped Qwen3-VL-4B-Instruct *weights* are themselves Apache-2.0
+# (Qwen/Qwen3-VL-4B-Instruct, license: apache-2.0), so redistributing a
+# quantized copy is fully permitted — the whole stack is Apache-2.0 / MIT.
 license: "apache-2.0"
 role: "s2"
 kind: "reward"
