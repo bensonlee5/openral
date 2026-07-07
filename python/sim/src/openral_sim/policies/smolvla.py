@@ -341,7 +341,9 @@ class _SmolVLAAdapter:
         """
         alias_to_cam = {self._cam_alias.get(ck, ck): ck for ck in self._camera_keys}
         ordered: list[Any] = []
-        for feat in self._policy.config.image_features[: len(self._camera_keys)]:
+        # image_features is an ordered dict keyed by feature name; list() it
+        # before slicing (dicts are not sliceable — `dict[:2]` raises KeyError).
+        for feat in list(self._policy.config.image_features)[: len(self._camera_keys)]:
             alias = str(feat).rsplit(".", 1)[-1]
             cam_key = alias_to_cam.get(alias, alias)
             if cam_key not in handles:
