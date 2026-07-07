@@ -678,8 +678,8 @@ class _Gr00tFamilySidecarAdapter:
         # mid-rollout. The launcher's own ``_ensure_source`` /
         # ``_install_deps`` short-circuit when the cache is warm, so
         # this is additive rather than duplicative. Only the rldx sidecar
-        # registers a pre-stage step; the gr00t sidecar (ADR-0046) clones
-        # NVIDIA/Isaac-GR00T itself at boot.
+        # registers a pre-stage step; GR00T-N1.7 now loads in-process (ADR-0046
+        # amended), so there is no gr00t sidecar to pre-stage.
         if self.family == "rldx":
             ensure_backend_deps("rldx_sidecar_setup")
         # No server up — fork the boot helper and wait for it to bind.

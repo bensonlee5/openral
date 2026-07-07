@@ -16,8 +16,9 @@ via bitsandbytes, and is run **out-of-process** for three reasons:
   down the reasoner; the sidecar owns its own VRAM lifecycle and can be torn
   down independently.
 * **Same pattern as the rest of the tree.** ``tools/locateanything_sidecar.py``
-  (LocateAnything detector) and ``tools/gr00t_sidecar.py`` (GR00T) already run
-  models out-of-process over ZMQ REQ/REP + msgpack. This is that pattern.
+  (LocateAnything detector) and ``tools/rldx_sidecar.py`` (RLDX-1 / GR00T-N1.5)
+  already run models out-of-process over ZMQ REQ/REP + msgpack. This is that
+  pattern.
 
 The openral side is
 :class:`openral_runner.backends.gstreamer.qwen_scene_vlm.QwenSceneVlm`, which
