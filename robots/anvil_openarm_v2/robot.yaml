@@ -13,9 +13,9 @@
 #
 #   - J1: +/-135 deg (standard v2: -200..+80 in MJCF sign convention)
 #   - J6: -45..+70 deg (standard v2: +/-45) — the extra +25 deg of
-#     radial deviation enabled by Anvil's red wrist bracket
-#   - the red wrist bracket itself (visual-only meshes on the link6
-#     gimbal bodies in the fetched MJCF)
+#     radial deviation enabled by Anvil's wrist support bracket
+#   - the wrist support bracket itself (visual-only CAD meshes on the
+#     link5 forearm bodies in the fetched MJCF)
 #
 # Everything else — kinematics, meshes, native <position> actuators
 # with per-class PD gains, single-driven-finger grippers with the
