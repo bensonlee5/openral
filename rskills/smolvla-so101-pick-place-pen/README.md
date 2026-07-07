@@ -22,10 +22,14 @@ inference: false
 > pen pick-and-place on a **real SO-101 follower arm**, packaged for `OpenRAL`.
 
 This package wraps
+[`OpenRAL/rskill-smolvla-so101-pick-place-pen`](https://huggingface.co/OpenRAL/rskill-smolvla-so101-pick-place-pen)
+— an OpenRAL mirror (byte-identical weights, Apache-2.0) of upstream
 [`nota-gmbh/so101_pick_place_pen_smolvla`](https://huggingface.co/nota-gmbh/so101_pick_place_pen_smolvla)
-with a `rskill.yaml` manifest that adds capability checking, license surfacing,
-latency budgets, the joint-units contract, and local registry integration. It
-does **not** copy model weights.
+with the stray `pretrained_revision` config key stripped at rest, so
+`SmolVLAPolicy.from_pretrained` loads cleanly under `HF_HUB_OFFLINE=1` with no
+runtime config-sanitize. The `rskill.yaml` manifest adds capability checking,
+license surfacing, latency budgets, the joint-units contract, and local registry
+integration. It does **not** copy model weights.
 
 ## Quick start
 
@@ -47,6 +51,7 @@ OPENRAL_SMOLVLA_TRT=1 uv run openral deploy run --robot so101 \
 
 | Field | Value |
 | --- | --- |
+| Weights repo | [`OpenRAL/rskill-smolvla-so101-pick-place-pen`](https://huggingface.co/OpenRAL/rskill-smolvla-so101-pick-place-pen) (mirror; clean config) |
 | Source repo | [`nota-gmbh/so101_pick_place_pen_smolvla`](https://huggingface.co/nota-gmbh/so101_pick_place_pen_smolvla) |
 | Base model | [`lerobot/smolvla_base`](https://huggingface.co/lerobot/smolvla_base) |
 | Paper | [arXiv:2506.01844](https://arxiv.org/abs/2506.01844) — *SmolVLA* |
@@ -102,14 +107,17 @@ on a real dataset frame, a 2-camera export reproduces native torch
 | `latency_budget` | 400 ms/chunk |
 | Actions | pick · place · pick_and_place (object: pen) |
 
-## Known issue — upstream config field (handled automatically)
+## Config provenance — clean at rest
 
-The upstream `config.json` carries a stray `pretrained_revision` key that
-lerobot 0.5.1's `SmolVLAConfig` (draccus) rejects with `DecodingError`. Every
-OpenRAL SmolVLA load path — the rSkill adapter, the deploy/sim factory, and the
-TRT ONNX export — calls `openral_rskill._lerobot_compat.sanitize_smolvla_config`
-first, which strips config keys not valid for `SmolVLAConfig` (idempotent). If
-you call `SmolVLAPolicy.from_pretrained` directly, call it first too.
+The **upstream** `nota-gmbh` `config.json` carries a stray `pretrained_revision`
+key that lerobot 0.5.1's `SmolVLAConfig` (draccus) rejects with `DecodingError`
+— and which forced an offline-breaking revision re-fetch inside
+`SmolVLAPolicy.from_pretrained`. The shipped weights repo
+(`OpenRAL/rskill-smolvla-so101-pick-place-pen`) **strips that one key at rest**,
+so `from_pretrained` loads cleanly, including under `HF_HUB_OFFLINE=1`, with no
+runtime config edit. (The shared
+`openral_rskill._lerobot_compat.sanitize_smolvla_config` helper still runs on
+every OpenRAL SmolVLA load path as a defensive no-op for other checkpoints.)
 
 ## License
 

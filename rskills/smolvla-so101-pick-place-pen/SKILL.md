@@ -26,7 +26,7 @@ metadata:
   latency_budget: {per_chunk_ms: 400.0}
   license_code: Apache-2.0
   license_weights: apache-2.0
-  weights_uri: hf://nota-gmbh/so101_pick_place_pen_smolvla
+  weights_uri: hf://OpenRAL/rskill-smolvla-so101-pick-place-pen
   source_repo: hf://nota-gmbh/so101_pick_place_pen_smolvla
   paper_url: https://arxiv.org/abs/2506.01844
 ---

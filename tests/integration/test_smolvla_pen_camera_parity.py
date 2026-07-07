@@ -1,6 +1,6 @@
 """Camera-count parity for the SO-101 pen SmolVLA rSkill (Option B).
 
-The ``nota-gmbh/so101_pick_place_pen_smolvla`` checkpoint declares **three**
+The ``OpenRAL/rskill-smolvla-so101-pick-place-pen`` checkpoint declares **three**
 camera slots (``observation.images.camera1/2/3``) inherited from
 ``lerobot/smolvla_base``, but trains on **two** cameras and sets
 ``empty_cameras=0``. lerobot ``prepare_images`` therefore drops the unfilled
@@ -40,7 +40,7 @@ pytest.importorskip("lerobot")
 import onnxruntime as ort  # noqa: E402
 from openral_rskill.smolvla_export import export_smolvla_split_onnx  # noqa: E402
 
-_CHECKPOINT = "nota-gmbh/so101_pick_place_pen_smolvla"
+_CHECKPOINT = "OpenRAL/rskill-smolvla-so101-pick-place-pen"  # shipped mirror (clean config)
 _DATASET = "nota-gmbh/pick_and_place_pen_so101"
 _VLM_BACKBONE = "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
 _HF_CACHE = Path.home() / ".cache" / "huggingface" / "hub"
@@ -67,8 +67,9 @@ def policy() -> Any:
     from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
 
     local = snapshot_download(_CHECKPOINT)
-    # Upstream config.json carries a stray `pretrained_revision` key that
-    # lerobot's draccus config rejects; keep only valid SmolVLAConfig fields.
+    # The shipped mirror already has a clean config, so the strip below is a
+    # no-op there; it stays defensive (and to force device=cpu for this fp32/CPU
+    # test). Keep only valid SmolVLAConfig fields.
     valid = {f.name for f in dataclasses.fields(SmolVLAConfig)}
     cfgp = Path(local) / "config.json"
     raw = json.loads(cfgp.read_text())

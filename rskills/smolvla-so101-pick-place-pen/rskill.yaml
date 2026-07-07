@@ -25,9 +25,13 @@
 # runner converts deg<->rad at the HAL boundary; declared explicitly below so
 # it does not rely on the stats-magnitude heuristic.
 #
-# NOTE — the upstream config.json carries a stray `pretrained_revision` key
-# that lerobot 0.5.1's SmolVLAConfig (draccus) rejects; the loader strips
-# unknown config fields before `from_pretrained`. See SKILL.md.
+# PROVENANCE — weights are the OpenRAL mirror `OpenRAL/rskill-smolvla-so101-pick-place-pen`
+# (byte-identical to upstream `nota-gmbh/so101_pick_place_pen_smolvla`, Apache-2.0).
+# The upstream config.json carried a stray `pretrained_revision` key that lerobot
+# 0.5.1's draccus `SmolVLAConfig` rejects — and which forced an offline-breaking
+# revision re-fetch on load. The mirror strips that one key AT REST, so
+# `SmolVLAPolicy.from_pretrained` loads cleanly (incl. HF_HUB_OFFLINE=1) with NO
+# runtime config-sanitize — identical to the proven SmolVLA deploy path.
 
 # ── Identity ───────────────────────────────────────────────────────────────
 schema_version: "0.1"
@@ -89,12 +93,12 @@ min_vram_gb:
 # ADR-0077 §4 — pair this VLA with its task-progress reward monitor so a
 # reward-enabled deploy auto-resolves the Robometer NF4 manifest.
 reward_rskill_name: "OpenRAL/rskill-robometer-4b-nf4"
-weights_uri: "hf://nota-gmbh/so101_pick_place_pen_smolvla"
+weights_uri: "hf://OpenRAL/rskill-smolvla-so101-pick-place-pen"
 
 # ── Preprocessing (all knobs needed to interpret IO) ───────────────────────
 processors:
-  preprocessor_uri: "hf://nota-gmbh/so101_pick_place_pen_smolvla/policy_preprocessor.json"
-  postprocessor_uri: "hf://nota-gmbh/so101_pick_place_pen_smolvla/policy_postprocessor.json"
+  preprocessor_uri: "hf://OpenRAL/rskill-smolvla-so101-pick-place-pen/policy_preprocessor.json"
+  postprocessor_uri: "hf://OpenRAL/rskill-smolvla-so101-pick-place-pen/policy_postprocessor.json"
 # Real SO-101 teleop recorded upright — no rotation. The checkpoint's input
 # keys are already camera1/camera2, matching the robot's vla_feature_key slots,
 # so no rename aliases.
