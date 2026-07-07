@@ -4,6 +4,11 @@
   all validated empirically on an 8 GB GPU (load, NF4, sidecar, reasoner tool,
   and a live openarm deploy-sim run). See the **2026-06-16 amendment** below for
   the pre-quantized meta-load, determinism, frame-bound, and co-activation wiring.
+  **Amended 2026-07-07** (see the **2026-07-07 amendment** below): the reward
+  model now loads lerobot's in-tree `lerobot.rewards.robometer.RobometerRewardModel`
+  with plain `transformers` — no pinned `robometer` package, no
+  `transformers==4.57.1`, no dedicated venv — and the reward camera now defaults
+  to the wrist (eye-in-hand) view.
 - **Date:** 2026-06-15
 - **ADR number:** `0057`. `0056` is claimed by the in-flight
   `feat/multi-detector-locate` branch (on-demand detectors as reasoner tools);
@@ -161,3 +166,40 @@ openarm `deploy-sim` run with the reasoner and the reward monitor co-active.
 - **Live result.** openarm deploy-sim, no GStreamer: reward service up, sidecar
   meta-loaded (3.32 GB), `subsampling 19 → 8 frames`, and `query_task_progress`
   returned `ok=True, progress=0.561, success=0.283` over the live sim camera.
+
+## Amendment (2026-07-07) — native lerobot loader replaces the pinned `robometer` venv
+
+The gating spike (Phase 0) concluded that the RBM class had no `auto_map` and
+could only be loaded via the upstream `robometer` package pinned to
+`transformers==4.57.1`, forcing an isolated sidecar venv. lerobot 0.6.0 removes
+that constraint: it ships the reward model in-tree as
+`lerobot.rewards.robometer.RobometerRewardModel` — a vanilla
+`AutoModelForImageTextToText` (Qwen3-VL-4B) with three prediction heads, loadable
+with plain `transformers` (>=5).
+
+**What changed:**
+
+- `tools/_robometer_server.py` now loads `RobometerRewardModel` from lerobot's
+  native module. There is **no** pinned `robometer` git package, **no**
+  `transformers==4.57.1` force-pin, and **no** dedicated venv. `tools/robometer_sidecar.py`
+  boots straight into the server with the **current interpreter** (the node's own
+  env, provisioned by `uv sync --group robometer`); the deleted `ensure_venv`
+  helper is replaced by `_resolve_python`, which defaults to `sys.executable` and
+  honours `$OPENRAL_ROBOMETER_SIDECAR_VENV` / `--venv` only for operators who
+  want full isolation. The process boundary is retained **only** for VRAM
+  isolation + 8 GB alloc tuning (`PYTORCH_ALLOC_CONF=expandable_segments:True`),
+  not for a dependency conflict.
+- The NF4 pre-quantized weights (`OpenRAL/rskill-robometer-4b-nf4`, ~3.3 GB
+  resident) are kept: the server meta-builds the native `RobometerRewardModel`
+  skeleton and drops the packed 4-bit weights in directly (remapped into the
+  native module) — no bf16 spike, no Qwen weight download.
+- Per-frame progress is decoded via the module-level `decode_progress_outputs`
+  on `_compute_rbm_logits`, not the native `compute_reward` (which returns only a
+  scalar), preserving the discrete-mode per-frame progress ∈ [0,1] + success ∈
+  [0,1] contract.
+- The reward camera now defaults to the **wrist (eye-in-hand) view** rather than
+  the VLA's primary RGB camera.
+
+**Unchanged:** the `reward` rSkill kind, `RewardContract`, the stateless-scorer /
+node-side `RollingFrameBuffer` split, the advisory-only guarantee, and the
+`deploy-sim` `--enable-reward-monitor` co-activation wiring.

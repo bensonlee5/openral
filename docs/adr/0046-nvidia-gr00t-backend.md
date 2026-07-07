@@ -1,6 +1,6 @@
 # ADR-0046 — NVIDIA Isaac GR00T as an out-of-process VLA backend
 
-- **Status:** Accepted — PR1 (packaging + license posture) + PR2 (runtime adapter + sidecar) implemented 2026-06-10; only the live LIBERO sim-eval remains operator-run on a Python-3.10 GPU host
+- **Status:** Accepted — PR1 (packaging + license posture) + PR2 (runtime adapter + sidecar) implemented 2026-06-10. **Amended 2026-07-07** (see Amendment below): GR00T N1.7 now runs **in-process** via lerobot 0.6.0's native `GrootPolicy`; the Python-3.10 ZMQ sidecar (`tools/gr00t_sidecar.py`) is deleted. RLDX-1 (N1.5) keeps its sidecar.
 - **Date:** 2026-06-10
 - **Related:** ADR-0010 (RLDX-1 ZMQ sidecar — the architectural precedent this
   reuses), ADR-0006 (HF-Hub rSkill packaging + license guard), ADR-0012
@@ -192,3 +192,41 @@ numbers (arXiv:2503.14734) are not faked — `reproduced_locally: false` until r
   and its manifests declare no `processors` block.
 - Until PR2, a `gr00t` rSkill packages, validates, and publishes but does not
   dispatch — surfaced explicitly via the palette install hint, never silently.
+
+## Amendment (2026-07-07) — GR00T N1.7 moves in-process on lerobot 0.6.0
+
+The original decision routed GR00T through the RLDX ZMQ sidecar because a
+Python-3.10 / transformers / flash-attn pin was incompatible with the 3.12-only
+workspace (§ Context 2). That premise no longer holds for **N1.7**: lerobot
+0.6.0 ships a native, in-process `GrootPolicy` (`lerobot.policies.groot`) that
+loads GR00T N1.7 under the workspace's Python 3.12 — N1.7's Cosmos-Reason2 /
+Qwen3-VL backbone is a stock `Qwen3VLForConditionalGeneration` available in
+`transformers>=5.4`, so the py3.10 rationale disappears.
+
+**What changed:**
+
+- `python/sim/src/openral_sim/policies/gr00t.py` now builds an in-process
+  `_GrootAdapter` around lerobot's `GrootPolicy` (mirroring the smolvla
+  adapter), replacing the `_Gr00tFamilySidecarAdapter` fork. The Python-3.10 ZMQ
+  sidecar boot helper `tools/gr00t_sidecar.py` is **deleted**.
+- Native `GrootPolicy` has no quantization knob and the transformers
+  `BitsAndBytesConfig` / `device_map` path needs `accelerate` (absent from the
+  3.12 venv). So the adapter reuses OpenRAL's accelerate-free
+  `openral_sim._quantization.quantize_nf4_in_place` to NF4-rewrite **only** the
+  Qwen3-VL backbone; the diffusion action head stays bf16 (this also side-steps
+  the GR00T DiT `TimestepEncoder` uint8/`silu` bug). Measured **~5.2 GiB peak**
+  on an 8 GiB card.
+- `_patch_groot_dtype_property` rebinds `GR00TN17.dtype` to the first
+  floating-point param dtype so NF4's `uint8` `Params4bit` does not poison the
+  float input cast; `_import_real_groot_policy` evicts the stale `_lerobot_compat`
+  GR00T stub; `_build_groot_config` pins `embodiment_tag=libero_sim` +
+  the real 7-D LIBERO I/O features at construction.
+- **Functional gate met:** live-validated LIBERO-spatial **5/5** at ~19 ms/step,
+  NF4 ~5.2 GiB — so the previously-outstanding operator-run Python-3.10 eval is
+  moot; the eval now runs on the same 3.12 GPU host as every other in-process VLA.
+
+**Unchanged:** RLDX-1 (a GR00T-**N1.5** finetune) still runs out-of-process on
+its own ZMQ sidecar via the `rldx` adapter (`tools/rldx_sidecar.py`,
+`_Gr00tFamilySidecarAdapter`) — native lerobot rejects N1.5, so that path and its
+class name are correct and retained. The N1/N1.5/N1.6 non-commercial license
+guard and the N1.7 NVIDIA Open Model posture are unaffected.

@@ -203,4 +203,4 @@ _Shared helpers for VLA adapters (Layer 3); internal — no public re-export._
 ### `python/rskill/src/openral_rskill/_lerobot_compat.py`
 _Compatibility shim for `lerobot.policies` import side-effects._
 
-- private: `_install_stub() -> None` (L26)
+- private: `_install_stub() -> None` (L28)
