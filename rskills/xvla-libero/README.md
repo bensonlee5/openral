@@ -93,5 +93,5 @@ upstream repo. Commercial use is allowed.
 ## See also
 
 - [`rskills/smolvla-libero/README.md`](../smolvla-libero/README.md) — gold-standard LIBERO finetune (locally verified).
-- [`rskills/pi05-libero-nf4/README.md`](../pi05-libero-nf4/README.md) — π0.5 LIBERO finetune (non-commercial).
+- [`rskills/pi05-libero-int8/README.md`](../pi05-libero-int8/README.md) — π0.5 LIBERO finetune (non-commercial).
 - [`docs/reference/vla_compatibility.md`](../../docs/reference/vla_compatibility.md) §3.1.

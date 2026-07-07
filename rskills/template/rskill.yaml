@@ -12,7 +12,7 @@
 #   license                         →  --license value
 #   embodiment_tags                 →  [--embodiment-tag value]
 #
-# The template is modeled on `rskills/pi05-libero-nf4/rskill.yaml` — the
+# The template is modeled on `rskills/pi05-libero-int8/rskill.yaml` — the
 # representative VLA skill in tree — and therefore ships pi0.5-shaped
 # policy knobs (`image_preprocessing`, `state_contract`,
 # `n_action_steps`, `min_vram_gb`). Strip or edit them if your new

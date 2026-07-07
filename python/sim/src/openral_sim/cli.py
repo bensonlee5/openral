@@ -3,7 +3,7 @@ r"""``openral sim run`` driver — Typer-based.
 Canonical invocation::
 
     openral sim run --config scenes/sim/robocasa_pnp.yaml \
-               --rskill rskills/pi05-robocasa365-human300-nf4
+               --rskill rskills/rldx1-ft-rc365-nf4
 
 The YAML carries the scene + task (and an optional robot_id for free-axis
 scenes); the policy is supplied entirely via ``--rskill``. The CLI loads

@@ -96,7 +96,7 @@ def test_overrides_unlock_robots_without_observation_spec(repo_root: Path) -> No
     # franka_panda has no observation_spec / action_spec on disk.
     assert robot.observation_spec is None or not robot.observation_spec.state_shape
 
-    # pi05-libero-nf4 contract: 8-D state, 7-D action.
+    # pi05-libero-int8 contract: 8-D state, 7-D action.
     feats = features_from_robot(
         robot,
         fps=20.0,

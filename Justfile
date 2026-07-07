@@ -596,7 +596,7 @@ sim-xvla-libero *args: _strip-hf-libero-egg _ensure-libero-config
 
 # LIBERO sim eval with π0.5 (SimScene tier; requires ≥8 GB VRAM; weights are non-commercial).
 sim-pi05-libero *args: _strip-hf-libero-egg _ensure-libero-config
-    MUJOCO_GL=egl uv run --all-packages --group libero openral sim run --config scenes/sim/libero_spatial.yaml --rskill rskill://rskills/pi05-libero-nf4 --save-video example_videos {{args}}
+    MUJOCO_GL=egl uv run --all-packages --group libero openral sim run --config scenes/sim/libero_spatial.yaml --rskill rskill://rskills/pi05-libero-int8 --save-video example_videos {{args}}
 
 # MetaWorld push-v2 with SmolVLA — 1-episode demo via the BenchmarkScene tier
 # (no SimScene sibling for MetaWorld today). `--no-update-manifest` keeps the
@@ -642,10 +642,6 @@ sim-custom *args:
 # smolvla/xvla/pi05 on the same suite).
 sim-act-libero *args: _strip-hf-libero-egg _ensure-libero-config
     MUJOCO_GL=egl uv run --all-packages --group libero openral sim run --config scenes/sim/libero_spatial.yaml --rskill rskill://rskills/act-libero --save-video example_videos {{args}}
-
-# RoboCasa PickPlaceCounterToCabinet with π0.5 (SimScene tier; NF4 already; ~5 GB VRAM).
-sim-pi05-robocasa *args:
-    MUJOCO_GL=egl uv run --all-packages --group robocasa openral sim run --config scenes/sim/robocasa_pnp.yaml --rskill rskill://rskills/pi05-robocasa365-human300-nf4 --save-video example_videos {{args}}
 
 # Full end-to-end audit of every YAML under scenes/.
 # 1 episode per config, real GPU rollout (CLAUDE.md §1.11–§1.12), JSON report

@@ -93,15 +93,14 @@ class ConfigSpec:
 
 
 # Explicit mapping. The YAML names + rSkill names are not regular enough to
-# derive via a rule (e.g. `scenes/sim/robocasa_pnp.yaml` →
-# `rskills/pi05-robocasa365-human300-nf4`), so we list them. Each row is
+# derive via a rule, so we list them. Each row is
 # one (scene, rSkill) combination — the same scene may appear multiple
 # times paired with different rSkills (LIBERO is the obvious example).
 CATALOGUE: Final[tuple[ConfigSpec, ...]] = (
     # ---- SimScene tier (openral sim run) ----
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/smolvla-libero", "libero", "sim"),
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/xvla-libero", "libero", "sim"),
-    ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/pi05-libero-nf4", "libero", "sim"),
+    ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/pi05-libero-int8", "libero", "sim"),
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/act-libero", "libero", "sim"),
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/rldx1-ft-libero-nf4", "libero", "sim"),
     ConfigSpec(
@@ -112,14 +111,8 @@ CATALOGUE: Final[tuple[ConfigSpec, ...]] = (
     ),
     ConfigSpec(
         "scenes/sim/franka_libero_pnp.yaml",
-        "rskills/pi05-libero-nf4",
+        "rskills/pi05-libero-int8",
         "libero",
-        "sim",
-    ),
-    ConfigSpec(
-        "scenes/sim/robocasa_pnp.yaml",
-        "rskills/pi05-robocasa365-human300-nf4",
-        "robocasa",
         "sim",
     ),
     ConfigSpec(

@@ -33,14 +33,13 @@ openral deploy sim --config scenes/deploy/robocasa_baguette.yaml --no-enable-oct
 
 # terminal B — record, then dispatch the mobile-manip policy (drives base AND arm).
 # Do NOT type in the dashboard prompt box (that hands control to the autonomous reasoner).
-tools/record_demo.sh clip1_robocasa_pi05 300
+tools/record_demo.sh clip1_robocasa_rldx 300
 ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill \
-  "{rskill_id: 'OpenRAL/rskill-pi05-robocasa365-human300-nf4', \
+  "{rskill_id: 'OpenRAL/rskill-rldx1-ft-rc365-nf4', \
     prompt: 'Pick the baguette from the counter and place it in the cabinet.', \
     deadline_s: 180.0}"
 ```
-Expect: real base navigation + arm reach + safety-gated grasp **attempt** (pi05 self-collides
-non-deterministically → kernel E-stop; NOT a guaranteed completed grasp).
+Expect: real base navigation + arm reach under safety-gated control.
 
 ### 1b. Autonomous + open-vocab perception (LocateAnything-3B)   [ADR-0050 — code-complete, live-verify pending]
 Real open-vocab perception of the baguette, then the autonomous grab — fits 8 GB via the

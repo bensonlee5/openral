@@ -37,7 +37,7 @@ _RSKILLS_DIR = _REPO_ROOT / "rskills"
 # can assert against the real on-disk enum value. The pi05 / rldx
 # manifests use ``int4``; smolvla-libero ships unquantized ``bf16``. These
 # are NOT toy manifests — they are the manifests ``openral sim run`` consumes.
-_PI05_LIBERO = _RSKILLS_DIR / "pi05-libero-nf4"  # quantization.dtype: int4
+_PI05_LIBERO = _RSKILLS_DIR / "pi05-libero-int8"  # quantization.dtype: int4
 _BF16_MANIFEST = _RSKILLS_DIR / "smolvla-libero"  # quantization.dtype: bf16
 _RLDX_LIBERO = _RSKILLS_DIR / "rldx1-ft-libero-nf4"  # quantization.dtype: int4
 
@@ -52,7 +52,7 @@ class TestLoadManifestForSpec:
         spec = VLASpec(id="pi05", weights_uri=str(_PI05_LIBERO))
         manifest = load_manifest_for_spec(spec)
         assert manifest is not None
-        # The on-disk pi05-libero-nf4 manifest pins these — assert against
+        # The on-disk pi05-libero-int8 manifest pins these — assert against
         # them to catch a silent regression in the path-handling layer.
         assert manifest.model_family == "pi05"
         assert manifest.quantization is not None

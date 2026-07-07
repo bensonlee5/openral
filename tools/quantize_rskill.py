@@ -9,7 +9,7 @@ and uploads the bundle to a target rSkill repo on the Hub.
 
 Why this exists
 ---------------
-Loading a 3.6 B-param π0.5 RoboCasa checkpoint takes ~90 s on a
+Loading a large lerobot checkpoint can take ~90 s on a
 4070-mobile: ~20 s reading bf16 safetensors from cache, ~10 s
 restoring transformers/lerobot metadata, and the rest is the on-line
 ``bitsandbytes`` nf4 conversion that
@@ -29,11 +29,11 @@ environment. Read-only contributors can ignore it.
 Usage
 -----
 
-The defaults mirror the validated π0.5 RoboCasa path::
+Example::
 
     HF_TOKEN=<your-token> uv run python tools/quantize_rskill.py \\
-        --source outputs/run_artifacts/r365_pi05_ckpt_lerobot \\
-        --target OpenRAL/rskill-pi05-robocasa365-human300-nf4
+        --source <local-or-hf-lerobot-policy> \\
+        --target <hf-org>/<rskill-id>-nf4
 
 To package a different lerobot policy with the same nf4 rule, point
 ``--policy-class`` at its modeling module's policy class::
@@ -311,9 +311,13 @@ def _build_policy_and_quantize(
     policy.eval()
     print(f"[quantize] convert + move: {time.perf_counter() - t0:.1f} s", flush=True)
 
-    # Resolve the HEAD revision so the manifest can pin it.
-    info = HfApi().repo_info(source_repo, repo_type="model")
-    revision = info.sha or "main"
+    # Resolve the HEAD revision so the manifest can pin it. Local converted
+    # checkpoints (the default RoboCasa π0.5 flow) are not Hub repos.
+    if os.path.exists(source_repo):
+        revision = f"local:{Path(source_repo).resolve()}"
+    else:
+        info = HfApi().repo_info(source_repo, repo_type="model")
+        revision = info.sha or "main"
     return policy, revision
 
 
@@ -326,6 +330,8 @@ def _save_state(
     policy_class_dotted: str,
     scheme: str,
     min_params: int,
+    metadata_source_repo: str | None = None,
+    metadata_source_revision: str | None = None,
 ) -> None:
     """Dump the quantized state dict + metadata into ``out_dir``."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -382,8 +388,8 @@ def _save_state(
         raise NotImplementedError(scheme)
 
     meta = {
-        "source_repo": source_repo,
-        "source_revision": revision,
+        "source_repo": metadata_source_repo or source_repo,
+        "source_revision": metadata_source_revision or revision,
         "policy_class": policy_class_dotted,
         "quantization": {
             "scheme": scheme,
@@ -509,13 +515,16 @@ def _copy_source_config(source_repo: str, out_dir: Path, *, loader: str) -> None
     allow = ["*.json", "*.md", "*.safetensors", ".gitattributes"]
     if loader == "transformers":
         allow.append("*.py")
-    snapshot = Path(
-        snapshot_download(
-            repo_id=source_repo,
-            allow_patterns=allow,
-            ignore_patterns=["model*.safetensors"],
+    if os.path.exists(source_repo):
+        snapshot = Path(source_repo)
+    else:
+        snapshot = Path(
+            snapshot_download(
+                repo_id=source_repo,
+                allow_patterns=allow,
+                ignore_patterns=["model*.safetensors"],
+            )
         )
-    )
     for src in snapshot.iterdir():
         if not src.is_file():
             continue
@@ -613,7 +622,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--target",
-        default="OpenRAL/rskill-pi05-robocasa365-human300-nf4",
+        required=True,
         help="Target HF Hub repo for the quantized artefact.",
     )
     parser.add_argument(
@@ -693,6 +702,23 @@ def main() -> int:
         action="store_true",
         help="Only quantize + save locally; do not touch the Hub.",
     )
+    parser.add_argument(
+        "--metadata-source-repo",
+        default=None,
+        help=(
+            "Public upstream repo/path to record in quantization_metadata.json. "
+            "Use when --source is a local converted checkpoint derived from a "
+            "separate canonical source."
+        ),
+    )
+    parser.add_argument(
+        "--metadata-source-revision",
+        default=None,
+        help=(
+            "Public upstream revision to record in quantization_metadata.json. "
+            "Use with --metadata-source-repo for local converted checkpoints."
+        ),
+    )
     args = parser.parse_args()
 
     # Resolve a write token from env first, then from the cached
@@ -754,6 +780,8 @@ def main() -> int:
             policy_class_dotted=policy_class_dotted,
             scheme=args.scheme,
             min_params=args.min_params,
+            metadata_source_repo=args.metadata_source_repo,
+            metadata_source_revision=args.metadata_source_revision,
         )
         _copy_source_config(args.source, out_dir, loader=args.loader)
         # Stamp the bnb quantization_config so the Hub auto-tags the mirror

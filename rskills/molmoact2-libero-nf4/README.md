@@ -181,6 +181,6 @@ commercial use is permitted; review the upstream LICENSE before deployment.
 
 - [`robots/franka_panda/README.md`](../../robots/franka_panda/README.md) — RobotDescription manifest.
 - [`scenes/benchmark/libero_spatial.yaml`](../../scenes/benchmark/libero_spatial.yaml) — canonical LIBERO-Spatial BenchmarkScene (pass `--rskill rskills/molmoact2-libero-nf4`).
-- [`rskills/pi05-libero-nf4/README.md`](../pi05-libero-nf4/README.md) — π0.5 LIBERO alternative (the model MolmoAct2 outperforms).
+- [`rskills/pi05-libero-int8/README.md`](../pi05-libero-int8/README.md) — π0.5 LIBERO alternative (the model MolmoAct2 outperforms).
 - [`rskills/smolvla-libero/README.md`](../smolvla-libero/README.md) — Apache-2.0 LIBERO alternative.
 - [CLAUDE.md §6.4](../../CLAUDE.md) — rSkill packaging contract.

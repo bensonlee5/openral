@@ -211,7 +211,7 @@ def test_skill_failure_event_counts_and_carries_state() -> None:
                 "openral.event.skill_failure",
                 {
                     "openral.event.skill_failure.state": "vram_insufficient",
-                    "reasoner.rskill_id": "pi05-libero-nf4",
+                    "reasoner.rskill_id": "pi05-libero-int8",
                 },
             ),
         ],

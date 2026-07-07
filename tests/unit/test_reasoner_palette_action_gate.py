@@ -56,7 +56,7 @@ def _aloha() -> RobotDescription:
 
 def _pi05_libero() -> RSkillManifest:
     """Real pi05 LIBERO manifest (dim=7, no representation yet)."""
-    path = RSKILLS_DIR / "pi05-libero-nf4" / "rskill.yaml"
+    path = RSKILLS_DIR / "pi05-libero-int8" / "rskill.yaml"
     if not path.exists():
         pytest.skip(f"rskill fixture missing: {path}")
     return RSkillManifest.from_yaml(str(path))

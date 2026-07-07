@@ -125,7 +125,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """
         import openral_sim.factory as _sim_factory
 
-        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         if not yaml_path.is_file():
             pytest.skip(f"missing in-tree fixture: {yaml_path}")
 
@@ -161,7 +161,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """
         import openral_sim.factory as _sim_factory
 
-        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         if not yaml_path.is_file():
             pytest.skip(f"missing in-tree fixture: {yaml_path}")
 
@@ -189,7 +189,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """No description → keep the caller's ``scene_cameras`` untouched."""
         import openral_sim.factory as _sim_factory
 
-        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         if not yaml_path.is_file():
             pytest.skip(f"missing in-tree fixture: {yaml_path}")
 

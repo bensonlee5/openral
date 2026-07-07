@@ -351,7 +351,7 @@ def _load_bf16_state_for_int8(policy: Any, repo_id: str, *, torch: Any) -> None:
     state + policy params), and the ``.to(<cuda>)`` allocator dance
     can overshoot 8 GiB GPUs that handled the slow path fine
     (observed 6.65 GiB peak vs the slow path's 4.72 GiB final on a
-    7.62 GiB RTX 4070 Laptop with ``pi05-libero-nf4`` + int8).
+    7.62 GiB RTX 4070 Laptop with ``pi05-libero-int8`` + int8).
     """
     del torch  # consumed by the caller's `.to(device)`; kept for API parity
     try:

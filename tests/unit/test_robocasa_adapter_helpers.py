@@ -170,7 +170,7 @@ task:
         path = tf.name
     args = SimpleNamespace(
         config=path,
-        rskill="rskills/pi05-robocasa365-human300-nf4",
+        rskill="rskills/rldx1-ft-rc365-nf4",
         robot=None,
         task=None,
         instruction=None,

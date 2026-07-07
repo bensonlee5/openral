@@ -162,17 +162,18 @@ def test_gr1_empty_modes_bug_fixed() -> None:
 def test_rc365_sim_executable_after_fix() -> None:
     """ADR-0071 fix: rc365 cartesian slot EE corrected panda_hand -> panda_gripper.
 
-    Both robocasa-365 checkpoints are now sim-executable on panda_mobile (the
+    The remaining robocasa-365 rSkill is sim-executable on panda_mobile (the
     cartesian/gripper/base/composite modes are all in SIM_EXECUTABLE and the EE
     names match the robot).
     """
     robot = RobotDescription.from_yaml(str(REPO_ROOT / "robots" / "panda_mobile" / "robot.yaml"))
-    for sname in ("pi05-robocasa365-human300-nf4", "rldx1-ft-rc365-nf4"):
-        skill = RSkillManifest.from_yaml(str(REPO_ROOT / "rskills" / sname / "rskill.yaml"))
-        assert skill.action_contract is not None
-        space = TaskSpace.from_action_contract(skill.action_contract, robot)
-        match = task_space_compatible(space, robot, hal_mode="sim")
-        assert match.ok is True, (sname, match.reasons)
+    skill = RSkillManifest.from_yaml(
+        str(REPO_ROOT / "rskills" / "rldx1-ft-rc365-nf4" / "rskill.yaml")
+    )
+    assert skill.action_contract is not None
+    space = TaskSpace.from_action_contract(skill.action_contract, robot)
+    match = task_space_compatible(space, robot, hal_mode="sim")
+    assert match.ok is True, match.reasons
 
 
 def test_every_actuating_skill_has_a_matching_robot() -> None:

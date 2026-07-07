@@ -919,7 +919,7 @@ def test_bh_preflight_palette_deps_drops_blocked_non_tty_when_extras_missing(
 
     Real fixture: ``robots/franka_panda/robot.yaml`` matches several in-tree
     rSkills via ``build_tool_palette`` — the policy-extras-gated
-    ``rskill-pi05-libero-nf4`` (``model_family=pi05``, imports
+    ``rskill-pi05-libero-int8`` (``model_family=pi05``, imports
     ``transformers`` gated behind ``uv sync --group sim``/``--group libero``)
     and the family-less ``rskill-moveit-joints``
     (``kind: ros_action``, no policy extras, always importable). Because a
@@ -958,7 +958,7 @@ def test_bh_preflight_palette_deps_drops_blocked_non_tty_when_extras_missing(
     # preflight skips the typer.confirm prompt entirely.
     import sys as _sys
 
-    # The pi05 miss blocks rskill-pi05-libero-nf4, but the family-less
+    # The pi05 miss blocks rskill-pi05-libero-int8, but the family-less
     # rskill-moveit-joints stays dispatchable → palette is
     # non-empty → the advisory preflight drops the blocked skill and
     # proceeds (no Exit). Disable auto-install (default=1) so the test

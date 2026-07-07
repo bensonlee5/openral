@@ -57,7 +57,7 @@ def _write_registry(
 
 def test_list_installed_returns_entries_for_real_manifests(tmp_path: Path) -> None:
     """Sanity: the loader round-trips through the registry file."""
-    reg = _write_registry(tmp_path, skill_dirs=["pi05-libero-nf4"])
+    reg = _write_registry(tmp_path, skill_dirs=["pi05-libero-int8"])
     entries = rSkill.list_installed(registry_path=reg)
     assert len(entries) == 1
     assert entries[0].repo_id  # non-empty
@@ -65,7 +65,7 @@ def test_list_installed_returns_entries_for_real_manifests(tmp_path: Path) -> No
 
 def test_build_palette_from_registry_includes_capability_matched(tmp_path: Path) -> None:
     """The refresh path equivalent: registry → manifests → ToolPalette."""
-    reg = _write_registry(tmp_path, skill_dirs=["pi05-libero-nf4"])
+    reg = _write_registry(tmp_path, skill_dirs=["pi05-libero-int8"])
     entries = rSkill.list_installed(registry_path=reg)
     manifests = [RSkillManifest.from_yaml(e.manifest_path) for e in entries]
     target = manifests[0]
@@ -81,7 +81,7 @@ def test_build_palette_from_registry_filters_non_intersecting_embodiment(
     tmp_path: Path,
 ) -> None:
     """A skill targeting a different embodiment is excluded from the refresh."""
-    reg = _write_registry(tmp_path, skill_dirs=["pi05-libero-nf4"])
+    reg = _write_registry(tmp_path, skill_dirs=["pi05-libero-int8"])
     entries = rSkill.list_installed(registry_path=reg)
     manifests = [RSkillManifest.from_yaml(e.manifest_path) for e in entries]
     palette = build_tool_palette(

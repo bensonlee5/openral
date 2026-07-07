@@ -42,8 +42,7 @@ binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 | `molmoact2-libero-nf4` | molmoact2 | franka_panda |
 | `molmoact2-so101-nf4` | molmoact2 | so100/so101_follower |
 | `openvla-oft-simpler-widowx-nf4` | openvla | widowx |
-| `pi05-libero-nf4` | pi05 | franka_panda |
-| `pi05-robocasa365-human300-nf4` | pi05 | panda_mobile |
+| `pi05-libero-int8` | pi05 | franka_panda |
 | `rldx1-ft-gr1-nf4` | rldx | gr1 |
 | `rldx1-ft-libero-nf4` | rldx | franka_panda |
 | `rldx1-ft-rc365-nf4` | rldx | panda_mobile |

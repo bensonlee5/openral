@@ -5809,7 +5809,7 @@ def assert_vla_reward_fits(
 #
 # Every benchmarked rSkill ships one ``eval/<benchmark>.json`` file per
 # benchmark suite it has been (or will be) evaluated on.  Four shapes are
-# already in tree (``rskills/{smolvla-libero, smolvla-metaworld, pi05-libero-nf4,
+# already in tree (``rskills/{smolvla-libero, smolvla-metaworld, pi05-libero-int8,
 # xvla-libero}/eval/*.json``); CLAUDE.md §6.4 lists ``eval/`` as required
 # packaging.  This schema pins the format so ``rSkill.from_yaml`` can
 # validate every JSON it finds and ``openral benchmark report`` can aggregate

@@ -148,7 +148,7 @@ obscure a profiling investigation), set
 `OPENRAL_SIM_SEQUENTIAL_INIT=1`:
 
 ```bash
-OPENRAL_SIM_SEQUENTIAL_INIT=1 openral sim run --config scenes/sim/libero_spatial.yaml --rskill pi05-libero-nf4
+OPENRAL_SIM_SEQUENTIAL_INIT=1 openral sim run --config scenes/sim/libero_spatial.yaml --rskill pi05-libero-int8
 ```
 
 See [GH-134](https://github.com/OpenRAL/openral/issues/134).
@@ -681,7 +681,7 @@ license posture, then a `typer.confirm()` prompt:
 
 ```bash
 openral sim run --config scenes/sim/robocasa_pnp.yaml \
-            --rskill rskills/pi05-robocasa365-human300-nf4 \
+            --rskill rskills/rldx1-ft-rc365-nf4 \
             --max-steps 200
 ```
 
@@ -719,51 +719,18 @@ bypassed at adapter import-time via `_spoof_robocasa_version_pins`;
 the controller config's missing-actuator entries are stripped before
 they reach robosuite. See "Known constraints" below for the full set.
 
-### Running with a π₀.₅ checkpoint
+### Running with a RoboCasa-365 checkpoint
 
-`rskills/pi05-robocasa365-human300-nf4` (manifest: `rskills/pi05-robocasa365-human300-nf4/rskill.yaml`)
-wraps the **OpenRAL/rskill-pi05-robocasa365-human300-nf4**
-Apache-2.0 checkpoint — Physical Intelligence's π₀.₅ (3.4 B params,
-16-D state, chunk_size=50) fine-tuned on RoboCasa365 Human-300
-(300 atomic+composite tasks, 100 demos each) against the
-**PandaMobile** robot, pre-quantized to nf4 so the prequant fast-path
-in `openral_sim._quantization` loads the policy in ~20 s instead
-of the ~150 s `from_pretrained` walk.
+`rskills/rldx1-ft-rc365-nf4` wraps the verified RoboCasa-365 PandaMobile
+rSkill. It runs through the same three-camera, 16-D state, 12-D action
+contract as the RoboCasa scene.
 
 ```bash
 OPENRAL_ALLOW_ROBOCASA_ASSETS=1 \
   uv run openral sim run --config scenes/sim/robocasa_pnp.yaml \
-                    --rskill rskills/pi05-robocasa365-human300-nf4 \
+                    --rskill rskills/rldx1-ft-rc365-nf4 \
                     --view --max-steps 200
 ```
-
-Three extra one-time dependencies are needed alongside the RoboCasa
-setup above (the `robocasa` extras group drops `transformers` and
-`bitsandbytes` because of its `libero`-group conflict):
-
-```bash
-# lerobot pi05's tested transformers pin (5.3.0) -- newer versions
-# break with `'Tensor' object has no attribute 'pooler_output'` because
-# SiglipVisionModel's output type changed in transformers >=4.50.
-uv pip install "transformers==5.3.0"
-
-# nf4 quantization (essential for 8 GiB consumer cards -- bf16 OOMs
-# the moment robosuite's offscreen renderer pins GL textures).
-uv pip install "bitsandbytes>=0.45"
-
-# Authenticate to download google/paligemma-3b-pt-224 (gated -- accept
-# the license at https://huggingface.co/google/paligemma-3b-pt-224
-# first):
-hf auth login --token <YOUR_HF_TOKEN>
-```
-
-The first launch downloads the prequantized nf4 safetensors from
-`OpenRAL/rskill-pi05-robocasa365-human300-nf4` plus
-`google/paligemma-3b-pt-224`'s tokenizer.model into
-`~/.cache/huggingface/hub/`. The pi05 adapter detects the
-`quantization_metadata.json` sentinel and overlays the prequant state
-via `install_prequantized_linears`, skipping the bf16->nf4 conversion
-entirely. Total VRAM after warmup: ~4-5 GiB.
 
 What that config wires together:
 
@@ -776,9 +743,9 @@ What that config wires together:
 - `scene.backend_options.mode: prebuilt` -- validated through
   :class:`openral_core.RoboCasaBackendOptions` (prebuilt-vs-procedural
   XOR).
-- `--rskill rskills/pi05-robocasa365-human300-nf4` -- the
-  prequantized π₀.₅ Apache-2.0 manifest that declares the embodiment
-  tags / sensor requirements the runner validates.
+- `--rskill rskills/rldx1-ft-rc365-nf4` -- the verified RoboCasa-365
+  manifest that declares the embodiment tags / sensor requirements the
+  runner validates.
 
 The first invocation fetches the ~11 GB CC-BY-4.0 kitchen asset bundle
 under `~/.cache/openral/robocasa/`. The download is gated by

@@ -47,8 +47,7 @@ All entries are published under `OpenRAL/rskill-*` on HuggingFace Hub and exerci
 | [`xvla-libero`](https://github.com/OpenRAL/openral/tree/master/rskills/xvla-libero/) | xVLA (Florence-2) | `franka_panda` | Apache-2.0 |
 | [`act-libero`](https://github.com/OpenRAL/openral/tree/master/rskills/act-libero/) | ACT | `franka_panda` | Apache-2.0 |
 | [`molmoact2-libero-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/molmoact2-libero-nf4/) | MolmoAct2 NF4 (Molmo2-ER VLM + flow-matching, ~5.5 B) | `franka_panda` | Apache-2.0 |
-| [`pi05-libero-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/pi05-libero-nf4/) | π0.5 NF4 | `franka_panda` | Permissive research (weights non-Apache) |
-| [`pi05-robocasa365-human300-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/pi05-robocasa365-human300-nf4/) | π0.5 NF4 (RoboCasa365 + 300 human eps fine-tune) | `panda_mobile` | Apache-2.0 (weights: research) |
+| [`pi05-libero-int8`](https://github.com/OpenRAL/openral/tree/master/rskills/pi05-libero-int8/) | π0.5 NF4 | `franka_panda` | Permissive research (weights non-Apache) |
 | [`act-aloha`](https://github.com/OpenRAL/openral/tree/master/rskills/act-aloha/) | ACT (Action Chunking Transformer) | `aloha_bimanual` | MIT |
 | [`act-aloha-insertion`](https://github.com/OpenRAL/openral/tree/master/rskills/act-aloha-insertion/) | ACT insertion checkpoint — *custom example* | `aloha_bimanual` | MIT |
 | [`diffusion-pusht`](https://github.com/OpenRAL/openral/tree/master/rskills/diffusion-pusht/) | Diffusion Policy | `pusht_2d` | Apache-2.0 |

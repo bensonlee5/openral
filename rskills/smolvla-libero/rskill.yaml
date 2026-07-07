@@ -27,7 +27,7 @@ model_family: "smolvla"
 # LIBERO benchmark targets table-top manipulation with a Franka Panda
 # arm — the canonical embodiment used under
 # `openral sim run --config smolvla_libero_spatial.yaml` (matches the
-# pi05-libero-nf4 / xvla-libero manifests).
+# pi05-libero-int8 / xvla-libero manifests).
 embodiment_tags:
   - "franka_panda"
 

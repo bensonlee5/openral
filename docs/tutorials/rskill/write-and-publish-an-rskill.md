@@ -51,7 +51,7 @@ canonical `EmbodimentTag` literal (e.g. `so100_follower`, `franka_panda`,
 
 Open `rskills/<id>/rskill.yaml`. The fields that matter most for consumers
 (modeled on the in-tree
-[`rskills/pi05-libero-nf4/rskill.yaml`](https://github.com/OpenRAL/openral/blob/master/rskills/pi05-libero-nf4/rskill.yaml)):
+[`rskills/pi05-libero-int8/rskill.yaml`](https://github.com/OpenRAL/openral/blob/master/rskills/pi05-libero-int8/rskill.yaml)):
 
 | Field | What it does |
 | --- | --- |

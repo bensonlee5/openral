@@ -957,7 +957,7 @@ def test_skill_registry_changed_triggers_palette_refresh(tmp_path) -> None:
     # via OPENRAL_DATA_HOME so the test does not touch the user's
     # actual registry.
     repo_root = Path(__file__).resolve().parents[2]
-    manifest_path = repo_root / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+    manifest_path = repo_root / "rskills" / "pi05-libero-int8" / "rskill.yaml"
     if not manifest_path.exists():
         pytest.skip(f"rskill fixture missing: {manifest_path}")
     data_home = tmp_path / "data_home"

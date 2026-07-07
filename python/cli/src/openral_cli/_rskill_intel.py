@@ -68,7 +68,7 @@ def family_defaults(family: RSkillFamily) -> RSkillPatch:
     """Return the manifest patch for a given family.
 
     Numbers match the published reference manifests under ``rskills/``
-    (``act-aloha``, ``smolvla-libero``, ``pi05-libero-nf4``, ``xvla-libero``,
+    (``act-aloha``, ``smolvla-libero``, ``pi05-libero-int8``, ``xvla-libero``,
     ``diffusion-pusht``). Keeping them in one place avoids drift between
     the scaffolder and the in-tree reference skills.
     """

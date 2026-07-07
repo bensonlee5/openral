@@ -113,7 +113,7 @@ For each tuple, the README is acceptable if **any** of the substrings
 appears (case-insensitive) in **any** heading line. The set is
 deliberately permissive — ``## Model``, ``## Upstream model``,
 ``## Architecture``, and ``## Provenance`` all satisfy the first slot —
-so the diverse in-tree READMEs (smolvla-libero, pi05-libero-nf4,
+so the diverse in-tree READMEs (smolvla-libero, pi05-libero-int8,
 diffusion-pusht, …) pass without rewrites.
 """
 

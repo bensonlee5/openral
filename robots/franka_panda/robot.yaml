@@ -175,7 +175,7 @@ capabilities:
     - "franka"
     - "panda"
     # `libero` mirrors the LIBERO benchmark's canonical Franka-Panda
-    # embodiment so smolvla-libero / pi05-libero-nf4 / xvla-libero rSkills
+    # embodiment so smolvla-libero / pi05-libero-int8 / xvla-libero rSkills
     # accept this manifest under `openral sim run`. See ADR-0007: physical-only
     # invariants stay; sim-canonical tags / sensors map 1:1 to a known
     # benchmark configuration on the same physical arm.

@@ -179,8 +179,7 @@ robots/                                       — canonical RobotDescription man
                                                    by openral_sim at import.
 skills/                                       — rSkill packages (manifest + eval/)
                                                   (smolvla-libero, smolvla-metaworld,
-                                                   pi05-libero-nf4,
-                                                   pi05-robocasa365-human300-nf4,
+                                                   pi05-libero-int8,
                                                    xvla-libero, act-aloha,
                                                    act-aloha-insertion,
                                                    diffusion-pusht)

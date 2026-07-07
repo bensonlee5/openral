@@ -274,9 +274,11 @@ class _RoboCasaSim:
             env_dim = int(getattr(self._env, "action_dim", action_arr.shape[-1]))
             if action_arr.shape[-1] != env_dim:
                 if action_arr.shape[-1] == env_dim + 1:
-                    # 12-D dataset, 11-D env: drop the trailing torso slot
-                    # (the dataset always recorded it as -1; verified from
-                    # the pi0.5 RoboCasa-MG_300 unnormalizer per-dim stats).
+                    # 12-D dataset, 11-D env: drop the trailing control_mode
+                    # flag. The live raw robosuite BASIC composite is
+                    # right(6) + gripper(1) + base(3) + torso(1); the policy's
+                    # dim10 torso slot is constant 0, dim11 is the active
+                    # manipulate/nav mode flag that this env does not consume.
                     action_arr = np.ascontiguousarray(action_arr[:env_dim])
                 elif action_arr.shape[-1] == env_dim - 1:
                     # Inverse skew: re-append the torso slot at -1 (lowest).

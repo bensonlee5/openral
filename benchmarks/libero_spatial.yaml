@@ -9,7 +9,7 @@
 # for the Spatial suite (object 280 / goal 300 / long 520).
 #
 # Render resolution is 256x256 — matches the canonical lerobot LIBERO
-# pipeline the smolvla-libero / pi05-libero-nf4 rSkills were finetuned
+# pipeline the smolvla-libero / pi05-libero-int8 rSkills were finetuned
 # against. SmolVLA's `resize_with_pad` always upsamples to 512x512
 # inside the policy regardless of env render size (see
 # lerobot/policies/smolvla/modeling_smolvla.py:421); rendering at 512x512

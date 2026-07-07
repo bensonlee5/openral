@@ -39,7 +39,7 @@ def test_palette_is_empty_when_no_skills_installed() -> None:
 
 def test_palette_includes_capability_matched_skill() -> None:
     """A skill whose embodiment_tags intersect the robot is included."""
-    manifest = _load_manifest("pi05-libero-nf4")
+    manifest = _load_manifest("pi05-libero-int8")
     capabilities = RobotCapabilities(
         embodiment_tags=list(manifest.embodiment_tags),
     )
@@ -75,7 +75,7 @@ def test_palette_excludes_unresolved_scaffold_template() -> None:
 
 def test_palette_excludes_skill_with_non_intersecting_embodiment() -> None:
     """A skill targeting a different embodiment is excluded."""
-    manifest = _load_manifest("pi05-libero-nf4")
+    manifest = _load_manifest("pi05-libero-int8")
     capabilities = RobotCapabilities(embodiment_tags=["aloha"])  # mismatched
     palette = build_tool_palette(
         installed_skills=[manifest],

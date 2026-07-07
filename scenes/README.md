@@ -289,4 +289,4 @@ win. For evaluations (`--n-episodes >= 2`, or long episodes) it is pure win.
 `openral sim list` prints scenes, paste-able `--rskill` strings, and robots.
 The listing's `rskills:` line is generated from `rskills/<dir>/rskill.yaml`
 files in the repo; copy any token straight into `--rskill` (e.g.
-`--rskill pi05-libero-nf4`).
+`--rskill pi05-libero-int8`).
