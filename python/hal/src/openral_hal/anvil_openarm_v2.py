@@ -10,10 +10,11 @@ exactly two documented joint ranges plus one part:
 * **J1: +/-135 deg** (standard v2 ships -200..+80 deg in the MJCF sign
   convention) — symmetric base yaw on both arms.
 * **J6: -45..+70 deg** (standard v2: +/-45 deg) — the extra +25 deg of
-  radial deviation enabled by Anvil's red wrist bracket.
-* **The red wrist bracket** — clamps the J6 rotor hub and lands on a
+  radial deviation enabled by Anvil's wrist support bracket.
+* **The wrist support bracket** — clamps the J6 rotor hub and lands on a
   plate bolted to the J7 motor end cap; represented in the MJCF by
-  stylised visual-only meshes on the ``link6`` gimbal bodies.
+  visual-only STL meshes from the hardware CAD, hosted on the ``link5``
+  forearm bodies (the bracket must not rotate with J6).
 
 Everything else — kinematics, meshes, native ``<position>`` actuators
 with per-class PD gains, the single-driven-finger grippers with the
@@ -376,7 +377,7 @@ class AnvilOpenArmV2MujocoHAL(MujocoArmHAL):
 
     What makes it the *Anvil* 2.0 rather than the stock v2 arm is
     entirely in the fetched MJCF: J1 clamped to +/-135 deg, J6 widened
-    to -45..+70 deg of radial deviation, and the red wrist bracket
+    to -45..+70 deg of radial deviation, and the wrist support bracket
     (visual-only) that enables it — see
     :mod:`openral_hal._anvil_openarm_v2_assets`.
 
