@@ -187,6 +187,36 @@ def _patch_groot_dtype_property(torch: Any) -> None:
     _gm.GR00TN17.dtype = property(_first_float_dtype)
 
 
+# GR00T N1.7's VLM backbone is a stock Qwen3-VL-2B-Instruct (lerobot's own
+# hard-coded backbone config is literally "a Qwen3-VL-2B-Instruct layout").
+# lerobot builds the model from that hard-coded config (no fetch), but its
+# *processor* factory hard-codes ``AutoTokenizer/ImageProcessor/VideoProcessor
+# .from_pretrained("nvidia/Cosmos-Reason2-2B")`` — a **gated** NVIDIA repo — so
+# loading a GR00T-N1.7 checkpoint 401s at processor build even though every
+# weight is local. The tokenizer/processors are byte-identical to the public,
+# ungated ``Qwen/Qwen3-VL-2B-Instruct`` (same vocab/merges; matching vision +
+# eos special-token ids), so we point the processor there. This keeps the
+# ``nvidia_open_model`` rSkill loadable with no NVIDIA gate and no HF login.
+# Override with OPENRAL_GR00T_BACKBONE_MODEL=nvidia/Cosmos-Reason2-2B to use the
+# exact upstream repo (requires accepting its license + an authenticated token).
+_GR00T_PUBLIC_BACKBONE_MODEL = "Qwen/Qwen3-VL-2B-Instruct"
+
+
+def _redirect_groot_backbone_processor() -> None:
+    """Point lerobot's GR00T-N1.7 processor at the ungated Qwen3-VL backbone.
+
+    lerobot resolves ``GROOT_N1_7_BACKBONE_MODEL`` as a module global at
+    processor-build time (``processor_groot.py`` passes it explicitly into the
+    VLM encode step), so rebinding the name on that module redirects the
+    tokenizer/image/video loads without touching the model-construction path
+    (which uses the checkpoint's own hard-coded Cosmos config, no fetch).
+    """
+    backbone = os.environ.get("OPENRAL_GR00T_BACKBONE_MODEL") or _GR00T_PUBLIC_BACKBONE_MODEL
+    from lerobot.policies.groot import processor_groot as _pg
+
+    _pg.GROOT_N1_7_BACKBONE_MODEL = backbone
+
+
 def _to_groot_libero_state(state: Any) -> NDArray[np.float32]:
     """Return the GR00T libero_sim 8-D proprio vector as flat float32.
 
@@ -400,6 +430,7 @@ def _build_gr00t(env_cfg: Any) -> _GrootAdapter:
         local_path = snapshot_download(repo_id, revision=revision)
 
     _patch_groot_dtype_property(torch)
+    _redirect_groot_backbone_processor()
 
     config = _build_groot_config(
         local_path=local_path,
