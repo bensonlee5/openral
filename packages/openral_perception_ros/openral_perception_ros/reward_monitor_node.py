@@ -52,6 +52,28 @@ from collections.abc import Callable
 from typing import Any
 
 
+def _camera_label(topic: str) -> str:
+    """Derive a short, human-readable camera name from a camera image topic.
+
+    Convention topics are ``/openral/cameras/<name>/image`` (see
+    ``DeployScene.sensors`` / the ROS 2 sensor bringup) — this pulls out
+    ``<name>`` (e.g. ``"top"``) so the dashboard can show which camera the
+    reward monitor actually attends to instead of a full topic string or the
+    uninformative default ``primary_camera`` id (usually just ``"default"``).
+    Falls back to the raw topic when it doesn't match the convention.
+
+    Example:
+        >>> _camera_label("/openral/cameras/top/image")
+        'top'
+        >>> _camera_label("/some/other/topic")
+        '/some/other/topic'
+    """
+    parts = topic.strip("/").split("/")
+    if len(parts) >= 3 and parts[0] == "openral" and parts[1] == "cameras":
+        return parts[2]
+    return topic
+
+
 def main(args: Any = None) -> None:
     """Entry point: init ROS, spin the reward-monitor node, shut down cleanly."""
     import rclpy
@@ -104,6 +126,11 @@ def main(args: Any = None) -> None:
             self._default_task = gp("task").get_parameter_value().string_value
             self._cameras = self._resolve_cameras()
             self._primary_id = next(iter(self._cameras))
+            # Surfaced on the ``reward.score`` span (dashboard rSkill card) so an
+            # operator can see which camera the reward monitor is actually
+            # scoring — the primary_camera id is usually the uninformative
+            # single-camera fallback "default", the topic tail is not.
+            self._camera_name = _camera_label(self._cameras[self._primary_id])
             self._monitor, window_s, fps = self._build_monitor(manifest_path)
             # One rolling buffer per camera id (the primary is what we score).
             self._buffers: dict[str, RollingFrameBuffer] = {
@@ -275,8 +302,10 @@ def main(args: Any = None) -> None:
             """Trace one assessment as a ``reward.score`` span (ADR-0057).
 
             The dashboard's rSkill card renders the latest score as a live
-            progress/success bar; without this span a scored run leaves no
-            reward record in the trace stream. No-op when OTel is unconfigured.
+            progress/success bar and the ``reward.camera`` attribute as the
+            camera the monitor is attending to; without this span a scored run
+            leaves no reward record in the trace stream. No-op when OTel is
+            unconfigured.
             """
             from openral_observability import semconv
             from opentelemetry import trace
@@ -291,6 +320,7 @@ def main(args: Any = None) -> None:
                     semconv.REWARD_SUCCEEDED: bool(a["succeeded"]),
                     semconv.REWARD_FRAMES: int(a["frames_seen"]),
                     semconv.REWARD_TASK: task,
+                    semconv.REWARD_CAMERA: self._camera_name,
                 },
             ):
                 pass

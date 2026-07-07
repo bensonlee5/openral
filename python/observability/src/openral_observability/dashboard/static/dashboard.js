@@ -151,6 +151,7 @@
     }
     const meta = document.createElement("div"); meta.className = "rmeta";
     meta.textContent = "reward · " + fmtAge(rw.ts_unix) +
+      (attrs["reward.camera"] ? " · cam " + attrs["reward.camera"] : "") +
       (attrs["reward.stalled"] ? " · stalled" : "") +
       (attrs["reward.succeeded"] ? " · succeeded" : "");
     el.appendChild(meta);

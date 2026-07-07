@@ -63,6 +63,7 @@ REWARD_STALLED: Final[str] = "reward.stalled"
 REWARD_SUCCEEDED: Final[str] = "reward.succeeded"
 REWARD_FRAMES: Final[str] = "reward.frames"
 REWARD_TASK: Final[str] = "reward.task"
+REWARD_CAMERA: Final[str] = "reward.camera"
 
 # ── openral.run.* — CLI invocation ─────────────────────────────────────────
 
@@ -397,6 +398,7 @@ __all__ = [
     "REASONER_TICK_IDX",
     "REASONER_TIER",
     "REASONER_TOOL",
+    "REWARD_CAMERA",
     "REWARD_FRAMES",
     "REWARD_PROGRESS",
     "REWARD_STALLED",
