@@ -20,10 +20,16 @@ from typer.testing import CliRunner
 lerobot = pytest.importorskip(
     "lerobot",
     reason=(
-        "lerobot>=0.5.1 not installed; install via "
-        "`just sync --all-packages --group metaworld` or "
-        "`uv pip install lerobot>=0.5.1`"
+        "lerobot>=0.6.0 not installed; install via `uv pip install 'openral-dataset[lerobot]'`"
     ),
+)
+pytest.importorskip(
+    "lerobot.datasets",
+    reason=(
+        "lerobot dataset extra not installed; install via "
+        "`uv pip install 'openral-dataset[lerobot]'`"
+    ),
+    exc_type=ImportError,
 )
 
 
