@@ -1,23 +1,35 @@
 """Stateless Robometer reward-scoring server (ADR-0057), run in the sidecar venv.
 
-ZMQ REQ/REP + msgpack. Loads the NF4 RBM reward model once, then scores clips on
-demand. Stateless — the rolling frame buffer / windowing lives node-side
+ZMQ REQ/REP + msgpack. Loads the NF4 Robometer reward model once, then scores
+clips on demand. Stateless — the rolling frame buffer / windowing lives node-side
 (:class:`openral_runner.backends.reward.frame_source.RollingFrameBuffer`).
 
-Two load paths (``--mode``, default ``auto``):
-  * **prequantized** — the published ``OpenRAL/rskill-robometer-4b-nf4`` checkpoint
-    is loaded DIRECTLY as 4-bit on the meta device (no 8 GB bf16 materialisation,
-    no requantize): build the RBM skeleton on ``meta`` -> install empty Linear4bit
-    shells -> ``Params4bit.from_prequantized`` the packed weights -> assign the
-    folded rotary buffers. ~1.7 s, 3.32 GB VRAM.
-  * **bf16** — the upstream Apache-2.0 ``robometer/Robometer-4B`` is loaded bf16 via
-    the pinned robometer loader, then NF4-quantized in place (the path used to
-    BUILD the pre-quantized checkpoint; ~90 s + 19 GB transient CPU RSS).
+Native LeRobot backend (lerobot >= 0.6.0). The reward model is
+``lerobot.rewards.robometer.RobometerRewardModel`` — a vanilla
+``AutoModelForImageTextToText`` (Qwen3-VL-4B) with three prediction heads, loaded
+with plain ``transformers`` (no ``robometer`` git package, no ``auto_map``, no
+pinned ``transformers==4.57.1``). To fit an 8 GB GPU we keep OpenRAL's NF4
+pre-quantized checkpoint (``OpenRAL/rskill-robometer-4b-nf4``, ~3.3 GB resident)
+and load its packed 4-bit weights DIRECTLY into the native ``nn.Module``:
 
-``auto`` picks prequantized for a local pre-quantized dir or an HF repo id
-containing ``nf4``, else bf16. The meta path is byte-identical to the bf16 path
-(verified) and, with the determinism pins applied here, reproducible across
-launches.
+  * build the native skeleton on the ``meta`` device (no Qwen weight download —
+    the empty Qwen3-VL architecture comes from ``lerobot/Robometer-4B``'s baked
+    ``vlm_config``);
+  * drop the LM vocab projection (``lm_head``) — Robometer reads only hidden
+    states, so the 388M-param tied head is dead weight;
+  * install empty ``bitsandbytes`` ``Linear4bit`` shells on the large Linears;
+  * remap the upstream RBM backbone keys (``model.language_model.*`` /
+    ``model.visual.*``) onto the native ``AutoModelForImageTextToText`` nesting
+    (``model.model.*``) and ``Params4bit.from_prequantized`` the packed weights;
+  * assign the folded non-persistent rotary buffers.
+
+Per-frame decode: the native ``RobometerRewardModel.compute_reward`` returns only
+the LAST-frame scalar. OpenRAL needs the full per-frame progress[]/success[]
+series (for the reasoner's trend / plateau / stall logic), so we call the
+lower-level ``_compute_rbm_logits`` + module-level ``decode_progress_outputs``
+directly. The progress head is 10 bins wide (verified against the published
+checkpoint); ``decode_progress_outputs`` derives the bin count from the logit
+width, so the ``num_bins`` wire field is advisory only (kept for wire compat).
 
 Protocol (msgpack dict, key ``op``):
   ping     {}                                          -> {ok, model}
@@ -31,8 +43,13 @@ Booted by ``tools/robometer_sidecar.py``. Not imported by the main package.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from dataclasses import fields
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lerobot.rewards.robometer.configuration_robometer import RobometerConfig
 
 import _robometer_quant as q
 
@@ -44,6 +61,11 @@ import torch  # noqa: E402
 import zmq  # noqa: E402
 
 q.apply_determinism()
+
+# The published checkpoint's native config (Qwen3-VL-4B, 10-bin discrete progress
+# head). Only its small config.json is fetched — never the 9 GB bf16 weights; the
+# baked ``vlm_config`` gives us the empty architecture for the meta build.
+_NATIVE_CONFIG_REPO = "lerobot/Robometer-4B"
 
 
 def _split_repo_rev(weights: str) -> tuple[str, str | None]:
@@ -65,142 +87,127 @@ def _resolve_local_dir(weights: str) -> str:
     return snapshot_download(repo, revision=rev)
 
 
+def _native_config() -> RobometerConfig:
+    """Build the native ``RobometerConfig`` from the published checkpoint's config.
+
+    ``RobometerConfig.from_pretrained`` can't parse the saved ``config.json``
+    (draccus rejects its ``type`` field), so we filter the raw JSON down to the
+    dataclass fields. The baked ``vlm_config`` (Qwen3-VL, vocab 151,674) means no
+    Qwen weight/config download is needed for the meta build.
+    """
+    from huggingface_hub import hf_hub_download
+    from lerobot.rewards.robometer.configuration_robometer import RobometerConfig
+
+    raw = json.load(open(hf_hub_download(_NATIVE_CONFIG_REPO, "config.json")))  # noqa: SIM115 — one-shot
+    valid = {f.name for f in fields(RobometerConfig)}
+    skip = {"input_features", "output_features", "normalization_mapping"}
+    kw = {k: v for k, v in raw.items() if k in valid and k not in skip}
+    return RobometerConfig(**kw)
+
+
+def _remap_backbone_key(key: str) -> str:
+    """Upstream RBM key -> native ``AutoModelForImageTextToText`` nesting.
+
+    The pre-quantized checkpoint stores the backbone as ``model.language_model.*``
+    / ``model.visual.*`` (upstream ``RBM.model`` == the bare ``Qwen3VLModel``).
+    The native module wraps it in a ``…ForConditionalGeneration``, so those live
+    one level deeper at ``model.model.*``. Heads / ``frame_pool_attn`` are shared.
+    """
+    if key.startswith(("model.language_model", "model.visual")):
+        return "model." + key
+    return key
+
+
 class _Scorer:
-    """Loads the NF4 RBM once and scores clips (discrete mode -> [0,1])."""
+    """Loads the NF4 Robometer model once and scores clips (discrete -> [0,1])."""
 
-    def __init__(self, weights: str, device: str = "cuda", mode: str = "auto") -> None:
-        from robometer.utils.setup_utils import setup_batch_collator
-
+    def __init__(self, weights: str, device: str = "cuda") -> None:
         self.device = device
-        resolved = mode
-        if mode == "auto":
-            local_first = weights if os.path.isdir(weights) else None
-            if (
-                local_first and q.is_prequantized_checkpoint(local_first)
-            ) or "nf4" in os.path.basename(_split_repo_rev(weights)[0]).lower():
-                resolved = "prequantized"
-            else:
-                resolved = "bf16"
-
-        if resolved == "prequantized":
-            self.exp_config, self.tokenizer, self.processor, self.model = self._load_prequantized(
-                weights
+        local = _resolve_local_dir(weights)
+        if not q.is_prequantized_checkpoint(local):
+            raise RuntimeError(
+                f"{local} is not an NF4 pre-quantized checkpoint (no bnb nf4 keys). "
+                "The native sidecar loads OpenRAL/rskill-robometer-4b-nf4; the bf16 "
+                "lerobot/Robometer-4B is too large for an 8 GB GPU."
             )
-        else:
-            self.exp_config, self.tokenizer, self.processor, self.model = (
-                self._load_bf16_and_quantize(weights)
-            )
-
+        self.cfg, self.model = self._load_prequantized(local)
         self.model.eval()
+
+        from lerobot.rewards.robometer.processor_robometer import RobometerEncoderProcessorStep
+
+        # Processor from the SAME checkpoint dir: the exact Qwen3-VL tokenizer +
+        # image/video preprocessor the weights shipped with. ``max_frames=None``
+        # keeps every frame the node-side client sends (it already subsampled to
+        # the activation budget), so progress[] length == frames sent.
+        self.step = RobometerEncoderProcessorStep(
+            base_model_id=local,
+            max_frames=None,
+            use_multi_image=self.cfg.use_multi_image,
+            use_per_frame_progress_token=self.cfg.use_per_frame_progress_token,
+        )
         if device == "cuda":
             torch.cuda.synchronize()
             vram = torch.cuda.memory_allocated() / 1e9
-            print(f"[robometer-server] ready ({resolved}): {vram:.2f} GB on {device}", flush=True)
-        self.collator = setup_batch_collator(
-            self.processor, self.tokenizer, self.exp_config, is_eval=True
-        )
+            print(f"[robometer-server] ready (native nf4): {vram:.2f} GB on {device}", flush=True)
 
-    def _load_prequantized(self, weights: str) -> tuple:
-        """Direct 4-bit load of the published checkpoint (meta device, no bf16)."""
-        import yaml
-        from robometer.configs.experiment_configs import ExperimentConfig
-        from robometer.models.rbm import RBM
+    def _load_prequantized(self, local: str) -> tuple:
+        """Meta-build the native module, then drop in the packed NF4 weights."""
+        from lerobot.rewards.robometer.modeling_robometer import RobometerRewardModel
         from safetensors.torch import load_file
-        from transformers import AutoConfig, AutoProcessor, AutoTokenizer
 
-        local = _resolve_local_dir(weights)
-        print(f"[robometer-server] prequantized meta-load from {local} ...", flush=True)
-        raw = yaml.safe_load(open(os.path.join(local, "config.yaml")))  # noqa: SIM115 — one-shot sidecar load
-        valid = {f.name for f in fields(ExperimentConfig)}
-        exp = ExperimentConfig(**{k: v for k, v in raw.items() if k in valid})
-        base_id = getattr(exp.model, "base_model_id", "Qwen/Qwen3-VL-4B-Instruct")
-
-        config = AutoConfig.from_pretrained(local)
-        processor = AutoProcessor.from_pretrained(local)
-        tokenizer = AutoTokenizer.from_pretrained(local)
-        # Direct construction defaults to "eager"; production uses "sdpa".
+        cfg = _native_config()
+        cfg.device = self.device
+        print(f"[robometer-server] native meta-build ({cfg.progress_discrete_bins} bins) ...", flush=True)
+        with torch.device("meta"):
+            model = RobometerRewardModel(cfg)
+        # Direct construction defaults to "eager"; production + determinism use "sdpa".
         for c in (
-            config,
-            getattr(config, "text_config", None),
-            getattr(config, "vision_config", None),
+            model.model.config,
+            getattr(model.model.config, "text_config", None),
+            getattr(model.model.config, "vision_config", None),
         ):
             if c is not None:
                 c._attn_implementation = "sdpa"
+        # Robometer reads only hidden_states; the LM vocab projection is dead
+        # weight (388M tied params) and would otherwise quantize to an empty shell.
+        model.model.lm_head = torch.nn.Identity()
 
-        with torch.device("meta"):
-            model = RBM(
-                config,
-                processor,
-                tokenizer,
-                base_model=None,
-                base_model_id=base_id,
-                model_config=exp.model,
-            )
         q.install_linear4bit_shells(model, torch.bfloat16)
-        state = load_file(os.path.join(local, "model.safetensors"), device=self.device)
+        raw = load_file(os.path.join(local, "model.safetensors"), device=self.device)
+        state = {_remap_backbone_key(k): v for k, v in raw.items()}
         consumed = q.install_prequantized(model, state, self.device)
         leftover = {k: v for k, v in state.items() if k not in consumed}
         model.load_state_dict(leftover, strict=False, assign=True)
+        # ``original_inv_freq`` is a non-persistent rope buffer equal to
+        # ``inv_freq`` at init (default rope scaling), so it's absent from the
+        # checkpoint — seed it so ``assign_meta_buffers`` can fill it.
+        for bname, _buf in list(model.named_buffers()):
+            if bname.endswith("original_inv_freq") and bname not in state:
+                src = bname.replace("original_inv_freq", "inv_freq")
+                if src in state:
+                    state[bname] = state[src]
         n_buf = q.assign_meta_buffers(model, state, self.device)
         still_meta = [n for n, p in model.named_parameters() if p.is_meta]
         if still_meta:
             raise RuntimeError(f"meta params left after prequant load: {still_meta[:5]}")
         print(f"[robometer-server] installed NF4 + {n_buf} rotary buffers", flush=True)
-        return exp, tokenizer, processor, model
-
-    def _load_bf16_and_quantize(self, weights: str) -> tuple:
-        """Upstream bf16 load + in-place NF4 (used to build the prequant checkpoint)."""
-        from robometer.utils.save import load_model_from_hf
-
-        print(f"[robometer-server] loading {weights} bf16 on CPU ...", flush=True)
-        exp_config, tokenizer, processor, model = load_model_from_hf(
-            model_path=weights, device="cpu"
-        )
-        n = q.quantize_nf4_in_place(model, compute_dtype=torch.bfloat16)
-        model.to(self.device)
-        print(f"[robometer-server] quantized {n} NF4 modules", flush=True)
-        return exp_config, tokenizer, processor, model
+        return cfg, model
 
     @torch.no_grad()
     def score(self, frames_rgb: np.ndarray, task: str, num_bins: int) -> tuple[list, list]:
-        from robometer.data.dataset_types import ProgressSample, Trajectory
-        from robometer.evals.eval_server import compute_batch_outputs
+        del num_bins  # advisory only: bin count is derived from the 10-wide head
+        from lerobot.rewards.robometer.modeling_robometer import decode_progress_outputs
 
-        t = int(frames_rgb.shape[0])
-        traj = Trajectory(
-            frames=frames_rgb,
-            frames_shape=tuple(frames_rgb.shape),
-            task=task,
-            id="0",
-            metadata={"subsequence_length": t},
-            video_embeddings=None,
+        encoded = self.step.encode_samples([(frames_rgb, task)])
+        inputs = {k: (v.to(self.device) if hasattr(v, "to") else v) for k, v in encoded.items()}
+        prog_logits, succ_logits = self.model._compute_rbm_logits(inputs)
+        decoded = decode_progress_outputs(
+            prog_logits, succ_logits, is_discrete_mode=self.cfg.use_discrete_progress
         )
-        batch = self.collator([ProgressSample(trajectory=traj, sample_type="progress")])
-        inp = batch["progress_inputs"]
-        for k, v in inp.items():
-            if hasattr(v, "to"):
-                inp[k] = v.to(self.device)
-        res = compute_batch_outputs(
-            self.model,
-            self.tokenizer,
-            inp,
-            sample_type="progress",
-            is_discrete_mode=True,
-            num_bins=num_bins,
-        )
-        prog = np.asarray(
-            res["progress_pred"][0]
-            if isinstance(res["progress_pred"], list)
-            else res["progress_pred"],
-            dtype=np.float32,
-        )
-        succ_raw = res.get("outputs_success", {}).get("success_probs")
+        prog = np.asarray(decoded["progress_pred"][0], dtype=np.float32)
         succ = (
-            np.asarray(
-                succ_raw[0] if isinstance(succ_raw, list) and succ_raw else succ_raw,
-                dtype=np.float32,
-            )
-            if succ_raw is not None
+            np.asarray(decoded["success_probs"][0], dtype=np.float32)
+            if decoded["success_probs"]
             else np.zeros_like(prog)
         )
         return prog.tolist(), succ.tolist()
@@ -212,10 +219,9 @@ def main() -> int:
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=5769)
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--mode", default="auto", choices=("auto", "prequantized", "bf16"))
     args = ap.parse_args()
 
-    scorer = _Scorer(args.weights, device=args.device, mode=args.mode)
+    scorer = _Scorer(args.weights, device=args.device)
 
     ctx = zmq.Context.instance()
     sock = ctx.socket(zmq.REP)

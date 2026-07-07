@@ -25,6 +25,29 @@ base_model:
 > normalized progress (0–1)** and **per-frame success probability**, queried on
 > demand by the Reasoner. **No actuators. Advisory-only.** Apache-2.0.
 
+## Preview
+
+Per-frame **progress** + **success** on a real **LIBERO `libero_spatial`** deploy
+clip — task *"pick up the black bowl and place it on the plate"* — scored live
+with the NF4 Qwen3-VL-4B backbone (peak **3.79 GB**, RTX 4070 Laptop 8 GB).
+Progress rises from **0.44** (first 20% of frames) to **0.72** (last 20%) as the
+bowl is grasped and placed:
+
+![progress curve](media/progress.png)
+
+| Start of clip | Mid-reach | Bowl placed |
+| :---: | :---: | :---: |
+| ![start](media/frame_start.png) | ![mid](media/frame_mid.png) | ![end](media/frame_end.png) |
+
+> In deploy the Reasoner scores a **trailing window** each tick and reads the
+> last-frame value (`success_now`) — exactly what this preview reproduces. HF
+> cards render images but not HTML5 `<video>`; the full overlay is
+> **[`media/progress.mp4`](media/progress.mp4)** (20 frames, downloadable).
+> Regenerate with `tools/robometer_per_frame_demo.py --media-dir media`.
+>
+> Runs the lerobot 0.6.0 in-tree `RobometerRewardModel` (plain `transformers`,
+> no `robometer` git package, no `transformers==4.57.1` pin) — ADR-0057 (amended).
+
 ## Quick Start
 
 ```bash

@@ -106,7 +106,7 @@ class RobometerReward:
         self,
         *,
         model_id: str,
-        weights_source: str = "robometer/Robometer-4B",
+        weights_source: str = "OpenRAL/rskill-robometer-4b-nf4",
         host: str = "127.0.0.1",
         port: int = _DEFAULT_PORT,
         auto_spawn: bool = True,
@@ -367,7 +367,7 @@ def build_reward_monitor(
         )
     if manifest.reward is None:  # pragma: no cover — validator guarantees this
         raise ROSConfigError(f"reward manifest {manifest.name!r} has no `reward` block")
-    raw = manifest.weights_uri or manifest.source_repo or "robometer/Robometer-4B"
+    raw = manifest.weights_uri or manifest.source_repo or "OpenRAL/rskill-robometer-4b-nf4"
     # hf://org/repo[@rev] -> "org/repo[@rev]" (sidecar resolves rev); local:///path
     # -> "/path" (a pre-quantized checkpoint dir loaded directly as 4-bit).
     if raw.startswith("local://"):

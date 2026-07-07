@@ -1367,9 +1367,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             pathlib.Path(_RSKILLS_DIR) / "robometer-4b" / "rskill.yaml"
         )
         # Resolve the camera the monitor scores. An explicit override wins; else
-        # default to the robot's first RGB camera from robot.yaml (the same camera
-        # the VLA consumes), so the monitor "just works" across robots — falling
-        # back to the historical agentview_left only if robot.yaml has none.
+        # default to the robot's WRIST (eye-in-hand) RGB camera from robot.yaml —
+        # it frames the gripper and the manipulated object, which is what Robometer
+        # scores progress from. Falls back to the first RGB camera (the view the VLA
+        # consumes) and then to the historical agentview_left if robot.yaml has none.
         reward_image_topic = reward_monitor_image_topic
         if reward_image_topic == "/openral/cameras/agentview_left/image":
             import yaml  # local: the base graph (no detector/reward) never imports it
@@ -1378,10 +1379,19 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             try:
                 with pathlib.Path(robot_yaml).open(encoding="utf-8") as _rh:
                     _rdoc = yaml.safe_load(_rh) or {}
-                for _s in _rdoc.get("sensors", []):
-                    if _s.get("modality") == "rgb" and _s.get("name"):
-                        reward_camera = str(_s["name"])
-                        break
+                _rgb = [
+                    str(_s["name"])
+                    for _s in _rdoc.get("sensors", [])
+                    if _s.get("modality") == "rgb" and _s.get("name")
+                ]
+                _wrist = next(
+                    (c for c in _rgb if "wrist" in c.lower() or "eye_in_hand" in c.lower()),
+                    None,
+                )
+                if _wrist is not None:
+                    reward_camera = _wrist
+                elif _rgb:
+                    reward_camera = _rgb[0]
             except (OSError, yaml.YAMLError):
                 pass
             reward_image_topic = f"/openral/cameras/{reward_camera}/image"
