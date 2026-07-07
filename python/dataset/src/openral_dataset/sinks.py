@@ -415,6 +415,7 @@ class LeRobotDatasetSink(DatasetSink):
         """
         # lerobot import is deferred to here to keep the package
         # importable on hosts without lerobot installed.
+        from lerobot.configs.video import RGBEncoderConfig
         from lerobot.datasets import LeRobotDataset
 
         features: dict[str, Any] = {
@@ -447,7 +448,9 @@ class LeRobotDatasetSink(DatasetSink):
             root=self._root,
             robot_type=self._robot.name,
             use_videos=True,
-            vcodec=self._vcodec,
+            # lerobot 0.6.0 moved per-stream codec off create()'s signature into
+            # an RGBEncoderConfig (was a bare `vcodec=` kwarg through 0.5.x).
+            rgb_encoder=RGBEncoderConfig(vcodec=self._vcodec),
         )
         _log.info(
             "lerobot_dataset_created",

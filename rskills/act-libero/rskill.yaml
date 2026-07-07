@@ -49,9 +49,14 @@ processors:
   postprocessor_uri: "hf://Deepkar/libero-test-act/policy_postprocessor.json"
 image_preprocessing:
   flip_180: true
+  # Map the scene's source camera keys (camera1/camera2, per sensors_required
+  # above) onto this checkpoint's input-feature names (observation.images.image /
+  # image2). lerobot 0.6.0's ACT predict_action_chunk indexes the batch by
+  # config.image_features, so a stale source name (previously top/wrist, which
+  # the LIBERO sim never emits) yields a KeyError instead of silently running.
   aliases:
-    top: "image"
-    wrist: "image2"
+    camera1: "image"
+    camera2: "image2"
 state_contract:
   # ADR-0027 — LIBERO checkpoints train on 8-D TASK-SPACE proprio
   # (eef_pos ‖ eef_axisangle ‖ gripper). `openral sim run` supplies it directly;

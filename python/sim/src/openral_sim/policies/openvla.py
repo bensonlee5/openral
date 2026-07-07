@@ -357,7 +357,9 @@ def _install_legacy_openvla_model_compat(model_cls: type[Any]) -> None:
 def _legacy_openvla_timm_version_guard() -> Any:
     """Let legacy OpenVLA remote code pass its strict pre-1.0 timm version check."""
     try:
-        import timm  # type: ignore[import-not-found]  # reason: optional OpenVLA remote-code dependency
+        # reason: timm is optional — lerobot 0.6.0 moved it behind the `timm-dep`
+        # extra; the surrounding try/except ImportError already handles its absence.
+        import timm  # type: ignore[import-not-found,unused-ignore]
     except ImportError:
         yield
         return
