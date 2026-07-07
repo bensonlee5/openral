@@ -34,10 +34,10 @@ _REPO_ROOT = Path(__file__).parent.parent.parent
 _RSKILLS_DIR = _REPO_ROOT / "rskills"
 
 # Canonical fixtures: each has a `quantization.dtype` so the dtype tests
-# can assert against the real on-disk enum value. The pi05 / rldx
-# manifests use ``int4``; smolvla-libero ships unquantized ``bf16``. These
+# can assert against the real on-disk enum value. rldx uses ``int4``,
+# pi05-libero-int8 uses ``int8``, and smolvla-libero ships unquantized ``bf16``. These
 # are NOT toy manifests — they are the manifests ``openral sim run`` consumes.
-_PI05_LIBERO = _RSKILLS_DIR / "pi05-libero-int8"  # quantization.dtype: int4
+_PI05_LIBERO = _RSKILLS_DIR / "pi05-libero-int8"  # quantization.dtype: int8
 _BF16_MANIFEST = _RSKILLS_DIR / "smolvla-libero"  # quantization.dtype: bf16
 _RLDX_LIBERO = _RSKILLS_DIR / "rldx1-ft-libero-nf4"  # quantization.dtype: int4
 
@@ -56,7 +56,7 @@ class TestLoadManifestForSpec:
         # them to catch a silent regression in the path-handling layer.
         assert manifest.model_family == "pi05"
         assert manifest.quantization is not None
-        assert manifest.quantization.dtype.value == "int4"
+        assert manifest.quantization.dtype.value == "int8"
 
     def test_hf_uri_returns_none(self) -> None:
         """Bare ``hf://`` URIs must yield ``None`` so adapters can fall through."""
@@ -91,10 +91,10 @@ class TestLoadManifestForSpec:
 class TestNormaliseManifestDtype:
     """Pull ``manifest.quantization.dtype`` as a plain string."""
 
-    def test_int4_manifest(self) -> None:
+    def test_int8_manifest(self) -> None:
         manifest = load_rskill_manifest(str(_PI05_LIBERO))
-        # ``QuantizationDtype.INT4`` enum value should land as ``"int4"``.
-        assert normalise_manifest_dtype(manifest) == "int4"
+        # ``QuantizationDtype.INT8`` enum value should land as ``"int8"``.
+        assert normalise_manifest_dtype(manifest) == "int8"
 
     def test_bf16_manifest(self) -> None:
         manifest = load_rskill_manifest(str(_BF16_MANIFEST))
@@ -114,7 +114,7 @@ class TestManifestDtype:
 
     def test_spec_extra_overrides_manifest(self) -> None:
         """Per-run override beats the manifest's pinned dtype."""
-        manifest = load_rskill_manifest(str(_PI05_LIBERO))  # pinned int4
+        manifest = load_rskill_manifest(str(_PI05_LIBERO))  # pinned int8
         spec = VLASpec(
             id="pi05",
             weights_uri=str(_PI05_LIBERO),
@@ -125,7 +125,7 @@ class TestManifestDtype:
     def test_manifest_used_when_no_extra(self) -> None:
         manifest = load_rskill_manifest(str(_PI05_LIBERO))
         spec = VLASpec(id="pi05", weights_uri=str(_PI05_LIBERO))
-        assert manifest_dtype(spec, manifest=manifest) == "int4"
+        assert manifest_dtype(spec, manifest=manifest) == "int8"
 
     def test_none_when_neither_source_has_dtype(self) -> None:
         spec = VLASpec(id="pi05", weights_uri="")

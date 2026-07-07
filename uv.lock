@@ -2973,6 +2973,7 @@ name = "openral-sim"
 version = "0.1.2"
 source = { editable = "python/sim" }
 dependencies = [
+    { name = "imageio", extra = ["ffmpeg"] },
     { name = "openral-core" },
     { name = "openral-dataset" },
     { name = "openral-observability" },
@@ -2986,6 +2987,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "imageio", extras = ["ffmpeg"], specifier = ">=2.34" },
     { name = "openral-core", editable = "python/core" },
     { name = "openral-dataset", editable = "python/dataset" },
     { name = "openral-observability", editable = "python/observability" },

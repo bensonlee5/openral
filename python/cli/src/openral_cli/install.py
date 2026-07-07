@@ -71,6 +71,7 @@ _GROUPS: Final[dict[str, list[str]]] = {
         "pymunk<7",
         "robot-descriptions>=1.12.0",
         "transformers>=5.4.0,<5.6.0",
+        "lerobot[diffusion]",
     ],
     "libero": [
         "lerobot[libero]",
@@ -105,6 +106,7 @@ _GROUPS: Final[dict[str, list[str]]] = {
         "accelerate>=1.13.0",
         "bitsandbytes>=0.45",
         "num2words>=0.5.14",
+        "imageio[ffmpeg]>=2.34",
     ],
     "rldx": [
         "pyzmq>=25",
