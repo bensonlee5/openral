@@ -189,7 +189,7 @@ def write_media(
     overlaid = [render_overlay(frames[i], float(progress[i]), task) for i in range(len(frames))]
     imageio.mimwrite(
         os.path.join(media_dir, "progress.mp4"),
-        overlaid,
+        cast(list[Any], overlaid),
         fps=15,
         codec="libx264",
         quality=8,
