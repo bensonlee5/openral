@@ -3078,6 +3078,7 @@ isaacsim = [
     { name = "pyzmq" },
 ]
 libero = [
+    { name = "accelerate" },
     { name = "bitsandbytes" },
     { name = "lerobot", extra = ["libero"], marker = "extra == 'group-17-openral-workspace-libero'" },
     { name = "num2words" },
@@ -3209,6 +3210,7 @@ isaacsim = [
     { name = "pyzmq", specifier = ">=25" },
 ]
 libero = [
+    { name = "accelerate", specifier = ">=1.13.0" },
     { name = "bitsandbytes", specifier = ">=0.45" },
     { name = "lerobot", extras = ["libero"] },
     { name = "num2words", specifier = ">=0.5.14" },

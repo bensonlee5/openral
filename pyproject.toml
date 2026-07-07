@@ -164,6 +164,7 @@ libero = [
     "transformers>=5.4.0,<5.6.0",  # reason: lerobot 0.6.0 requires transformers>=5.4.0,<5.6.0 via its `transformers-dep` extra (smolvla / pi / xvla / libero all alias it). Stated explicitly here — matching the sim / metaworld / maniskill3 / robocasa groups — so a multi-group sync resolves to one version and the pin survives even if a future lerobot loosens its own bound.
     "num2words>=0.5.14",  # reason: required by SmolVLAProcessor (transformers) for number tokenization
     "bitsandbytes>=0.45",  # reason: 4-bit (NF4) quantization for π0.5 — 3.4 B PaliGemma backbone needs ≤8 GiB VRAM in nf4
+    "accelerate>=1.13.0",  # reason: init_empty_weights meta-init fast path for NF4 prequant loads (molmoact2 / pi05 libero rSkills) — matches sim / metaworld / maniskill3 / robocasa groups
 ]
 metaworld = [
     # The MetaWorld benchmark package itself (metaworld==3.0.0) is NOT listed here
