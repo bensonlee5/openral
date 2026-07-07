@@ -337,6 +337,26 @@ def _has_openarm_robosuite() -> bool:
     return (major, minor) >= (1, 5)
 
 
+def _has_vlabench() -> bool:
+    """VLABench needs its own package + MuJoCo/dm_control + the lerobot env config.
+
+    The ``rrt_algorithms`` probe covers the git-only data-gen dep that VLABench
+    imports transitively (``dm_task`` → ``skill_lib`` → RRT); the plan writes a
+    site-packages stub for it (:func:`_vlabench_stub_rrt_step`), and a stray
+    ``uv sync`` can evict that stub, so probing it re-triggers the plan to
+    rewrite it — same self-healing rationale as the robosuite editable-shadow
+    cleanup. ``lerobot.envs.configs`` carries ``VLABenchEnv`` (the native 0.6.0
+    env config the backend drives).
+    """
+    return (
+        _has_module("VLABench")
+        and _has_module("mujoco")
+        and _has_module("dm_control")
+        and _has_module("lerobot.envs.configs")
+        and _has_module("rrt_algorithms")
+    )
+
+
 # ── plans ────────────────────────────────────────────────────────────────────
 
 
@@ -1521,6 +1541,149 @@ def _metaworld_plan() -> BackendInstallPlan:
     )
 
 
+def _vlabench_source_dir() -> Path:
+    """Stable on-disk path for the VLABench clone (editable install anchor).
+
+    Lives under ``$OPENRAL_CACHE_HOME/repos/VLABench``. Same rationale as the
+    robocasa clones: ``uv pip install -e`` anchors here forever, and
+    ``VLABENCH_ROOT`` (the asset root the sim reads) is ``<this>/VLABench``.
+    Moving the clone would orphan both the editable install and the ~12 GB
+    asset bundle unpacked under it.
+    """
+    return _cache_home() / "repos" / "VLABench"
+
+
+# VLABench imports exactly these four symbols from the git-only rrt-algorithms
+# package (VLABench/algorithms/motion_planning/rrt.py), transitively on the
+# env-build import chain (dm_task → skill_lib → rrt). They are only *used* in
+# SkillLib's scripted-skill / data-generation methods, never on the VLA
+# policy-eval path. Rather than pull the external repo (which also drags plotly
+# in for utilities.plotting), the plan writes a tiny site-packages stub whose
+# every symbol raises if actually invoked — so an unexpected use on the eval
+# path fails loudly instead of silently running an unvalidated planner.
+_VLABENCH_RRT_STUB_SYMBOLS = (
+    ("rrt/rrt.py", "RRT"),
+    ("rrt/rrt_star.py", "RRTStar"),
+    ("search_space/search_space.py", "SearchSpace"),
+    ("utilities/plotting.py", "Plot"),
+)
+
+
+def _vlabench_stub_rrt_step() -> InstallStep:
+    """Write a raise-on-use ``rrt_algorithms`` stub into the active site-packages.
+
+    Idempotent: overwrites the stub files each run (cheap, and self-heals a stub
+    a stray ``uv sync`` evicted). Package dirs get an ``__init__.py`` so the
+    four ``from rrt_algorithms.… import …`` lines in VLABench resolve.
+    """
+    banner = 'rrt_algorithms is stubbed (VLABench data-gen only; not on the VLA eval path)'
+    script = (
+        "import sysconfig\n"
+        "from pathlib import Path\n"
+        "sp = Path(sysconfig.get_paths()['purelib']) / 'rrt_algorithms'\n"
+        f"symbols = {_VLABENCH_RRT_STUB_SYMBOLS!r}\n"
+        f"doc = {banner!r}\n"
+        "sp.mkdir(parents=True, exist_ok=True)\n"
+        "(sp / '__init__.py').write_text('# stub for git-only rrt-algorithms\\n')\n"
+        "for rel, cls in symbols:\n"
+        "    f = sp / rel\n"
+        "    f.parent.mkdir(parents=True, exist_ok=True)\n"
+        "    initf = f.parent / '__init__.py'\n"
+        "    if not initf.exists():\n"
+        "        initf.write_text('')\n"
+        "    f.write_text(\n"
+        "        f'class {cls}:\\n'\n"
+        "        f'    def __init__(self, *a, **k):\\n'\n"
+        "        f'        raise NotImplementedError({doc!r})\\n'\n"
+        "    )\n"
+        "print(f'wrote rrt_algorithms stub -> {sp}')\n"
+    )
+    return InstallStep(
+        description=(
+            "write raise-on-use rrt_algorithms stub into site-packages "
+            "(git-only VLABench data-gen dep; imported transitively but off the "
+            "VLA eval path — see _VLABENCH_RRT_STUB_SYMBOLS)"
+        ),
+        argv=["bash", "-c", f"python3 - <<'OPENRAL_STUB_EOF'\n{script}OPENRAL_STUB_EOF"],
+    )
+
+
+def _vlabench_plan() -> BackendInstallPlan:
+    """VLABench (ICCV 2025, OpenMOSS) — native lerobot 0.6.0 env, provisioned in-tree.
+
+    VLABench has no PyPI release: it ships as a git clone installed editable
+    ``--no-deps`` (its pins conflict with the numpy-2 workspace lock), plus its
+    handful of numpy-2-compatible sim deps installed loose. The ~12 GB CC-BY
+    asset bundle is a separate first-env-build fetch (ADR-0079); this plan only
+    covers the Python side.
+    """
+    uv = _uv()
+    git = _git()
+    src = _vlabench_source_dir()
+    clone_step = (
+        f"[ -d {src}/.git ] || {git} clone --depth=1 "
+        f"https://github.com/OpenMOSS/VLABench.git {src}"
+    )
+    # numpy-2-compatible sim deps VLABench needs at env-build time (dm_control
+    # renderer + open3d/mediapy for obs, gdown for the asset fetch). Loose (no
+    # pins) so uv resolves them against the workspace's numpy 2.x — VLABench's
+    # own setup pins numpy 1.25, which is why the editable install is --no-deps.
+    sim_deps = ["mujoco", "dm_control", "open3d", "mediapy", "gdown"]
+    return BackendInstallPlan(
+        backend_id="vlabench",
+        display_name=(
+            "VLABench (ICCV 2025, OpenMOSS — MuJoCo + dm_control primitive "
+            "manipulation, Franka Panda)"
+        ),
+        license_note=(
+            "Clones OpenMOSS/VLABench (Apache-2.0) editable + installs its "
+            "numpy-2-compatible sim deps (mujoco, dm_control, open3d, mediapy, "
+            "gdown — all permissive). rrt-algorithms (a git-only data-gen dep, "
+            "MIT) is STUBBED in site-packages — imported transitively but never "
+            "run on the VLA eval path. The ~12 GB CC-BY asset bundle is fetched "
+            "separately on first env build (ADR-0079)."
+        ),
+        probe=_has_vlabench,
+        steps=(
+            InstallStep(
+                description=f"mkdir -p {src.parent} (cache for the editable clone)",
+                argv=["mkdir", "-p", str(src.parent)],
+            ),
+            InstallStep(
+                description=(
+                    f"git clone --depth=1 OpenMOSS/VLABench → {src} "
+                    "(idempotent: skipped if already cloned; no PyPI release)"
+                ),
+                argv=["bash", "-c", f"set -e; {clone_step}"],
+            ),
+            InstallStep(
+                description=(
+                    f"uv pip install --no-deps -e {src} (editable so the asset "
+                    "tree unpacked under VLABench/assets/ is reachable; --no-deps "
+                    "because VLABench's numpy 1.25 pin conflicts with the workspace)"
+                ),
+                argv=[uv, "pip", "install", "--no-deps", "-e", str(src)],
+            ),
+            InstallStep(
+                description=(
+                    "uv pip install " + " ".join(sim_deps) + " (numpy-2-compatible "
+                    "dm_control renderer + obs/asset deps; loose so uv keeps numpy 2.x)"
+                ),
+                argv=[uv, "pip", "install", *sim_deps],
+            ),
+            _vlabench_stub_rrt_step(),
+        ),
+        manual_hint=(
+            f"mkdir -p {src.parent} && "
+            f"{clone_step} && "
+            f"uv pip install --no-deps -e {src} && "
+            "uv pip install " + " ".join(sim_deps) + " && "
+            "# then stub rrt_algorithms in site-packages (see _vlabench_stub_rrt_step) "
+            f"and export VLABENCH_ROOT={src}/VLABench"
+        ),
+    )
+
+
 def _openarm_robosuite_plan() -> BackendInstallPlan:
     """OpenArm v2 tabletop scene — needs ``robosuite>=1.5`` from the ``robocasa`` group.
 
@@ -1576,6 +1739,7 @@ _PLANS: dict[str, Callable[[], BackendInstallPlan]] = {
     "maniskill3": _maniskill3_plan,
     "aloha": _aloha_plan,
     "metaworld": _metaworld_plan,
+    "vlabench": _vlabench_plan,
     "openarm_robosuite": _openarm_robosuite_plan,
     "rldx_client": _rldx_client_plan,
     "rldx_sidecar_setup": _rldx_sidecar_setup_plan,

@@ -5961,7 +5961,8 @@ class PhysicsBackend(str, Enum):
     """Physics / scene backend used to instantiate a :class:`SceneSpec`.
 
     Attributes:
-        MUJOCO: Vanilla MuJoCo (CPU / single-env). Default for LIBERO, MetaWorld.
+        MUJOCO: Vanilla MuJoCo (CPU / single-env). Default for LIBERO, MetaWorld,
+            and VLABench (native lerobot 0.6.0 VLABenchEnv, in-process — ADR-0079).
         MUJOCO_MJX: MuJoCo MJX (XLA, GPU-batched headless rollouts).
         PYBULLET: PyBullet (legacy adapters, contact-rich tabletop).
         SAPIEN: SAPIEN (Hillbot/UCSD physics + ray-traced rendering). The

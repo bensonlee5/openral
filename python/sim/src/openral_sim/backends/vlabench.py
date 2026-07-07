@@ -17,15 +17,23 @@ Env contract (``obs_type="pixels_agent_pos"``, ``n_envs=1``):
 ``SyncVectorEnv`` and unwrap the ``n_envs=1`` batch dimension here.
 
 Task ID convention: ``"vlabench/<task-name>"`` (e.g. ``"vlabench/select_fruit"``).
-``scene.id`` MUST be ``"vlabench"``. VLABench + its ~12 GB asset bundle are
-externally provisioned (CLAUDE.md §1.9); set ``VLABENCH_ROOT`` (or
-``OPENRAL_VLABENCH_ROOT``) to the ``VLABench/`` package dir that holds ``assets/``.
+``scene.id`` MUST be ``"vlabench"``.
+
+Provisioning (ADR-0079). The Python side (clone + editable install + numpy-2 sim
+deps + rrt-algorithms stub) is handled by :func:`ensure_backend_deps` under the
+``"vlabench"`` plan, auto-installed on first env build (``OPENRAL_AUTO_INSTALL_DEPS``).
+The ~12 GB CC-BY asset bundle is a separate one-time Google-Drive fetch that this
+backend does NOT auto-download — like the CoppeliaSim/RLBench backend it leaves the
+heavy external artefact to the user and raises with the exact recipe when it is
+absent. ``VLABENCH_ROOT`` (or ``OPENRAL_VLABENCH_ROOT``) points at the ``VLABench/``
+package dir that holds ``assets/``; it defaults to the clone the plan installs.
 """
 
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -131,9 +139,32 @@ def _resolve_vlabench_root() -> None:
     if override:
         os.environ["VLABENCH_ROOT"] = override
         return
-    import VLABench
+    import VLABench  # type: ignore[import-not-found,import-untyped,unused-ignore]  # reason: opt-in vlabench backend, externally provisioned (ADR-0079)
 
     os.environ["VLABENCH_ROOT"] = os.path.dirname(VLABench.__file__)
+
+
+def _check_vlabench_assets() -> None:
+    """Verify the ~12 GB asset bundle is unpacked under ``VLABENCH_ROOT/assets``.
+
+    The clone ships ``assets/base`` + ``assets/robots``, but the object + scene
+    meshes (``assets/obj``, ``assets/scenes``) come from the separate Google-Drive
+    download and are what every task's MJCF references. We do NOT auto-fetch them
+    (a 12 GB gdown pull is too flaky to drive unattended — ADR-0079); raise with
+    the exact recipe when they are missing so the failure is legible instead of a
+    ``FileNotFoundError`` deep in dm_control at ``env.reset()``.
+    """
+    root = Path(os.environ["VLABENCH_ROOT"])
+    obj_dir = root / "assets" / "obj"
+    if obj_dir.is_dir() and any(obj_dir.iterdir()):
+        return
+    scripts = root.parent / "scripts" / "download_assets.py"
+    raise ROSConfigError(
+        f"VLABench asset bundle missing under {root / 'assets'} (no populated "
+        "assets/obj). It is a one-time ~12 GB CC-BY download from Google Drive; "
+        f"fetch it with:\n  VLABENCH_ROOT={root} python {scripts}\n"
+        "See docs/adr/0079-vlabench-benchmark-backend.md."
+    )
 
 
 def _build_vlabench_scene(env_cfg: SimEnvironment) -> _VLABenchSim:
@@ -144,15 +175,20 @@ def _build_vlabench_scene(env_cfg: SimEnvironment) -> _VLABenchSim:
         )
     task_name = _parse_task_id(env_cfg.task.id)
 
+    from openral_sim._deps import ensure_backend_deps
+
+    ensure_backend_deps("vlabench")
     try:
         _resolve_vlabench_root()
         from lerobot.envs.configs import VLABenchEnv
     except ImportError as exc:  # pragma: no cover
         raise ROSConfigError(
-            "VLABench backend not installed; provision the VLABench sim + assets "
-            "(clone OpenMOSS/VLABench, `uv pip install --no-deps -e .`, "
-            "`python scripts/download_assets.py`) and set VLABENCH_ROOT."
+            "VLABench backend not installed; the 'vlabench' install plan "
+            "(openral_sim._deps) auto-provisions it — re-run with "
+            "OPENRAL_AUTO_INSTALL_DEPS=1, or install manually per "
+            "docs/adr/0079-vlabench-benchmark-backend.md and set VLABENCH_ROOT."
         ) from exc
+    _check_vlabench_assets()
 
     cfg = VLABenchEnv(
         task=task_name,

@@ -96,6 +96,7 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0045](0045-isaac-sim-backend-integration.md) | NVIDIA Isaac Sim as an optional sim backend | Proposed | refs 0034 idle-step amendment |
 | [0061](0061-robotwin-dual-arm-benchmark-backend.md) | RoboTwin 2.0 dual-arm benchmark backend (SAPIEN, out-of-process sidecar) | Accepted | reuses 0045 sidecar; refs 0060 gate, 0009 producers |
 | [0062](0062-rlbench-benchmark-backend.md) | RLBench (CoppeliaSim/PyRep) benchmark backend + 3D Diffuser Actor | Accepted | renumbered from 0061; reuses 0045 sidecar; refs 0060 gate |
+| [0079](0079-vlabench-benchmark-backend.md) | VLABench (MuJoCo + dm_control) benchmark backend — native in-process, auto-provisioned | Accepted | native (no sidecar) unlike 0062; refs 0060 gate; assets manual like 0062 |
 | [0060](0060-benchmark-task-data-compatibility-gate.md) | Benchmark task-data compatibility gate (`evaluated_tasks`) | Accepted | gates 0061/0062/0063 |
 | [0065](0065-generic-sim-camera-rig.md) | Generic sim camera rig driven by `SensorSpec.sim_placement` | Accepted | closes issue #88 |
 | [0066](0066-deploy-scene-owns-composition.md) | `DeployScene` owns its MJCF composition (robot / scene / rSkill separation) | Accepted | extends 0034, 0041 |

@@ -1,9 +1,10 @@
 # VLABench select_fruit — Franka Panda, primitive (short-horizon) suite.
 # Run: openral benchmark scene --config scenes/benchmark/vlabench_select_fruit.yaml \
 #                        --rskill rskills/smolvla-vlabench
-# Setup: VLABench is externally provisioned (clone OpenMOSS/VLABench,
-#   `uv pip install --no-deps -e .`, `python scripts/download_assets.py`),
-#   then set VLABENCH_ROOT to the VLABench/ package dir. MUJOCO_GL=egl.
+# Setup (ADR-0079): the Python side auto-installs via the `vlabench`
+#   ensure_backend_deps plan (OPENRAL_AUTO_INSTALL_DEPS=1); the ~12 GB CC-BY
+#   asset bundle is a one-time manual `scripts/download_assets.py` fetch. The
+#   backend raises with the exact recipe when assets are absent. MUJOCO_GL=egl.
 
 robot_id: franka_panda
 

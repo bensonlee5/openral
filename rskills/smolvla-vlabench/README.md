@@ -33,15 +33,19 @@ The only VLABench policy above 50% is `VLABench/pi0-fast-ft-primitive-10task-del
 `PI0FAST` (+int8 for 8 GB) to run in-process — a dedicated, not-yet-done effort.
 VLABench's composite/long-horizon suite is unsolved (<50%) by every known policy.
 
-## Provisioning (VLABench is out-of-tree, ~12 GB)
+## Provisioning (ADR-0079)
+
+The **Python side auto-installs** on first env build via the `vlabench`
+`ensure_backend_deps` plan (`OPENRAL_AUTO_INSTALL_DEPS=1`, the default): it clones
+`OpenMOSS/VLABench`, `uv pip install --no-deps -e`'s it, adds the numpy-2 sim deps, and
+writes a raise-on-use `rrt_algorithms` stub (git-only data-gen dep, off the VLA eval path).
+
+The **~12 GB CC-BY asset bundle is a one-time manual fetch** (a Google-Drive `gdown` pull
+too flaky to drive unattended — the backend raises with this exact recipe when it is absent):
 
 ```bash
-git clone https://github.com/OpenMOSS/VLABench.git
-uv pip install --no-deps -e VLABench          # works on numpy 2.x
-uv pip install mujoco dm_control open3d mediapy gdown  # numpy2-compatible sim deps
-# rrt_algorithms is git-only + used only for data-gen (off the VLA eval path) — stub it.
-export VLABENCH_ROOT=$PWD/VLABench/VLABench
-python VLABench/scripts/download_assets.py     # ~12 GB obj + scene from Google Drive
+export VLABENCH_ROOT=$HOME/.cache/openral/repos/VLABench/VLABench   # the clone the plan installs
+python $HOME/.cache/openral/repos/VLABench/scripts/download_assets.py   # ~12 GB obj + scene
 ```
 
 ## Run
