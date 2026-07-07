@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import structlog
 from numpy.typing import NDArray
 from openral_core.exceptions import ROSConfigError
 from openral_rskill._vla_core import (
@@ -100,6 +101,12 @@ class _ACTAdapter:
     _image_std: dict[str, Any] = field(default_factory=dict)
     _action_mean: Any = None  # tensor (1, A)
     _action_std: Any = None
+    # ADR-0082: device-resident inference. When the co-located NVMM sensor leg
+    # delivers frames as GPU handles (obs["image_handles"]), the observation
+    # carries no host pixels — this executor runs the ACT "device" engine
+    # (image/state normalize + action unnormalize baked in) straight on the
+    # device pointers. None → host path (obs["images"]).
+    _nvmm_executor: Any = None
 
     def last_input_frame(self) -> NDArray[np.uint8] | None:
         return self._last_input_frame
@@ -109,6 +116,9 @@ class _ACTAdapter:
             self._policy.reset()
 
     def step(self, observation: Observation, instruction: str) -> NDArray[np.float32]:
+        handles = observation.get("image_handles")
+        if self._nvmm_executor is not None and handles:
+            return self._device_step(observation, handles)
         batch = self._build_batch(observation, instruction)
         if self._preprocessor is not None:
             batch = self._preprocessor(batch)
@@ -122,6 +132,39 @@ class _ACTAdapter:
             # raw joint-position command units.
             action_tensor = action_tensor * self._action_std + self._action_mean
         return to_numpy_action(action_tensor)
+
+    def _device_step(
+        self, observation: Observation, handles: dict[str, Any]
+    ) -> NDArray[np.float32]:
+        """Zero-copy step: NVMM handles → ``ActNvmmExecutor`` → raw action (ADR-0082).
+
+        ``handles`` is keyed by VLA slot (``camera1`` / ``camera2``); the manifest
+        ``image_preprocessing.aliases`` rename those to the checkpoint views, so
+        the engine image input is ``img_<alias>`` (``camera1``→``front``→
+        ``img_front``; ``camera2``→``wrist``→``img_wrist``). The device engine
+        bakes image/state normalize + action unnormalize, so it takes ``/255`` RGB
+        (produced on-GPU by the executor's kernel) + the raw proprio state — the
+        same raw state ``_build_batch`` feeds the host processor — and returns the
+        raw action chunk. Per-step re-inference (``n_action_steps=1``): the first
+        action of the chunk is returned; the runner does the deg↔rad conversion.
+        """
+        frames: dict[str, tuple[int, int, int, int]] = {}
+        for slot, desc in handles.items():
+            name = self._image_input_template.format(cam=self._cam_alias.get(slot, slot))
+            input_name = name.replace("observation.images.", "img_")
+            frames[input_name] = (
+                int(desc["gpu_ptr"]),
+                int(desc["width"]),
+                int(desc["height"]),
+                int(desc["pitch"]),
+            )
+        state = observation.get("state")
+        state_np = np.zeros(self._state_dim or 6, dtype=np.float32)
+        if state is not None:
+            arr = np.asarray(state, dtype=np.float32).reshape(-1)
+            state_np[: min(arr.shape[0], state_np.shape[0])] = arr[: state_np.shape[0]]
+        action_chunk = self._nvmm_executor.infer(frames, state_np)  # (1, chunk, dim) raw
+        return np.asarray(action_chunk[0, 0], dtype=np.float32)
 
     def _normalize_inplace(self, batch: dict[str, Any]) -> None:
         for cam_key in self._camera_keys:
@@ -178,6 +221,68 @@ class _ACTAdapter:
         return batch
 
 
+_log = structlog.get_logger(__name__)
+
+
+def _maybe_build_act_nvmm(
+    policy: Any, repo_id: str, device: str, manifest: Any
+) -> Any:  # reason: lerobot policy + ActNvmmExecutor are untyped
+    """Build the ADR-0082 device-resident NVMM executor, or ``None`` (host path).
+
+    Gated on ``OPENRAL_ACT_TRT=1`` + a resolvable device ONNX
+    (``OPENRAL_ACT_DEVICE_ONNX`` env or manifest
+    ``policy_extras.act_device_onnx_uri``) + a CUDA device with ``tensorrt``. The
+    device engine — image/state normalize + action unnormalize baked in
+    (``tools/export_act_onnx.py --preprocess device``) — is built/cached from the
+    ONNX and handed to :class:`~openral_runner.backends.gstreamer.act_nvmm.ActNvmmExecutor`.
+    Missing deps / no device ONNX → ``None`` so the host path runs; a genuine
+    build failure propagates (§1.4, no silent fallback).
+    """
+    import os  # reason: local, keeps module import cheap
+
+    if os.environ.get("OPENRAL_ACT_TRT", "0").lower() not in ("1", "true"):
+        return None
+    device_onnx = os.environ.get("OPENRAL_ACT_DEVICE_ONNX")
+    if not device_onnx and manifest is not None:
+        raw = manifest.policy_extras.get("act_device_onnx_uri")
+        device_onnx = raw if isinstance(raw, str) else None
+    if not device_onnx or not device.startswith("cuda"):
+        return None
+    try:
+        import tensorrt  # noqa: F401  # reason: probe for the device path
+        from openral_rskill.act_trt import ensure_act_onnx
+        from openral_rskill.runtime_tensorrt import TensorRTRuntime
+        from openral_rskill.smolvla_trt import _device_index
+        from openral_runner.backends.gstreamer.act_nvmm import ActNvmmExecutor
+    except ImportError:
+        _log.info("act_nvmm.unavailable", reason="tensorrt/deps absent — host path")
+        return None
+
+    onnx_path = ensure_act_onnx(repo_id, onnx_uri=device_onnx)
+    engine_bytes = TensorRTRuntime(
+        device=device, rskill_id=f"{repo_id}#act-device"
+    ).serialized_engine(onnx_path)
+    cfg = policy.config
+    image_input_names = [k.replace("observation.images.", "img_") for k in cfg.image_features]
+    _, h, w = next(iter(cfg.image_features.values())).shape
+    executor = ActNvmmExecutor(
+        engine_bytes,
+        image_input_names=image_input_names,
+        state_input_name="state",
+        height=h,
+        width=w,
+        device_index=_device_index(device),
+    )
+    _log.info(
+        "act_nvmm.attached",
+        repo_id=repo_id,
+        onnx=str(onnx_path),
+        images=image_input_names,
+        device=device,
+    )
+    return executor
+
+
 @POLICIES.register("act")
 def _build_act(env_cfg: Any) -> _ACTAdapter:
     """Load an ACTPolicy checkpoint."""
@@ -219,17 +324,21 @@ def _build_act(env_cfg: Any) -> _ACTAdapter:
     apply_chunk_replay(policy, spec.extra, manifest=manifest, default_n_action_steps=1)
     _apply_temporal_ensemble(policy, spec.extra)
 
-    # Optional whole-model ONNX / TensorRT inference (OPENRAL_ACT_TRT=1), the ACT
-    # analogue of OPENRAL_SMOLVLA_TRT. When it attaches it swaps
-    # ``predict_action_chunk``, so torch.compile of the eager forward is moot —
-    # only compile the torch path when TRT is off.
+    # Inference backend (OPENRAL_ACT_TRT=1), in precedence order:
+    #  1. ADR-0082 device-resident NVMM path — when the DeepStream sensor leg
+    #     delivers GPU handles, ``ActNvmmExecutor`` runs the "device" engine on the
+    #     device pointers (no host vision copy). Used per-step when handles arrive.
+    #  2. host TensorRT — swaps ``predict_action_chunk`` for the ONNX/TRT runner.
+    #  3. torch.compile of the eager forward.
     from openral_rskill.act_trt import maybe_attach_act_trt_from_env
 
-    onnx_uri = manifest.policy_extras.get("act_onnx_uri") if manifest is not None else None
-    if not maybe_attach_act_trt_from_env(
-        policy, repo_id, onnx_uri=onnx_uri if isinstance(onnx_uri, str) else None, device=device
-    ):
-        maybe_compile_chunk_forward(policy, spec.extra, device, torch)
+    nvmm_executor = _maybe_build_act_nvmm(policy, repo_id, device, manifest)
+    if nvmm_executor is None:
+        onnx_uri = manifest.policy_extras.get("act_onnx_uri") if manifest is not None else None
+        if not maybe_attach_act_trt_from_env(
+            policy, repo_id, onnx_uri=onnx_uri if isinstance(onnx_uri, str) else None, device=device
+        ):
+            maybe_compile_chunk_forward(policy, spec.extra, device, torch)
 
     # Two ACT shapes coexist in tree:
     #
@@ -312,6 +421,7 @@ def _build_act(env_cfg: Any) -> _ACTAdapter:
         _image_std=stats.get("image_std", {}),
         _action_mean=stats.get("action_mean"),
         _action_std=stats.get("action_std"),
+        _nvmm_executor=nvmm_executor,
     )
 
 

@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import torch
 
@@ -63,10 +63,100 @@ class _ACTExportWrapper(torch.nn.Module):
         return actions
 
 
-def export(out_path: Path, repo_id: str, *, device: str = "cpu") -> str:
-    """Export ``repo_id``'s ACT policy to ``out_path`` as ONNX; return sha256."""
+class _ACTDeviceWrapper(torch.nn.Module):
+    """Device-preprocess ACT facade: takes ``/255`` RGB images, bakes image normalize.
+
+    The zero-copy NVMM path (``openral_rskill.act_nvmm``) hands the engine
+    ``[0,1]`` RGB NCHW tensors straight off the nvrtc RGBA→NCHW/255 kernel — so
+    the per-channel MEAN_STD image normalize the lerobot processor would apply on
+    the host is folded into the graph here instead. State stays host-normalized
+    (6-D, negligible); the graph consumes the already-normalized ``state``.
+    """
+
+    def __init__(
+        self,
+        policy: Any,  # reason: lerobot ACTPolicy is untyped
+        image_feature_keys: list[str],
+        state_key: str,
+        stats: _ActStats,
+    ) -> None:
+        super().__init__()
+        from lerobot.utils.constants import OBS_IMAGES
+
+        self.model = policy.model
+        self._image_feature_keys = image_feature_keys
+        self._state_key = state_key
+        self._obs_images = OBS_IMAGES
+        self.register_buffer("_img_mean", stats.img_mean.view(1, 3, 1, 1))
+        self.register_buffer("_img_std", stats.img_std.view(1, 3, 1, 1))
+        self.register_buffer("_state_mean", stats.state_mean.view(1, -1))
+        self.register_buffer("_state_std", stats.state_std.view(1, -1))
+        self.register_buffer("_action_mean", stats.action_mean.view(1, 1, -1))
+        self.register_buffer("_action_std", stats.action_std.view(1, 1, -1))
+
+    def forward(self, *images_and_state: torch.Tensor) -> torch.Tensor:
+        *images_rgb01, state_raw = images_and_state
+        normed = [(img - self._img_mean) / self._img_std for img in images_rgb01]
+        state = (state_raw - self._state_mean) / self._state_std
+        batch: dict[str, Any] = {self._state_key: state}
+        for key, img in zip(self._image_feature_keys, normed, strict=True):
+            batch[key] = img
+        batch[self._obs_images] = list(normed)
+        actions_norm: torch.Tensor = self.model(batch)[0]
+        return actions_norm * self._action_std + self._action_mean  # unnormalized
+
+
+class _ActStats(NamedTuple):
+    img_mean: torch.Tensor
+    img_std: torch.Tensor
+    state_mean: torch.Tensor
+    state_std: torch.Tensor
+    action_mean: torch.Tensor
+    action_std: torch.Tensor
+
+
+def _norm_stats(repo_id: str) -> _ActStats:
+    """Image / state / action MEAN_STD stats from the checkpoint's preprocessor normalizer.
+
+    The ``device`` engine bakes all three (image + state normalize, action
+    unnormalize) so its executor stays a pure device-pointer runner — feeding
+    ``/255`` RGB + raw state and reading back raw action.
+    """
+    from huggingface_hub import hf_hub_download
+    from safetensors.torch import load_file
+
+    s = load_file(
+        hf_hub_download(repo_id, "policy_preprocessor_step_3_normalizer_processor.safetensors")
+    )
+    img_key = next(
+        k for k in s if k.startswith("observation.images.") and k.endswith(".mean")
+    ).rsplit(".", 1)[0]
+    return _ActStats(
+        img_mean=s[f"{img_key}.mean"].reshape(3).float(),
+        img_std=s[f"{img_key}.std"].reshape(3).float(),
+        state_mean=s["observation.state.mean"].reshape(-1).float(),
+        state_std=s["observation.state.std"].reshape(-1).float(),
+        action_mean=s["action.mean"].reshape(-1).float(),
+        action_std=s["action.std"].reshape(-1).float(),
+    )
+
+
+def export(
+    out_path: Path, repo_id: str, *, device: str = "cpu", preprocess: str = "host"
+) -> str:
+    """Export ``repo_id``'s ACT policy to ``out_path`` as ONNX; return sha256.
+
+    ``preprocess="host"`` (default): image inputs are already MEAN_STD-normalized
+    (the lerobot processor runs on the host). ``preprocess="device"``: image
+    inputs are ``[0,1]`` RGB and the image normalize is baked into the graph —
+    for the zero-copy NVMM path where an nvrtc kernel produces ``/255`` frames on
+    the GPU (:mod:`openral_rskill.act_nvmm`).
+    """
     from lerobot.policies.act.modeling_act import ACTPolicy
     from lerobot.utils.constants import OBS_STATE
+
+    if preprocess not in ("host", "device"):
+        raise ValueError(f"preprocess must be 'host' or 'device', got {preprocess!r}")
 
     policy: Any = ACTPolicy.from_pretrained(repo_id)
     policy.eval().to(device)
@@ -76,7 +166,14 @@ def export(out_path: Path, repo_id: str, *, device: str = "cpu") -> str:
     _, h, w = next(iter(cfg.image_features.values())).shape
     state_dim = cfg.robot_state_feature.shape[0]
 
-    wrapped = _ACTExportWrapper(policy, image_feature_keys, OBS_STATE).eval().to(device)
+    if preprocess == "device":
+        wrapped: Any = (
+            _ACTDeviceWrapper(policy, image_feature_keys, OBS_STATE, _norm_stats(repo_id))
+            .eval()
+            .to(device)
+        )
+    else:
+        wrapped = _ACTExportWrapper(policy, image_feature_keys, OBS_STATE).eval().to(device)
     dummy_images = tuple(
         torch.randn(1, 3, h, w, device=device) for _ in image_feature_keys
     )
@@ -110,5 +207,11 @@ if __name__ == "__main__":
     ap.add_argument("--repo-id", default="gabrycina/so101-passing-pen-policy")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--device", default="cpu")
+    ap.add_argument(
+        "--preprocess",
+        choices=("host", "device"),
+        default="host",
+        help="'device' bakes image normalize (for the zero-copy NVMM path).",
+    )
     ns = ap.parse_args()
-    export(ns.out, ns.repo_id, device=ns.device)
+    export(ns.out, ns.repo_id, device=ns.device, preprocess=ns.preprocess)

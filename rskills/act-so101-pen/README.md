@@ -84,12 +84,32 @@ Two RGB streams, aliased to the checkpoint's `observation.images.*` inputs:
 Both are ≥224×224 (trained at 640×480). Proprioception is the 6-D
 joint-position vector.
 
+**In-distribution requirement (important).** ACT is a from-scratch imitation
+policy (ResNet-18, no language grounding) and is overfit to its exact training
+rig — it keys off camera geometry, scale, lighting, and background, not just
+"a pen on a bench". A visually *similar* setup is not enough: on frames that
+match the training distribution the engine reproduces the recorded expert
+actions to ~1° across the whole pick, but on a different physical rig (other
+camera extrinsics / FOV / lighting) it emits erratic actions and the arm
+lunges. Two real training frames are checked in under
+[`reference_frames/`](reference_frames/) (`train_ep0f0_front.png`,
+`train_ep0f0_wrist.png`, episode 0 frame 0; recorded action
+`[2.7, -99.7, 96.9, 60.1, 3.9, 0.5]` in joint degrees) as the in-distribution
+reference — match your camera framing to these before expecting good behavior,
+or collect a short teleop set on your own rig and fine-tune.
+
 ## Reward monitor
 
 Per ADR-0077, this VLA emits no success signal of its own, so it runs paired
 with a reward / progress monitor: `reward_rskill_name:
-OpenRAL/rskill-robometer-4b-nf4` (Robometer-4B, NF4, ~3.6 GB). ACT (fp32,
-~0.2 GB) + Robometer co-reside comfortably on an 8 GB card.
+OpenRAL/rskill-robometer-4b-nf4` (Robometer-4B, NF4). Robometer's **measured**
+resident footprint is ~5.5 GB (weights + CUDA context + VLM-scoring
+activations), not the ~3.6 GB packed-weight size — its manifest `min_vram_gb`
+declares the measured value so the ADR-0077 preflight budgets it honestly. ACT
+(fp32, ~0.5 GB) + Robometer fit an 8 GB card for the host-path VLA; the
+device-resident NVMM path plus dual-camera DeepStream buffers, however, is a
+tight fit alongside Robometer on 8 GB — run reward-off for actuation there, or
+use a larger GPU.
 
 ## ONNX / TensorRT
 

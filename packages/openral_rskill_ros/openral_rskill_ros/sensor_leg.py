@@ -44,6 +44,7 @@ HAL bridge as its single camera source).
 from __future__ import annotations
 
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -191,6 +192,54 @@ def _publish_rate_hz(spec: SensorSpec) -> float:
     return _DEFAULT_PUBLISH_RATE_HZ
 
 
+def _await_first_frame(
+    reader: Any, sensor_id: str, *, attempts: int = 3, timeout_s: float = 6.0
+) -> None:
+    """Block until ``reader`` streams its first frame, reopening on a bus error.
+
+    Serialises camera cold-start (call between consecutive ``reader.open()``s):
+    two USB MJPG cameras whose ``nvjpegdec`` pipelines negotiate PLAYING at the
+    same instant can race, and the loser latches a v4l2 ``streaming stopped
+    (-5)`` bus error with no self-retry. Waiting for a frame before opening the
+    next camera staggers negotiation; a bounded close+reopen recovers a camera
+    that lost a transient race (by then the other camera already streams, so the
+    reopen runs unopposed). Fast no-op once frames flow (tens of ms).
+
+    Args:
+        reader: An open ``SensorReader`` (``read_latest`` / ``open`` / ``close``).
+        sensor_id: Sensor name, for diagnostics.
+        attempts: Max open attempts before giving up.
+        timeout_s: Per-attempt wait for the first frame.
+
+    Raises:
+        ROSRuntimeError: No frame after ``attempts`` open attempts.
+    """
+    from openral_core.exceptions import ROSPerceptionStale, ROSRuntimeError
+
+    for attempt in range(1, attempts + 1):
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            try:
+                reader.read_latest(max_age_ms=None)
+                return  # streaming — first fresh frame arrived
+            except ROSPerceptionStale:
+                time.sleep(0.05)  # no frame yet — keep polling
+            except ROSRuntimeError as exc:  # bus error (e.g. v4l2 -5) — reopen
+                log.warning(
+                    "sensor_leg.camera_reopen",
+                    sensor_id=sensor_id,
+                    attempt=attempt,
+                    error=str(exc),
+                )
+                reader.close()
+                reader.open()
+                break  # re-enter the wait loop against the reopened pipeline
+    raise ROSRuntimeError(
+        f"sensor_leg: camera {sensor_id!r} produced no frame after {attempts} "
+        f"open attempts ({timeout_s:.0f}s each)"
+    )
+
+
 def open_deploy_sensor_readers(
     sensors: Iterable[SensorSpec],
     *,
@@ -256,6 +305,13 @@ def open_deploy_sensor_readers(
                 )
                 reader = SENSOR_BACKEND_REGISTRY[cfg.backend.value](cfg)
                 reader.open()
+                # Serialise cold-start: block until this camera streams a frame
+                # before opening the next one (reopening on a transient bus
+                # error). Two USB MJPG cameras whose ``nvjpegdec`` pipelines
+                # negotiate PLAYING concurrently race — one loses with v4l2
+                # ``streaming stopped (-5)`` and the reader latches it without
+                # self-retry, so a co-mounted wrist+top pair came up one-camera-short.
+                _await_first_frame(reader, spec.name)
                 leg.readers.append(reader)
             else:
                 # No native tee (opencv_thread): open the reader bare and

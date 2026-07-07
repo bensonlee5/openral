@@ -72,6 +72,10 @@ weights_uri: "hf://gabrycina/so101-passing-pen-policy"
 # README "ONNX / TensorRT".
 policy_extras:
   act_onnx_uri: "hf://OpenRAL/rskill-act-so101-pen/model.onnx"
+  # ADR-0082 device-resident path: image/state normalize + action unnormalize
+  # baked in, image inputs are /255 RGB (the on-GPU nvrtc kernel output). Used
+  # when the DeepStream NVMM sensor leg delivers frames as GPU handles.
+  act_device_onnx_uri: "hf://OpenRAL/rskill-act-so101-pen/model_device.onnx"
 
 # ── ADR-0077 — reward / progress monitor co-resident with this VLA ──────────
 # A VLA emits no success signal of its own, so it runs paired with a reward
