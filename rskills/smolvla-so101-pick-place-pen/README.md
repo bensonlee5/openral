@@ -119,6 +119,38 @@ runtime config edit. (The shared
 `openral_rskill._lerobot_compat.sanitize_smolvla_config` helper still runs on
 every OpenRAL SmolVLA load path as a defensive no-op for other checkpoints.)
 
+## Known limitation — pre-build the TRT engines (real-hardware deploy)
+
+Validated on a real SO-101 (`scenes/deploy/so101_bench.yaml`, reward-off):
+clean offline load → 2-cam TRT engines → NVMM zero-copy frames → joint-position
+chunks streamed to the arm at `joint_units=degrees`. It picks the pen.
+
+One caveat when `OPENRAL_SMOLVLA_TRT=1`: the split-ONNX export of the **policy
+graph** *deadlocks when run inside the `rskill_runner_node` process* (every
+thread parks in `futex_wait` after the ONNX "Translate ✅" step — the ROS
+executor/thread state and the torch.onnx dynamo exporter contend). The vision
+leg exports fine; the policy leg hangs. Until the exporter is moved to a
+subprocess, **pre-build the engines once in a clean process** so the deploy's
+first activation finds them cached (loads in ~1 s, no in-node export):
+
+```python
+# run inside the deploy image, HF_HUB_OFFLINE=1, on the target host:
+import torch
+from openral_rskill._lerobot_compat import sanitize_smolvla_config
+from openral_rskill.smolvla_trt import attach_trt_sample_actions
+from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
+REPO = "OpenRAL/rskill-smolvla-so101-pick-place-pen"
+torch.set_default_dtype(torch.float32)
+sanitize_smolvla_config(REPO)
+pol = SmolVLAPolicy.from_pretrained(REPO); pol.model = pol.model.to("cuda:0").eval()
+attach_trt_sample_actions(pol, REPO, precision="bf16", device_index=0, n_cameras=2)
+# → writes vision + policy engines into ~/.cache/openral/engines (~355 s cold).
+```
+
+Without TRT (`OPENRAL_SMOLVLA_TRT` unset) the policy runs in PyTorch, but the
+DeepStream camera pipeline delivers NVMM handles with no CPU fallback, so TRT is
+required for this deploy path (or disable NVMM per-camera in the scene).
+
 ## License
 
 **Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0 (ADR-0012);
