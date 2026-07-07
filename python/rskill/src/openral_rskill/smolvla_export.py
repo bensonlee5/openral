@@ -416,3 +416,50 @@ def _export_onnx(
     if onnx_program is None:  # pragma: no cover - defensive; dynamo=True always returns
         raise ROSConfigError(f"smolvla_export: dynamo export returned None for {path.name}")
     onnx_program.save(str(path))
+
+
+def _cli_export(argv: list[str] | None = None) -> int:
+    """Subprocess entry point: load a checkpoint and write its split ONNX graphs.
+
+    Run as ``python -m openral_rskill.smolvla_export --repo-id <id> --out-dir
+    <dir> [--n-cameras N]``.
+
+    This exists because the ``torch.onnx`` **dynamo** exporter deadlocks when
+    invoked inside a process that already runs an ``rclpy`` executor: the
+    exporter's internal threadpool and the ROS 2 executor threads contend, and
+    every thread parks in ``futex_wait`` right after the "Translate ✅" step —
+    the policy graph never finishes. The same export completes fine in a fresh
+    process, so :func:`openral_rskill.smolvla_trt.ensure_smolvla_onnx` shells
+    this module instead of exporting in-process. Standalone callers (tests, the
+    engine prebuild) reach it through that same path.
+
+    Args:
+        argv: Command-line arguments (``None`` = ``sys.argv[1:]``).
+
+    Returns:
+        Process exit code (``0`` on success).
+    """
+    import argparse  # noqa: PLC0415  # reason: only needed on the subprocess path
+
+    parser = argparse.ArgumentParser(prog="openral_rskill.smolvla_export")
+    parser.add_argument("--repo-id", required=True, help="HF checkpoint id (offline-cache ok).")
+    parser.add_argument("--out-dir", required=True, help="Directory for the two ONNX graphs.")
+    parser.add_argument(
+        "--n-cameras", type=int, default=None, help="Camera slots to bake (default: config count)."
+    )
+    ns = parser.parse_args(argv)
+
+    from lerobot.policies.smolvla.modeling_smolvla import (  # noqa: PLC0415  # reason: deferred heavy dep
+        SmolVLAPolicy,
+    )
+
+    from openral_rskill._lerobot_compat import sanitize_smolvla_config  # noqa: PLC0415
+
+    sanitize_smolvla_config(ns.repo_id)
+    policy = SmolVLAPolicy.from_pretrained(ns.repo_id)
+    export_smolvla_split_onnx(policy, ns.out_dir, n_cameras=ns.n_cameras)
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover - subprocess entry point
+    raise SystemExit(_cli_export())

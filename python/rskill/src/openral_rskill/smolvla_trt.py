@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -35,7 +37,7 @@ import structlog
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
 from openral_core.schemas import QuantizationBackend, QuantizationConfig, QuantizationDtype
 
-from openral_rskill.smolvla_export import SmolVLAOnnxPaths, export_smolvla_split_onnx
+from openral_rskill.smolvla_export import SmolVLAOnnxPaths
 
 log = structlog.get_logger(__name__)
 
@@ -108,10 +110,11 @@ def ensure_smolvla_onnx(
 ) -> SmolVLAOnnxPaths:
     """Return cached split-ONNX graphs for ``repo_id``, exporting on first use.
 
-    The export needs a **separate fp32/CPU copy** of the checkpoint
-    (:func:`export_smolvla_split_onnx` converts its policy in place), so the
-    caller's deploy policy is never touched. One-time cost ~7 min CPU;
-    subsequent calls just stat the files.
+    The first-use export runs in a **fresh subprocess** (``python -m
+    openral_rskill.smolvla_export``): the torch.onnx dynamo exporter deadlocks
+    inside a process already hosting an rclpy executor, and the child also loads
+    its own fp32/CPU checkpoint copy so the caller's deploy policy is never
+    touched. One-time cost ~7 min CPU; subsequent calls just stat the files.
 
     Args:
         repo_id: HF checkpoint id (must resolve from cache when offline).
@@ -134,35 +137,34 @@ def ensure_smolvla_onnx(
     vision = root / "vision_encoder.onnx"
     policy_graph = root / "policy_graph.onnx"
     if vision.exists() and policy_graph.exists():
-        # n_cameras / tokens-per-camera are static graph facts; recover them
-        # cheaply from the vision graph's input/output shapes via onnx.
-        import onnx  # noqa: PLC0415  # reason: deferred heavy dep
+        return _load_onnx_paths(vision, policy_graph)
 
-        model = onnx.load(str(vision), load_external_data=False)
-        vin = model.graph.input[0].type.tensor_type.shape.dim
-        vout = model.graph.output[0].type.tensor_type.shape.dim
-        return SmolVLAOnnxPaths(
-            vision_onnx=vision,
-            policy_onnx=policy_graph,
-            n_cameras=int(vin[0].dim_value),
-            image_tokens_per_camera=int(vout[1].dim_value),
-        )
-
-    try:
-        from lerobot.policies.smolvla.modeling_smolvla import (  # noqa: PLC0415  # reason: deferred heavy dep
-            SmolVLAPolicy,
-        )
-    except ImportError as exc:  # pragma: no cover - import guard
-        raise ROSConfigError("ensure_smolvla_onnx requires 'lerobot' (uv add lerobot).") from exc
-
+    # The torch.onnx dynamo exporter deadlocks when run inside a process that
+    # already hosts an rclpy executor (its threadpool contends with the ROS
+    # threads — every thread parks in futex_wait after "Translate ✅" and the
+    # policy graph never finishes). Export in a fresh process, which is immune;
+    # the GPU TRT engine build stays in-process (pure TRT builder, no deadlock).
     log.info("smolvla_trt.exporting_onnx", repo_id=repo_id, out_dir=str(root))
     t0 = time.perf_counter()
-    from openral_rskill._lerobot_compat import sanitize_smolvla_config  # noqa: PLC0415
-
-    sanitize_smolvla_config(repo_id)
-    export_policy = SmolVLAPolicy.from_pretrained(repo_id)
-    paths = export_smolvla_split_onnx(export_policy, root, n_cameras=n_cameras)
-    del export_policy
+    cmd = [
+        sys.executable, "-m", "openral_rskill.smolvla_export",
+        "--repo-id", repo_id, "--out-dir", str(root),
+    ]
+    if n_cameras is not None:
+        cmd += ["--n-cameras", str(n_cameras)]
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
+    if proc.returncode != 0:
+        raise ROSConfigError(
+            f"smolvla_trt: ONNX export subprocess failed (rc={proc.returncode}) for "
+            f"{repo_id!r}.\n--- stdout ---\n{proc.stdout[-2000:]}"
+            f"\n--- stderr ---\n{proc.stderr[-4000:]}"
+        )
+    if not (vision.exists() and policy_graph.exists()):
+        raise ROSConfigError(
+            f"smolvla_trt: ONNX export subprocess exited 0 but graphs are missing under "
+            f"{root} (repo_id={repo_id!r})."
+        )
+    paths = _load_onnx_paths(vision, policy_graph)
     log.info(
         "smolvla_trt.onnx_exported",
         repo_id=repo_id,
@@ -170,6 +172,25 @@ def ensure_smolvla_onnx(
         n_cameras=paths.n_cameras,
     )
     return paths
+
+
+def _load_onnx_paths(vision: Path, policy_graph: Path) -> SmolVLAOnnxPaths:
+    """Build :class:`SmolVLAOnnxPaths` from two on-disk graphs.
+
+    ``n_cameras`` and tokens-per-camera are static graph facts, recovered
+    cheaply from the vision graph's input/output shapes (no policy load).
+    """
+    import onnx  # noqa: PLC0415  # reason: deferred heavy dep
+
+    model = onnx.load(str(vision), load_external_data=False)
+    vin = model.graph.input[0].type.tensor_type.shape.dim
+    vout = model.graph.output[0].type.tensor_type.shape.dim
+    return SmolVLAOnnxPaths(
+        vision_onnx=vision,
+        policy_onnx=policy_graph,
+        n_cameras=int(vin[0].dim_value),
+        image_tokens_per_camera=int(vout[1].dim_value),
+    )
 
 
 class _TrtSampleActions:
