@@ -286,6 +286,7 @@ robocasa = [
     "accelerate>=1.13.0",  # reason: device_map + dtype handling for SmolVLA / pi05 init_empty_weights fast meta-init path.
     "bitsandbytes>=0.45",  # reason: 4-bit (NF4) quantization for π0.5 / openarm-vision-nf4 — the pi05 adapter raises ROSConfigError without bnb on `quantization.dtype: nf4` manifests.
     "num2words>=0.5.14",  # reason: required by SmolVLAProcessor (transformers) for number tokenization.
+    "imageio[ffmpeg]>=2.34",  # reason: robocasa's env_utils imports imageio at load (playback_dataset_hdf5), and openral_sim's --save-video writer uses imageio's ffmpeg plugin. Both rode in transitively via lerobot's video deps under 0.5.1; lerobot 0.6.0 modularized those behind extras, dropping imageio[ffmpeg] from the bare-lerobot robocasa closure — declare it here so the robocasa runtime env resolves both the module and its ffmpeg plugin.
 ]
 rldx = [
     # ADR-0010 — opt-in RLDX-1 sidecar adapter.
