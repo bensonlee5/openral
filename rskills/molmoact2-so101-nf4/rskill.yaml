@@ -14,6 +14,11 @@
 # weights via load_prequantized_state_for_rskill (no on-the-fly
 # quantization cost at startup).
 #
+# Provenance (lerobot 0.6.0): the model graph is built from lerobot's in-tree
+# MolmoAct2ForConditionalGeneration class (this NF4 pack loads into it
+# key-for-key) — NOT via a trust_remote_code AutoModel. source_repo below
+# supplies only the config + processor + norm_stats.json.
+#
 # norm_tag: this checkpoint requires norm_tag="so100_so101_molmoact2" (the
 # adapter's bare default is "libero", which this checkpoint rejects). It is
 # declared below under image_preprocessing.norm_tag and propagated to the
