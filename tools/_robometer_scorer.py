@@ -36,7 +36,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import fields
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from lerobot.rewards.robometer.configuration_robometer import RobometerConfig
@@ -47,6 +47,7 @@ q.set_cublas_workspace_env()  # MUST precede CUDA init (torch import below)
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
+from numpy.typing import NDArray  # noqa: E402
 
 q.apply_determinism()
 
@@ -138,7 +139,7 @@ class _Scorer:
             vram = torch.cuda.memory_allocated() / 1e9
             print(f"[robometer] ready (native nf4): {vram:.2f} GB on {device}", flush=True)
 
-    def _load_prequantized(self, local: str) -> tuple:
+    def _load_prequantized(self, local: str) -> tuple[RobometerConfig, Any]:
         """Meta-build the native module, then drop in the packed NF4 weights."""
         from lerobot.rewards.robometer.modeling_robometer import RobometerRewardModel
         from safetensors.torch import load_file
@@ -182,7 +183,9 @@ class _Scorer:
         return cfg, model
 
     @torch.no_grad()
-    def score(self, frames_rgb: np.ndarray, task: str, num_bins: int) -> tuple[list, list]:
+    def score(
+        self, frames_rgb: NDArray[np.uint8], task: str, num_bins: int
+    ) -> tuple[list[float], list[float]]:
         del num_bins  # advisory only: bin count is derived from the 10-wide head
         from lerobot.rewards.robometer.modeling_robometer import decode_progress_outputs
 

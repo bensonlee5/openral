@@ -9,12 +9,13 @@ quantization stays in ``tools/quantize_rskill.py``.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import torch
 from huggingface_hub import snapshot_download
@@ -44,13 +45,14 @@ def _maybe_add_openpi_src(path: str | None) -> None:
 def _restore_openpi_params(params_dir: Path) -> dict[str, Any]:
     try:
         import numpy as np
-        from flax import traverse_util
-        from openpi.models import model as openpi_model
+
+        traverse_util = cast(Any, importlib.import_module("flax.traverse_util"))
+        openpi_model = cast(Any, importlib.import_module("openpi.models.model"))
     except Exception as exc:  # pragma: no cover - dependency gate
         raise RuntimeError(_OPENPI_RESTORE_DEPS) from exc
 
     params = openpi_model.restore_params(params_dir, restore_type=np.ndarray)
-    return traverse_util.flatten_dict(params, sep=".")
+    return cast(dict[str, Any], traverse_util.flatten_dict(params, sep="."))
 
 
 def _download_params(source: str, revision: str | None, checkpoint_subdir: str) -> Path:

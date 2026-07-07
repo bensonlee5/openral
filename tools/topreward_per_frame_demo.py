@@ -29,7 +29,7 @@ import os
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import argparse
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -41,10 +41,11 @@ from lerobot.rewards.topreward.compute_rabc_weights import (
 from lerobot.rewards.topreward.configuration_topreward import TOPRewardConfig
 from lerobot.rewards.topreward.modeling_topreward import TOPRewardModel
 from lerobot.rewards.topreward.processor_topreward import TOPRewardEncoderProcessorStep
+from numpy.typing import NDArray
 from transformers import BitsAndBytesConfig, Qwen3VLForConditionalGeneration
 
 
-class NF4TOPRewardModel(TOPRewardModel):
+class NF4TOPRewardModel(TOPRewardModel):  # type: ignore[misc]  # reason: lerobot model is untyped.
     """TOPReward whose Qwen3-VL backbone is loaded in NF4 (4-bit) to fit 8 GB.
 
     lerobot's :class:`TOPRewardModel.__init__` hard-codes ``model_kwargs`` with
@@ -81,7 +82,7 @@ def per_frame_progress(
     num_samples: int,
     max_frames: int,
     device: str = "cuda",
-) -> tuple[np.ndarray, str, int, np.ndarray]:
+) -> tuple[NDArray[np.float32], str, int, NDArray[np.uint8]]:
     """Return the TOPReward per-frame progress curve for one dataset episode.
 
     Returns ``(progress[num_frames] in [0,1], task_string, num_frames,
@@ -144,7 +145,7 @@ def per_frame_progress(
     return np.asarray(progress, dtype=np.float32), task, num_frames, frames
 
 
-def render_overlay(frame: np.ndarray, value: float, task: str) -> np.ndarray:
+def render_overlay(frame: NDArray[np.uint8], value: float, task: str) -> NDArray[np.uint8]:
     """Draw a progress bar + value + task caption under an RGB frame (uint8 HWC)."""
     import cv2
 
@@ -175,10 +176,12 @@ def render_overlay(frame: np.ndarray, value: float, task: str) -> np.ndarray:
     cv2.putText(
         canvas, cap, (x1, y0 + 68), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (170, 200, 235), 1, cv2.LINE_AA
     )
-    return cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+    return cast(NDArray[np.uint8], cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB))
 
 
-def write_media(frames: np.ndarray, progress: np.ndarray, task: str, media_dir: str) -> None:
+def write_media(
+    frames: NDArray[np.uint8], progress: NDArray[np.float32], task: str, media_dir: str
+) -> None:
     """Write progress.mp4 + start/mid/end stills with the progress overlay."""
     import imageio.v2 as imageio
 
@@ -197,7 +200,7 @@ def write_media(frames: np.ndarray, progress: np.ndarray, task: str, media_dir: 
         imageio.imwrite(os.path.join(media_dir, f"frame_{label}.png"), overlaid[idx])
 
 
-def _sparkline(x: np.ndarray) -> str:
+def _sparkline(x: NDArray[np.float32]) -> str:
     blocks = "▁▂▃▄▅▆▇█"
     return "".join(blocks[min(len(blocks) - 1, int(round(v * (len(blocks) - 1))))] for v in x)
 
