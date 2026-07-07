@@ -1,11 +1,11 @@
 ---
-name: pi05-libero-nf4
+name: pi05-libero-int8
 description: >-
-  S1 Vision-Language-Action policy. Capabilities: pick, place, open, close on bowl, cup, drawer, object. π0.5 fine-tuned on LIBERO (v0.44), NF4-quantized via tools/quantize_rskill.py and re-hosted at OpenRAL/rskill-pi05-libero-nf4 so 8 GB GPUs can run the rollout without OOM. π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/libero.json (pending). Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S1 Vision-Language-Action policy. Capabilities: pick, place, open, close on bowl, cup, drawer, object. π0.5 fine-tuned on LIBERO (v0.44), loaded from the upstream LeRobot checkpoint and packed to int8 at runtime so 8 GB GPUs can run the rollout without the NF4 competence regression observed under LeRobot 0.6.0. π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/libero.json (pending). Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
-  rskill_id: OpenRAL/rskill-pi05-libero-nf4
+  rskill_id: OpenRAL/rskill-pi05-libero-int8
   manifest: ./rskill.yaml
   role: s1
   kind: vla
@@ -19,19 +19,19 @@ metadata:
   action_dim: 7
   action_representation: delta_ee_6d_plus_gripper
   runtime: pytorch
-  quantization: int4/pytorch
+  quantization: int8/pytorch
   min_vram_gb: {fp32: 14.0, bf16: 7.0, int4: 4.0}
   chunk_size: 50
   n_action_steps: 25
   latency_budget: {per_chunk_ms: 200.0}
   license_code: Apache-2.0
   license_weights: permissive_research   # NOT permissive — see License section
-  weights_uri: hf://OpenRAL/rskill-pi05-libero-nf4
+  weights_uri: hf://lerobot/pi05_libero_finetuned_v044
   source_repo: hf://lerobot/pi05_libero_finetuned_v044
   paper_url: https://arxiv.org/abs/2410.24164
 ---
 
-# pi05-libero-nf4 — rSkill discovery view
+# pi05-libero-int8 — rSkill discovery view
 
 > **Generated view, not a hand-written skill.** This `SKILL.md` is a discovery-only
 > mirror of [`rskill.yaml`](./rskill.yaml), produced by `tools/generate_rskill_skillmd.py`.
@@ -41,7 +41,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **Vision-Language-Action policy** (`role: s1`, `kind: vla`). π0.5 fine-tuned on LIBERO (v0.44), NF4-quantized via tools/quantize_rskill.py and re-hosted at OpenRAL/rskill-pi05-libero-nf4 so 8 GB GPUs can run the rollout without OOM. π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/libero.json (pending).
+An OpenRAL **Vision-Language-Action policy** (`role: s1`, `kind: vla`). π0.5 fine-tuned on LIBERO (v0.44), loaded from the upstream LeRobot checkpoint and packed to int8 at runtime so 8 GB GPUs can run the rollout without the NF4 competence regression observed under LeRobot 0.6.0. π0.5 uses a PaliGemma 3B backbone with a flow-matching head. Weights are PI permissive-research — commercial use needs a vendor agreement. See eval/libero.json (pending).
 
 ## Capabilities
 
@@ -68,7 +68,7 @@ this file. Execution always goes through the OpenRAL loader and the robot HAL.
 ```python
 from openral_rskill import rSkill
 
-skill = rSkill.from_pretrained("OpenRAL/rskill-pi05-libero-nf4")
+skill = rSkill.from_pretrained("OpenRAL/rskill-pi05-libero-int8")
 # the loader validates embodiment / sensors / runtime / quantization against the target
 # RobotDescription and enforces the weight-license gate before any weights load.
 ```
