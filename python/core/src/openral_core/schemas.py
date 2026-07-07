@@ -3894,6 +3894,13 @@ SCENE_FAMILY_TASK_SPACE: dict[str, SceneTaskSpace] = {
         modes=frozenset({ControlMode.CARTESIAN_DELTA, ControlMode.GRIPPER_POSITION}),
         action_dim=7,
     ),
+    # VLABench Franka Panda EE control: 7-D [pos_delta(3) | euler_delta(3) | gripper(1)],
+    # in-process on lerobot 0.6.0 (ADR-0079). Same interface as the LIBERO/SimplerEnv
+    # OSC families — drivable by the default sim packers.
+    "vlabench": SceneTaskSpace(
+        modes=frozenset({ControlMode.CARTESIAN_DELTA, ControlMode.GRIPPER_POSITION}),
+        action_dim=7,
+    ),
     # gym-aloha bimanual joints: 14-D [2 x (6 arm + 1 gripper)].
     "aloha_transfer_cube": SceneTaskSpace(
         modes=frozenset({ControlMode.JOINT_POSITION}), action_dim=14

@@ -78,6 +78,7 @@ _GROUPS: Final[dict[str, list[str]]] = {
         "transformers>=5.4.0,<5.6.0",
         "num2words>=0.5.14",
         "bitsandbytes>=0.45",
+        "accelerate>=1.13.0",
     ],
     "metaworld": [
         "lerobot",

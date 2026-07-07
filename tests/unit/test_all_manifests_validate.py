@@ -83,6 +83,7 @@ _BENCHMARK_STEMS: list[str] = [
     "robotwin_lift_pot",
     "robotwin_place_empty_cup",
     "robotwin_stack_blocks_two",
+    "vlabench_select_fruit",
     "widowx_carrot_on_plate",
 ]
 

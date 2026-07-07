@@ -56,7 +56,28 @@ MUJOCO_GL=egl VLABENCH_ROOT=$VLABENCH_ROOT \
     --rskill rskills/smolvla-vlabench
 ```
 
-## Contract
+## Upstream model / training
+
+Base is [`lerobot/smolvla_base`](https://huggingface.co/lerobot/smolvla_base)
+(SmolVLA ~0.5 B, [arXiv:2506.01844](https://arxiv.org/abs/2506.01844)), finetuned
+on [`lerobot/vlabench_unified`](https://huggingface.co/datasets/lerobot/vlabench_unified)
+(VLABench, 97 tasks). The wrapped checkpoint is
+[`lerobot/smolvla_vlabench`](https://huggingface.co/lerobot/smolvla_vlabench)
+(Apache-2.0); OpenRAL adds no weights, only packaging.
+
+## Supported robots / embodiments
+
+`franka_panda` (VLABench's 7-DOF Franka Panda). The manifest's `embodiment_tags`
+must intersect the robot's — matched against `robots/franka_panda`.
+
+## Sensors / observation contract
+
+Three RGB views (`camera1/2/3`, from the env's `image`/`second_image`/`wrist_image`,
+≥224×224) plus a 7-D proprio state `[pos_robot(3), euler_xyz(3), gripper(1)]`. The
+checkpoint's preprocessor renames `image→camera1…` (a no-op on the already-canonical
+keys) and resizes to 256.
+
+## Manifest summary
 
 | Field | Value |
 | --- | --- |
@@ -65,6 +86,11 @@ MUJOCO_GL=egl VLABENCH_ROOT=$VLABENCH_ROOT \
 | state | 7-D `[pos_robot(3), euler_xyz(3), gripper(1)]` |
 | action | 7-D absolute eef pose → IK (`delta_ee_6d_plus_gripper` label is nominal) |
 | robot | `franka_panda` (uses the manifest's 3rd `camera3`/`front` sensor) |
+
+## License
+
+Apache-2.0 — both this rSkill's packaging and the wrapped `lerobot/smolvla_vlabench`
+checkpoint.
 
 ## See also
 - `python/sim/src/openral_sim/backends/vlabench.py` — the backend.

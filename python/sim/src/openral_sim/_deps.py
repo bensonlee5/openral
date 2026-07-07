@@ -1576,7 +1576,7 @@ def _vlabench_stub_rrt_step() -> InstallStep:
     a stray ``uv sync`` evicted). Package dirs get an ``__init__.py`` so the
     four ``from rrt_algorithms.… import …`` lines in VLABench resolve.
     """
-    banner = 'rrt_algorithms is stubbed (VLABench data-gen only; not on the VLA eval path)'
+    banner = "rrt_algorithms is stubbed (VLABench data-gen only; not on the VLA eval path)"
     script = (
         "import sysconfig\n"
         "from pathlib import Path\n"
@@ -1621,8 +1621,7 @@ def _vlabench_plan() -> BackendInstallPlan:
     git = _git()
     src = _vlabench_source_dir()
     clone_step = (
-        f"[ -d {src}/.git ] || {git} clone --depth=1 "
-        f"https://github.com/OpenMOSS/VLABench.git {src}"
+        f"[ -d {src}/.git ] || {git} clone --depth=1 https://github.com/OpenMOSS/VLABench.git {src}"
     )
     # numpy-2-compatible sim deps VLABench needs at env-build time (dm_control
     # renderer + open3d/mediapy for obs, gdown for the asset fetch). Loose (no
