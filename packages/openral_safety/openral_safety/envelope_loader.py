@@ -514,7 +514,7 @@ def _capsules_by_link(
     return capsule_of
 
 
-def collision_params_from_description(
+def collision_params_from_description(  # noqa: PLR0912, PLR0915
     robot: RobotDescription, *, margin_m: float | None = None
 ) -> dict[str, object]:
     """Flatten a robot's collision geometry into safety_kernel ROS parameters.

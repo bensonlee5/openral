@@ -27,6 +27,7 @@ import structlog
 from openral_core.exceptions import ROSConfigError
 
 # Reuse the identical slug helper from the SmolVLA runtime rather than duplicating.
+from openral_rskill.runtime import Runtime
 from openral_rskill.smolvla_trt import _slug
 
 log = structlog.get_logger(__name__)
@@ -45,9 +46,7 @@ __all__ = [
 ]
 
 
-def ensure_act_onnx(
-    repo_id: str, *, onnx_uri: str | None, cache_dir: Path | None = None
-) -> Path:
+def ensure_act_onnx(repo_id: str, *, onnx_uri: str | None, cache_dir: Path | None = None) -> Path:
     """Resolve the ACT ONNX graph for ``repo_id`` to a local path.
 
     Resolution order:
@@ -132,7 +131,11 @@ class _OnnxActChunk:
     """
 
     def __init__(
-        self, runtime: Any, image_feature_keys: list[str], state_key: str, device: str  # noqa: ANN401  # reason: Runtime Protocol
+        self,
+        runtime: Runtime,
+        image_feature_keys: list[str],
+        state_key: str,
+        device: str,
     ) -> None:
         import torch  # noqa: PLC0415  # reason: deferred heavy dep
 

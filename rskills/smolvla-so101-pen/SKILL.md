@@ -20,6 +20,7 @@ metadata:
   action_representation: joint_positions
   runtime: pytorch
   quantization: bf16/pytorch
+  min_vram_gb: {bf16: 1.5}
   chunk_size: 50
   n_action_steps: 50
   latency_budget: {per_chunk_ms: 400.0}

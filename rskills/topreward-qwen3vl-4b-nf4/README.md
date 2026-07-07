@@ -1,21 +1,26 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - reward
-  - reward-model
-  - robot-learning
-  - progress-estimation
-  - success-detection
-  - zero-shot
-  - qwen3-vl
-  - nf4
-  - bitsandbytes
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- nf4
+- 4-bit
+- any
+- reward
+- reward-model
+- robot-learning
+- progress-estimation
+- success-detection
+- zero-shot
+- qwen3-vl
+- bitsandbytes
 base_model:
-  - Qwen/Qwen3-VL-4B-Instruct
+- Qwen/Qwen3-VL-4B-Instruct
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-topreward-qwen3vl-4b-nf4

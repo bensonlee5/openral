@@ -660,9 +660,7 @@ if _ROS2_AVAILABLE:
                 # this ROS reconstruction serves observability only for them.
                 direct = {
                     str(s)
-                    for s in (
-                        self.get_parameter("direct_image_frame_sensors").value or []
-                    )
+                    for s in (self.get_parameter("direct_image_frame_sensors").value or [])
                     if s
                 }
                 if sensor_name not in direct:

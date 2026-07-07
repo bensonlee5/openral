@@ -126,8 +126,10 @@ def real_obs(policy: Any) -> dict[str, Any]:
     assert all(bool(m.flatten()[0]) for m in img_masks)
     tok = policy.model.vlm_with_expert.processor.tokenizer(
         task if task.endswith("\n") else task + "\n",
-        padding="max_length", truncation=True,
-        max_length=cfg.tokenizer_max_length, return_tensors="pt",
+        padding="max_length",
+        truncation=True,
+        max_length=cfg.tokenizer_max_length,
+        return_tensors="pt",
     )
     return {
         "images": images,
@@ -136,7 +138,9 @@ def real_obs(policy: Any) -> dict[str, Any]:
         "lang_masks": tok["attention_mask"].bool(),
         "state": policy.prepare_state(batch),
         "noise": torch.randn(
-            1, cfg.chunk_size, cfg.max_action_dim,
+            1,
+            cfg.chunk_size,
+            cfg.max_action_dim,
             generator=torch.Generator().manual_seed(7),
         ),
     }
@@ -145,7 +149,11 @@ def real_obs(policy: Any) -> dict[str, Any]:
 def _native(policy: Any, obs: dict[str, Any], images: list[Any], masks: list[Any]) -> np.ndarray:
     with torch.no_grad():
         return policy.model.sample_actions(
-            images, masks, obs["lang_tokens"], obs["lang_masks"], obs["state"],
+            images,
+            masks,
+            obs["lang_tokens"],
+            obs["lang_masks"],
+            obs["state"],
             noise=obs["noise"],
         ).numpy()
 

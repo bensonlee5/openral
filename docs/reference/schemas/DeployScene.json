@@ -92,6 +92,210 @@
       "title": "CameraSimPlacement",
       "type": "object"
     },
+    "DeployRuntime": {
+      "additionalProperties": false,
+      "description": "Committed deploy-posture toggles for a workcell scene.\n\nEvery runtime leg ``openral deploy sim`` / ``deploy run`` can bring up is\ndeclared here so a committed :class:`DeployScene` pins its posture\nexplicitly instead of relying on per-invocation CLI flags. Precedence is\n``CLI flag > scene runtime > auto`` \u2014 an explicit CLI flag always wins,\nand ``None`` means \"auto\" (the manifest-derived / built-in default the CLI\ndocuments for that flag: SLAM from ``capabilities.has_lidar``/vision-SLAM,\nNav2 tracks SLAM, octomap from a depth SensorSpec, detector on,\nkernel-check on, reward monitor / critic off).\n\nHost-operational knobs (dashboard, foxglove, ports, dataset recording,\n``--initial-task``, ``--dry-run``) stay CLI-only \u2014 they describe the\ninvocation, not the workcell.\n\nRelative ``*_manifest`` / ``object_detector_onnx`` paths that exist next\nto the scene YAML are resolved against the scene's directory; otherwise\nthe value is passed through verbatim (repo-relative default / alias).",
+      "properties": {
+        "enable_slam": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Slam"
+        },
+        "enable_nav2": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Nav2"
+        },
+        "enable_octomap": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Octomap"
+        },
+        "enable_octomap_kernel_check": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Octomap Kernel Check"
+        },
+        "enable_object_detector": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Object Detector"
+        },
+        "object_detector_onnx": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object Detector Onnx"
+        },
+        "object_detector_manifest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object Detector Manifest"
+        },
+        "object_detector_query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object Detector Query"
+        },
+        "object_detector_locators": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object Detector Locators"
+        },
+        "enable_reward_monitor": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Reward Monitor"
+        },
+        "reward_monitor_manifest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Monitor Manifest"
+        },
+        "reward_monitor_task": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reward Monitor Task"
+        },
+        "enable_critic": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enable Critic"
+        },
+        "spatial_memory_ingest": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spatial Memory Ingest"
+        },
+        "approach_skill_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approach Skill Id"
+        }
+      },
+      "title": "DeployRuntime",
+      "type": "object"
+    },
+    "HalParameters": {
+      "additionalProperties": false,
+      "description": "Per-robot HAL construction defaults declared in the manifest (ADR-0029).\n\nCarries the transport / constructor keyword arguments a robot's HAL needs\n\u2014 the SO-100's serial ``port`` + ``baud``, a ros2_control arm's\n``robot_ip`` / ``fci_ip`` \u2014 so the manifest is the single source of those\ndefaults instead of a per-robot lifecycle-node subclass. This is the\nschema seam that lets the unified, ``robot.yaml``-driven\n``ManifestHALLifecycleNode`` (ADR-0032) serve a parameterised HAL without\na bespoke ``_create_hal``.\n\n:func:`openral_hal.build_hal` merges :attr:`defaults` **underneath** any\nexplicit ``transport`` kwargs (so a ``deploy run`` override wins) and then\ndrops every key the target HAL constructor does not accept \u2014 exactly the\nfiltering it already applies to ``transport``. Empty by default, so robots\nthat need no construction kwargs (the derived ``MujocoArmHAL`` arms) are\nunaffected.\n\nAttributes:\n    defaults: HAL constructor / transport keyword defaults, e.g.\n        ``{\"port\": \"/dev/ttyACM0\", \"baud\": 1_000_000}`` for the SO-100 or\n        ``{\"robot_ip\": \"192.168.1.10\"}`` for a real UR arm.\n\nExample:\n    >>> HalParameters(defaults={\"port\": \"/dev/ttyACM0\"}).defaults[\"port\"]\n    '/dev/ttyACM0'",
+      "properties": {
+        "defaults": {
+          "additionalProperties": true,
+          "title": "Defaults",
+          "type": "object"
+        }
+      },
+      "title": "HalParameters",
+      "type": "object"
+    },
     "IntrinsicsPinhole": {
       "description": "Pinhole camera intrinsics.\n\nAttributes:\n    width: Image width in pixels.\n    height: Image height in pixels.\n    fx: Focal length in x (pixels).\n    fy: Focal length in y (pixels).\n    cx: Principal point x (pixels).\n    cy: Principal point y (pixels).\n    distortion_model: Distortion model name.\n    distortion_coeffs: Distortion coefficients.\n\nExample:\n    >>> IntrinsicsPinhole(width=640, height=480, fx=600.0, fy=600.0, cx=320.0, cy=240.0)\n    IntrinsicsPinhole(width=640, height=480, fx=600.0, fy=600.0, cx=320.0, cy=240.0, ...)",
       "properties": {
@@ -217,7 +421,7 @@
       "type": "object"
     },
     "SafetyEnvelope": {
-      "description": "Safety constraints enforced by the C++ safety kernel.\n\nAttributes:\n    workspace_box_min_xyz: Lower corner of allowed workspace (m).\n    workspace_box_max_xyz: Upper corner of allowed workspace (m).\n    no_go_zones: List of polygon definitions (dicts with 'vertices').\n    max_ee_speed_m_s: Maximum end-effector linear speed in m/s.\n        Also used by ADR-0028b's per-mode supervisor as the\n        CARTESIAN_TWIST linear bound.\n    max_ee_accel_m_s2: Maximum end-effector acceleration in m/s\u00b2.\n    max_joint_speed_factor: Fraction of joint velocity_limit allowed.\n    max_force_n: Maximum contact force in Newtons.\n    max_torque_nm: Maximum joint torque in Nm.\n    deadman_required: Whether a deadman switch is required.\n    e_stop_topic: ROS 2 topic for E-stop commands.\n    e_stop_qos: QoS profile for E-stop topic.\n    contact_force_threshold_n: Force threshold for contact detection.\n    cycle_time_violation_threshold_ms: Control cycle time violation threshold.\n    human_in_loop_required: rSkill names requiring human supervision.\n    max_cartesian_step_m: ADR-0028b \u2014 per-step magnitude bound on\n        CARTESIAN_DELTA's xyz triplet (Euclidean). ``None`` means\n        \"no per-mode check declared, skip\"; today's behaviour\n        preserved. Robots that host OSC-trained checkpoints\n        (panda_mobile, future Franka + \u03c00.7) declare this so the\n        supervisor rejects out-of-distribution arm deltas before\n        they reach the controller.\n    max_cartesian_step_rad: ADR-0028b \u2014 per-step magnitude bound on\n        CARTESIAN_DELTA's axis-angle triplet (Euclidean). ``None``\n        skips the check.\n    max_ee_angular_speed_rad_s: ADR-0028b \u2014 angular component bound\n        for CARTESIAN_TWIST (the linear bound reuses\n        :attr:`max_ee_speed_m_s`). ``None`` skips the check.\n    max_base_linear_speed_m_s: ADR-0028b \u2014 BODY_TWIST linear bound\n        (Euclidean over vx,vy,vz). ``None`` skips the check;\n        mobile manipulators / wheeled bases declare it.\n    max_base_angular_speed_rad_s: ADR-0028b \u2014 BODY_TWIST angular\n        bound (Euclidean over wx,wy,wz; for planar bases only\n        wz is non-zero). ``None`` skips the check.",
+      "description": "Safety constraints enforced by the C++ safety kernel.\n\nAttributes:\n    workspace_box_min_xyz: Lower corner of allowed workspace (m).\n    workspace_box_max_xyz: Upper corner of allowed workspace (m).\n    no_go_zones: List of polygon definitions (dicts with 'vertices').\n    max_ee_speed_m_s: Maximum end-effector linear speed in m/s.\n        Also used by ADR-0028b's per-mode supervisor as the\n        CARTESIAN_TWIST linear bound.\n    max_ee_accel_m_s2: Maximum end-effector acceleration in m/s\u00b2.\n    max_joint_speed_factor: Fraction of joint velocity_limit allowed.\n    max_force_n: Maximum contact force in Newtons.\n    max_torque_nm: Maximum joint torque in Nm.\n    deadman_required: Whether a deadman switch is required.\n    e_stop_topic: ROS 2 topic for E-stop commands.\n    e_stop_qos: QoS profile for E-stop topic.\n    contact_force_threshold_n: Force threshold for contact detection.\n    cycle_time_violation_threshold_ms: Control cycle time violation threshold.\n    human_in_loop_required: rSkill names requiring human supervision.\n    max_cartesian_step_m: ADR-0028b \u2014 per-step magnitude bound on\n        CARTESIAN_DELTA's xyz triplet (Euclidean). ``None`` means\n        \"no per-mode check declared, skip\"; today's behaviour\n        preserved. Robots that host OSC-trained checkpoints\n        (panda_mobile, future Franka + \u03c00.7) declare this so the\n        supervisor rejects out-of-distribution arm deltas before\n        they reach the controller.\n    max_cartesian_step_rad: ADR-0028b \u2014 per-step magnitude bound on\n        CARTESIAN_DELTA's axis-angle triplet (Euclidean). ``None``\n        skips the check.\n    max_ee_angular_speed_rad_s: ADR-0028b \u2014 angular component bound\n        for CARTESIAN_TWIST (the linear bound reuses\n        :attr:`max_ee_speed_m_s`). ``None`` skips the check.\n    max_base_linear_speed_m_s: ADR-0028b \u2014 BODY_TWIST linear bound\n        (Euclidean over vx,vy,vz). ``None`` skips the check;\n        mobile manipulators / wheeled bases declare it.\n    max_base_angular_speed_rad_s: ADR-0028b \u2014 BODY_TWIST angular\n        bound (Euclidean over wx,wy,wz; for planar bases only\n        wz is non-zero). ``None`` skips the check.\n    self_collision_margin_m: ADR-0081 \u2014 clearance margin (m) for the\n        kernel's self/world/voxel geometric checks; a pair closer than\n        this fires. Default ``0.0`` (collide on touch). A small\n        **negative** value tolerates the grazing contact inherent to a\n        compact arm's in-distribution operating envelope (e.g. the\n        SO-101 pen VLA, whose links graze at true \u2248 0) while still\n        catching a real jam (deeper penetration). Loosening this is a\n        safety-WG decision and must be justified against the true\n        (non-convex mesh) envelope clearance, not the conservative\n        primitive distance.",
       "properties": {
         "workspace_box_min_xyz": {
           "anyOf": [
@@ -394,6 +598,11 @@
           ],
           "default": null,
           "title": "Max Base Angular Speed Rad S"
+        },
+        "self_collision_margin_m": {
+          "default": 0.0,
+          "title": "Self Collision Margin M",
+          "type": "number"
         }
       },
       "title": "SafetyEnvelope",
@@ -956,6 +1165,17 @@
       "title": "Sensors",
       "type": "array"
     },
+    "hal": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HalParameters"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "memory_dir": {
       "anyOf": [
         {
@@ -967,6 +1187,17 @@
       ],
       "default": null,
       "title": "Memory Dir"
+    },
+    "runtime": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DeployRuntime"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

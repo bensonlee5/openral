@@ -58,7 +58,8 @@ class NF4TOPRewardModel(TOPRewardModel):  # type: ignore[misc]  # reason: lerobo
         # Skip TOPRewardModel.__init__ (bf16 loader); run the abstract base only.
         PreTrainedRewardModel.__init__(self, config)
         self.config = config
-        qcfg = BitsAndBytesConfig(
+        bits_and_bytes_config = cast(Any, BitsAndBytesConfig)
+        qcfg = bits_and_bytes_config(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,

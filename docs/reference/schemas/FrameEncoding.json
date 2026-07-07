@@ -11,6 +11,7 @@
     "jpeg",
     "png",
     "cuda_nv12",
+    "cuda_rgba",
     "raw"
   ]
 }

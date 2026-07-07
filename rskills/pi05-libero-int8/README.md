@@ -11,16 +11,18 @@ tags:
 - pi05
 - lerobot
 - vision-language-action
+- int8
+- 8-bit
+- franka_panda
 - nf4
 - 4-bit
-- franka_panda
 - vla
 - libero
 - manipulation
+inference: false
 base_model:
 - lerobot/pi05_libero_finetuned_v044
 base_model_relation: quantized
-inference: false
 ---
 
 # rskill-pi05-libero-int8

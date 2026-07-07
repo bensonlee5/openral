@@ -16,7 +16,7 @@ metadata:
   sensors_required: [rgb]
   runtime: pytorch
   quantization: int4/pytorch
-  min_vram_gb: {fp32: 18.0, bf16: 9.0, int4: 3.6}
+  min_vram_gb: {fp32: 18.0, bf16: 9.0, int4: 5.5}
   chunk_size: 1
   latency_budget: {per_chunk_ms: 3000.0}
   license_code: Apache-2.0

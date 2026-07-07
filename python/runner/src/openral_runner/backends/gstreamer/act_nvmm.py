@@ -102,9 +102,7 @@ class ActNvmmExecutor:
         except BaseException:
             self._free_resources()
             raise
-        log.debug(
-            "act_nvmm.ready", images=self._image_input_names, outputs=list(self._outputs)
-        )
+        log.debug("act_nvmm.ready", images=self._image_input_names, outputs=list(self._outputs))
 
     def _build(
         self,
@@ -199,8 +197,17 @@ class ActNvmmExecutor:
         gy = (height + _BLOCK_Y - 1) // _BLOCK_Y
         _dr(
             self._cuda.cuLaunchKernel(
-                self._func, gx, gy, 1, _BLOCK_X, _BLOCK_Y, 1, 0, int(self._stream),
-                kargs.ctypes.data, 0,
+                self._func,
+                gx,
+                gy,
+                1,
+                _BLOCK_X,
+                _BLOCK_Y,
+                1,
+                0,
+                int(self._stream),
+                kargs.ctypes.data,
+                0,
             ),
             self._cuda,
         )
@@ -231,8 +238,11 @@ class ActNvmmExecutor:
         state = np.ascontiguousarray(state_raw, dtype=np.float32).reshape(1, self._state_dim)
         _rt(
             cudart.cudaMemcpyAsync(
-                int(self._state_dev), state.ctypes.data, state.nbytes,
-                cudart.cudaMemcpyKind.cudaMemcpyHostToDevice, int(self._stream),
+                int(self._state_dev),
+                state.ctypes.data,
+                state.nbytes,
+                cudart.cudaMemcpyKind.cudaMemcpyHostToDevice,
+                int(self._stream),
             ),
             cudart,
         )
@@ -241,8 +251,11 @@ class ActNvmmExecutor:
         for _name, (host, dev) in self._outputs.items():
             _rt(
                 cudart.cudaMemcpyAsync(
-                    host.ctypes.data, int(dev), host.nbytes,
-                    cudart.cudaMemcpyKind.cudaMemcpyDeviceToHost, int(self._stream),
+                    host.ctypes.data,
+                    int(dev),
+                    host.nbytes,
+                    cudart.cudaMemcpyKind.cudaMemcpyDeviceToHost,
+                    int(self._stream),
                 ),
                 cudart,
             )

@@ -35,11 +35,13 @@ Use ``MUJOCO_GL=egl`` for ``--screenshot`` (offscreen). For ``--rviz`` also
 from __future__ import annotations
 
 import argparse
+import importlib
 import math
 import pathlib
+from collections.abc import Sequence
+from typing import cast
 
 import numpy as np
-
 from openral_core.assets import resolve_asset
 from openral_core.schemas import RobotDescription
 
@@ -93,6 +95,18 @@ Visualization Manager:
 """
 
 
+def _float_list(params: dict[str, object], key: str) -> list[float]:
+    return cast(list[float], params.get(key, []))
+
+
+def _int_list(params: dict[str, object], key: str) -> list[int]:
+    return cast(list[int], params.get(key, []))
+
+
+def _str_list(params: dict[str, object], key: str) -> list[str]:
+    return cast(list[str], params[key])
+
+
 def _rpy_to_quat(roll: float, pitch: float, yaw: float) -> list[float]:
     """Fixed-axis XYZ Euler (URDF rpy) → MuJoCo wxyz quaternion."""
     cr, sr = math.cos(roll / 2), math.sin(roll / 2)
@@ -106,15 +120,15 @@ def _rpy_to_quat(roll: float, pitch: float, yaw: float) -> list[float]:
     ]
 
 
-def _add_primitives(spec: "mujoco.MjSpec", params: dict) -> int:
+def _add_primitives(spec: mujoco.MjSpec, params: dict[str, object]) -> int:
     """Add the kernel's box + capsule collision geoms to the spec bodies."""
-    names = params["collision_link_names"]
+    names = _str_list(params, "collision_link_names")
     bodies = {b.name: b for b in spec.bodies}
     added = 0
 
-    box_link = params.get("collision_box_link", [])
-    box_he = params.get("collision_box_half_extents", [])
-    box_o = params.get("collision_box_origin_xyzrpy", [])
+    box_link = _int_list(params, "collision_box_link")
+    box_he = _float_list(params, "collision_box_half_extents")
+    box_o = _float_list(params, "collision_box_origin_xyzrpy")
     for b, link in enumerate(box_link):
         body = bodies.get(names[link])
         if body is None:
@@ -130,10 +144,10 @@ def _add_primitives(spec: "mujoco.MjSpec", params: dict) -> int:
         g.conaffinity = 0
         added += 1
 
-    cap_link = params["collision_capsule_link"]
-    cap_r = params["collision_capsule_radius"]
-    cap_h = params["collision_capsule_half_length"]
-    cap_o = params["collision_capsule_origin_xyzrpy"]
+    cap_link = _int_list(params, "collision_capsule_link")
+    cap_r = _float_list(params, "collision_capsule_radius")
+    cap_h = _float_list(params, "collision_capsule_half_length")
+    cap_o = _float_list(params, "collision_capsule_origin_xyzrpy")
     for c, link in enumerate(cap_link):
         body = bodies.get(names[link])
         if body is None:
@@ -151,11 +165,19 @@ def _add_primitives(spec: "mujoco.MjSpec", params: dict) -> int:
     return added
 
 
-def _capsule_marker_parts(marker_id, frame, xyzrpy, radius, half_length, rgba):
+def _capsule_marker_parts(
+    marker_id: int,
+    frame: str,
+    xyzrpy: Sequence[float],
+    radius: float,
+    half_length: float,
+    rgba: Sequence[float],
+) -> list[object]:
     """RViz has no capsule primitive — approximate with a cylinder + two end
     spheres (visualization_msgs/Marker list)."""
     from geometry_msgs.msg import Point, Pose, Quaternion
-    from visualization_msgs.msg import Marker
+
+    Marker = importlib.import_module("visualization_msgs.msg").Marker
 
     q = _rpy_to_quat(*xyzrpy[3:6])
     pos = xyzrpy[0:3]
@@ -199,7 +221,9 @@ def _capsule_marker_parts(marker_id, frame, xyzrpy, radius, half_length, rgba):
     return out
 
 
-def _run_rviz(rd, params, manifest, deg):
+def _run_rviz(
+    rd: RobotDescription, params: dict[str, object], manifest: pathlib.Path, deg: list[float] | None
+) -> None:
     """Real RViz: robot_state_publisher (RobotModel + TF from the URDF) + a
     latched collision MarkerArray + rviz2, all as child processes."""
     import subprocess
@@ -210,23 +234,34 @@ def _run_rviz(rd, params, manifest, deg):
     from rclpy.node import Node
     from rclpy.qos import DurabilityPolicy, QoSProfile
     from sensor_msgs.msg import JointState
-    from visualization_msgs.msg import Marker, MarkerArray
+
+    marker_msg = importlib.import_module("visualization_msgs.msg")
+    Marker = marker_msg.Marker
+    MarkerArray = marker_msg.MarkerArray
 
     # URDF with absolute file:// mesh paths so RViz's RobotModel resolves them.
+    if rd.assets.urdf is None:
+        raise SystemExit(f"{manifest} has no URDF asset for RViz")
     try:
-        urdf_src = resolve_asset(rd.assets.urdf, "urdf", manifest_dir=manifest.parent)
-    except Exception:  # noqa: BLE001 - fall back to the manifest-relative file
+        urdf_src = resolve_asset(rd.assets.urdf.ref, "urdf", manifest_dir=manifest.parent)
+    except Exception:
         ref = rd.assets.urdf.ref.split(":", 1)[-1]
         urdf_src = manifest.parent / ref
+    if urdf_src is None:
+        raise SystemExit(f"{manifest} URDF is provided only at runtime")
     assets_abs = (manifest.parent / "assets").resolve()
-    urdf_text = pathlib.Path(urdf_src).read_text().replace(
-        'filename="assets/', f'filename="file://{assets_abs}/'
+    urdf_text = (
+        pathlib.Path(urdf_src)
+        .read_text()
+        .replace('filename="assets/', f'filename="file://{assets_abs}/')
     )
     tmp_urdf = pathlib.Path(tempfile.mkstemp(suffix=".urdf")[1])
     tmp_urdf.write_text(urdf_text)
 
     joint_names = [j.name for j in rd.joints]
-    positions = [math.radians(deg[i]) if deg and i < len(deg) else 0.0 for i in range(len(joint_names))]
+    positions = [
+        math.radians(deg[i]) if deg and i < len(deg) else 0.0 for i in range(len(joint_names))
+    ]
 
     rsp = subprocess.Popen(
         ["ros2", "run", "robot_state_publisher", "robot_state_publisher", str(tmp_urdf)]
@@ -241,32 +276,37 @@ def _run_rviz(rd, params, manifest, deg):
     js_pub = node.create_publisher(JointState, "/joint_states", 10)
     mk_pub = node.create_publisher(MarkerArray, "/collision_markers", latched)
 
-    names = params["collision_link_names"]
+    names = _str_list(params, "collision_link_names")
     arr = MarkerArray()
     mid = 0
-    for b, link in enumerate(params.get("collision_box_link", [])):
-        o = params["collision_box_half_extents"]
-        p = params["collision_box_origin_xyzrpy"]
-        q = _rpy_to_quat(*p[6 * b + 3 : 6 * b + 6])
+    box_he = _float_list(params, "collision_box_half_extents")
+    box_origin = _float_list(params, "collision_box_origin_xyzrpy")
+    for b, link in enumerate(_int_list(params, "collision_box_link")):
+        q = _rpy_to_quat(*box_origin[6 * b + 3 : 6 * b + 6])
         m = Marker()
         m.header.frame_id = names[link]
         m.ns, m.id, m.type, m.action = "box", mid, Marker.CUBE, Marker.ADD
         m.pose = Pose(
-            position=Point(x=p[6 * b], y=p[6 * b + 1], z=p[6 * b + 2]),
+            position=Point(x=box_origin[6 * b], y=box_origin[6 * b + 1], z=box_origin[6 * b + 2]),
             orientation=Quaternion(w=q[0], x=q[1], y=q[2], z=q[3]),
         )
-        m.scale.x, m.scale.y, m.scale.z = 2 * o[3 * b], 2 * o[3 * b + 1], 2 * o[3 * b + 2]
+        m.scale.x = 2 * box_he[3 * b]
+        m.scale.y = 2 * box_he[3 * b + 1]
+        m.scale.z = 2 * box_he[3 * b + 2]
         m.color.r, m.color.g, m.color.b, m.color.a = _BOX_RGBA
         arr.markers.append(m)
         mid += 1
-    for c, link in enumerate(params["collision_capsule_link"]):
+    cap_origin = _float_list(params, "collision_capsule_origin_xyzrpy")
+    cap_radius = _float_list(params, "collision_capsule_radius")
+    cap_half_length = _float_list(params, "collision_capsule_half_length")
+    for c, link in enumerate(_int_list(params, "collision_capsule_link")):
         arr.markers.extend(
             _capsule_marker_parts(
                 mid,
                 names[link],
-                params["collision_capsule_origin_xyzrpy"][6 * c : 6 * c + 6],
-                params["collision_capsule_radius"][c],
-                params["collision_capsule_half_length"][c],
+                cap_origin[6 * c : 6 * c + 6],
+                cap_radius[c],
+                cap_half_length[c],
                 _CAP_RGBA,
             )
         )
@@ -276,12 +316,12 @@ def _run_rviz(rd, params, manifest, deg):
     js.name = joint_names
     js.position = positions
 
-    def _tick():
+    def _tick() -> None:
         js.header.stamp = node.get_clock().now().to_msg()
         js_pub.publish(js)
         mk_pub.publish(arr)
 
-    timer = node.create_timer(0.1, _tick)  # noqa: F841
+    node.create_timer(0.1, _tick)
     node.get_logger().info("RViz collision viz up — fixed frame 'base'. Ctrl-C to quit.")
     try:
         rclpy.spin(node)
@@ -300,7 +340,9 @@ def main() -> None:
     ap.add_argument("--deg", nargs="*", type=float, help="joint angles in degrees (manifest order)")
     ap.add_argument("--screenshot", type=pathlib.Path, help="write an offscreen PNG and exit")
     ap.add_argument("--viewer", action="store_true", help="open the interactive MuJoCo window")
-    ap.add_argument("--rviz", action="store_true", help="open real RViz (RobotModel + TF + markers)")
+    ap.add_argument(
+        "--rviz", action="store_true", help="open real RViz (RobotModel + TF + markers)"
+    )
     ap.add_argument("--width", type=int, default=1280)
     ap.add_argument("--height", type=int, default=960)
     args = ap.parse_args()
@@ -318,7 +360,11 @@ def main() -> None:
         _run_rviz(rd, params, manifest, args.deg)
         return
 
+    if rd.assets.mjcf is None:
+        raise SystemExit(f"{manifest} has no MJCF asset to visualise")
     mjcf = resolve_asset(rd.assets.mjcf, "mjcf", manifest_dir=manifest.parent)
+    if mjcf is None:
+        raise SystemExit(f"{manifest} MJCF is provided only at runtime")
     spec = mujoco.MjSpec.from_file(str(mjcf))
     # The upstream MJCF ships a small offscreen buffer; size it to the request so
     # the offscreen renderer can produce the screenshot.
@@ -332,8 +378,10 @@ def main() -> None:
         for i, d in enumerate(args.deg[: model.nq]):
             data.qpos[i] = math.radians(d)
     mujoco.mj_forward(model, data)
-    print(f"{args.robot}: overlaid {n} kernel collision primitives "
-          f"(box=red, capsule=blue) at qpos(deg)={np.round(np.degrees(data.qpos[:model.nq]),1)}")
+    print(
+        f"{args.robot}: overlaid {n} kernel collision primitives "
+        f"(box=red, capsule=blue) at qpos(deg)={np.round(np.degrees(data.qpos[: model.nq]), 1)}"
+    )
 
     if args.screenshot:
         renderer = mujoco.Renderer(model, height=args.height, width=args.width)

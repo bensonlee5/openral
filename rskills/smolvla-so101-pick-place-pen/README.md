@@ -11,6 +11,9 @@ tags:
 - lerobot
 - vision-language-action
 - so101_follower
+base_model:
+- nota-gmbh/so101_pick_place_pen_smolvla
+base_model_relation: finetune
 datasets:
 - nota-gmbh/pick_and_place_pen_so101
 inference: false

@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 import torch
 
@@ -43,7 +43,9 @@ class _ACTExportWrapper(torch.nn.Module):
     core network, from positional image + state tensors the exporter can trace.
     """
 
-    def __init__(self, policy: Any, image_feature_keys: list[str], state_key: str) -> None:  # reason: lerobot ACTPolicy is untyped
+    def __init__(
+        self, policy: Any, image_feature_keys: list[str], state_key: str
+    ) -> None:  # reason: lerobot ACTPolicy is untyped
         super().__init__()
         from lerobot.utils.constants import OBS_IMAGES
 
@@ -96,14 +98,20 @@ class _ACTDeviceWrapper(torch.nn.Module):
 
     def forward(self, *images_and_state: torch.Tensor) -> torch.Tensor:
         *images_rgb01, state_raw = images_and_state
-        normed = [(img - self._img_mean) / self._img_std for img in images_rgb01]
-        state = (state_raw - self._state_mean) / self._state_std
+        img_mean = cast(torch.Tensor, self._img_mean)
+        img_std = cast(torch.Tensor, self._img_std)
+        state_mean = cast(torch.Tensor, self._state_mean)
+        state_std = cast(torch.Tensor, self._state_std)
+        action_mean = cast(torch.Tensor, self._action_mean)
+        action_std = cast(torch.Tensor, self._action_std)
+        normed = [(img - img_mean) / img_std for img in images_rgb01]
+        state = (state_raw - state_mean) / state_std
         batch: dict[str, Any] = {self._state_key: state}
         for key, img in zip(self._image_feature_keys, normed, strict=True):
             batch[key] = img
         batch[self._obs_images] = list(normed)
         actions_norm: torch.Tensor = self.model(batch)[0]
-        return actions_norm * self._action_std + self._action_mean  # unnormalized
+        return actions_norm * action_std + action_mean  # unnormalized
 
 
 class _ActStats(NamedTuple):
@@ -141,9 +149,7 @@ def _norm_stats(repo_id: str) -> _ActStats:
     )
 
 
-def export(
-    out_path: Path, repo_id: str, *, device: str = "cpu", preprocess: str = "host"
-) -> str:
+def export(out_path: Path, repo_id: str, *, device: str = "cpu", preprocess: str = "host") -> str:
     """Export ``repo_id``'s ACT policy to ``out_path`` as ONNX; return sha256.
 
     ``preprocess="host"`` (default): image inputs are already MEAN_STD-normalized
@@ -174,9 +180,7 @@ def export(
         )
     else:
         wrapped = _ACTExportWrapper(policy, image_feature_keys, OBS_STATE).eval().to(device)
-    dummy_images = tuple(
-        torch.randn(1, 3, h, w, device=device) for _ in image_feature_keys
-    )
+    dummy_images = tuple(torch.randn(1, 3, h, w, device=device) for _ in image_feature_keys)
     dummy_state = torch.randn(1, state_dim, device=device)
     example = (*dummy_images, dummy_state)
 

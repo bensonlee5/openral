@@ -216,17 +216,13 @@ def _policy_graph_module(model: Any) -> Any:  # noqa: ANN401  # reason: lerobot 
 
             # ── embed_prefix, with embed_image elided ────────────────────
             img_emb = img_embs * math.sqrt(img_embs.shape[-1])
-            img_pad = torch.ones(
-                bsize, img_emb.shape[1], dtype=torch.bool, device=device
-            )
+            img_pad = torch.ones(bsize, img_emb.shape[1], dtype=torch.bool, device=device)
             lang_emb = m.vlm_with_expert.embed_language_tokens(lang_tokens)
             lang_emb = lang_emb * math.sqrt(lang_emb.shape[-1])
             state_emb = m.state_proj(state)
             if state_emb.ndim == 2:  # noqa: PLR2004  # reason: (B, F) -> (B, 1, F), mirrors embed_prefix
                 state_emb = state_emb[:, None, :]
-            state_pad = torch.ones(
-                bsize, state_emb.shape[1], dtype=torch.bool, device=device
-            )
+            state_pad = torch.ones(bsize, state_emb.shape[1], dtype=torch.bool, device=device)
 
             prefix_embs = torch.cat([img_emb, lang_emb, state_emb], dim=1)
             prefix_pad_masks = torch.cat([img_pad, lang_masks, state_pad], dim=1)
@@ -269,9 +265,7 @@ def _policy_graph_module(model: Any) -> Any:  # noqa: ANN401  # reason: lerobot 
             dt = -1.0 / num_steps
             x_t = noise
             for step in range(num_steps):
-                timestep = torch.full(
-                    (bsize,), 1.0 + step * dt, dtype=torch.float32, device=device
-                )
+                timestep = torch.full((bsize,), 1.0 + step * dt, dtype=torch.float32, device=device)
                 v_t = m.denoise_step(
                     prefix_pad_masks=prefix_pad_masks,
                     past_key_values=past_key_values,

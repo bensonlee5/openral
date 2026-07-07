@@ -31,12 +31,11 @@ import pathlib
 
 import numpy as np
 import pytest
-
 from openral_core.assets import resolve_asset
 from openral_core.schemas import BoxShape, RobotDescription
 
 pytest.importorskip("mujoco")
-import mujoco as mj  # noqa: E402
+import mujoco as mj
 
 _MANIFEST = pathlib.Path(__file__).resolve().parents[2] / "robots" / "so101_follower" / "robot.yaml"
 
@@ -52,7 +51,7 @@ _GROSS_FOLD = [_D2R(x) for x in (0, -90, 150, -30, 0, 10)]  # elbow 150° — wa
 # ── kernel-mirrored geometry (matches cpp/.../collision.cpp) ───────────────────
 
 
-def _T(x, y, z, roll, pitch, yaw):
+def _transform(x, y, z, roll, pitch, yaw):
     cr, sr = math.cos(roll), math.sin(roll)
     cp, sp = math.cos(pitch), math.sin(pitch)
     cy, sy = math.cos(yaw), math.sin(yaw)
@@ -99,7 +98,7 @@ def _fk(p, q):
     names = p["collision_link_names"]
     world = [None] * len(names)
     for i in range(len(names)):
-        ti = _T(*origin[6 * i : 6 * i + 6])
+        ti = _transform(*origin[6 * i : 6 * i + 6])
         motion = np.eye(4)
         d = dof[i]
         if d >= 0 and d < len(q) and kind[i] == 1:
@@ -109,22 +108,23 @@ def _fk(p, q):
     return world
 
 
-def _box_box(A, heA, B, heB):
+def _box_box(a_tf, a_half_extents, b_tf, b_half_extents):
     """Conservative SAT box-box distance (max separating gap; matches the C++)."""
-    Ra, Rb = A[:3, :3], B[:3, :3]
-    dc = B[:3, 3] - A[:3, 3]
-    heA, heB = np.asarray(heA), np.asarray(heB)
-    axes = [Ra[:, i] for i in range(3)] + [Rb[:, i] for i in range(3)]
-    axes += [np.cross(Ra[:, i], Rb[:, j]) for i in range(3) for j in range(3)]
+    a_rot, b_rot = a_tf[:3, :3], b_tf[:3, :3]
+    dc = b_tf[:3, 3] - a_tf[:3, 3]
+    a_half_extents = np.asarray(a_half_extents)
+    b_half_extents = np.asarray(b_half_extents)
+    axes = [a_rot[:, i] for i in range(3)] + [b_rot[:, i] for i in range(3)]
+    axes += [np.cross(a_rot[:, i], b_rot[:, j]) for i in range(3) for j in range(3)]
     best = -9.0
-    for lax in axes:
-        n = np.linalg.norm(lax)
+    for axis in axes:
+        n = np.linalg.norm(axis)
         if n < 1e-9:
             continue
-        lax = lax / n
-        ra = sum(heA[k] * abs(Ra[:, k] @ lax) for k in range(3))
-        rb = sum(heB[k] * abs(Rb[:, k] @ lax) for k in range(3))
-        best = max(best, abs(dc @ lax) - ra - rb)
+        unit_axis = axis / n
+        ra = sum(a_half_extents[k] * abs(a_rot[:, k] @ unit_axis) for k in range(3))
+        rb = sum(b_half_extents[k] * abs(b_rot[:, k] @ unit_axis) for k in range(3))
+        best = max(best, abs(dc @ unit_axis) - ra - rb)
     return best
 
 
@@ -135,7 +135,10 @@ def _boxes(p):
         p["collision_box_half_extents"],
         p["collision_box_origin_xyzrpy"],
     )
-    return {names[li]: (np.asarray(bh[3 * k : 3 * k + 3]), bo[6 * k : 6 * k + 6]) for k, li in enumerate(bl)}
+    return {
+        names[li]: (np.asarray(bh[3 * k : 3 * k + 3]), bo[6 * k : 6 * k + 6])
+        for k, li in enumerate(bl)
+    }
 
 
 def _kernel_self_min(p, q):
@@ -155,9 +158,16 @@ def _kernel_self_min(p, q):
             a, b = bn[i], bn[j]
             if tuple(sorted((idx[a], idx[b]))) in allowed:
                 continue
-            heA, oA = boxes[a]
-            heB, oB = boxes[b]
-            vals.append(_box_box(world[idx[a]] @ _T(*oA), heA, world[idx[b]] @ _T(*oB), heB))
+            a_half_extents, a_origin = boxes[a]
+            b_half_extents, b_origin = boxes[b]
+            vals.append(
+                _box_box(
+                    world[idx[a]] @ _transform(*a_origin),
+                    a_half_extents,
+                    world[idx[b]] @ _transform(*b_origin),
+                    b_half_extents,
+                )
+            )
     return min(vals)
 
 
@@ -192,7 +202,7 @@ def test_every_obb_encloses_its_link_mesh():
     rd = RobotDescription.from_yaml(str(_MANIFEST))
     model = _mj_model()
 
-    def quat2R(q):
+    def quat_to_rot(q):
         w, x, y, z = q
         return np.array(
             [
@@ -204,7 +214,7 @@ def test_every_obb_encloses_its_link_mesh():
 
     for g in rd.collision_geometry:
         bid = mj.mj_name2id(model, mj.mjtObj.mjOBJ_BODY, g.link_name)
-        R = _T(*g.origin_xyz_rpy)[:3, :3]
+        rot = _transform(*g.origin_xyz_rpy)[:3, :3]
         c = np.asarray(g.origin_xyz_rpy[:3])
         he = np.asarray(g.shape.half_extents_m)
         worst = 0.0
@@ -212,9 +222,11 @@ def test_every_obb_encloses_its_link_mesh():
             if model.geom_bodyid[gi] != bid or model.geom_dataid[gi] < 0:
                 continue
             did = model.geom_dataid[gi]
-            V = model.mesh_vert[model.mesh_vertadr[did] : model.mesh_vertadr[did] + model.mesh_vertnum[did]].reshape(-1, 3)
-            V = (V @ quat2R(model.geom_quat[gi]).T) + model.geom_pos[gi]  # link frame
-            local = (V - c) @ R  # into box frame
+            verts = model.mesh_vert[
+                model.mesh_vertadr[did] : model.mesh_vertadr[did] + model.mesh_vertnum[did]
+            ].reshape(-1, 3)
+            verts = (verts @ quat_to_rot(model.geom_quat[gi]).T) + model.geom_pos[gi]
+            local = (verts - c) @ rot
             worst = max(worst, float((np.abs(local) - he).max()))
         assert worst <= 2e-3, f"{g.link_name} mesh escapes its OBB by {worst:.4f} m"
 
@@ -268,5 +280,7 @@ def test_operating_envelope_is_near_contact_not_deep_penetration():
 
     ft = np.zeros(6)
     for a, b in (("shoulder", "lower_arm"), ("shoulder", "wrist"), ("upper_arm", "wrist")):
-        hull = min(mj.mj_geomDistance(model, data, ga, gb, 1.0, ft) for ga in geoms(a) for gb in geoms(b))
+        hull = min(
+            mj.mj_geomDistance(model, data, ga, gb, 1.0, ft) for ga in geoms(a) for gb in geoms(b)
+        )
         assert hull > -0.03, f"{a}<->{b} hull clearance {hull:.4f} is deeper than grazing"

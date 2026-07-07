@@ -98,7 +98,10 @@ def maybe_attach_trt_from_env(
         return False
     precision = os.environ.get(_ENV_PRECISION, "bf16")
     attach_trt_sample_actions(
-        policy, repo_id, precision=precision, device_index=_device_index(device),
+        policy,
+        repo_id,
+        precision=precision,
+        device_index=_device_index(device),
         n_cameras=n_cameras,
     )
     log.info("smolvla_trt.enabled_from_env", repo_id=repo_id, precision=precision, device=device)
@@ -147,12 +150,17 @@ def ensure_smolvla_onnx(
     log.info("smolvla_trt.exporting_onnx", repo_id=repo_id, out_dir=str(root))
     t0 = time.perf_counter()
     cmd = [
-        sys.executable, "-m", "openral_rskill.smolvla_export",
-        "--repo-id", repo_id, "--out-dir", str(root),
+        sys.executable,
+        "-m",
+        "openral_rskill.smolvla_export",
+        "--repo-id",
+        repo_id,
+        "--out-dir",
+        str(root),
     ]
     if n_cameras is not None:
         cmd += ["--n-cameras", str(n_cameras)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         raise ROSConfigError(
             f"smolvla_trt: ONNX export subprocess failed (rc={proc.returncode}) for "

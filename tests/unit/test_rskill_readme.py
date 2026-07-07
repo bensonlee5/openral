@@ -34,13 +34,12 @@ def test_vla_frontmatter_derives_model_card_fields() -> None:
 
 
 def test_nf4_derives_base_model_tree_and_quant_tags() -> None:
-    fm = build_rskill_frontmatter(_manifest("pi05-libero-nf4"))
+    fm = build_rskill_frontmatter(_manifest("molmoact2-so101-nf4"))
     # base_model comes from source_repo (weights_uri self-hosts the NF4 pack)
-    assert fm["base_model"] == ["lerobot/pi05_libero_finetuned_v044"]
+    assert fm["base_model"] == ["allenai/MolmoAct2-SO100_101"]
     assert fm["base_model_relation"] == "quantized"
     assert {"nf4", "4-bit"} <= set(fm["tags"])
-    # non-standard weights license → other + descriptive license_name
-    assert fm["license"] == "other" and fm["license_name"] == "permissive-research"
+    assert fm["license"] == "apache-2.0"
 
 
 def test_detector_uses_object_detection_pipeline() -> None:
