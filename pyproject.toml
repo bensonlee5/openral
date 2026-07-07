@@ -300,16 +300,15 @@ rldx = [
     "msgpack>=1",
 ]
 gr00t = [
-    # ADR-0046 — opt-in NVIDIA Isaac GR00T sidecar adapter.
+    # ADR-0046 (amended) — in-process NVIDIA GR00T-N1.7 policy on lerobot 0.6.0.
     #
-    # Same shape as the `rldx` group: the GR00T inference server
-    # (`tools/gr00t_sidecar.py`, landing in ADR-0046 PR2) runs in its OWN
-    # Python 3.10 venv that this group does NOT touch — GR00T pins
-    # transformers / flash-attn / CUDA against Python 3.10, incompatible
-    # with this repo's Python 3.12. What we install here is only the
-    # openral-side ZMQ + msgpack client used by `openral_sim.policies.gr00t`.
-    "pyzmq>=25",
-    "msgpack>=1",
+    # GR00T-N1.7 is now first-party in lerobot (`lerobot.policies.groot`), runs
+    # in-process under this repo's Python 3.12 / transformers 5.x, and is loaded
+    # + NF4-quantized directly by `openral_sim.policies.gr00t` — no Python 3.10
+    # sidecar, no ZMQ. `lerobot[groot]` pulls the groot policy extras
+    # (diffusers, peft, timm, decord, dm-tree). Validated live: GR00T-N1.7 NF4
+    # in-process solves LIBERO-spatial 5/5 at ~19 ms/step on an 8 GiB card.
+    "lerobot[groot]",
 ]
 isaacsim = [
     # ADR-0045 — opt-in NVIDIA Isaac Sim scene backend.
@@ -381,14 +380,18 @@ qwen-vlm = [
 ]
 robometer = [
     # ADR-0057 — opt-in Robometer-4B reward monitor for the reasoner's
-    # query_task_progress tool.
+    # query_task_progress tool (lerobot 0.6.0 native port).
     #
-    # The model itself runs in its OWN sidecar venv
-    # (`tools/robometer_sidecar.py`, provisioned separately — it pins the
-    # robometer package + transformers==4.57.1); what we install here is the
-    # node-side ZMQ + msgpack client that
-    # `openral_runner.backends.reward.robometer_reward` uses to talk to that
-    # sidecar — the same wire transport as qwen-vlm / locateanything / rldx.
+    # The reward model is now lerobot's in-tree
+    # `lerobot.rewards.robometer.RobometerRewardModel` (Qwen3-VL-4B with three
+    # prediction heads), loaded with plain transformers 5.x in the node's own
+    # env — no `robometer` git package, no `transformers==4.57.1` pin, no
+    # separate sidecar venv. `qwen-vl-utils` backs its Qwen3-VL video processor
+    # (`lerobot.rewards.robometer.processor_robometer`), so it is required here.
+    "qwen-vl-utils>=0.0.14",
+    # The heavy model still runs out-of-process in a stateless ZMQ/msgpack
+    # scoring sidecar (`tools/_robometer_server.py`); `robometer_reward` is the
+    # node-side client — same wire transport as qwen-vlm / locateanything / rldx.
     # Required by the reward_monitor_node's query_task_progress service.
     "pyzmq>=25",
     "msgpack>=1",

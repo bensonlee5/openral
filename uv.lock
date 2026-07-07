@@ -608,6 +608,18 @@ wheels = [
 ]
 
 [[package]]
+name = "decord"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", marker = "(platform_machine != 'AMD64' and platform_machine != 'x86_64' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa') or (platform_machine != 's390x' and sys_platform != 'linux') or (platform_machine == 'AMD64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux') or (sys_platform != 'linux' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/79/936af42edf90a7bd4e41a6cac89c913d4b47fa48a26b042d5129a9242ee3/decord-0.6.0-py3-none-manylinux2010_x86_64.whl", hash = "sha256:51997f20be8958e23b7c4061ba45d0efcd86bffd5fe81c695d0befee0d442976", size = 13602299, upload-time = "2021-06-14T21:30:55.486Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/be/e15b5b866da452e62635a7b27513f31cb581fa2ea9cc9b768b535d62a955/decord-0.6.0-py3-none-win_amd64.whl", hash = "sha256:02665d7c4f1193a330205a791bc128f7e108eb6ae5b67144437a02f700943bad", size = 24733380, upload-time = "2021-06-14T21:30:57.766Z" },
+]
+
+[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1664,6 +1676,22 @@ dataset = [
 ]
 diffusion = [
     { name = "diffusers" },
+]
+groot = [
+    { name = "av" },
+    { name = "datasets" },
+    { name = "decord", marker = "platform_machine == 'AMD64' or platform_machine == 'x86_64' or (extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+    { name = "diffusers" },
+    { name = "dm-tree" },
+    { name = "jsonlines" },
+    { name = "pandas" },
+    { name = "peft" },
+    { name = "pyarrow" },
+    { name = "timm" },
+    { name = "torchcodec", version = "0.9.1", source = { registry = "https://pypi.org/simple" }, marker = "(platform_machine != 'AMD64' and platform_machine != 'x86_64' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa') or (platform_machine == 'AMD64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux') or (sys_platform != 'linux' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+    { name = "torchcodec", version = "0.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine != 'arm64' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa') or (sys_platform != 'darwin' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+    { name = "torchcodec", version = "0.11.1", source = { registry = "https://pypi.org/simple" }, marker = "(platform_machine != 'aarch64' and platform_machine != 'arm64' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'arm64' and sys_platform == 'linux') or sys_platform == 'win32' or (sys_platform != 'linux' and extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+    { name = "transformers" },
 ]
 libero = [
     { name = "av" },
@@ -3040,8 +3068,7 @@ dev = [
     { name = "types-pyyaml" },
 ]
 gr00t = [
-    { name = "msgpack" },
-    { name = "pyzmq" },
+    { name = "lerobot", extra = ["groot"] },
 ]
 isaacsim = [
     { name = "msgpack" },
@@ -3107,6 +3134,7 @@ rldx = [
 robocasa = [
     { name = "accelerate" },
     { name = "bitsandbytes" },
+    { name = "imageio", extra = ["ffmpeg"], marker = "extra == 'group-17-openral-workspace-robocasa'" },
     { name = "lerobot" },
     { name = "num2words" },
     { name = "robosuite", version = "1.5.2", source = { git = "https://github.com/ARISE-Initiative/robosuite.git?rev=232ce7d4a6ed89c949a9aba024a05c8c32fdd08b#232ce7d4a6ed89c949a9aba024a05c8c32fdd08b" } },
@@ -3115,6 +3143,7 @@ robocasa = [
 robometer = [
     { name = "msgpack" },
     { name = "pyzmq" },
+    { name = "qwen-vl-utils" },
 ]
 robotwin = [
     { name = "msgpack" },
@@ -3175,10 +3204,7 @@ dev = [
     { name = "types-protobuf", specifier = ">=7.34.1.20260518" },
     { name = "types-pyyaml", specifier = ">=6" },
 ]
-gr00t = [
-    { name = "msgpack", specifier = ">=1" },
-    { name = "pyzmq", specifier = ">=25" },
-]
+gr00t = [{ name = "lerobot", extras = ["groot"] }]
 isaacsim = [
     { name = "msgpack", specifier = ">=1" },
     { name = "pyzmq", specifier = ">=25" },
@@ -3241,6 +3267,7 @@ rldx = [
 robocasa = [
     { name = "accelerate", specifier = ">=1.13.0" },
     { name = "bitsandbytes", specifier = ">=0.45" },
+    { name = "imageio", extras = ["ffmpeg"], specifier = ">=2.34" },
     { name = "lerobot" },
     { name = "num2words", specifier = ">=0.5.14" },
     { name = "robosuite", git = "https://github.com/ARISE-Initiative/robosuite.git?rev=232ce7d4a6ed89c949a9aba024a05c8c32fdd08b" },
@@ -3249,6 +3276,7 @@ robocasa = [
 robometer = [
     { name = "msgpack", specifier = ">=1" },
     { name = "pyzmq", specifier = ">=25" },
+    { name = "qwen-vl-utils", specifier = ">=0.0.14" },
 ]
 robotwin = [
     { name = "msgpack", specifier = ">=1" },
@@ -3453,6 +3481,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz", hash = "sha256:17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a", size = 135180, upload-time = "2026-04-27T01:46:08.907Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl", hash = "sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189", size = 57328, upload-time = "2026-04-27T01:46:07.06Z" },
+]
+
+[[package]]
+name = "peft"
+version = "0.19.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "accelerate" },
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "psutil" },
+    { name = "pyyaml" },
+    { name = "safetensors" },
+    { name = "torch", version = "2.9.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'linux' or (extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or (extra == 'group-17-openral-workspace-libero' and extra == 'group-17-openral-workspace-robocasa')" },
+    { name = "tqdm" },
+    { name = "transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/cf/037f1e3d5186496c05513a6754639e2dab3038a05f384284d49a9bd06a2d/peft-0.19.1.tar.gz", hash = "sha256:0d97542fe96dcdaa20d3b81c06f26f988618f416a73544ab23c3618ccb674a40", size = 763738, upload-time = "2026-04-16T15:46:45.105Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/b6/f54d676ed93cc2dd2234c3b172ea9c8c3d7d29361e66b1b23dec57a67465/peft-0.19.1-py3-none-any.whl", hash = "sha256:2113f72a81621b5913ef28f9022204c742df111890c5f49d812716a4a301e356", size = 680692, upload-time = "2026-04-16T15:46:42.886Z" },
 ]
 
 [[package]]
@@ -4152,6 +4202,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/10/5e/de8d3911e44699abc4e3ce835e69c3db76525af8018026f9bce61be69a43/quadprog-0.1.13-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:8628ea1b1910c0fbfc828fca36ebc76a8c7352fdef782b5971aee1f4db08ba38", size = 95809, upload-time = "2024-10-24T16:58:43.729Z" },
     { url = "https://files.pythonhosted.org/packages/20/64/72ae344963db87a15e8566b8c4f1408080ad5746c8e1c32f8d04911074bb/quadprog-0.1.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7e2cb007ecf649fb2a614a1954359d534682d7339c3834df30aee7321ae1f7bb", size = 534623, upload-time = "2024-10-24T16:58:44.787Z" },
     { url = "https://files.pythonhosted.org/packages/47/11/4f8b99099215f6e7f2c8ca9756c590e561d1d3093fedb51a960dc609e347/quadprog-0.1.13-cp312-cp312-win_amd64.whl", hash = "sha256:d3d8d774d6436829ea4a11eeffe4a1a72375df17c9e9a7a48973372e64c826ad", size = 92523, upload-time = "2024-10-24T16:58:46.031Z" },
+]
+
+[[package]]
+name = "qwen-vl-utils"
+version = "0.0.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "av" },
+    { name = "packaging" },
+    { name = "pillow" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/b1/ad4fc2260a3badd278b38d642f3b987412f1f6682f0ef2b31b0572d5caa8/qwen_vl_utils-0.0.14.tar.gz", hash = "sha256:9c7cad5ae803b3a10f8bb7194deb12aeacdd032f92f4224e880c73587a7346ad", size = 8453, upload-time = "2025-09-23T09:38:57.532Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/43/80f67e0336cb2fc725f8e06f7fe35c1d0fe946f4d2b8b2175e797e07349e/qwen_vl_utils-0.0.14-py3-none-any.whl", hash = "sha256:5e28657bfd031e56bd447c5901b58ddfc3835285ed100f4c56580e0ade054e96", size = 8120, upload-time = "2025-09-23T09:38:56.297Z" },
 ]
 
 [[package]]
