@@ -71,7 +71,7 @@ processors:
 # into camera1/camera2/camera3.
 image_preprocessing:
   flip_180: false
-  flip_vertical: true
+  flip_vertical: false
   aliases:
     shoulder_left: "robot0_agentview_left_image"
     shoulder_right: "robot0_agentview_right_image"
