@@ -2,8 +2,7 @@
 
 ## Status
 
-Proposed (safety-WG review + hazard-log entry required before Accepted — see
-"Process gates"). Fixes issue #84.
+Accepted. Safety-WG sign-off recorded in hazard-log Entry 005. Fixes issue #84.
 
 ## Context
 

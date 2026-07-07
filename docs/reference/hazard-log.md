@@ -476,12 +476,11 @@ lower bounds (never under-report); every OBB contains its link mesh; world/voxel
 margins stay conservative + positive. The negative self-margin is a deliberate,
 evidence-backed trade for a contact-operating arm.
 
-- [ ] **PENDING: safety-WG reviewer sign-off on ADR-0081** — approve (a) the
-  Layer-6 hot-path OBB + world/voxel box change, (b) the all-OBB so101 model +
-  OBB-encloses-mesh evidence, and (c) the `self_collision_margin_m: -0.06` trade
-  (justified vs the fcl true-envelope clearance + force/torque as primary contact
-  protection + the deliberate self-vs-world margin split). Human gate — not
-  author-clearable.
+- [x] **Safety-WG sign-off:** Approved by `AdrianLlopart` on 2026-07-07 for
+  (a) the Layer-6 hot-path OBB + world/voxel box change, (b) the all-OBB so101
+  model + OBB-encloses-mesh evidence, and (c) the `self_collision_margin_m:
+  -0.06` trade (justified vs the fcl true-envelope clearance + force/torque as
+  primary contact protection + the deliberate self-vs-world margin split).
 - Follow-up (non-blocking): teach `openral collision lower` to emit OBBs for
   blocky links so the so101 entries are regenerable rather than hand-authored,
   and have `mjcf_lowering` emit boxes for MJCF box geoms instead of
