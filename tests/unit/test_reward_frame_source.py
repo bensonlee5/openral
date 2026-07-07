@@ -1,7 +1,7 @@
 """Unit tests for the reward-monitor rolling frame buffer (ADR-0057).
 
 Pure-Python, no ROS / torch / GPU — exercises the node-side windowing the
-stateless Robometer sidecar relies on.
+Robometer reward monitor relies on.
 
 Run with:
     uv run pytest tests/unit/test_reward_frame_source.py -v

@@ -443,7 +443,7 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     # The expert bridges the two internally (``smolvlm_with_expert`` casts each
     # leg to its own layer weight dtype). Pinning these legs — rather than a full
     # ``policy.float()`` — keeps the large VLM backbone bf16, so the policy still
-    # co-resides with the robometer reward sidecar on an 8 GB card (fp32-unify
+    # co-resides with the Robometer reward monitor on an 8 GB card (fp32-unify
     # OOMs it). Observed pre-fix failure: ``mat1 and mat2 must have the same
     # dtype, got Float and BFloat16`` at ``state_proj(state)``.
     _backbone_dtype = next(policy.model.vlm_with_expert.vlm.parameters()).dtype

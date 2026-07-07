@@ -2898,7 +2898,7 @@ requires-dist = [
 
 [[package]]
 name = "openral-rskill"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "python/rskill" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -2919,7 +2919,7 @@ requires-dist = [
 
 [[package]]
 name = "openral-runner"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "python/runner" }
 dependencies = [
     { name = "openral-core" },
@@ -2970,7 +2970,7 @@ requires-dist = [{ name = "openral-core", editable = "python/core" }]
 
 [[package]]
 name = "openral-sim"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "python/sim" }
 dependencies = [
     { name = "openral-core" },
@@ -3038,6 +3038,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "matplotlib" },
     { name = "pillow" },
+    { name = "qwen-vl-utils" },
 ]
 
 [package.dev-dependencies]
@@ -3140,11 +3141,6 @@ robocasa = [
     { name = "robosuite", version = "1.5.2", source = { git = "https://github.com/ARISE-Initiative/robosuite.git?rev=232ce7d4a6ed89c949a9aba024a05c8c32fdd08b#232ce7d4a6ed89c949a9aba024a05c8c32fdd08b" } },
     { name = "transformers" },
 ]
-robometer = [
-    { name = "msgpack" },
-    { name = "pyzmq" },
-    { name = "qwen-vl-utils" },
-]
 robotwin = [
     { name = "msgpack" },
     { name = "pyzmq" },
@@ -3177,6 +3173,7 @@ tensorrt = [
 requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.9" },
     { name = "pillow", specifier = ">=12.2.0" },
+    { name = "qwen-vl-utils", specifier = ">=0.0.14" },
 ]
 
 [package.metadata.requires-dev]
@@ -3272,11 +3269,6 @@ robocasa = [
     { name = "num2words", specifier = ">=0.5.14" },
     { name = "robosuite", git = "https://github.com/ARISE-Initiative/robosuite.git?rev=232ce7d4a6ed89c949a9aba024a05c8c32fdd08b" },
     { name = "transformers", specifier = ">=5.4.0,<5.6.0" },
-]
-robometer = [
-    { name = "msgpack", specifier = ">=1" },
-    { name = "pyzmq", specifier = ">=25" },
-    { name = "qwen-vl-utils", specifier = ">=0.0.14" },
 ]
 robotwin = [
     { name = "msgpack", specifier = ">=1" },

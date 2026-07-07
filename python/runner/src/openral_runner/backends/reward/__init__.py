@@ -4,12 +4,11 @@ A reward rSkill (Robometer-4B) runs in parallel with a VLA policy and scores the
 rollout: per-frame normalized progress + per-frame success probability. This
 package holds the **node-side** pieces — a transport-agnostic rolling frame
 buffer (:class:`~openral_runner.backends.reward.frame_source.RollingFrameBuffer`,
-fed by the same ``sensor_msgs/Image`` topic the VLA uses, in sim or real) and a
-ZMQ client to a stateless scoring sidecar process
+fed by the same ``sensor_msgs/Image`` topic the VLA uses, in sim or real) and
+the in-process Robometer scorer
 (:class:`~openral_runner.backends.reward.robometer_reward.RobometerInProcessReward`).
 
-The heavy NF4 model runs out-of-process via ``tools/robometer_sidecar.py``;
-nothing here imports torch / transformers, so the package stays importable on
+Nothing here imports torch / transformers, so the package stays importable on
 any host.
 """
 
@@ -21,7 +20,6 @@ if TYPE_CHECKING:
     from openral_runner.backends.reward.frame_source import RollingFrameBuffer
     from openral_runner.backends.reward.robometer_reward import (
         RobometerInProcessReward,
-        RobometerReward,
         build_reward_monitor,
     )
     from openral_runner.backends.reward.topreward_reward import (
@@ -31,7 +29,6 @@ if TYPE_CHECKING:
 
 __all__ = [
     "RobometerInProcessReward",
-    "RobometerReward",
     "RollingFrameBuffer",
     "TOPRewardMonitor",
     "build_reward_monitor",
@@ -47,7 +44,7 @@ def __getattr__(name: str) -> Any:  # noqa: ANN401 — lazy re-export; concrete 
         )
 
         return RollingFrameBuffer
-    if name in {"RobometerInProcessReward", "RobometerReward", "build_reward_monitor"}:
+    if name in {"RobometerInProcessReward", "build_reward_monitor"}:
         from openral_runner.backends.reward import robometer_reward  # noqa: PLC0415
 
         return getattr(robometer_reward, name)

@@ -8,7 +8,7 @@ loads the pre-quantized NF4 weights (``weights_uri``) 4-bit directly and runs in
 the node's own process (transformers 5.x, bitsandbytes).
 
 :class:`TOPRewardMonitor` mirrors
-:class:`~openral_runner.backends.reward.robometer_reward.RobometerReward`'s
+:class:`~openral_runner.backends.reward.robometer_reward.RobometerInProcessReward`'s
 ``score`` / ``assess`` / ``close`` surface, so ``reward_monitor_node`` and the
 Reasoner's ``query_task_progress`` path consume it unchanged. The clip-level
 scalar becomes a **per-frame** series via the same prefix sweep + per-window
@@ -180,7 +180,7 @@ class TOPRewardMonitor:
         """Score ``frames`` and summarize the window for the Reasoner.
 
         Same keys as
-        :meth:`~openral_runner.backends.reward.robometer_reward.RobometerReward.assess`.
+        :meth:`~openral_runner.backends.reward.robometer_reward.RobometerInProcessReward.assess`.
         """
         from openral_runner.backends.reward.frame_source import trend  # noqa: PLC0415
 

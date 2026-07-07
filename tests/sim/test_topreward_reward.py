@@ -73,7 +73,7 @@ def test_topreward_monitor_scores_real_clip() -> None:
     assert max(progress) == pytest.approx(1.0)
     assert min(progress) == pytest.approx(0.0)
     assert tail > head + 0.1, f"progress should rise (head={head:.3f} tail={tail:.3f})"
-    # assess exposes the exact reasoner contract (same keys as RobometerReward)
+    # assess exposes the exact reasoner contract (same keys as Robometer)
     assert set(assess) == {
         "progress_now",
         "success_now",

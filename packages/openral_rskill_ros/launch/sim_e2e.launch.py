@@ -358,10 +358,6 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     ).lower() in ("1", "true", "yes")
     reward_monitor_manifest = LaunchConfiguration("reward_monitor_manifest").perform(context)
     reward_monitor_task = LaunchConfiguration("reward_monitor_task").perform(context)
-    reward_monitor_image_topic = LaunchConfiguration("reward_monitor_image_topic").perform(context)
-    reward_monitor_sidecar_port = LaunchConfiguration("reward_monitor_sidecar_port").perform(
-        context
-    )
     # ADR-0064 — Tier-C critic-producer leg. Off by default; when on, a
     # critic_producer_node watches the generic /openral/critic/score topic and
     # turns a critic stall into a Tier-C FailureTrigger on /openral/failure/critic
@@ -1366,35 +1362,25 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         reward_manifest = reward_monitor_manifest or str(
             pathlib.Path(_RSKILLS_DIR) / "robometer-4b" / "rskill.yaml"
         )
-        # Resolve the camera the monitor scores. An explicit override wins; else
-        # default to the robot's WRIST (eye-in-hand) RGB camera from robot.yaml —
-        # it frames the gripper and the manipulated object, which is what Robometer
-        # scores progress from. Falls back to the first RGB camera (the view the VLA
-        # consumes) and then to the historical agentview_left if robot.yaml has none.
-        reward_image_topic = reward_monitor_image_topic
-        if reward_image_topic == "/openral/cameras/agentview_left/image":
-            import yaml  # local: the base graph (no detector/reward) never imports it
+        # Resolve the camera the monitor scores. Use the robot manifest's first RGB
+        # camera so Robometer follows the same default view order as the deploy graph;
+        # do not special-case wrist.
+        import yaml  # local: the base graph (no reward) never imports it
 
-            reward_camera = "agentview_left"
-            try:
-                with pathlib.Path(robot_yaml).open(encoding="utf-8") as _rh:
-                    _rdoc = yaml.safe_load(_rh) or {}
-                _rgb = [
-                    str(_s["name"])
-                    for _s in _rdoc.get("sensors", [])
-                    if _s.get("modality") == "rgb" and _s.get("name")
-                ]
-                _wrist = next(
-                    (c for c in _rgb if "wrist" in c.lower() or "eye_in_hand" in c.lower()),
-                    None,
-                )
-                if _wrist is not None:
-                    reward_camera = _wrist
-                elif _rgb:
-                    reward_camera = _rgb[0]
-            except (OSError, yaml.YAMLError):
-                pass
-            reward_image_topic = f"/openral/cameras/{reward_camera}/image"
+        reward_camera = "agentview_left"
+        try:
+            with pathlib.Path(robot_yaml).open(encoding="utf-8") as _rh:
+                _rdoc = yaml.safe_load(_rh) or {}
+            _rgb = [
+                str(_s["name"])
+                for _s in _rdoc.get("sensors", [])
+                if _s.get("modality") == "rgb" and _s.get("name")
+            ]
+            if _rgb:
+                reward_camera = _rgb[0]
+        except (OSError, yaml.YAMLError):
+            pass
+        reward_image_topic = f"/openral/cameras/{reward_camera}/image"
         reward_monitor = Node(
             package="openral_perception_ros",
             executable="reward_monitor_node.py",
@@ -1405,7 +1391,6 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     "manifest_path": reward_manifest,
                     "image_topic": reward_image_topic,
                     "task": reward_monitor_task,
-                    "sidecar_port": int(reward_monitor_sidecar_port),
                     # ADR-0064 — when the critic producer is also up, feed it real
                     # Robometer progress as a CriticScore stream (else stay query-only).
                     "enable_critic_score": enable_critic,
@@ -1864,23 +1849,6 @@ def generate_launch_description() -> LaunchDescription:
                 "a query leaves task empty (e.g. the operator's task goal). The "
                 "reasoner normally passes the active task per query. Ignored unless "
                 "enable_reward_monitor."
-            ),
-        ),
-        DeclareLaunchArgument(
-            "reward_monitor_image_topic",
-            default_value="/openral/cameras/agentview_left/image",
-            description=(
-                "ADR-0057 — camera RGB topic the reward monitor buffers; must match "
-                "the camera the co-active VLA consumes. Ignored unless "
-                "enable_reward_monitor."
-            ),
-        ),
-        DeclareLaunchArgument(
-            "reward_monitor_sidecar_port",
-            default_value="5769",
-            description=(
-                "ADR-0057 — ZMQ port for the temporary Robometer sidecar fallback. "
-                "Ignored unless enable_reward_monitor."
             ),
         ),
         DeclareLaunchArgument(

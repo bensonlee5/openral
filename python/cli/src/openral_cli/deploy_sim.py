@@ -1239,7 +1239,7 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
         argv_template.append(f"reward_monitor_manifest:={resolved_reward_monitor_manifest}")
     # The reward monitor's always-on critic_score path scores against its
     # `task` param; an empty task makes `_publish_critic_score` silently skip
-    # every tick (it never scores, never spawns the robometer sidecar). Default
+    # every tick. Default
     # it to the operator goal so a deploy with `--initial-task` gets a
     # background progress signal out of the box (an explicit
     # `--reward-monitor-task` still wins; the reasoner's `query_task_progress`
@@ -1519,13 +1519,6 @@ _ORPHAN_GRAPH_NEEDLES: tuple[str, ...] = (
     # GR00T/RLDX weights resident and starves the GPU (~6.5 GiB) of the
     # next run. The cache dir is openral-specific, so this is unambiguous.
     "/.cache/openral/rldx-sidecar/",
-    # Robometer reward sidecar (ADR-0057). Same out-of-process pattern as
-    # rldx: ``reward_monitor_node`` spawns it in its own session, so killpg on
-    # the launch group never reaches it, and it forks one torch-inductor
-    # ``compile_worker`` per CPU. The venv path appears in the server's AND
-    # every compile_worker's cmdline, so this single needle reaps the whole
-    # sidecar tree (~3.3 GiB GPU) if the graceful ``close()`` doesn't run.
-    "/.cache/openral/robometer-sidecar/",
     # Perception / critic graph nodes spawned by ``sim_e2e.launch.py``. These
     # were absent from the sweep, so under a heavy graph whose graceful
     # shutdown doesn't finish within ``grace_s`` they orphaned (the reward

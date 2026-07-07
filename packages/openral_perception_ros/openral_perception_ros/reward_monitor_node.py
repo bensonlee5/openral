@@ -28,8 +28,6 @@ Parameters:
     image_topic (str): single-camera fallback topic.
     manifest_path (str): rSkill manifest path (``kind: "reward"``). Required.
     task (str): default task instruction (used when a request leaves ``task`` empty).
-    sidecar_host (str): ZMQ host for the temporary Robometer sidecar fallback.
-    sidecar_port (int): ZMQ port for the temporary Robometer sidecar fallback.
     enable_critic_score (bool): also publish a generic ``openral_msgs/CriticScore``
         per window (ADR-0064) to feed the Tier-C critic producer. Default False
         (query-only).
@@ -74,8 +72,6 @@ def main(args: Any = None) -> None:
             self.declare_parameter("image_topic", "/openral/cameras/agentview_left/image")
             self.declare_parameter("manifest_path", "")
             self.declare_parameter("task", "")
-            self.declare_parameter("sidecar_host", "127.0.0.1")
-            self.declare_parameter("sidecar_port", 5769)
             # ADR-0064 — opt-in: also publish a generic openral_msgs/CriticScore per
             # window so the Tier-C critic producer (critic_producer_node) can fire a
             # /openral/failure/critic on a progress stall. Off by default — the node
@@ -216,17 +212,12 @@ def main(args: Any = None) -> None:
             from openral_core.schemas import RSkillManifest
             from openral_runner.backends.reward.robometer_reward import build_reward_monitor
 
-            gp = self.get_parameter
             manifest = RSkillManifest.from_yaml(manifest_path)
             if manifest.reward is None:
                 raise ValueError(
                     f"manifest {manifest.name!r} is kind:reward but has no reward block"
                 )
-            monitor = build_reward_monitor(
-                manifest,
-                host=gp("sidecar_host").get_parameter_value().string_value,
-                port=gp("sidecar_port").get_parameter_value().integer_value,
-            )
+            monitor = build_reward_monitor(manifest)
             self.get_logger().info(f"reward backend model={manifest.name}")
             self._critic_id = manifest.name
             return monitor, manifest.reward.frame_window_s, manifest.reward.target_fps
@@ -351,8 +342,7 @@ def main(args: Any = None) -> None:
         def destroy_node(self) -> None:
             """Release the reward backend before tearing down.
 
-            ``RobometerReward.close()`` still handles the temporary sidecar fallback;
-            in-process reward backends release their VLM and CUDA cache.
+            Reward backends release their VLM and CUDA cache.
             """
             with contextlib.suppress(Exception):
                 self._monitor.close()

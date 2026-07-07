@@ -1,6 +1,6 @@
 """Live native Robometer reward on a real clip (ADR-0057, lerobot 0.6.0 port).
 
-Runs the migrated sidecar scorer — lerobot's in-tree
+Runs the in-process scorer — lerobot's in-tree
 ``RobometerRewardModel`` (Qwen3-VL-4B + NF4 pre-quantized weights, loaded with
 plain ``transformers`` and no ``robometer`` git package) — on a real LIBERO
 rollout clip and asserts a per-frame progress/success series in ``[0, 1]``.
@@ -58,7 +58,7 @@ def test_native_robometer_scores_real_clip() -> None:
     import numpy as np
 
     sys.path.insert(0, str(_REPO / "tools"))
-    import _robometer_server as srv
+    import _robometer_scorer as scorer_mod
 
     cap = cv2.VideoCapture(str(_MP4))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -74,7 +74,7 @@ def test_native_robometer_scores_real_clip() -> None:
     clip = np.stack(frames).astype(np.uint8)
     assert clip.shape == (_N_FRAMES, _RES, _RES, 3)
 
-    scorer = srv._Scorer(_WEIGHTS, device="cuda")
+    scorer = scorer_mod._Scorer(_WEIGHTS, device="cuda")
     progress, success = scorer.score(clip, "pick up the object and place it", num_bins=100)
 
     # Per-frame series, one value per input frame.

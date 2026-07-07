@@ -1,14 +1,14 @@
 # ADR-0057 — `kind: reward` rSkills: robotic reward models as parallel task-progress monitors
 
 - **Status:** Accepted 2026-06-15. Phases 0–5 + the live deploy-sim co-activation
-  all validated empirically on an 8 GB GPU (load, NF4, sidecar, reasoner tool,
+  all validated empirically on an 8 GB GPU (load, NF4, scorer, reasoner tool,
   and a live openarm deploy-sim run). See the **2026-06-16 amendment** below for
   the pre-quantized meta-load, determinism, frame-bound, and co-activation wiring.
   **Amended 2026-07-07** (see the **2026-07-07 amendment** below): the reward
   model now loads lerobot's in-tree `lerobot.rewards.robometer.RobometerRewardModel`
   with plain `transformers` — no pinned `robometer` package, no
   `transformers==4.57.1`, no dedicated venv — and the reward camera now defaults
-  to the wrist (eye-in-hand) view.
+  to the first RGB camera in `robot.yaml`.
 - **Date:** 2026-06-15
 - **ADR number:** `0057`. `0056` is claimed by the in-flight
   `feat/multi-detector-locate` branch (on-demand detectors as reasoner tools);
@@ -16,14 +16,14 @@
 - **Related:**
   - ADR-0047 — `kind: vlm` scene VLM as a read-only `query_scene` Reasoner tool.
     The reward monitor is the same shape (read-only, S2-cadence, advisory,
-    out-of-process sidecar) but emits **scalars** (progress/success) instead of
+    in-process reward scorer) but emits **scalars** (progress/success) instead of
     free-form text. `query_scene` is the *escalation target* when the reward
     signal is ambiguous.
   - ADR-0056 — on-demand detectors as prompt-able Reasoner tools; same
     "auxiliary perception runs parallel to the VLA and feeds the Reasoner"
     pattern, with `locate_in_view` as a sibling read-only tool.
-  - ADR-0046 — GR00T out-of-process ZMQ sidecar; the reward sidecar reuses the
-    same process-isolation + msgpack scaffold.
+  - ADR-0046 — GR00T runtime co-residency constraints; the reward monitor follows
+    the same explicit VRAM budgeting discipline.
   - ADR-0037 — `kind: detector` + the GStreamer perception bus / tee that
     supplies frames on real hardware.
   - ADR-0018 §4 — the Reasoner has no actuation authority over read-only tools;
@@ -57,8 +57,8 @@ OpenRAL, and how does its output reach the Reasoner?
 - **Quantize** (Phase 2): NF4 (the repo's `Linear.numel ≥ 4M → Linear4bit` rule)
   takes 8.91 GB bf16 → **3.33 GB resident / 3.56 GB peak** (8-frame forward),
   output intact — **4.44 GB headroom** on an 8 GB GPU.
-- **Run in parallel** (Phase 3): a working ZMQ sidecar streamed a real rollout
-  video and produced **progress 0.21 → 0.88 with success spiking to 0.90 at task
+- **Run in parallel** (Phase 3): the scorer streamed a real rollout video and
+  produced **progress 0.21 → 0.88 with success spiking to 0.90 at task
   completion**. Parallel-to-VLA on 8 GB is feasible alongside a small NF4 VLA.
 
 ## Decision
@@ -72,19 +72,19 @@ OpenRAL, and how does its output reach the Reasoner?
    labels it. Backward-compatible additive change (no `schema_version` bump, no
    migrator) — every existing manifest still validates.
 
-2. **Run it out-of-process** as a long-lived ZMQ sidecar (reusing the
-   GR00T/scene-VLM scaffold), loading the NF4 model via the pinned `robometer`
-   package in an isolated venv (`transformers==4.57.1`). Weights resolve from the
-   HF cache; no per-run `git clone`.
+2. **Run it in-process inside `reward_monitor_node`** via lerobot's in-tree
+   `RobometerRewardModel`, loading OpenRAL's pre-quantized NF4 weights directly.
+   This keeps the reward VLM out of the VLA runner, reasoner, and HAL processes
+   without an additional ZMQ boundary.
 
 3. **Abstract the frame source** so the same skill works in **sim and real**:
-   the sidecar subscribes to the same `sensor_msgs/Image` camera topic the
-   co-active VLA consumes — GStreamer tee on real hardware, sim HAL camera
-   publisher in `deploy-sim`. Not GStreamer-bound.
+   the reward monitor subscribes to a `sensor_msgs/Image` camera topic —
+   GStreamer tee on real hardware, sim HAL camera publisher in `deploy-sim`.
+   Not GStreamer-bound.
 
 4. **Surface it as a read-only Reasoner tool** (`QueryTaskProgressTool` /
    `query_task_progress`), not an `ExecuteSkill`. The Reasoner co-activates the
-   reward rSkill with a VLA; the sidecar continuously ingests frames into a
+   reward rSkill with a VLA; the node continuously ingests frames into a
    rolling window; the Reasoner queries it on demand for the windowed assessment
    (`progress_now`, `success_now`, trends, `stalled`) and uses it to continue,
    escalate to `query_scene`, advance, or enter the replanning ladder. **The
@@ -98,29 +98,26 @@ OpenRAL, and how does its output reach the Reasoner?
   not free-form text. Folding it into `vlm` would overload that kind's
   open-vocab-QA meaning and lose the typed `RewardContract`. The two are
   complementary — `query_scene` is the escalation target when reward is ambiguous.
-- **Continuous push topic** (sidecar publishes a progress stream the Reasoner
+- **Continuous push topic** (monitor publishes a progress stream the Reasoner
   subscribes to). Rejected in favor of continuous-ingest + on-demand query: the
   Reasoner pulls the windowed assessment when it wants context, which matches its
   event-driven cadence and avoids a high-rate topic the Reasoner would have to
   debounce. The rolling buffer still gives it history ("over the last X s").
 - **In-process with the VLA.** Rejected: a 4 B VLM contends with the VLA on the
-  GPU step loop and needs a different `transformers` pin; process isolation keeps
-  the control path clean and makes CPU/2nd-GPU/cloud placement transparent.
+  GPU step loop; keeping it in the reward-monitor ROS node preserves process
+  isolation from the control path while avoiding an extra transport boundary.
 
 ## Consequences
 
 - New `reward` kind + `RewardContract` + `MONITOR` action in `openral_core`
   (additive). `_EMBODIMENT_AGNOSTIC_KINDS` and `_PERCEPTION_KINDS` gain `reward`.
-- A new runner backend (`openral_runner.backends.reward`) + sidecar + Reasoner
+- A new runner backend (`openral_runner.backends.reward`) + Reasoner
   tool + co-activation wiring.
 - 8 GB co-residency is real but workable: NF4 both models, keep the frame window
-  bounded (activation peak scales with window / resolution / `num_bins`), or
-  place the sidecar on CPU / a 2nd GPU / the cloud.
-- The upstream `robometer` package is executed in the sidecar (not an
-  OpenRAL-trusted org); it is pinned by commit and isolated. `transformers` is
-  pinned to `4.57.1` in the sidecar venv. `tools/quantize_rskill.py
-  --loader transformers` does **not** work for this model (no `auto_map`);
-  packaging must quantize via the `robometer` loader path.
+  bounded (activation peak scales with window / resolution / `num_bins`), or run
+  the reward monitor on CPU / a 2nd GPU / a cloud host.
+- The runtime uses lerobot's in-tree `RobometerRewardModel` with plain
+  `transformers`; no pinned upstream `robometer` runtime package is executed.
 - Reward output is advisory; it can never gate motors or be on the control path.
 
 ## Amendment — 2026-06-16: pre-quantized meta-load, determinism, frame-bound, co-activation
@@ -137,8 +134,8 @@ openarm `deploy-sim` run with the reasoner and the reward monitor co-active.
   weights) vs ~110 s + a 19 GB transient CPU spike for the bf16-load-then-quantize
   path. Proven **bit-identical** to that path (same-process `max|Δ| = 0`; 4-bit
   dequant round-trip `0`). Shared helpers in `tools/_robometer_quant.py`; the
-  sidecar's `--mode auto` picks the meta path for a `*nf4*` repo or a local
-  pre-quantized dir, else the bf16 build path.
+  scorer picks the meta path for a `*nf4*` repo or a local pre-quantized dir,
+  else the bf16 build path.
 - **Determinism.** The reward ramp is made byte-stable across process launches by
   forcing the math SDP kernel + `use_deterministic_algorithms(True)` +
   `CUBLAS_WORKSPACE_CONFIG=:4096:8` + `cudnn.allow_tf32=False`. (Without this, a
@@ -147,12 +144,12 @@ openarm `deploy-sim` run with the reasoner and the reward monitor co-active.
 - **Bounded activation.** The vision-transformer forward's activation memory
   scales with the number of frames × resolution; a full 8 s × 3 fps window of
   640×480 frames needs ~4.7 GiB and OOMs the 3.3 GB-resident model on 8 GB even
-  with no VLA. `RobometerReward(max_frames=8)` evenly subsamples the window
+  with no VLA. `RobometerInProcessReward(max_frames=8)` evenly subsamples the window
   (`_evenly_spaced_indices`, end-inclusive) to keep the forward co-resident with
   the sim (and a small NF4 VLA). Logged, never silent.
 - **`local://` weights.** A `kind: reward` manifest's `weights_uri` may be
   `local:///abs/dir` (offline / pre-publish / air-gapped pre-quantized checkpoint);
-  the client strips the scheme and the sidecar meta-loads it. `hf://org/repo[@rev]`
+  the runtime strips the scheme and the scorer meta-loads it. `hf://org/repo[@rev]`
   unchanged.
 - **Deploy-sim co-activation.** `sim_e2e.launch.py` gains opt-in
   `enable_reward_monitor` (default off): brings up `reward_monitor_node` PARALLEL
@@ -163,7 +160,7 @@ openarm `deploy-sim` run with the reasoner and the reward monitor co-active.
   `openral deploy sim --enable-reward-monitor [--reward-monitor-manifest <yaml>]
   [--reward-monitor-task <str>]`. The S2 system prompt now tells the reasoner to
   poll the monitor when it sees fit to judge a running skill (advisory).
-- **Live result.** openarm deploy-sim, no GStreamer: reward service up, sidecar
+- **Live result.** openarm deploy-sim, no GStreamer: reward service up, scorer
   meta-loaded (3.32 GB), `subsampling 19 → 8 frames`, and `query_task_progress`
   returned `ok=True, progress=0.561, success=0.283` over the live sim camera.
 
@@ -183,19 +180,17 @@ with plain `transformers` (>=5).
   native module inside `reward_monitor_node`. There is **no** pinned `robometer`
   git package, **no** `transformers==4.57.1` force-pin, and **no** dedicated venv.
   The reward model is still isolated from the VLA runner / reasoner / HAL by the
-  reward-monitor ROS process boundary. The old `tools/robometer_sidecar.py` ZMQ
-  path remains as an opt-in fallback (`OPENRAL_ROBOMETER_BACKEND=sidecar`) until a
-  deploy-sim validation pass lets us delete it.
+  reward-monitor ROS process boundary.
 - The NF4 pre-quantized weights (`OpenRAL/rskill-robometer-4b-nf4`, ~3.3 GB
-  resident) are kept: the server meta-builds the native `RobometerRewardModel`
+  resident) are kept: the scorer meta-builds the native `RobometerRewardModel`
   skeleton and drops the packed 4-bit weights in directly (remapped into the
   native module) — no bf16 spike, no Qwen weight download.
 - Per-frame progress is decoded via the module-level `decode_progress_outputs`
   on `_compute_rbm_logits`, not the native `compute_reward` (which returns only a
   scalar), preserving the discrete-mode per-frame progress ∈ [0,1] + success ∈
   [0,1] contract.
-- The reward camera now defaults to the **wrist (eye-in-hand) view** rather than
-  the VLA's primary RGB camera.
+- The reward camera now defaults to the first RGB camera listed in `robot.yaml`
+  (falling back to `agentview_left`), with no camera-name override.
 
 **Unchanged:** the `reward` rSkill kind, `RewardContract`, the stateless-scorer /
 node-side `RollingFrameBuffer` split, the advisory-only guarantee, and the

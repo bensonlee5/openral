@@ -2707,7 +2707,7 @@ class ReasonerNode(LifecycleNode):
         """Ask the reward monitor for a windowed progress/success assessment (ADR-0057).
 
         Calls ``/openral/perception/query_task_progress`` (served by the
-        reward_monitor_node, backed by the Robometer NF4 sidecar). Async
+        reward_monitor_node, backed by the Robometer NF4 scorer). Async
         (``call_async`` + done-callback) so the multi-hundred-ms reward inference
         never blocks the reasoner executor; the quantitative result is republished
         as a ``PromptStamped`` (frame_id ``"reward_monitor"``) feeding the next

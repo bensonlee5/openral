@@ -4783,15 +4783,14 @@ class RewardContract(BaseModel):
             head (Robometer does). Default ``False`` — the progress/success
             path is the Reasoner-facing contract; preference is future work.
         backend: Which reward runtime scores this skill (ADR-0057). ``"robometer"``
-            (default) → the fine-tuned Robometer RewardModel via the ZMQ scoring
-            sidecar; ``"topreward"`` → the zero-shot TOPReward monitor (lerobot
+            (default) → the fine-tuned Robometer RewardModel in-process;
+            ``"topreward"`` → the zero-shot TOPReward monitor (lerobot
             ``TOPRewardModel``, per-frame progress from a prefix sweep of
             ``P("True" | video, instruction)``), run in-process. Selects the
             backend in ``build_reward_monitor``; existing manifests default to
             ``"robometer"`` so behavior is unchanged.
-        frame_window_s: Length of the rolling frame buffer in seconds. The
-            sidecar evicts frames older than this relative to the newest.
-            Must be > 0.
+        frame_window_s: Length of the rolling frame buffer in seconds. The node
+            evicts frames older than this relative to the newest. Must be > 0.
         target_fps: Frame-sampling rate fed to the model (Robometer's example
             uses 3 fps). Must be > 0. This is an S2-cadence monitor, not a
             per-control-step signal.

@@ -1,8 +1,4 @@
-"""Stateless Robometer reward-scoring server (ADR-0057), run in a sidecar process.
-
-ZMQ REQ/REP + msgpack. Loads the NF4 Robometer reward model once, then scores
-clips on demand. Stateless — the rolling frame buffer / windowing lives node-side
-(:class:`openral_runner.backends.reward.frame_source.RollingFrameBuffer`).
+"""Robometer reward scorer (ADR-0057), loaded in ``reward_monitor_node``.
 
 Native LeRobot backend (lerobot >= 0.6.0). The reward model is
 ``lerobot.rewards.robometer.RobometerRewardModel`` — a vanilla
@@ -31,18 +27,12 @@ directly. The progress head is 10 bins wide (verified against the published
 checkpoint); ``decode_progress_outputs`` derives the bin count from the logit
 width, so the ``num_bins`` wire field is advisory only (kept for wire compat).
 
-Protocol (msgpack dict, key ``op``):
-  ping     {}                                          -> {ok, model}
-  score    {frames: bytes(n*h*w*3 BGR), n, width,      -> {ok, progress:[float],
-            height, task: str, num_bins: int}                success:[float]}
-  shutdown {}                                          -> {ok}
-
-Booted by ``tools/robometer_sidecar.py``. Not imported by the main package.
+Imported lazily by ``openral_runner.backends.reward.robometer_reward`` so normal
+package imports still avoid torch / transformers.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 from dataclasses import fields
@@ -55,10 +45,8 @@ import _robometer_quant as q
 
 q.set_cublas_workspace_env()  # MUST precede CUDA init (torch import below)
 
-import msgpack  # noqa: E402 — must follow set_cublas_workspace_env()
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
-import zmq  # noqa: E402
 
 q.apply_determinism()
 
@@ -127,7 +115,7 @@ class _Scorer:
         if not q.is_prequantized_checkpoint(local):
             raise RuntimeError(
                 f"{local} is not an NF4 pre-quantized checkpoint (no bnb nf4 keys). "
-                "The native sidecar loads OpenRAL/rskill-robometer-4b-nf4; the bf16 "
+                "The native scorer loads OpenRAL/rskill-robometer-4b-nf4; the bf16 "
                 "lerobot/Robometer-4B is too large for an 8 GB GPU."
             )
         self.cfg, self.model = self._load_prequantized(local)
@@ -148,7 +136,7 @@ class _Scorer:
         if device == "cuda":
             torch.cuda.synchronize()
             vram = torch.cuda.memory_allocated() / 1e9
-            print(f"[robometer-server] ready (native nf4): {vram:.2f} GB on {device}", flush=True)
+            print(f"[robometer] ready (native nf4): {vram:.2f} GB on {device}", flush=True)
 
     def _load_prequantized(self, local: str) -> tuple:
         """Meta-build the native module, then drop in the packed NF4 weights."""
@@ -157,7 +145,7 @@ class _Scorer:
 
         cfg = _native_config()
         cfg.device = self.device
-        print(f"[robometer-server] native meta-build ({cfg.progress_discrete_bins} bins) ...", flush=True)
+        print(f"[robometer] native meta-build ({cfg.progress_discrete_bins} bins) ...", flush=True)
         with torch.device("meta"):
             model = RobometerRewardModel(cfg)
         # Direct construction defaults to "eager"; production + determinism use "sdpa".
@@ -190,7 +178,7 @@ class _Scorer:
         still_meta = [n for n, p in model.named_parameters() if p.is_meta]
         if still_meta:
             raise RuntimeError(f"meta params left after prequant load: {still_meta[:5]}")
-        print(f"[robometer-server] installed NF4 + {n_buf} rotary buffers", flush=True)
+        print(f"[robometer] installed NF4 + {n_buf} rotary buffers", flush=True)
         return cfg, model
 
     @torch.no_grad()
@@ -211,49 +199,3 @@ class _Scorer:
             else np.zeros_like(prog)
         )
         return prog.tolist(), succ.tolist()
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default="OpenRAL/rskill-robometer-4b-nf4")
-    ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=5769)
-    ap.add_argument("--device", default="cuda")
-    args = ap.parse_args()
-
-    scorer = _Scorer(args.weights, device=args.device)
-
-    ctx = zmq.Context.instance()
-    sock = ctx.socket(zmq.REP)
-    sock.bind(f"tcp://{args.host}:{args.port}")
-    print(f"[robometer-server] listening on tcp://{args.host}:{args.port}", flush=True)
-
-    while True:
-        req = msgpack.unpackb(sock.recv(), raw=False)
-        op = req.get("op")
-        if op == "ping":
-            sock.send(msgpack.packb({"ok": True, "model": args.weights}))
-        elif op == "score":
-            try:
-                n, w, h = int(req["n"]), int(req["width"]), int(req["height"])
-                bgr = np.frombuffer(req["frames"], dtype=np.uint8).reshape(n, h, w, 3)
-                rgb = bgr[:, :, :, ::-1]  # BGR -> RGB (model expects RGB)
-                progress, success = scorer.score(
-                    np.ascontiguousarray(rgb), str(req["task"]), int(req.get("num_bins", 100))
-                )
-                sock.send(msgpack.packb({"ok": True, "progress": progress, "success": success}))
-            except Exception as exc:
-                sock.send(msgpack.packb({"ok": False, "error": f"{type(exc).__name__}: {exc}"}))
-        elif op == "shutdown":
-            sock.send(msgpack.packb({"ok": True}))
-            break
-        else:
-            sock.send(msgpack.packb({"ok": False, "error": f"unknown op {op!r}"}))
-
-    sock.close()
-    ctx.term()
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -20,7 +20,6 @@ from openral_core.schemas import RSkillManifest
 from openral_runner.backends.reward.frame_source import Frame
 from openral_runner.backends.reward.robometer_reward import (
     RobometerInProcessReward,
-    RobometerReward,
     build_reward_monitor,
 )
 
@@ -36,7 +35,7 @@ def _load_manifest() -> RSkillManifest:
 def test_build_reward_monitor_propagates_contract() -> None:
     """The factory carries num_bins + success_threshold + weights from the manifest."""
     manifest = _load_manifest()
-    mon = build_reward_monitor(manifest, port=5769)
+    mon = build_reward_monitor(manifest)
     assert isinstance(mon, RobometerInProcessReward)
     assert mon._num_bins == manifest.reward.num_bins
     assert mon._success_threshold == manifest.reward.success_threshold
@@ -49,15 +48,9 @@ def test_build_reward_monitor_local_scheme() -> None:
     """``local://`` weights resolve to a bare path (pre-quantized checkpoint dir)."""
     manifest = _load_manifest()
     local = manifest.model_copy(update={"weights_uri": "local:///tmp/robometer-nf4-ckpt"})
-    mon = build_reward_monitor(local, port=5769)
+    mon = build_reward_monitor(local)
     # local:// stripped to the absolute dir; the in-process loader meta-loads it directly.
     assert mon._weights_source == "/tmp/robometer-nf4-ckpt"
-
-
-def test_build_reward_monitor_sidecar_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Temporary fallback: operators can still force the old ZMQ sidecar."""
-    monkeypatch.setenv("OPENRAL_ROBOMETER_BACKEND", "sidecar")
-    assert isinstance(build_reward_monitor(_load_manifest(), port=5769), RobometerReward)
 
 
 def test_evenly_spaced_indices_bounds_frames() -> None:
@@ -117,7 +110,7 @@ def _gpu_present() -> bool:
 def _missing_live_deps() -> list[str]:
     return [
         mod
-        for mod in ("bitsandbytes", "huggingface_hub", "lerobot", "msgpack", "torch", "zmq")
+        for mod in ("bitsandbytes", "huggingface_hub", "lerobot", "safetensors", "torch")
         if importlib.util.find_spec(mod) is None
     ]
 
@@ -135,7 +128,7 @@ def test_e2e_score_clip_in_process() -> None:
     import numpy as np
 
     manifest = _load_manifest()
-    mon = build_reward_monitor(manifest, port=5770)
+    mon = build_reward_monitor(manifest)
     n, h, w = 6, 224, 224
     frames = [
         Frame(
