@@ -4,8 +4,8 @@
 #
 # Why int8 (not NF4): bf16 π0.5 (~7 GB, ~13.6 GiB peak) OOMs on an 8 GB
 # consumer GPU. NF4 4-bit fits but is *too lossy* for the 3.4 B π0.5
-# backbone — it destroys competence (0/5 on libero_spatial via the
-# pi05-libero-nf4 pack). LLM.int8 (bitsandbytes Linear8bitLt on every
+# backbone — it destroys competence (0/5 on libero_spatial with NF4
+# 4-bit). LLM.int8 (bitsandbytes Linear8bitLt on every
 # Linear ≥4M elements) restores the policy AND fits 8 GB: measured
 # 0.5–0.7 on libero_spatial across 10-episode runs (RTX 4070 8 GB;
 # eval/scene_libero_spatial.json records 0.5). The pi05 adapter loads the

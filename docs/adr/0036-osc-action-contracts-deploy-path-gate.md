@@ -22,7 +22,7 @@ deploy). LIBERO / SIMPLER / MetaWorld / PushT checkpoints emit a cartesian end-e
 When such a skill declares only `action_contract.dim` (no `slots`, no `representation`),
 `rskill_runner_node._step_impl` falls back to the legacy path and labels the **whole vector
 `JOINT_POSITION`**. The C++ safety kernel validates it against the joint-space envelope and rejects it
-(`n_dof 7 ≠ 8` for franka) → E-stop. Observed live on `openral deploy sim` of `pi05-libero-nf4`: the skill
+(`n_dof 7 ≠ 8` for franka) → E-stop. Observed live on `openral deploy sim` of `pi05-libero-int8`: the skill
 was picked and stepped once with camera frames, then E-stopped on
 `envelope_violation field=n_dof value=7 limit=8`.
 
@@ -113,7 +113,7 @@ so a future cartesian rSkill cannot silently reintroduce the joint-default bug.
   OSC controller in the MuJoCo digital twin. *Mitigation / residual risk:* a digital twin has no real
   motor to protect; the action is structurally validated by the C++ kernel (shape / NaN / self-collision,
   unchanged) and physically clamped by the OSC controller + MuJoCo `ctrlrange`. This is identical to the
-  already-accepted robocasa cartesian path. **Verified** 2026-06-03: `openral deploy sim` of `pi05-libero-nf4`
+  already-accepted robocasa cartesian path. **Verified** 2026-06-03: `openral deploy sim` of `pi05-libero-int8`
   on franka executed `cartesian_delta` (`env_dim=7`) for 1400+ ticks with zero envelope violations,
   E-stops, dimension errors, or crashes.
 - **HZ-0036-2 — a cartesian skill must never reach a real joint-only motor.** *Mitigation:* the

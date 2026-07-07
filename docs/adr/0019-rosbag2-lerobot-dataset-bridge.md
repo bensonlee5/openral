@@ -243,7 +243,7 @@ Smoke verification (real GPU + real VLA weights + real sim envs):
 | Config | rSkill | State | Action | Result |
 | --- | --- | --- | --- | --- |
 | PushT + Diffusion | diffusion-pusht | 2 | 2 | ✅ |
-| Franka + LIBERO + pi05 | pi05-libero-nf4 | 8 | 7 | ✅ |
+| Franka + LIBERO + pi05 | pi05-libero-int8 | 8 | 7 | ✅ |
 | Franka + LIBERO + SmolVLA | smolvla-libero | 8 | 7 | ✅ |
 | Franka + LIBERO + xVLA | xvla-libero | 8 | 7 | ✅ |
 | Franka + LIBERO + ACT | act-libero | 8 | 7 | ✅ |

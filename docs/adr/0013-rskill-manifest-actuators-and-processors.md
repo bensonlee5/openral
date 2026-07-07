@@ -136,7 +136,7 @@ authoritative values per in-tree manifest:
 
 | skill | kind | n_dof |
 |---|---|---|
-| smolvla-base / smolvla-libero / pi05-libero-nf4 / xvla-libero | `joint_position` | (auto-fill from robot) |
+| smolvla-base / smolvla-libero / pi05-libero-int8 / xvla-libero | `joint_position` | (auto-fill from robot) |
 | smolvla-metaworld | `joint_position` | (auto-fill from sawyer manifest) |
 | act-aloha / act-aloha-insertion | `joint_position` | (auto-fill from aloha bimanual: 14) |
 | diffusion-pusht | `cartesian_delta` | (auto-fill from pusht_2d: 2) |

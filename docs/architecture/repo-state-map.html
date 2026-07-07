@@ -1517,7 +1517,7 @@ const CROSS = [
     title: "tools/rskill_publisher.py",
     pkg: "tools · python/cli",
     status: "green",
-    desc: "Validates an rskill.yaml, pins a HF Hub revision, and pushes the skill repo. Used to package smolvla-libero / pi05-libero-nf4 / xvla-libero / smolvla-metaworld. Publishing is hard-gated by python/cli `_rskill_doc_validator.validate_rskill_docs`: refuses upload when the README is missing / too short / missing canonical sections / contains template sentinels, or when the manifest still has the scaffold-default description, lacks both `paper_url` and `source_repo`, or carries a `TEMPLATE` substring in `name` / `weights_uri` / `source_repo`. The same report prints in dry-run mode (no --publish) so authors see what to fix without attempting an upload.",
+    desc: "Validates an rskill.yaml, pins a HF Hub revision, and pushes the skill repo. Used to package smolvla-libero / pi05-libero-int8 / xvla-libero / smolvla-metaworld. Publishing is hard-gated by python/cli `_rskill_doc_validator.validate_rskill_docs`: refuses upload when the README is missing / too short / missing canonical sections / contains template sentinels, or when the manifest still has the scaffold-default description, lacks both `paper_url` and `source_repo`, or carries a `TEMPLATE` substring in `name` / `weights_uri` / `source_repo`. The same report prints in dry-run mode (no --publish) so authors see what to fix without attempting an upload.",
     schemas: ["RSkillManifest"],
   },
   {
@@ -1531,7 +1531,7 @@ const CROSS = [
     title: "rskills/template/",
     pkg: "rskills/template",
     status: "green",
-    desc: "Schema-valid rSkill skeleton consumed by `openral rskill new` / tools/rskill_scaffolder.py. Real, loadable manifest (modeled on rskills/pi05-libero-nf4/) with TEMPLATE_ORG / TEMPLATE_ID sentinels for the rewriter. `rSkill.from_yaml('rskills/template/rskill.yaml')` succeeds as-is per §1.11 (real fixtures, no placeholder strings). The README is a full sectioned scaffold (Upstream model / Supported robots / Sensors required / Manifest summary / License / …) that mirrors what python/cli `_rskill_doc_validator` enforces at publish time — the validator deliberately rejects the bare scaffold so a fresh `openral rskill new` cannot be published without editing.",
+    desc: "Schema-valid rSkill skeleton consumed by `openral rskill new` / tools/rskill_scaffolder.py. Real, loadable manifest (modeled on rskills/pi05-libero-int8/) with TEMPLATE_ORG / TEMPLATE_ID sentinels for the rewriter. `rSkill.from_yaml('rskills/template/rskill.yaml')` succeeds as-is per §1.11 (real fixtures, no placeholder strings). The README is a full sectioned scaffold (Upstream model / Supported robots / Sensors required / Manifest summary / License / …) that mirrors what python/cli `_rskill_doc_validator` enforces at publish time — the validator deliberately rejects the bare scaffold so a fresh `openral rskill new` cannot be published without editing.",
     schemas: ["RSkillManifest"],
   },
   {

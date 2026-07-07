@@ -158,7 +158,7 @@ _Per-family scaffold defaults + HF Hub config introspection for `openral rskill 
 - `RSkillFamily` — `Literal["act", "smolvla", "pi05", "xvla", "diffusion"]`; mirrors the keys of `openral_sim.registry.POLICIES` minus the mock entries.
 - `RSKILL_FAMILIES: tuple[RSkillFamily, ...]` — Tuple form of the above for menu rendering / validation.
 - `RSkillPatch(TypedDict, total=False)` — Subset of manifest fields the scaffolder overlays: `model_family`, `policy_id`, `chunk_size`, `quantization`, `latency_budget`, `min_vram_gb`, `n_action_steps`, `image_preprocessing`, `state_contract`, `sensors_required`, `weights_uri`, `source_repo`, `description`.
-- `family_defaults(family: RSkillFamily) -> RSkillPatch` — Per-family manifest baseline mirroring the in-tree reference manifests (`act-aloha`, `smolvla-libero`, `pi05-libero-nf4`, `xvla-libero`, `diffusion-pusht`). (L67)
+- `family_defaults(family: RSkillFamily) -> RSkillPatch` — Per-family manifest baseline mirroring the in-tree reference manifests (`act-aloha`, `smolvla-libero`, `pi05-libero-int8`, `xvla-libero`, `diffusion-pusht`). (L67)
 - `introspect_hf(repo_id, *, default_family=None) -> tuple[RSkillFamily, RSkillPatch]` — Fetches `config.json` from a HF Hub repo, infers the policy family from `type`, and derives chunk_size / sensors / state_contract / image_preprocessing.aliases / weights_uri from `input_features`. (L168)
 - `_fetch_hf_json(repo_id, filename) -> Any` — `huggingface_hub.hf_hub_download` + `json.load`; raises `ValueError` on network / parse error.
 - `_sensors_from_input_features(input_features) -> list[dict]` — One `SensorRequirement`-shaped dict per `observation.images.*` feature, with min_width / min_height pulled off the CHW shape.

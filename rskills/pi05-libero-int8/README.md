@@ -31,8 +31,8 @@ language:
 ## Why int8 (and not NF4)
 
 π0.5's 3.4 B backbone is **too large to run bf16 on 8 GB** (~13.6 GiB peak → OOM),
-but **NF4 4-bit is too lossy for it** — the `pi05-libero-nf4` pack scores **0/5**
-on `libero_spatial` because 4-bit quantization destroys the policy. **LLM.int8**
+but **NF4 4-bit is too lossy for it** — 4-bit quantization scores **0/5** on
+`libero_spatial` because it destroys the policy. **LLM.int8**
 (bitsandbytes `Linear8bitLt` on every Linear ≥ 4 M weight elements) is the sweet
 spot: it both fits 8 GB *and* preserves competence — **~0.5–0.7 success** on
 `libero_spatial` across 10-episode runs on an RTX 4070 (`eval/scene_libero_spatial.json`
@@ -121,7 +121,6 @@ license file before any deployment beyond research.
 
 ## See also
 
-- [`rskills/pi05-libero-nf4/README.md`](../pi05-libero-nf4/README.md) — the NF4 pack (fits 8 GB but 0/5 on libero_spatial; superseded by this int8 pack).
 - [`rskills/smolvla-libero/README.md`](../smolvla-libero/README.md) — Apache-2.0 LIBERO alternative.
 - [`docs/reference/vla_compatibility.md`](../../docs/reference/vla_compatibility.md) §3.1 — VLA × Robot × Sim matrix.
 - CLAUDE.md §7.4 — VLA license matrix and install-time guard rules.
