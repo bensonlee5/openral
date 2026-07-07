@@ -1,0 +1,34 @@
+# VLABench select_fruit — Franka Panda, primitive (short-horizon) suite.
+# Run: openral benchmark scene --config scenes/benchmark/vlabench_select_fruit.yaml \
+#                        --rskill rskills/smolvla-vlabench
+# Setup: VLABench is externally provisioned (clone OpenMOSS/VLABench,
+#   `uv pip install --no-deps -e .`, `python scripts/download_assets.py`),
+#   then set VLABENCH_ROOT to the VLABench/ package dir. MUJOCO_GL=egl.
+
+robot_id: franka_panda
+
+scene:
+  id: vlabench
+  backend: mujoco
+  observation_height: 480
+  observation_width: 480
+  cameras: ["camera1", "camera2", "camera3"]
+
+task:
+  id: vlabench/select_fruit
+  scene_id: vlabench
+  instruction: "select the fruit"
+  success_key: is_success      # VLABench reports info["is_success"]
+  max_steps: 500               # VLABench primitive-task horizon
+
+n_episodes: 50
+seed: 0
+
+metadata:
+  paper: "https://arxiv.org/abs/2412.18194"
+  honest_scope: >
+    VLABench (ICCV 2025, OpenMOSS) primitive-suite task select_fruit, Franka
+    Panda, MuJoCo + dm_control. The primitive (short-horizon) track is the only
+    one where any policy exceeds 50% (pi0-fast-ft 51.2%); the long-horizon
+    composite suite is unsolved (<50%) by every known policy. Scene targets the
+    primitive suite. VLABench + its ~12 GB asset bundle install out-of-tree.

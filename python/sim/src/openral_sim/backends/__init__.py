@@ -57,6 +57,7 @@ def _register_backends() -> None:
         simpler_env,
         so101_box,
         tabletop_push,
+        vlabench,
     )
 
 

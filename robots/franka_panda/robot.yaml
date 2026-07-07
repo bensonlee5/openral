@@ -232,6 +232,24 @@ sensors:
     vla_feature_key: "observation.images.camera2"
     vendor: "sim"
     model: "libero_eye_in_hand"
+  # Third RGB view used by 3-camera benchmarks (e.g. VLABench's
+  # image/second_image/wrist_image). LIBERO scenes declare only camera1/2, so
+  # this stream is inert there; VLABench's backend populates it as camera3.
+  - name: "front"
+    modality: "rgb"
+    frame_id: "world"
+    rate_hz: 20.0
+    intrinsics:
+      width: 256
+      height: 256
+      fx: 256.0
+      fy: 256.0
+      cx: 128.0
+      cy: 128.0
+    encoding: "rgb8"
+    vla_feature_key: "observation.images.camera3"
+    vendor: "sim"
+    model: "vlabench_front"
 
 # Franka FCI / libfranka is closed-but-permissive (vendor-licensed binaries,
 # free for research and commercial). franka_ros2 is Apache-2.0. Per
