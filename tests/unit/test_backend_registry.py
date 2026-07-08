@@ -98,9 +98,7 @@ class TestMaybeAttachProHooks:
     def test_no_hook_installed_returns_false(self) -> None:
         assert maybe_attach_pro_hooks("smolvla", NullRuntime()) is False
 
-    def test_registered_hook_declines_returns_false(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_registered_hook_declines_returns_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         ep = EntryPoint(
             name="smolvla",
             value=f"{__name__}:_fake_attach_hook",
@@ -112,9 +110,7 @@ class TestMaybeAttachProHooks:
         )
         assert maybe_attach_pro_hooks("smolvla", NullRuntime(), device="cpu") is False
 
-    def test_registered_hook_attaches_returns_true(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_registered_hook_attaches_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
         ep = EntryPoint(
             name="smolvla",
             value=f"{__name__}:_fake_attach_hook",

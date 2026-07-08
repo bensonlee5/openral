@@ -73,9 +73,7 @@ def _resolve_file(env_name: str, default: Path, what: str) -> Path:
     override = os.environ.get(env_name)
     p = Path(override).expanduser() if override else default
     if not p.exists():
-        raise ROSConfigError(
-            f"3D Diffuser Actor {what} not found at {p}. Set {env_name}."
-        )
+        raise ROSConfigError(f"3D Diffuser Actor {what} not found at {p}. Set {env_name}.")
     return p
 
 
