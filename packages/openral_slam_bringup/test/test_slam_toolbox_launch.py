@@ -94,8 +94,14 @@ def test_launch_description_shape() -> None:
     lifecycle dodges it.
     """
     mod = _import_launch_module()
+    from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
     from launch.actions import EmitEvent
     from launch_ros.actions import LifecycleNode
+
+    try:
+        get_package_share_directory("openral_slam_bringup")
+    except PackageNotFoundError:
+        pytest.skip("openral_slam_bringup not built (run `just ros2-build`).")
 
     desc = mod.generate_launch_description()
     actions = desc.describe_sub_entities()

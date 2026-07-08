@@ -68,8 +68,14 @@ def test_default_params_file_exists_and_parses() -> None:
 def test_launch_defaults_to_sim_depth_camera_topics() -> None:
     """deploy-sim's manifest depth camera is nvblox's default input."""
     mod = _import_launch_module()
+    from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
     from launch.actions import DeclareLaunchArgument
     from launch_ros.actions import Node
+
+    try:
+        get_package_share_directory("openral_slam_bringup")
+    except PackageNotFoundError:
+        pytest.skip("openral_slam_bringup not built (run `just ros2-build`).")
 
     desc = mod.generate_launch_description()
     args = {a.name: a for a in desc.describe_sub_entities() if isinstance(a, DeclareLaunchArgument)}
