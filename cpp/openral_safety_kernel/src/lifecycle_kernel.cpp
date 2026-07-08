@@ -929,14 +929,6 @@ void SafetyKernelLifecycleNode::publish_failure_trigger(const openral_msgs::msg:
       box_max_x = std::max(limit, meas + 1e-9);
     }
     oss << R"({"kind":"workspace","ee_name":")" << ee_name << R"(","measured_xyz":[)" << mx << ","
-        << my << "," << mz << R"(],"box_min":[)" << box_min_x << ",0.0,0.0],\"box_max\":["
-        << box_max_x << ",0.0,0.0]}";
-    // The escaped-quote line above is a c-string artefact of the raw
-    // literal break; we use a real raw literal for the box_max key:
-    // build the rest of the JSON without the embedded backslash.
-    // Recompose cleanly:
-    oss.str("");
-    oss << R"({"kind":"workspace","ee_name":")" << ee_name << R"(","measured_xyz":[)" << mx << ","
         << my << "," << mz << R"(],"box_min":[)" << box_min_x << R"(,0.0,0.0],"box_max":[)"
         << box_max_x << R"(,0.0,0.0]})";
     break;
