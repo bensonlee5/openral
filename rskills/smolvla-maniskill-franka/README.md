@@ -124,7 +124,7 @@ print(pkg.manifest.weights_uri)
 
 ```bash
 # One-time bootstrap
-just bootstrap && uv sync --all-packages --group sim --group maniskill3
+just bootstrap && just sync --group sim --group maniskill3
 
 # End-to-end rollout (live SAPIEN window via --view).
 DISPLAY=:1 uv run --group sim --group maniskill3 \

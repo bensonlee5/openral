@@ -48,7 +48,7 @@ Read only the context needed for the task:
 3. Fill the manifest from evidence.
    - Verify state dimension, action dimension, control mode, camera keys, image sizes, preprocessing, normalization sidecars, chunk size, runtime, and latency budget from checkpoint metadata, compatibility docs, or existing package patterns.
    - Match `embodiment_tags` with `RobotCapabilities.embodiment_tags`.
-   - Preserve `schema_version: "0.1"` while OpenRAL is pre-publish.
+   - Keep `schema_version: "0.1"` — the current published version. A backward-incompatible manifest change requires bumping the version AND shipping a migrator (CLAUDE.md §1.6); backward-compatible additions may evolve in place.
    - Do not invent manifest fields. Search nearby `rskills/*/rskill.yaml` and the Pydantic schema first.
 
 4. Set license and provenance gates honestly.

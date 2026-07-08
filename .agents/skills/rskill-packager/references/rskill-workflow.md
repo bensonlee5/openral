@@ -100,7 +100,7 @@ If a command needs an HF token, the user must type the secret into the terminal 
 - `weights_uri` points to the intended artifact and is pinned for stable publication.
 - `runtime`, `quantization`, and min VRAM match the load path.
 - `latency_budget` is evidence-backed.
-- `schema_version` remains `"0.1"` while OpenRAL is pre-publish.
+- `schema_version` is `"0.1"` (the current published version). Do not change it unless making a backward-incompatible manifest change, which requires bumping the version AND shipping a migrator (CLAUDE.md §1.6).
 
 ## Quantization Checklist
 

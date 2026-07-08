@@ -62,6 +62,8 @@ All entries are published under `OpenRAL/rskill-*` on HuggingFace Hub and exerci
 | [`gr00t-n17-libero`](https://github.com/OpenRAL/openral/tree/master/rskills/gr00t-n17-libero/) | NVIDIA Isaac GR00T N1.7 (3B, Cosmos-Reason2-2B VLM backbone) | `franka_panda` | NVIDIA Open Model License (commercial OK) — in-process lerobot 0.6.0 `GrootPolicy`, backbone-only NF4 |
 | [`smolvla-so101-pen`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-so101-pen/) | SmolVLA SO-101 pen checkpoint | `so101_follower` | Apache-2.0 |
 | [`smolvla-so101-pick-place-pen`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-so101-pick-place-pen/) | SmolVLA SO-101 pick/place pen checkpoint; optional split ONNX/TensorRT fast path | `so101_follower` | Apache-2.0 |
+| [`smolvla-robotwin`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-robotwin/) | SmolVLA finetuned on RoboTwin 2.0 (50 bimanual SAPIEN tasks) | `aloha_agilex` | Apache-2.0 — py3.10 SAPIEN sidecar |
+| [`smolvla-vlabench`](https://github.com/OpenRAL/openral/tree/master/rskills/smolvla-vlabench/) | SmolVLA finetuned on VLABench (`lerobot/vlabench_unified`, 97 tasks) — integration baseline, 0% on current tasks | `franka_panda` | Apache-2.0 |
 
 ## Perception rSkills (`kind: detector`)
 

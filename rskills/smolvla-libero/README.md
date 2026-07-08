@@ -255,7 +255,7 @@ The following properties were verified locally using `tests/sim/test_franka_pand
 
 ```bash
 git clone https://github.com/OpenRAL/openral && cd OpenRAL
-CC=/usr/bin/gcc uv sync --all-packages --group sim
+CC=/usr/bin/gcc just sync --group sim
 ```
 
 ### 2 — Manifest + IO contract tests (no GPU required for manifest tests)

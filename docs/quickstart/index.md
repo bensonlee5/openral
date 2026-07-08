@@ -9,7 +9,7 @@ This page gets you from zero to a working `openral doctor` check in under five m
 ```bash
 git clone https://github.com/OpenRAL/openral && cd OpenRAL
 just bootstrap          # installs uv, ROS 2, system deps
-uv sync --all-packages  # install Python workspace
+just sync               # install Python workspace (wraps uv sync + repair)
 ```
 
 ---
@@ -98,7 +98,7 @@ Add to `~/.bashrc` for permanent effect. Then re-run `openral doctor`.
 
 ### `openral-core` shows `fail`
 
-Run `uv sync --all-packages` from the repo root. Plain `uv sync` does not install workspace member packages.
+Run `just sync` from the repo root (`just sync` wraps `uv sync --all-packages` and runs the hf-libero repair script).
 
 ### USB devices shows `none found` with a robot connected
 
