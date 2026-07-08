@@ -3233,8 +3233,7 @@ def robot_vendor_urdf(
 app.command(
     name="prompt",
     help=(
-        "Publish a one-shot operator prompt to the prompt-router. "
-        "Requires a sourced ROS 2 install."
+        "Publish a one-shot operator prompt to the prompt-router. Requires a sourced ROS 2 install."
     ),
 )(prompt_command)
 
