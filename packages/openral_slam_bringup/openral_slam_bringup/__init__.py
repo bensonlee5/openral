@@ -6,5 +6,3 @@ Python runtime modules. The Reasoner drives the resulting
 ``LifecycleNode`` (``/openral/slam_toolbox``) via
 :class:`~openral_core.LifecycleTransitionTool`.
 """
-
-__version__ = "0.1.0"

@@ -8,5 +8,3 @@ the sibling ``lifecycle_node.py`` and is invoked via
 ``ros2 run openral_hal_panda_mobile lifecycle_node`` (after
 ``colcon build``).
 """
-
-from __future__ import annotations

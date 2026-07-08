@@ -8,7 +8,7 @@ the ``robot_yaml`` + ``hal_mode`` ROS parameters and routes through
 (→ ``UR5eHAL``); ``openral deploy run`` injects ``hal_mode:=real``
 (→ ``UR5eRealHAL``).
 
-Usage (after ``colcon build`` + ``source install/setup.bash``)::
+Usage::
 
     ros2 run openral_hal_ur5e lifecycle_node \
         --ros-args -p robot_yaml:=robots/ur5e/robot.yaml -p hal_mode:=sim

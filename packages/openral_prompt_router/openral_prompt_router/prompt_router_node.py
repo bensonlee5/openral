@@ -253,23 +253,11 @@ def main(args: list[str] | None = None) -> int:
         try:
             rclpy.spin(node)
         except (KeyboardInterrupt, ExternalShutdownException):
-            # Normal teardown path. rclpy installs a SIGINT handler at
-            # `rclpy.init()` that shuts down the context AND raises
-            # KeyboardInterrupt out of `rclpy.spin()` on Jazzy. On
-            # ROS 2 Rolling / a manual `rclpy.shutdown()` from another
-            # thread, spin instead raises ExternalShutdownException.
-            # Either way the context is already shut down by the time we
-            # reach the `finally` below, so the bare `rclpy.shutdown()`
-            # we used to call there raised
-            # `RCLError: rcl_shutdown already called` — the
-            # `try_shutdown()` switch below is the corresponding fix.
-            pass
+            pass  # context already shut down by the SIGINT handler
         finally:
             node.destroy_node()
     finally:
-        # Idempotent — no-op when the SIGINT handler (or whoever fired
-        # ExternalShutdownException) already shut down the context.
-        rclpy.try_shutdown()
+        rclpy.try_shutdown()  # idempotent — no-op if context already shut down
     return 0
 
 

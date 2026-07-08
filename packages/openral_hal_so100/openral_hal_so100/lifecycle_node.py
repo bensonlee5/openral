@@ -1,23 +1,11 @@
 #!/usr/bin/env python3
 r"""SO-100 / SO-101 HAL lifecycle node entry point.
 
-Manifest-driven node (issue #191 Phase 2): builds its sim or real
-HAL via :func:`openral_hal.lifecycle.make_lifecycle_main_from_manifest`, which
-reads the ``robot_yaml`` + ``hal_mode`` ROS parameters and routes through
-:func:`openral_hal.build_hal`. The previous bespoke ``_SO100LifecycleNode``
-(``port`` / ``calibrate_on_connect`` / ``sim_robot_yaml`` parameters) is gone:
-
-* **sim** (``hal_mode:=sim``) → a bare MuJoCo digital twin derived from the
-  manifest's ``sim:`` block (``MujocoArmHAL.from_description``). The SAME node
-  serves both the SO-100 (``so_arm100``) and the SO-101 (``so101_new_calib``)
-  from their own ``robots/<id>/robot.yaml`` — no dedicated ``openral_hal_so101``
-  package. ``openral deploy sim`` injects the resolved manifest (see
-  ``openral_cli.deploy_sim._ROBOT_HAL_REGISTRY``: ``manifest_driven=True`` +
-  ``bare_twin_sim=True``).
-* **real** (``hal_mode:=real``) → ``SO100FollowerHAL`` over the Feetech serial
-  bus. The serial ``port`` + ``calibrate_on_connect`` come from the manifest's
-  ``hal.parameters.defaults``, threaded into the constructor by
-  ``build_hal`` — so no per-robot ROS parameter is needed.
+Manifest-driven node: builds its sim or real HAL via
+:func:`openral_hal.lifecycle.make_lifecycle_main_from_manifest`, which reads
+the ``robot_yaml`` + ``hal_mode`` ROS parameters and routes through
+:func:`openral_hal.build_hal`. A single package serves both the SO-100
+(``so_arm100``) and SO-101 (``so101_new_calib``) from their own manifests.
 
 Usage::
 
