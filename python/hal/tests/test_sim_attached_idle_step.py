@@ -322,6 +322,9 @@ def test_idle_tick_disables_timer_after_action_dim_mismatch_native_so101() -> No
     """
     pytest.importorskip("openral_sim")
     pytest.importorskip("mujoco")
+    # This is the only idle test that drives `_setup_idle_stepper`, which imports
+    # rclpy for its wall-clock timer — skip (don't error) on a no-ROS CI host.
+    pytest.importorskip("rclpy")
     from openral_core import RobotDescription
     from openral_hal.sim_attached import SimAttachedHAL
     from openral_hal.sim_bringup import build_sim_env_from_yaml
