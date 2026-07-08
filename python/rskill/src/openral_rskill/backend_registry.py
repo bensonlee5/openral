@@ -25,15 +25,15 @@ the seam that lets those packages plug into the open ``openral-rskill`` /
 
 from __future__ import annotations
 
+from importlib import import_module
 from importlib.metadata import entry_points
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from openral_core.exceptions import ROSConfigError
 
-from openral_rskill.runtime import NullRuntime, Runtime
-from openral_rskill.runtime_onnx import ONNXRuntime
-from openral_rskill.runtime_pytorch import PyTorchRuntime
+if TYPE_CHECKING:
+    from openral_rskill.runtime import Runtime
 
 __all__ = ["maybe_attach_pro_hooks", "resolve_runtime_backend"]
 
@@ -42,13 +42,14 @@ log = structlog.get_logger(__name__)
 _RUNTIME_BACKENDS_GROUP = "openral.runtime_backends"
 _POLICY_ATTACH_HOOKS_GROUP = "openral.policy_attach_hooks"
 
-# Built-in backends: always available, no optional dependency beyond what
-# openral-rskill itself already requires transitively (torch / onnxruntime
-# are still lazy-imported *inside* these classes, not here).
-_BUILTIN_RUNTIME_BACKENDS: dict[str, type[Runtime]] = {
-    "pytorch": PyTorchRuntime,
-    "onnx": ONNXRuntime,
-    "null": NullRuntime,
+# Built-in backends, resolved lazily by module path: `openral_rskill.__init__`
+# imports this module eagerly, and `runtime_pytorch` imports torch at module
+# top — an eager class reference here would drag torch into every
+# `import openral_cli.main` (test_bh_cli_import_is_light guards this).
+_BUILTIN_RUNTIME_BACKENDS: dict[str, str] = {
+    "pytorch": "openral_rskill.runtime_pytorch:PyTorchRuntime",
+    "onnx": "openral_rskill.runtime_onnx:ONNXRuntime",
+    "null": "openral_rskill.runtime:NullRuntime",
 }
 
 
@@ -74,8 +75,7 @@ def resolve_runtime_backend(kind: str) -> type[Runtime]:
             registered entry point. Names the private package to install.
 
     Example:
-        >>> resolve_runtime_backend("pytorch") is PyTorchRuntime
-        True
+        >>> from openral_rskill.runtime import NullRuntime
         >>> resolve_runtime_backend("null") is NullRuntime
         True
         >>> resolve_runtime_backend("does-not-exist")  # doctest: +IGNORE_EXCEPTION_DETAIL
@@ -85,7 +85,9 @@ def resolve_runtime_backend(kind: str) -> type[Runtime]:
     """
     builtin = _BUILTIN_RUNTIME_BACKENDS.get(kind)
     if builtin is not None:
-        return builtin
+        module_path, _, attr = builtin.partition(":")
+        loaded_builtin: type[Runtime] = getattr(import_module(module_path), attr)
+        return loaded_builtin
 
     for ep in entry_points(group=_RUNTIME_BACKENDS_GROUP):
         if ep.name == kind:
