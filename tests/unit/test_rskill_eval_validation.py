@@ -10,8 +10,7 @@ Coverage
   :class:`RSkillEvalResult` (regression guard against shape drift).
 - A malformed JSON in ``eval/`` causes :meth:`rSkill.from_yaml` to raise
   :class:`ROSConfigError`.
-- A skill with **no** ``eval/`` directory loads cleanly
-  (e.g. ``rskills/pi05-robocasa365-human300-nf4``).
+- A skill with **no** ``eval/`` directory loads cleanly.
 """
 
 from __future__ import annotations

@@ -8,7 +8,7 @@
 #
 # Like `robots/aloha_bimanual/robot.yaml`, this manifest ships NO on-disk
 # URDF/MJCF: the actual robot lives inside the SAPIEN env owned by the
-# RoboTwin sidecar (ADR-0061), so the openral side never instantiates it.
+# RoboTwin sidecar, so the openral side never instantiates it.
 # The manifest exists only so the eval layer can resolve the 14-D
 # action/state contract and run the embodiment/sensor compatibility gate.
 # Joint kinematics are therefore approximate (sufficient for capability
@@ -19,7 +19,7 @@ embodiment_kind: "bimanual"
 
 base_frame: "world"
 
-# `assets` deliberately unset (ADR-0058 AssetRefs default) — the sidecar's
+# `assets` deliberately unset (AssetRefs default) — the sidecar's
 # SAPIEN scene owns the geometry; nothing on the openral side loads it.
 
 joints:
@@ -175,7 +175,7 @@ end_effectors:
 # `lerobot/robotwin_unified` dataset). The public `lerobot/smolvla_robotwin`
 # checkpoint's `config.json` consumes them at 256×256 under the generic feature
 # keys observation.images.camera1/2/3 (the same naming the franka_panda /
-# ManiSkill rSkills use). Per ADR-0070 the HAL-facing sensor names are
+# ManiSkill rSkills use). The HAL-facing sensor names are
 # canonical (top / wrist_left / wrist_right); the checkpoint-facing
 # `vla_feature_key` stays camera1/2/3 since it is frozen per checkpoint. The
 # RoboTwin sidecar re-keys the env's three cameras to scene cameras in
@@ -239,7 +239,7 @@ capabilities:
   bimanual: true
   supported_control_modes:
     - "joint_position"
-    # ADR-0071 — the two parallel grippers (see end_effectors) accept position
+    # The two parallel grippers (see end_effectors) accept position
     # commands; advertise the mode so a gripper-driving skill matches the gate.
     - "gripper_position"
   supported_vla_embodiments: ["aloha_agilex", "aloha", "lerobot"]

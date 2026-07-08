@@ -1,8 +1,45 @@
 {
   "$defs": {
+    "BoxShape": {
+      "additionalProperties": false,
+      "description": "Oriented box (OBB) collision primitive \u2014 a rectangular convex block.\n\nAn axis-aligned box in the primitive's local frame (placed and oriented by\nthe owning frame's ``origin_xyz_rpy`` / ``pose``), spanning\n``[-half_extents_m[k], +half_extents_m[k]]`` along each local axis ``k``.\n\nA box fits a *blocky* link (a near-cubic housing, e.g. the SO-ARM100/101\n``base``) far tighter than a capsule: a capsule's circular cross-section\nmust bulge past the block's flat faces, so it over-reports clearance at\nposes where the flat faces are what actually face a neighbour. That bulge\nis what makes the manifest capsule model false-E-stop the SO-101 at its\nhome pose (base\u2194lower_arm / base\u2194wrist reported penetrating while the true\nmesh clearance is +0.16 m / +0.24 m). See issue #84.\n\nAttributes:\n    shape: Discriminator (always ``\"box\"``).\n    half_extents_m: Half-sizes ``(hx, hy, hz)`` along the local x/y/z axes\n        in metres (the full box is ``2*hx x 2*hy x 2*hz``).\n\nExample:\n    >>> BoxShape(half_extents_m=(0.055, 0.048, 0.036)).shape\n    'box'",
+      "properties": {
+        "shape": {
+          "const": "box",
+          "default": "box",
+          "title": "Shape",
+          "type": "string"
+        },
+        "half_extents_m": {
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            }
+          ],
+          "title": "Half Extents M",
+          "type": "array"
+        }
+      },
+      "required": [
+        "half_extents_m"
+      ],
+      "title": "BoxShape",
+      "type": "object"
+    },
     "CapsuleShape": {
       "additionalProperties": false,
-      "description": "Capsule collision primitive \u2014 a segment swept by a radius.\n\nThe central segment runs along the local +Z axis from ``-length_m / 2``\nto ``+length_m / 2`` (the MJCF / URDF capsule convention); it is placed\nand oriented by the owning frame (:attr:`LinkCollisionGeometry.origin_xyz_rpy`\nfor a link, :attr:`WorldCollisionPrimitive.pose` for an obstacle).\nCapsules bound most robot links tightly, so the safety check stays\nconservative (ADR-0030 \u00a72).\n\nAttributes:\n    shape: Discriminator (always ``\"capsule\"``).\n    radius_m: Capsule radius in metres.\n    length_m: Length of the central segment in metres (the cylinder\n        portion; the total span is ``length_m + 2 * radius_m``). ``0.0``\n        degenerates to a sphere.\n\nExample:\n    >>> CapsuleShape(radius_m=0.04, length_m=0.3).length_m\n    0.3",
+      "description": "Capsule collision primitive \u2014 a segment swept by a radius.\n\nThe central segment runs along the local +Z axis from ``-length_m / 2``\nto ``+length_m / 2`` (the MJCF / URDF capsule convention); it is placed\nand oriented by the owning frame (:attr:`LinkCollisionGeometry.origin_xyz_rpy`\nfor a link, :attr:`WorldCollisionPrimitive.pose` for an obstacle).\nCapsules bound most robot links tightly, so the safety check stays\nconservative.\n\nAttributes:\n    shape: Discriminator (always ``\"capsule\"``).\n    radius_m: Capsule radius in metres.\n    length_m: Length of the central segment in metres (the cylinder\n        portion; the total span is ``length_m + 2 * radius_m``). ``0.0``\n        degenerates to a sphere.\n\nExample:\n    >>> CapsuleShape(radius_m=0.04, length_m=0.3).length_m\n    0.3",
       "properties": {
         "shape": {
           "const": "capsule",
@@ -98,7 +135,7 @@
       "type": "object"
     },
     "FrameEncoding": {
-      "description": "How the bytes inside a :class:`SensorFrame` are interpreted.\n\nThe first four values are raw per-pixel layouts. ``JPEG`` / ``PNG`` are\ncompressed forms; the runner decodes lazily. ``CUDA_NV12`` and ``RAW``\nmark frames whose payload is an opaque handle (NVMM pointer, DMA-BUF fd)\n\u2014 the ``data`` field is empty and the consumer must read via ``handle``.",
+      "description": "How the bytes inside a :class:`SensorFrame` are interpreted.\n\nThe first four values are raw per-pixel layouts. ``JPEG`` / ``PNG`` are\ncompressed forms; the runner decodes lazily. ``CUDA_NV12`` /\n``CUDA_RGBA`` and ``RAW`` mark frames whose payload is an opaque handle\n(NVMM pointer, DMA-BUF fd) \u2014 the ``data`` field is empty and the consumer\nmust read via ``handle``. ``CUDA_NV12`` is the Tegra NVMM default;\n``CUDA_RGBA`` is the x86 DeepStream NVMM layout.",
       "enum": [
         "bgr8",
         "rgb8",
@@ -107,6 +144,7 @@
         "jpeg",
         "png",
         "cuda_nv12",
+        "cuda_rgba",
         "raw"
       ],
       "title": "FrameEncoding",
@@ -158,7 +196,7 @@
     },
     "OccupancyGridRef": {
       "additionalProperties": false,
-      "description": "Reference to a 2D occupancy grid for mobile-base world-collision (ADR-0030).\n\nMirrors the ``nav_msgs/OccupancyGrid`` metadata that\n:mod:`openral_runner.slam_bridge` already decodes. The kernel consumes a\nbounded, fixed-capacity copy; a grid exceeding the configured capacity or\nolder than the staleness deadline is treated as unavailable\n(fail-closed). The occupancy bytes are referenced by topic, not inlined.\n\nAttributes:\n    frame_id: tf2 frame the grid origin is expressed in (e.g. ``\"map\"``).\n    resolution_m: Edge length of one cell, in metres.\n    width: Grid width in cells.\n    height: Grid height in cells.\n    origin: Pose of cell ``(0, 0)``'s lower-left corner.\n    data_topic: ROS 2 topic carrying the ``nav_msgs/OccupancyGrid``.",
+      "description": "Reference to a 2D occupancy grid for mobile-base world-collision.\n\nMirrors the ``nav_msgs/OccupancyGrid`` metadata that\n:mod:`openral_runner.slam_bridge` already decodes. The kernel consumes a\nbounded, fixed-capacity copy; a grid exceeding the configured capacity or\nolder than the staleness deadline is treated as unavailable\n(fail-closed). The occupancy bytes are referenced by topic, not inlined.\n\nAttributes:\n    frame_id: tf2 frame the grid origin is expressed in (e.g. ``\"map\"``).\n    resolution_m: Edge length of one cell, in metres.\n    width: Grid width in cells.\n    height: Grid height in cells.\n    origin: Pose of cell ``(0, 0)``'s lower-left corner.\n    data_topic: ROS 2 topic carrying the ``nav_msgs/OccupancyGrid``.",
       "properties": {
         "frame_id": {
           "title": "Frame Id",
@@ -366,7 +404,7 @@
     },
     "WorldCollisionPrimitive": {
       "additionalProperties": false,
-      "description": "A placed convex obstacle volume in the world (ADR-0030).\n\nThe world-frame analogue of :class:`LinkCollisionGeometry`: a convex\nprimitive plus the pose that places it. Populated by perception / SLAM and\nconsumed by the kernel's world-collision phase against the robot's link\ncapsules. A bounded, capped set is the kernel's world model (mesh\nobstacles are out of scope for the allocation-free check).\n\nAttributes:\n    shape: The convex primitive (capsule or sphere).\n    pose: Pose of the primitive's local origin in the world frame.\n    object_id: Optional stable identifier (e.g. a\n        :attr:`DetectedObject.track_id` rendered as text) surfaced in\n        :attr:`CollisionEvidence.link_b_or_object`.",
+      "description": "A placed convex obstacle volume in the world.\n\nThe world-frame analogue of :class:`LinkCollisionGeometry`: a convex\nprimitive plus the pose that places it. Populated by perception / SLAM and\nconsumed by the kernel's world-collision phase against the robot's link\ncapsules. A bounded, capped set is the kernel's world model (mesh\nobstacles are out of scope for the allocation-free check).\n\nAttributes:\n    shape: The convex primitive (capsule or sphere).\n    pose: Pose of the primitive's local origin in the world frame.\n    object_id: Optional stable identifier (e.g. a\n        :attr:`DetectedObject.track_id` rendered as text) surfaced in\n        :attr:`CollisionEvidence.link_b_or_object`.",
       "properties": {
         "shape": {
           "anyOf": [
@@ -375,6 +413,9 @@
             },
             {
               "$ref": "#/$defs/SphereShape"
+            },
+            {
+              "$ref": "#/$defs/BoxShape"
             }
           ],
           "title": "Shape"
@@ -403,7 +444,7 @@
       "type": "object"
     }
   },
-  "description": "Snapshot consumed by Reasoner and Skills.\n\nAttributes:\n    stamp_ns: Snapshot timestamp in nanoseconds.\n    joint_state: Current joint state.\n    base_pose: Base link pose (mobile robots).\n    base_twist: Base link twist (vx, vy, vz, wx, wy, wz).\n    ee_poses: End-effector poses keyed by EE name.\n    contact_forces: Contact forces keyed by contact name.\n    images: Sensor name \u2192 ROS 2 topic reference (not the raw image).\n    image_frames: Optional per-sensor :class:`SensorFrame` snapshot for\n        no-ROS / in-process deployments. When ``None`` the\n        consumer reads frames via :attr:`images` topic refs as before.\n    point_clouds: Sensor name \u2192 ROS 2 topic reference.\n    tactile: Sensor name \u2192 ROS 2 topic reference.\n    detected_objects: List of detected objects.\n    battery_pct: Battery percentage in [0, 100].\n    diagnostics: Per-component diagnostic status.\n    collision_primitives: Bounded set of placed convex obstacle volumes\n        the kernel checks robot links against (world-collision). Empty\n        until a perception / SLAM source populates it. ADR-0030.\n    occupancy_grid: Optional 2D occupancy grid reference for mobile-base\n        footprint checks. ``None`` until populated; an absent or stale\n        grid is treated as unavailable (fail-closed). ADR-0030.",
+  "description": "Snapshot consumed by Reasoner and Skills.\n\nAttributes:\n    stamp_ns: Snapshot timestamp in nanoseconds.\n    joint_state: Current joint state.\n    base_pose: Base link pose (mobile robots).\n    base_twist: Base link twist (vx, vy, vz, wx, wy, wz).\n    ee_poses: End-effector poses keyed by EE name.\n    contact_forces: Contact forces keyed by contact name.\n    images: Sensor name \u2192 ROS 2 topic reference (not the raw image).\n    image_frames: Optional per-sensor :class:`SensorFrame` snapshot for\n        no-ROS / in-process deployments. When ``None`` the\n        consumer reads frames via :attr:`images` topic refs as before.\n    point_clouds: Sensor name \u2192 ROS 2 topic reference.\n    tactile: Sensor name \u2192 ROS 2 topic reference.\n    detected_objects: List of detected objects.\n    battery_pct: Battery percentage in [0, 100].\n    diagnostics: Per-component diagnostic status.\n    collision_primitives: Bounded set of placed convex obstacle volumes\n        the kernel checks robot links against (world-collision). Empty\n        until a perception / SLAM source populates it.\n    occupancy_grid: Optional 2D occupancy grid reference for mobile-base\n        footprint checks. ``None`` until populated; an absent or stale\n        grid is treated as unavailable (fail-closed).",
   "properties": {
     "stamp_ns": {
       "title": "Stamp Ns",

@@ -112,7 +112,7 @@ _GOAL_STATUS_LABELS: dict[int, str] = {
 def _merge_nested(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
     """Deep-merge ``overrides`` onto ``base``; return a new dict.
 
-    ADR-0026 — used by :class:`ROSActionRskill._configure_impl` to merge
+    Used by :class:`ROSActionRskill._configure_impl` to merge
     the LLM's ``goal_params_json`` over the manifest's
     ``ros_integration.default_goal_json``. Semantics:
 
@@ -135,7 +135,7 @@ def _merge_nested(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, 
     return out
 
 
-# The cuMotion MoveIt planning-pipeline id (ADR-0065). Selecting it is a per-request
+# The cuMotion MoveIt planning-pipeline id. Selecting it is a per-request
 # ``MotionPlanRequest.pipeline_id`` — OpenRAL does not bring up ``move_group``; the
 # user's moveit_config must load this pipeline (a `ros_dependency` + config snippet).
 CUMOTION_PIPELINE_ID = "isaac_ros_cumotion"
@@ -150,7 +150,7 @@ def maybe_inject_cumotion_pipeline(
     """Return ``goal_dict`` with ``request.pipeline_id`` set to cuMotion when gated on.
 
     cuMotion is a MoveIt planning-pipeline plugin selected per request via
-    ``moveit_msgs/MotionPlanRequest.pipeline_id`` (ADR-0065 D1). When the host
+    ``moveit_msgs/MotionPlanRequest.pipeline_id``. When the host
     clears the cuMotion GPU floor (:meth:`ComputeSpec.supports_cumotion`)
     and the wrapped action is ``MoveGroup``, this injects the cuMotion pipeline id
     into the goal's ``request`` block; otherwise the goal is returned unchanged so
@@ -364,7 +364,7 @@ class ROSActionRskill(rSkillBase):
         self._description = robot_description
         self._prompt = prompt
         self._prompt_metadata_json = prompt_metadata_json
-        # ADR-0026 — per-dispatch JSON object merged over
+        # Per-dispatch JSON object merged over
         # ``ros_integration.default_goal_json`` at configure-time. Empty
         # = today's behaviour (the manifest default is sent verbatim).
         self._goal_params_json = goal_params_json
@@ -422,7 +422,7 @@ class ROSActionRskill(rSkillBase):
                 f"ROSActionRskill({self.name!r}): default_goal_json is not valid JSON: {exc}"
             ) from exc
 
-        # ADR-0026 — deep-merge per-dispatch goal_params_json over the
+        # Deep-merge per-dispatch goal_params_json over the
         # manifest's default_goal_json. Overrides win at leaves; nested
         # dicts recurse; arrays + scalars replace verbatim (no
         # element-wise merge — too surprising). Empty string = no merge.
@@ -441,7 +441,7 @@ class ROSActionRskill(rSkillBase):
                 )
             self._goal_dict = _merge_nested(self._goal_dict, overrides)
 
-        # ADR-0065 D1 — on a host that clears the cuMotion GPU floor, select the
+        # On a host that clears the cuMotion GPU floor, select the
         # cuMotion MoveIt pipeline for MoveGroup goals (per-request `pipeline_id`).
         # No-op for non-MoveGroup actions and on CPU/low-VRAM hosts (MoveIt then
         # uses its default OMPL pipeline). An explicit pipeline_id still wins.

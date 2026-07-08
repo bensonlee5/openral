@@ -26,7 +26,7 @@ comparison table) and fetched at a pinned SHA by
 ``openarm:anvil_v2_bimanual`` asset ref.
 
 Like the Enactic v2 adapter (:mod:`openral_hal.openarm`) this is a thin
-manifest-driven :class:`MujocoArmHAL` subclass (ADR-0023): the MJCF's
+manifest-driven :class:`MujocoArmHAL` subclass: the MJCF's
 own PD law handles dynamics, ``send_action`` writes target → ctrl.
 
 Action layout
@@ -245,7 +245,7 @@ ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(
     # framebuffer at its 640x480 default, so the sim sensors render at
     # 640x400 — same 16:10 aspect, fovy-matched intrinsics
     # (fy = 200 / tan(33 deg) ≈ 308).  Published by
-    # MujocoArmHAL.read_images via the SimSensorBridge (ADR-0065/0070).
+    # MujocoArmHAL.read_images via the SimSensorBridge.
     sensors=[
         SensorSpec(
             name="wrist_left",
@@ -297,7 +297,7 @@ ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(
         sim="openral_hal.anvil_openarm_v2:AnvilOpenArmV2MujocoHAL",
         real=None,
         # Same manifest-driven construction defaults as the Enactic v2
-        # arm; threaded by build_hal (ADR-0029).
+        # arm; threaded by build_hal.
         parameters=HalParameters(
             defaults={"settle_steps": 4, "gravity_enabled": False, "staleness_limit_s": 0.5}
         ),
@@ -305,7 +305,7 @@ ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(
     # MuJoCo wiring — the Anvil 2.0 bimanual MJCF fetched at a pinned
     # SHA by ``ensure_anvil_openarm_v2_mjcf`` (``openarm:anvil_v2_bimanual``).
     # No vendored URDF: upstream is xacro-only and, like ALOHA, the
-    # MuJoCo asset is the sim source of truth (ADR-0027 / ADR-0058).
+    # MuJoCo asset is the sim source of truth.
     #
     # qpos layout (18 slots, same as the Enactic v2 arm): left arm 0-6,
     # left fingers 7 + 8, right arm 9-15, right fingers 16 + 17.  The
@@ -373,7 +373,7 @@ class AnvilOpenArmV2MujocoHAL(MujocoArmHAL):
     ``openarm:anvil_v2_bimanual`` MJCF ref, the joint→qpos map that skips
     the follower fingers, two ``PASSTHROUGH`` hinge grippers,
     ``seed_ctrl_from_qpos``) lives in
-    :data:`ANVIL_OPENARM_V2_DESCRIPTION.sim` (ADR-0023).
+    :data:`ANVIL_OPENARM_V2_DESCRIPTION.sim`.
 
     What makes it the *Anvil* 2.0 rather than the stock v2 arm is
     entirely in the fetched MJCF: J1 clamped to +/-135 deg, J6 widened

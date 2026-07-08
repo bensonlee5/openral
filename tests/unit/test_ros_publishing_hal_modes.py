@@ -1,8 +1,7 @@
-"""Per-control-mode serialisation tests for ``ROSPublishingHAL._flatten_action_payload``
-(ADR-0028b step 4).
+"""Per-control-mode serialisation tests for ``ROSPublishingHAL._flatten_action_payload``.
 
-Before this ADR the serialiser rejected every non-joint mode with
-``ROSConfigError``. After: joint position / velocity / torque /
+Previously the serialiser rejected every non-joint mode with
+``ROSConfigError``. Now: joint position / velocity / torque /
 trajectory + cartesian delta / twist + body twist + gripper
 position / binary all flatten onto the ActionChunk wire format. The
 remaining unsupported modes (cartesian_pose carrying a Pose6D,

@@ -20,6 +20,7 @@ import pytest
 import torch
 from openral_core.exceptions import ROSConfigError
 from openral_core.schemas import VLASpec
+from openral_observability import semconv
 from openral_rskill._vla_core import (
     resolve_device,
     resolve_rskill_repo_id,
@@ -146,6 +147,7 @@ class TestRunInference:
         assert attrs.get("inference.kind") == "prefetch"
         assert attrs.get("inference.chunk_index") == 3
         assert attrs.get("inference.chunk_size") == 10
+        assert attrs.get(semconv.INFERENCE_DURATION_MS, -1.0) >= 0.0
 
     def test_default_kind_is_single(self, span_exporter: InMemorySpanExporter) -> None:
         run_inference(_FakePolicy(), batch={})

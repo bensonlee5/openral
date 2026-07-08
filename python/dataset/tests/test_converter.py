@@ -1,4 +1,4 @@
-"""End-to-end tests for :class:`Rosbag2ToLeRobotConverter` (ADR-0019 PR4).
+"""End-to-end tests for :class:`Rosbag2ToLeRobotConverter`.
 
 Per CLAUDE.md §1.11 — real `mcap` writer (via `Rosbag2Sink`) writes a
 bag to `tmp_path`, then the real `Rosbag2ToLeRobotConverter.from_bag`
@@ -270,7 +270,7 @@ def test_converter_round_trips_real_state_action_images(
 ) -> None:
     """The enriched bag carries REAL state/action/images, not zeros.
 
-    Regression guard for the ADR-0019 PR4-follow-up: previously the
+    Regression guard: previously the
     converter wrote ``np.zeros`` for every observation/action/image
     because the bag held only metadata. Now ``Rosbag2Sink`` records the
     inline arrays + per-camera pixels, so a recorded bag round-trips the
@@ -338,8 +338,8 @@ def test_converter_round_trips_robot_without_observation_spec(tmp_path: Path) ->
     """from-bag works for a robot whose layout lives only on the rSkill contract.
 
     franka_panda has ``observation_spec=None`` / ``action_spec=None`` (its
-    proprio/action dims come from the active rSkill's state/action contracts,
-    ADR-0007/ADR-0019). The converter must derive the LeRobot feature shapes
+    proprio/action dims come from the active rSkill's state/action contracts).
+    The converter must derive the LeRobot feature shapes
     from the recorded bag itself rather than the (absent) RobotDescription
     specs — this is the deploy path's robot (LIBERO/Franka).
     """

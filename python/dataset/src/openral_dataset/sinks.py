@@ -154,7 +154,7 @@ class LeRobotDatasetSink(DatasetSink):
             license: SPDX license string for the produced dataset.
             vcodec: ffmpeg video codec (default ``"libsvtav1"``).
             state_shape: Override for ``observation.state`` shape. Used
-                when the sim-specific contract (per ADR-0007) lives on
+                when the sim-specific contract lives on
                 the rSkill manifest rather than on
                 ``RobotDescription.observation_spec``. The CLI's
                 ``_maybe_build_recorder`` passes ``state_contract.dim``
@@ -172,7 +172,7 @@ class LeRobotDatasetSink(DatasetSink):
                 256x256). When unset, each camera's shape comes from
                 its ``SensorSpec.intrinsics``.
 
-        Per ADR-0019 PR-revert, this sink requires EVERY shape (state,
+        By design, this sink requires EVERY shape (state,
         action, per-camera HWC) to be declared up-front — there is no
         first-frame fallback. Missing shapes raise
         :class:`ROSConfigError` at construction so a wiring bug
@@ -202,7 +202,7 @@ class LeRobotDatasetSink(DatasetSink):
             raise ROSConfigError(
                 f"LeRobotDatasetSink: cannot build feature schema for "
                 f"robot {robot.name!r}: {exc}. "
-                "ADR-0019: state_shape and action_dim must come from either "
+                "state_shape and action_dim must come from either "
                 "RobotDescription.{observation_spec,action_spec} (hardware) "
                 "or the rSkill manifest's {state_contract,action_contract} "
                 "(sim). Camera shapes must come from "
@@ -219,7 +219,7 @@ class LeRobotDatasetSink(DatasetSink):
             if not spec.shape or 0 in spec.shape:
                 raise ROSConfigError(
                     f"LeRobotDatasetSink: camera feature {key!r} has shape "
-                    f"{spec.shape!r}. ADR-0019 requires every camera's "
+                    f"{spec.shape!r}. Every camera requires "
                     "intrinsics.{width,height} to be set on the "
                     "RobotDescription.sensors[*] entry that declares the "
                     "matching vla_feature_key."
@@ -257,7 +257,7 @@ class LeRobotDatasetSink(DatasetSink):
     def open_episode(self, header: EpisodeHeader) -> None:
         """Begin a new episode. Creates the on-disk dataset on first call.
 
-        ADR-0019: the underlying ``LeRobotDataset`` is created here on
+        The underlying ``LeRobotDataset`` is created here on
         the FIRST episode (not inside ``write_frame``), so any
         ``LeRobotDataset.create`` error surfaces before any tick has
         run. The features dict is already fully resolved by
@@ -407,7 +407,7 @@ class LeRobotDatasetSink(DatasetSink):
     def _create_dataset(self) -> Any:
         """Call ``LeRobotDataset.create`` from the pre-resolved feature_specs.
 
-        ADR-0019: state, action, and per-camera shapes are all known at
+        State, action, and per-camera shapes are all known at
         sink construction time — no first-frame derivation. This method
         just translates the FeatureSpec dict to the dict format
         ``lerobot.datasets.LeRobotDataset.create`` expects and opens the
@@ -415,6 +415,7 @@ class LeRobotDatasetSink(DatasetSink):
         """
         # lerobot import is deferred to here to keep the package
         # importable on hosts without lerobot installed.
+        from lerobot.configs.video import RGBEncoderConfig
         from lerobot.datasets import LeRobotDataset
 
         features: dict[str, Any] = {
@@ -447,7 +448,9 @@ class LeRobotDatasetSink(DatasetSink):
             root=self._root,
             robot_type=self._robot.name,
             use_videos=True,
-            vcodec=self._vcodec,
+            # lerobot 0.6.0 moved per-stream codec off create()'s signature into
+            # an RGBEncoderConfig (was a bare `vcodec=` kwarg through 0.5.x).
+            rgb_encoder=RGBEncoderConfig(vcodec=self._vcodec),
         )
         _log.info(
             "lerobot_dataset_created",

@@ -1,16 +1,24 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - gr00t
-  - nvidia
-  - vla
-  - franka
-  - libero
-  - manipulation
-license: other
 language:
-  - en
+- en
+license: other
+license_name: nvidia-open-model-license
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- gr00t
+- vision-language-action
+- franka_panda
+- nvidia
+- vla
+- franka
+- libero
+- manipulation
+base_model:
+- nvidia/GR00T-N1.7-LIBERO
+base_model_relation: finetune
+inference: false
 ---
 
 # rskill-gr00t-n17-libero
@@ -24,11 +32,12 @@ with a `rskill.yaml` manifest that adds capability checking, license
 surfacing, latency budgets, and local registry integration. It does **not**
 copy model weights.
 
-> **Runtime status.** This is a *packaging-and-validation* slice (ADR-0046
-> PR1): the manifest, license posture, and `model_family: gr00t` are wired
-> and tested. The out-of-process runtime adapter (`openral_sim.policies.gr00t`)
-> and the `tools/gr00t_sidecar.py` boot helper land in ADR-0046 PR2, which
-> also produces the locally-reproduced LIBERO eval numbers. Until then the
+> **Runtime status.** This is a *packaging-and-validation* slice (GR00T
+> backend epic PR1): the manifest, license posture, and `model_family: gr00t`
+> are wired and tested. The out-of-process runtime adapter
+> (`openral_sim.policies.gr00t`) and the `tools/gr00t_sidecar.py` boot helper
+> land in GR00T backend epic PR2, which also produces the
+> locally-reproduced LIBERO eval numbers. Until then the
 > skill packages and validates but is gracefully dropped from a live policy
 > palette with an install hint.
 
@@ -53,7 +62,7 @@ the N1.7 base on the LIBERO Franka embodiment.
 
 | Robot | Embodiment tag | Status | Notes |
 |---|---|---|---|
-| Franka Panda (LIBERO sim) | `franka_panda` | packaged | Native finetune embodiment; live eval in ADR-0046 PR2 |
+| Franka Panda (LIBERO sim) | `franka_panda` | packaged | Native finetune embodiment; live eval in GR00T backend epic PR2 |
 
 GR00T exposes a `LIBERO_PANDA` embodiment tag internally; OpenRAL maps it to
 the canonical `franka_panda` embodiment from `robots/`.
@@ -81,7 +90,7 @@ processor pipeline — hence no `processors` block in the manifest.
 | `role` | `s1` |
 | `model_family` | `gr00t` |
 | `embodiment_tags` | `franka_panda` |
-| `runtime` | `pytorch` (out-of-process sidecar, ADR-0046) |
+| `runtime` | `pytorch` (out-of-process sidecar) |
 | `quantization.dtype` | `bf16` |
 | `weights_uri` | `hf://nvidia/GR00T-N1.7-LIBERO` |
 | `chunk_size` | 16 |
@@ -93,7 +102,7 @@ Full schema: [`openral_core.schemas.RSkillManifest`](../../python/core/src/openr
 ## Hardware
 
 GR00T N1.7-3B (bf16, ~6 GB weights) plus the Cosmos-Reason VLM does not fit
-on an 8 GB GPU without NF4 quantization; the sidecar (ADR-0046 PR2) follows
+on an 8 GB GPU without NF4 quantization; the sidecar (GR00T backend epic PR2) follows
 the NF4 isolated-venv recipe used by the RLDX and detector sidecars. A
 ≥ 16 GB GPU runs bf16 directly.
 
@@ -106,4 +115,4 @@ are governed by the **NVIDIA Open Model License Agreement**, which permits
 commercial use. This is the key distinction from GR00T N1 / N1.5 / N1.6,
 which ship under the NVIDIA OneWay Noncommercial License and are blocked in
 commercial deployments by the OpenRAL loader unless
-`OPENRAL_ALLOW_NONCOMMERCIAL=1` is set (CLAUDE.md §3, ADR-0046).
+`OPENRAL_ALLOW_NONCOMMERCIAL=1` is set (CLAUDE.md §3).

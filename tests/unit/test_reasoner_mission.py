@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`openral_reasoner.mission` (ADR-0073 §1).
+"""Unit tests for :mod:`openral_reasoner.mission`.
 
 The deterministic mission queue that fixes the multi-task deploy gap: an
 operator goal carrying several ordered subtasks is split, sequenced one-active
@@ -15,7 +15,7 @@ from openral_reasoner import (
 )
 from openral_reasoner.mission import DEFAULT_MAX_SUBDIVIDE_DEPTH
 
-# ── MissionState.from_prompt — single-task seeding (ADR-0073 amendment) ──────
+# ── MissionState.from_prompt — single-task seeding ────────────────────────────
 
 
 def test_from_prompt_seeds_a_single_task_verbatim() -> None:
@@ -146,11 +146,11 @@ def test_taskstate_defaults() -> None:
     assert t.last_rskill_id is None and t.last_verdict is None
 
 
-# ── evaluate_task_verdict (ADR-0073 §2 — the reward gate decision) ───────────
+# ── evaluate_task_verdict — the reward gate decision ──────────────────────────
 
 
 def test_verdict_complete_on_success() -> None:
-    # ADR-0074 amendment — the band gates on the PROGRESS head.
+    # The band gates on the PROGRESS head.
     action, verdict = evaluate_task_verdict(
         ok=True, progress_now=0.91, success_threshold=0.8, check_floor=0.5, attempts=1
     )
@@ -211,7 +211,7 @@ def test_verdict_not_ok_falls_through_to_retry_then_abandon() -> None:
     )
 
 
-# ── subdivide_active (ADR-0073 amendment / #123 — flat-splice subdivision) ────
+# ── subdivide_active (#123 — flat-splice subdivision) ─────────────────────────
 
 
 def test_subdivide_active_splices_children_in_place() -> None:

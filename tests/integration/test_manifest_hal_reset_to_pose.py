@@ -2,8 +2,8 @@
 
 ``ManifestHALLifecycleNode`` opens ``/openral/<robot>/reset_to_pose`` **only**
 when the HAL it built exposes ``reset_to_pose`` — generalising the service that
-previously lived, hand-wired, only in the bespoke openarm node (ADR-0029
-blocker #4). Every ``MujocoArmHAL`` sim arm gains it for free; a HAL without the
+previously lived, hand-wired, only in the bespoke openarm node. Every
+``MujocoArmHAL`` sim arm gains it for free; a HAL without the
 method (panda_mobile's ``PandaMobileHAL``) gets no service.
 
 These tests bring the node up for real and assert:

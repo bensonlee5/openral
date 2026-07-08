@@ -83,7 +83,11 @@
     linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
   background-size: 96px 96px, 96px 96px;
   background-attachment: fixed;
-  min-height: 100vh;
+  /* Fixed-viewport shell: header (auto) + main (fills). The page itself does
+     not scroll on desktop — long content scrolls inside its own card. The
+     --stack-bp media query at the bottom restores natural document flow. */
+  height: 100dvh; overflow: hidden;
+  display: flex; flex-direction: column;
 }
 /* (body::after fractal-noise overlay removed) */
 
@@ -150,27 +154,136 @@
   header .conn.dead  .dot { background: var(--err); }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
-  /* ------------------- LAYOUT ------------------- */
+  /* ------------------- LAYOUT — no-scroll control-room bento -------------------
+     main is a fixed-height column of horizontal "bands". The page itself never
+     scrolls (on desktop); each band owns its columns and any long content
+     scrolls INSIDE its own card (.scroll-y). Sizing targets a 1440p screen and
+     falls back to the old vertical flow below --stack-bp (see bottom of file).
+
+     Band heights: the two stream/support/hero bands share the leftover height
+     via fr; the command strip + identity strip are auto (their natural size).
+     min-height:0 on every band + scroll child is what lets flex children shrink
+     below content size so internal scrollbars appear instead of page scroll. */
   main {
     position: relative; z-index: 1;
-    padding: 22px 24px 40px;
-    max-width: 1820px;
+    padding: 12px 18px 16px;
+    max-width: 2560px;
     margin: 0 auto;
-    display: flex; flex-direction: column;
-    gap: 22px;
+    width: 100%;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-rows: auto auto 1.62fr 1fr;
+    gap: 12px;
+    min-height: 0;
   }
-  section { display: flex; flex-direction: column; gap: 10px; margin: 0; }
-  section > h2 {
+  .band { display: grid; gap: 12px; min-height: 0; }
+
+  section { display: flex; flex-direction: column; gap: 8px; margin: 0; min-height: 0; }
+  section > h2, .stream-hd > h2 {
     font-family: var(--display);
-    font-size: 11px; font-weight: 600; letter-spacing: 0.26em;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.24em;
     text-transform: uppercase; color: var(--fg-dim);
-    margin: 0; padding-left: 0;
+    margin: 0; padding-left: 0; white-space: nowrap;
     display: flex; align-items: center; gap: 12px;
   }
   section > h2::after {
     content: ""; flex: 1; height: 1px;
     background: linear-gradient(90deg, var(--hair) 0%, transparent 100%);
   }
+
+  /* Any element that should scroll within its fixed card instead of growing the
+     page. grow = take the remaining height inside a flex-column card. */
+  .grow { flex: 1 1 auto; min-height: 0; }
+  .scroll-y {
+    overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: thin; scrollbar-color: var(--hair-strong) transparent;
+  }
+  .scroll-y::-webkit-scrollbar { width: 7px; }
+  .scroll-y::-webkit-scrollbar-thumb { background: var(--hair-strong); border-radius: 4px; }
+
+  /* ---- IDENTITY strip (demoted, thin, one line) ---- */
+  .idbar {
+    display: flex; align-items: stretch; gap: 0;
+    overflow-x: auto; overflow-y: hidden;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.018) 0%, transparent 60%),
+      var(--panel);
+    border: 1px solid var(--hair); border-radius: var(--radius-sm);
+    scrollbar-width: none;
+  }
+  .idbar::-webkit-scrollbar { display: none; }
+  .idbar .pair {
+    display: flex; align-items: baseline; gap: 7px;
+    padding: 6px 14px; white-space: nowrap; flex: 0 0 auto;
+    border-right: 1px solid var(--hair-soft);
+  }
+  .idbar .pair:last-child { border-right: none; }
+  .idbar .pair .k {
+    font-family: var(--display); font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute);
+  }
+  .idbar .pair .v {
+    font-family: var(--mono); font-size: 11px; color: var(--fg);
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .idbar .pair .v.empty { color: var(--fg-faint); }
+  .idbar .pair .v.accent { color: var(--accent); }
+  .idbar .pair .v.info { color: var(--info); }
+
+  /* ---- COMMAND band: prompt + estop (left, flexes) · counters (right) ---- */
+  .band-command { grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; }
+  .cmd-prompt { display: flex; flex-direction: column; justify-content: center; gap: 5px; min-width: 0; }
+  @media (max-width: 1400px) { .band-command { grid-template-columns: 1fr; } }
+
+  /* ---- WORKSPACE: main visual area (left) + compact instrument rail (right) ----
+     The big visual cards live in a 2×2 main grid; the short list/gauge cards
+     stack in a fixed-width rail so they take only the height their content needs
+     (and the maps get the room they deserve). */
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 22vw, 400px);
+    gap: 12px; min-height: 0;
+  }
+
+  /* Main visual: a wide LEFT column stacks the two horizontal cards (cameras
+     over reasoner); SLAM and pointcloud sit to their right as full-height
+     VERTICAL columns — the shape their square-ish map/cloud renders want. */
+  .main-visual {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    grid-template-areas:
+      "cam    slam cloud"
+      "reason slam cloud";
+    gap: 12px; min-height: 0;
+  }
+  #cell-cameras     { grid-area: cam;    min-height: 0; }
+  #card-reasoner    { grid-area: reason; min-height: 0; }
+  #card-slam-map    { grid-area: slam;   min-height: 0; }
+  #card-world-cloud { grid-area: cloud;  min-height: 0; }
+
+  /* Rail: stack of compact instruments, all kept on-screen. rSkill / system /
+     ledger take their natural (short) height; the two that can run long (joints,
+     world state) flex to share the leftover height and scroll INSIDE their own
+     card, so none is ever pushed off the bottom. */
+  .rail {
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 0; overflow: hidden;
+  }
+  .rail > .card { flex: 0 0 auto; min-height: 0; }
+  /* Joints is the one rail card that can run long; it flexes to fill the
+     leftover height (0,2,0 beats `.rail > .card`) and scrolls internally.
+     rSkill / system / ledger keep their natural, compact height. */
+  .rail > .rail-joints { flex: 1 1 0; min-height: 120px; }
+  .rail-joints { display: flex; flex-direction: column; }
+  .rail-joints .joints { flex: 1 1 auto; min-height: 0; max-height: none; }
+
+  /* ---- STREAM band: metrics (wider) · event log · world state ---- */
+  .band-stream { grid-template-columns: 1.5fr 1.1fr 0.9fr; }
+  .stream-cell { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .stream-hd { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .stream-hd .filter-bar { margin-left: auto; }
+  .stream-world { min-height: 0; }
 
   /* ------------------- CARD (instrument panel) ------------------- */
   .card {
@@ -213,11 +326,9 @@
     box-shadow: 0 18px 50px rgba(0,0,0,0.42);
   }
 
-  /* ADR-0030 — SLAM 2D map + robot-view pointcloud side by side. */
-  .map-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
-  @media (max-width: 1000px) { .map-row { grid-template-columns: 1fr; } }
-  #slam-image { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-  #world-cloud-image { max-height: 340px; object-fit: contain; margin: 0 auto; }
+  /* SLAM 2D map + robot-view pointcloud (now support-band cells). */
+  #slam-image { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  #world-cloud-image { width: 100%; object-fit: contain; margin: 0 auto; }
 
   .card .hd {
     display: flex; align-items: center; justify-content: space-between;
@@ -361,9 +472,10 @@
   }
   .counter:not(.zero).warn   { border-color: rgba(217,178,124,0.4); }
 
-  /* ------------------- CAMERAS (primary viewports) ------------------- */
-  .cameras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  @media (max-width: 1100px) { .cameras { grid-template-columns: 1fr; } }
+  /* ------------------- CAMERAS (primary viewports) -------------------
+     Auto-fills the hero column: 1 feed spans wide, 2+ tile. Scrolls inside the
+     framed #cameras well when more feeds arrive than fit the band height. */
+  .cameras { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-content: start; }
   .camera {
     background:
       linear-gradient(180deg, rgba(255,255,255,0.018) 0%, transparent 22%),
@@ -432,42 +544,22 @@
   .camera .footer .meta-sub { color: var(--fg-mute); font-size: 10px; }
   .camera .footer .meta-sub.right { color: var(--fg-mute); text-align: right; }
 
-  /* ------------------- LIVE SIGNALS ------------------- */
-  .live-signals { display: grid; grid-template-columns: minmax(0, 460px); gap: 14px; }
-  @media (max-width: 1100px) { .live-signals { grid-template-columns: 1fr; } }
-  .live-signals .card { min-height: 110px; }
+  /* ------------------- rSKILL RUNNING-SKILL STRIP -------------------
+     Sits atop the reasoner hero column: the skill the reasoner is currently
+     dispatching. Compact, fixed height — the mission queue below it flexes. */
+  .rskill-strip { flex: 0 0 auto; }
+  .rskill-strip .primary { font-size: 14px; }
   /* the running-skill card shows its latencies on the labelled .substat line
      below, so suppress the generic card renderer's bare unlabelled ms. */
-  .live-signals .latency { display: none; }
+  .rskill-strip .latency { display: none; }
   /* step + model forward-pass latency folded into the running-skill card */
-  .live-signals .substat {
+  .rskill-strip .substat {
     margin-top: 8px; padding-top: 8px;
     border-top: 1px solid var(--accent-line);
     font-size: 11.5px; color: var(--text-dim);
     font-variant-numeric: tabular-nums;
   }
-  .live-signals .substat:empty { display: none; }
-
-  /* ------------------- EMBODIMENT GRID -------------------
-     Three cards after the commands + ledger cards moved out (ADR-0073
-     dashboard reorg): robot joints tall on the left, world state (now
-     carrying the scene-object memory table) wide on the right, system
-     health beneath it. */
-  .embodiment {
-    display: grid;
-    grid-template-columns: 1.4fr 2fr;
-    grid-template-rows: auto auto;
-    gap: 14px;
-  }
-  .embodiment .robot { grid-column: 1; grid-row: 1 / span 2; }
-  .embodiment .world { grid-column: 2; grid-row: 1; }
-  .embodiment .system { grid-column: 2; grid-row: 2; }
-  @media (max-width: 1100px) {
-    .embodiment { grid-template-columns: 1fr; grid-template-rows: none; }
-    .embodiment .robot, .embodiment .world, .embodiment .system {
-      grid-column: 1; grid-row: auto;
-    }
-  }
+  .rskill-strip .substat:empty { display: none; }
 
   /* Joint instruments */
   .joints { display: flex; flex-direction: column; gap: 7px; margin-top: 2px; }
@@ -662,23 +754,27 @@
     color: var(--warn); border-color: rgba(217,178,124,0.45); background: rgba(217,178,124,0.08);
   }
 
-  /* console/terminal panel bodies — framed-window treatment */
+  /* console/terminal panel bodies — framed-window treatment. These are grow
+     children of their cards; overflow-y is auto (via .scroll-y) so their content
+     scrolls inside the fixed card rather than growing the page. */
   #reasoner-body {
     background: linear-gradient(180deg, var(--surface), var(--bg-2));
     border: 1px solid var(--hair-strong); border-radius: 14px;
-    padding: 6px 0; overflow: hidden;
+    padding: 6px 8px; overflow-x: hidden;
     font-family: var(--mono);
   }
   #cameras {
     background: linear-gradient(180deg, var(--surface), var(--bg-2));
     border: 1px solid var(--hair-strong); border-radius: 14px;
-    padding: 12px; overflow: hidden;
+    padding: 12px; overflow-x: hidden;
     font-family: var(--mono);
   }
 
   /* ------------------- EVENT LOG ------------------- */
+  /* Height comes from the fixed stream band (.grow); it scrolls internally.
+     The --stack-bp fallback re-caps it for natural document flow. */
   .event-log {
-    max-height: 280px; overflow-y: auto; padding: 2px 0;
+    padding: 2px 0;
     scrollbar-width: thin; scrollbar-color: var(--hair-strong) transparent;
   }
   .event-log::-webkit-scrollbar { width: 7px; }
@@ -750,41 +846,84 @@
     padding: 11px 18px 6px; border-bottom: 1px solid var(--hair-soft);
   }
 
-  /* ------------------- TRACE FOOTER ------------------- */
-  .trace-footer {
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.014) 0%, transparent 30%),
-      var(--panel);
-    border: 1px solid var(--hair); border-radius: var(--radius);
-    padding: 15px 18px;
-    display: grid; grid-template-columns: max-content max-content max-content 1fr;
-    align-items: center; gap: 18px; font-family: var(--mono); font-size: 11px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 34px -28px #000;
+  /* ------------------- TRACE CHIP (demoted into the header) ------------------- */
+  .trace-chip {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 10px;
+    padding: 5px 10px; border: 1px solid var(--hair); border-radius: 999px;
+    background: rgba(8,12,19,0.6);
   }
-  .trace-footer .lbl {
-    font-family: var(--display);
-    color: var(--fg-mute); text-transform: uppercase;
-    letter-spacing: 0.14em; font-size: 9px; font-weight: 600;
+  @media (max-width: 900px) { .trace-chip { display: none; } }
+  .trace-chip .lbl {
+    font-family: var(--display); color: var(--fg-mute); text-transform: uppercase;
+    letter-spacing: 0.14em; font-size: 8.5px; font-weight: 600;
   }
-  .trace-footer .trace-id {
+  .trace-chip .trace-id {
     color: var(--brand); user-select: all; cursor: pointer;
-    padding: 5px 9px; border-radius: 4px;
-    background: var(--bg-2); border: 1px solid var(--hair);
-    transition: background 0.15s;
+    max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: color 0.15s;
   }
-  .trace-footer .trace-id:hover, .trace-footer .trace-id.copied { background: var(--accent-soft); }
-  .trace-footer .jaeger {
+  .trace-chip .trace-id.copied { color: var(--ok); }
+  .trace-chip .jaeger {
     color: var(--fg-mute); text-decoration: none;
-    border: 1px solid var(--hair); padding: 5px 11px; border-radius: 4px;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    padding: 2px 7px; border: 1px solid var(--hair); border-radius: 4px;
+    transition: color 0.15s, border-color 0.15s;
   }
-  .trace-footer .jaeger.active { color: var(--info); border-color: var(--hair-strong); }
-  .trace-footer .jaeger.active:hover { background: var(--accent-soft); }
-  .trace-footer .jaeger.disabled { pointer-events: none; opacity: 0.7; }
-  .trace-footer .hint { justify-self: end; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--fg-faint); font-size: 10px; }
-  .trace-footer code { background: var(--well); padding: 3px 7px; border-radius: 4px; color: var(--fg-dim); border: 1px solid var(--hair-soft); }
+  .trace-chip .jaeger.active { color: var(--info); border-color: var(--hair-strong); }
+  .trace-chip .jaeger.active:hover { color: var(--accent); border-color: var(--accent-line); }
+  .trace-chip .jaeger.disabled { pointer-events: none; opacity: 0.55; }
 
-  .empty-state { text-align: center; padding: 22px; color: var(--fg-mute); font-size: 12px; font-family: var(--mono); letter-spacing: 0.02em; }
+  /* ---- Compact safety counters (command band, right side) ---- */
+  .counters-compact {
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(112px, 1fr);
+    gap: 8px; align-items: stretch;
+  }
+  @media (max-width: 1400px) {
+    .counters-compact { grid-template-columns: repeat(5, 1fr); grid-auto-flow: row; }
+  }
+  .counters-compact .counter { padding: 8px 12px; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .counters-compact .counter .sub { display: none; }
+  .counters-compact .counter .label { font-size: 8.5px; letter-spacing: 0.1em; }
+  .counters-compact .counter .val { font-size: 24px; }
+
+  /* ---- Stream-band panels: fill the fixed band and scroll internally ---- */
+  .stream-cell .panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  #metrics.panel { overflow-y: auto; }
+
+  .empty-state { text-align: center; padding: 18px; color: var(--fg-mute); font-size: 12px; font-family: var(--mono); letter-spacing: 0.02em; }
+
+  /* ============================================================
+     STACK FALLBACK — below 1200px the fixed-viewport bento would
+     cram; revert to the original vertical document flow so the page
+     scrolls naturally and every card gets its natural height.
+     ============================================================ */
+  @media (max-width: 1200px) {
+    body { height: auto; overflow: visible; display: block; }
+    main {
+      height: auto; flex: none; display: flex; flex-direction: column;
+      gap: 16px; padding: 16px 16px 40px;
+    }
+    .band { display: flex; flex-direction: column; gap: 12px; }
+    .band-stream, .band-command { grid-template-columns: 1fr; }
+    .workspace { display: flex; flex-direction: column; gap: 12px; }
+    .main-visual {
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: none;
+      grid-template-rows: none; gap: 12px;
+    }
+    #cell-cameras, #card-reasoner, #card-slam-map, #card-world-cloud { grid-area: auto; }
+    .rail { display: flex; flex-direction: column; overflow: visible; }
+    .rail-joints .joints, .rail-world .scroll-y { max-height: none; }
+    .stream-cell, #card-reasoner, #cameras,
+    .scroll-y, .grow { min-height: 0; flex: none; }
+    .scroll-y { overflow: visible; }
+    #cameras { overflow: visible; }
+    .cameras { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    .event-log { max-height: 320px; overflow-y: auto; }
+    #metrics.panel { max-height: 460px; }
+    .idbar { flex-wrap: wrap; }
+    .counters-compact { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-flow: row; }
+  }
+  @media (max-width: 700px) { .main-visual { grid-template-columns: 1fr; } }
 
   /* ------------------- OPERATOR PROMPT (command line) ------------------- */
   .prompt-box {
@@ -816,14 +955,26 @@
   #prompt-send:hover { background: var(--accent-tint); }
   #prompt-send:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   #prompt-send:disabled { background: var(--fg-mute); cursor: not-allowed; box-shadow: none; }
-  #estop-reset {
+  #estop-btn {
     font-family: var(--mono); font-weight: 700; letter-spacing: .04em;
-    background: transparent; color: var(--err);
-    border: 1px solid var(--err); border-radius: 9px; padding: 10px 15px;
-    cursor: pointer; transition: background .2s var(--ease), color .2s var(--ease);
+    border-radius: 9px; padding: 10px 15px; cursor: pointer;
+    /* Fixed width so the label swap (E-STOP <-> Reset e-stop) never resizes the
+       button or shifts its neighbours — the control stays put in both modes. */
+    min-width: 148px; text-align: center; box-sizing: border-box;
+    transition: background .2s var(--ease), color .2s var(--ease);
   }
-  #estop-reset:hover { background: var(--err); color: #0b0c10; }
-  #estop-reset:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }
+  /* Running: a filled, prominent STOP-the-robot control. */
+  #estop-btn.trigger {
+    background: var(--err); color: #0b0c10; border: 1px solid var(--err);
+  }
+  #estop-btn.trigger:hover { background: transparent; color: var(--err); }
+  /* Latched: the SAME button, now a quieter ghost control to CLEAR the e-stop. */
+  #estop-btn.reset {
+    background: transparent; color: var(--err); border: 1px solid var(--err);
+  }
+  #estop-btn.reset:hover { background: var(--err); color: #0b0c10; }
+  #estop-btn:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }
+  #estop-btn:disabled { opacity: .5; cursor: not-allowed; }
   /* Voice-prompt mic — square ghost icon button, monochrome per the design
      system (chroma stays reserved for safety state). It sits left of the input;
      the listening state pulses white, the working state dims. */
@@ -885,7 +1036,7 @@
   /* full-bleed card sections (slam / reasoner) keep card chrome */
   section.card { gap: 0; }
 
-  /* ------------------- REASONER · MISSION (ADR-0073) ------------------- */
+  /* ------------------- REASONER · MISSION ------------------- */
   .mission-head {
     font-size: 11.5px; color: var(--text-dim);
     margin: 2px 0 8px; letter-spacing: .02em;
@@ -927,7 +1078,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
   }
   .mission-task.st-abandoned .verdict { color: var(--err); }
-  /* reward success bar (success vs threshold gate, ADR-0073 §2 / ADR-0074). The
+  /* reward success bar (success vs threshold gate). The
      fill colour reflects the reasoner's three-tier verdict band over the score:
      ok (≥ success threshold) green, ambiguous (VLM-adjudicated) amber, fail
      (below check floor / unverified) red. */
@@ -939,6 +1090,24 @@
   .mission-task .mbar.band-ambiguous > i { background: var(--warn); }
   .mission-task .mbar.band-fail > i { background: var(--err); }
   .mission-task .att { font-variant-numeric: tabular-nums; }
+  /* Reward-monitor reward bars on the rSkill card: latest reward.score span as
+     progress/success rows, fill colour banded by value (>=0.7 ok, >=0.4
+     amber, else red). */
+  .reward-bars { margin-top: 6px; }
+  .reward-bars .rrow { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .reward-bars .rlabel { flex: 0 0 52px; font-size: 10px; color: var(--fg-dim); }
+  .reward-bars .rbar {
+    flex: 1 1 auto; height: 6px; border-radius: 3px;
+    background: var(--accent-soft); overflow: hidden;
+  }
+  .reward-bars .rbar > i { display: block; height: 100%; background: var(--ok); }
+  .reward-bars .rbar.band-ambiguous > i { background: var(--warn); }
+  .reward-bars .rbar.band-fail > i { background: var(--err); }
+  .reward-bars .rpct {
+    flex: 0 0 32px; text-align: right; font-size: 10px;
+    font-variant-numeric: tabular-nums; color: var(--fg-dim);
+  }
+  .reward-bars .rmeta { margin-top: 3px; font-size: 10px; color: var(--fg-dim); }
   /* mission-complete-with-failures banner: a run that finished but abandoned
      ≥1 task is a FAILED mission — call it out at the top of the card. */
   .mission-failed {

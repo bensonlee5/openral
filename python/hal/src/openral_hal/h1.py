@@ -304,8 +304,7 @@ H1_DESCRIPTION = RobotDescription(
     sdk_kind="open",
     hal=HalEntrypoints(sim="openral_hal.h1:H1MujocoHAL", real=None),
     # Floating-base humanoid — same offset arithmetic as G1 (qpos +7,
-    # qvel +6).  ``MujocoArmHAL`` derives both from ``floating_base=True``
-    # (ADR-0023).
+    # qvel +6).  ``MujocoArmHAL`` derives both from ``floating_base=True``.
     assets=AssetRefs(
         urdf=UrdfAsset(ref="rd:h1_description"),
         mjcf="rd:h1_mj_description",
@@ -407,7 +406,7 @@ class H1MujocoHAL(MujocoArmHAL):
         """Initialise the H1 HAL; no MuJoCo state is created until ``connect()``.
 
         All MuJoCo wiring (MJCF URI, floating-base offsets) lives in
-        :data:`H1_DESCRIPTION.sim` (ADR-0023).  The software PD gains
+        :data:`H1_DESCRIPTION.sim`.  The software PD gains
         stay here because they are H1-specific cerebellar substitute
         behavior, not arm-data.
         """

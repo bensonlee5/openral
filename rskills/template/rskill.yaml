@@ -12,7 +12,7 @@
 #   license                         →  --license value
 #   embodiment_tags                 →  [--embodiment-tag value]
 #
-# The template is modeled on `rskills/pi05-libero-nf4/rskill.yaml` — the
+# The template is modeled on `rskills/pi05-libero-int8/rskill.yaml` — the
 # representative VLA skill in tree — and therefore ships pi0.5-shaped
 # policy knobs (`image_preprocessing`, `state_contract`,
 # `n_action_steps`, `min_vram_gb`). Strip or edit them if your new
@@ -33,7 +33,7 @@ name: "TEMPLATE_ORG/rskill-TEMPLATE_ID"
 version: "0.1.0"
 license: "permissive_research"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "pi05"
@@ -109,7 +109,7 @@ description: >
   image_preprocessing / state_contract / min_vram_gb / n_action_steps
   blocks if your policy does not need them.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -119,7 +119,7 @@ objects:
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 action_contract:
   dim: 8

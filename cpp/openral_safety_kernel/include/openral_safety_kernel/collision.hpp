@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 phase 2 — allocation-free geometric self-collision core.
+// Allocation-free geometric self-collision core.
 //
 // Hand-rolled forward kinematics + closed-form capsule-capsule distance, with
 // NO external dependency (no Eigen / KDL / Pinocchio) so the safety kernel
-// stays small and auditable (ADR-0020 ethos). All hot-path functions are
+// stays small and auditable. All hot-path functions are
 // allocation-free: the model is built once at configure time and the FK
 // scratch is pre-sized and reused, so they only touch caller-owned storage.
 //
@@ -47,6 +47,17 @@ struct Capsule {
   Transform origin{};
 };
 
+/// An oriented box (OBB) attached to a link, expressed in that link's frame.
+/// The box spans `[-half_extents.k, +half_extents.k]` along each local axis k;
+/// `origin` places+orients it in the link frame (same convention as `Capsule`).
+/// A box fits a blocky link (a near-cubic housing, e.g. the SO-ARM100/101
+/// `base`) far tighter than a capsule, whose circular cross-section must bulge
+/// past the block's flat faces and over-report clearance (issue #84).
+struct Obb {
+  Vec3 half_extents{};
+  Transform origin{};
+};
+
 /// Flattened kinematic + collision model. Links are topologically ordered so
 /// every parent index is < its children's. A link may carry zero, one, or
 /// several capsules (real MJCF bodies often have several collision geoms);
@@ -61,6 +72,8 @@ struct CollisionModel {
   std::vector<Vec3> axis;             ///< joint axis (unit) in the joint frame
   std::vector<int> capsule_link;      ///< link index each capsule attaches to
   std::vector<Capsule> capsules;      ///< parallel to capsule_link
+  std::vector<int> box_link;          ///< link index each OBB attaches to
+  std::vector<Obb> boxes;             ///< parallel to box_link (blocky links)
   std::vector<std::pair<int, int>> allowed_pairs;  ///< unordered link pairs to skip
 };
 
@@ -112,6 +125,21 @@ Transform transform_from_xyz_rpy(double x, double y, double z, double roll, doub
 double capsule_distance(const Transform& a, double a_radius, double a_half_length,
                         const Transform& b, double b_radius, double b_half_length) noexcept;
 
+/// Closest distance between an OBB surface and a capsule surface, each given in
+/// a common frame (`box`/`cap` are the primitive origin transforms). Exact for
+/// the disjoint case (segment↔box closest distance minus the capsule radius);
+/// negative means interpenetration. Allocation-free.
+double box_capsule_distance(const Transform& box, const Vec3& half_extents, const Transform& cap,
+                            double cap_radius, double cap_half_length) noexcept;
+
+/// Conservative closest distance between two OBB surfaces. Uses the separating-
+/// axis theorem: the maximum gap over the 15 candidate axes (6 face normals + 9
+/// edge-edge cross products) is a lower bound on the true surface distance, so
+/// the kernel never *under*-reports a collision (safety §3 — at least as
+/// conservative). Negative means overlap. Allocation-free.
+double box_box_distance(const Transform& a, const Vec3& a_half, const Transform& b,
+                        const Vec3& b_half) noexcept;
+
 /// Forward kinematics for one joint-position row (`qpos`, length `n_dof`):
 /// fills `scratch.link_world[i]` with each link's frame in the base frame.
 /// Allocation-free; `scratch.link_world` must already be sized to
@@ -138,7 +166,7 @@ CollisionHit check_world_collision(const CollisionModel& model, const CollisionS
 /// false → caller falls back to the reactive check).
 inline constexpr std::size_t kMaxJacobianDof = 64;
 
-/// ADR-0040 Phase 3 — damped-least-squares IK step for predictive Cartesian
+/// Damped-least-squares IK step for predictive Cartesian
 /// checking. Forward kinematics must already be run for the current
 /// configuration (`scratch`). Given the end-effector link index `ee_link` and a
 /// desired base-frame EE twist `ee_twist` (6 = [vx,vy,vz, wx,wy,wz], the

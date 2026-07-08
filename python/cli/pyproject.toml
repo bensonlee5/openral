@@ -21,7 +21,7 @@ dependencies = [
 # Canonical (and only) entry point — `openral`. With no arguments it drops
 # into an interactive REPL (`openral>` prompt) where subcommands run bare
 # (`sim run --config …`). With arguments it behaves as a one-shot CLI for
-# scripts and CI. See ADR-0021.
+# scripts and CI.
 openral = "openral_cli.main:app"
 
 [build-system]

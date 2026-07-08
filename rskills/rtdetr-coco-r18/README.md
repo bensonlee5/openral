@@ -1,17 +1,21 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - detector
-  - object-detection
-  - rt-detr
-  - onnx
-  - coco
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: object-detection
+tags:
+- OpenRAL
+- rskill
+- detector
+- object-detection
+- any
+- rt-detr
+- onnx
+- coco
 base_model:
-  - PekingU/rtdetr_r18vd_coco_o365
+- PekingU/rtdetr_r18vd_coco_o365
+base_model_relation: finetune
+inference: false
 ---
 
 # rskill-rtdetr-coco-r18
@@ -20,7 +24,7 @@ base_model:
 > ResNet-18vd backbone (r18vd), trained on COCO and exported to ONNX. Runs
 > as a perception producer on the camera tee and publishes `ObjectsMetadata`
 > to `/openral/perception/objects`. **No actuators.** This skill uses
-> `kind: detector` (ADR-0037); it emits no `Action` chunks and drives no
+> `kind: detector`; it emits no `Action` chunks and drives no
 > `ros2_control` joints.
 
 ## What it does
@@ -137,7 +141,7 @@ The detector emits **no** `Action` chunks and has no proprioception
 | `version` | `0.1.0` |
 | `license` | `apache-2.0` |
 | `role` | `s1` |
-| `kind` | `detector` (ADR-0037 perception producer) |
+| `kind` | `detector` (perception producer) |
 | `embodiment_tags` | all 17 canonical embodiment tags (any robot with RGB camera) |
 | `runtime` / `quantization.dtype` | `onnx` / `fp32` |
 | `weights_uri` | `local://rskills/rtdetr-coco-r18` |

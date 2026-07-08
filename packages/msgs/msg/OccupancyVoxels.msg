@@ -1,4 +1,4 @@
-# ADR-0030 voxel phase — a dense, fixed-capacity 3-D occupancy voxel grid for
+# A dense, fixed-capacity 3-D occupancy voxel grid for
 # the safety kernel's world-collision check. A perception bridge lowers a 3-D
 # world map (e.g. an OctoMap) into a bounded local volume around the robot,
 # transforms it into the robot base frame (`header.frame_id`), and publishes it

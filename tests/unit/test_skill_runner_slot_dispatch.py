@@ -1,4 +1,4 @@
-"""Unit tests for ``_dispatch_slots`` in ``rskill_runner_node`` (ADR-0028b step 3).
+"""Unit tests for ``_dispatch_slots`` in ``rskill_runner_node``.
 
 Exercises the pure byte-routing function that splits a flat policy
 action vector into typed :class:`openral_core.Action` objects per the

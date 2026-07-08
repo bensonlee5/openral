@@ -12,7 +12,7 @@ sensor bridge owns cameras / depth / scan / viewer, this bridge owns the
 3. **``/cmd_vel`` → ``BODY_TWIST``** — Nav2 / teleop publish
    ``geometry_msgs/Twist``; the bridge maps each message to a 6-vec BODY_TWIST
    :class:`~openral_core.schemas.Action` and applies it via the node's
-   ``_send_action_traced`` (ADR-0024 out-of-scope: this path intentionally
+   ``_send_action_traced`` (out-of-scope: this path intentionally
    bypasses the OpenRAL safety supervisor — Nav2's ``velocity_smoother`` caps
    velocity).
 
@@ -59,7 +59,7 @@ class MobileBaseBridge:
     ) -> None:
         """Bind node + HAL + manifest; opens no publishers until :meth:`setup`.
 
-        ``proprio`` (ADR-0049): when supplied (sim-attached HALs), odom is NOT
+        ``proprio``: when supplied (sim-attached HALs), odom is NOT
         published from a timer on the executor thread — that thread is busy
         stepping/rendering the sim, which starved ``odom->base_link`` to ~1.8 Hz.
         Instead the node's dedicated publisher thread calls
@@ -94,7 +94,7 @@ class MobileBaseBridge:
         )
         self._odom_pub = self._node.create_publisher(Odometry, "/odom", odom_qos)
         self._tf_broadcaster = TransformBroadcaster(self._node)
-        # ADR-0049 — sim-attached HALs publish odom from the node's dedicated
+        # Sim-attached HALs publish odom from the node's dedicated
         # thread (:meth:`publish_from_snapshot`); only the legacy (real-HAL /
         # in-process-twin) path drives it from a timer on the executor thread.
         if self._proprio is None:
@@ -102,7 +102,7 @@ class MobileBaseBridge:
                 1.0 / max(self._odom_rate_hz, 1.0), self._publish_odom
             )
 
-        # /cmd_vel → BODY_TWIST bridge (ADR-0024 out-of-scope path). Empty topic
+        # /cmd_vel → BODY_TWIST bridge (out-of-scope path). Empty topic
         # disables the subscription (purely Action-driven).
         if self._cmd_vel_topic:
             from geometry_msgs.msg import Twist
@@ -135,7 +135,7 @@ class MobileBaseBridge:
             self._cmd_vel_sub = None
 
     def publish_from_snapshot(self) -> None:
-        """Publish one ``/odom`` + TF sample (ADR-0049 dedicated-thread entry).
+        """Publish one ``/odom`` + TF sample (dedicated-thread entry).
 
         Called from the node's publisher thread for sim-attached HALs; reads the
         proprio snapshot, never the simulator. Thin alias over :meth:`_publish_odom`
@@ -150,7 +150,7 @@ class MobileBaseBridge:
             return
         from nav_msgs.msg import Odometry
 
-        # ADR-0049 — on the sim-attached path read the post-step snapshot (plain
+        # On the sim-attached path read the post-step snapshot (plain
         # data) so this control-group callback never touches the simulator off
         # the sim thread; the legacy path reads the HAL directly.
         if self._proprio is not None:
@@ -169,7 +169,7 @@ class MobileBaseBridge:
         # Prefer a 6-DoF proprio (robocasa base pos+quat) so base_z carries the
         # platform height and any non-yaw rotation survives; fall back to the
         # planar (x, y, yaw) projection for the in-process digital twin / non-MJCF
-        # backends. Without the 6-DoF path the ADR-0027 state assembler sees
+        # backends. Without the 6-DoF path the downstream state assembler sees
         # base_z = 0 and the policy reaches at the wrong height.
         x, y, yaw = base_pose
         if pose_6dof is not None:
@@ -235,7 +235,7 @@ class MobileBaseBridge:
 
         Maps the message into the canonical 6-vec ``[vx, vy, vz, wx, wy, wz]`` —
         only ``linear.x`` / ``linear.y`` / ``angular.z`` carry signal on a planar
-        holonomic base. Per ADR-0024 this bypasses the OpenRAL safety supervisor
+        holonomic base. This path intentionally bypasses the OpenRAL safety supervisor
         (Nav2's ``velocity_smoother`` enforces caps); run an external
         ``twist_to_action`` relay onto ``/openral/candidate_action`` for the
         supervised path.

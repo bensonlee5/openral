@@ -1,6 +1,6 @@
 """Lockstep proof: ``SIM_EXECUTABLE_CONTROL_MODES`` == the sim HAL packers.
 
-ADR-0036 (amended 2026-06-04). The reasoner's ``hal_mode="sim"`` palette
+Amended 2026-06-04. The reasoner's ``hal_mode="sim"`` palette
 gate admits a VLA rSkill only when every :class:`ControlMode` its action
 contract demands is in :data:`openral_core.SIM_EXECUTABLE_CONTROL_MODES`.
 That constant is only safe if it is *exactly* the set of modes the default
@@ -180,7 +180,7 @@ def _composite_packer_handles(mode: ControlMode, hal: SimAttachedHAL) -> bool:
     """True iff ``_pack_with_composite_split`` does NOT reject ``mode`` as unsupported."""
     # The composite packer imports robosuite.controllers.composite at call
     # time; that subpackage exists only in robosuite>=1.5 (the RoboCasa pin).
-    # The base venv may carry robosuite==1.4 (the LIBERO pin, ADR-0011, which
+    # The base venv may carry robosuite==1.4 (the LIBERO pin, which
     # is mutually exclusive with >=1.5) — skip cleanly there rather than
     # raising ModuleNotFoundError from inside the packer.
     pytest.importorskip("robosuite.controllers.composite.composite_controller")

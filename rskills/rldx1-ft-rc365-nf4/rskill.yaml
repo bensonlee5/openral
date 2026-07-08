@@ -28,18 +28,18 @@
 # ── Identity ───────────────────────────────────────────────────────────────
 schema_version: "0.1"
 name: "OpenRAL/rskill-rldx1-ft-rc365-nf4"
-evaluated_tasks: ["robocasa"]  # ADR-0060: benchmark task this checkpoint is validated for (gate)
+evaluated_tasks: ["robocasa"]  # benchmark task this checkpoint is validated for (gate)
 version: "0.1.0"
 license: "rlwrld_non_commercial"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "rldx"
 
 # ── Compatibility contract ─────────────────────────────────────────────────
 # RoboCasa-365 runs on PandaMobile — same embodiment we already wire
-# for pi05-robocasa365-human300-nf4.
+# for RoboCasa-365 PandaMobile policies.
 embodiment_tags:
   - "panda_mobile"
 
@@ -102,7 +102,7 @@ processors:
 state_contract:
   layout: "rc365"
   dim: 16
-  # ADR-0027 — same panda_mobile bindings as the pi05 / robocasa-nf4
+  # same panda_mobile bindings as the pi05 / robocasa-nf4
   # manifests. The rldx adapter re-slices the assembled vector into
   # the RC365 5-key obs dict downstream of this binding.
   bindings:
@@ -122,10 +122,10 @@ state_contract:
     # ground truth, and the human300_16d assembler fed the policy
     # a state vector that far from the training distribution.
     # The training data lives in robocasa's world frame (no SLAM);
-    # ``odom`` is the matching authoritative source post-ADR-0027.
+    # ``odom`` is the matching authoritative source.
     world_frame: "odom"
     # openral's panda_mobile robot.yaml exposes the franka gripper as
-    # one parallel_gripper joint (per ADR-0028a, the MJCF two-finger
+    # one parallel_gripper joint (the MJCF two-finger
     # mimic is collapsed to a single 1-DoF abstraction). The
     # ``human300_16d`` assembler mirrors a single binding to ``[v, -v]``
     # to reconstruct the 2-D training-distribution shape.
@@ -159,7 +159,7 @@ description: >
   + control_mode); the rldx adapter trims to 11-D for the openral
   RoboCasa env. Non-commercial license.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -175,9 +175,9 @@ objects: []
 scenes:
   - "kitchen"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
-# ADR-0028b — RLDX-1 general_embodiment 12-D layout, cross-referenced
+# RLDX-1 general_embodiment 12-D layout, cross-referenced
 # against the live ``robosuite.controllers.composite.HybridMobileBase
 # ._action_split_indexes`` for PandaOmron:
 #   [0:5]  end_effector_position+rotation  (6, delta, OSC_POSE arm)   → composite 'right'
@@ -187,7 +187,7 @@ scenes:
 #   [10]   base_motion[3]                  (1, padding — torso slot)  → composite 'torso'
 #                                                                       (std=0 in training; discarded)
 #   [11]   control_mode                    (1, composite mode flag)   → HAL hardcodes -1
-# ADR-0028d resolves the prior "4-D non-standard-base" workaround:
+# A later action-contract amendment resolves the prior "4-D non-standard-base" workaround:
 # the trailing 4 dims of the policy's ``base_motion`` group are
 # 3 active base-velocity channels + 1 always-zero torso channel,
 # both of which map onto already-existing openral ControlModes
@@ -199,4 +199,4 @@ action_contract:
     - {range: [6, 6],   control_mode: "gripper_position", ee: "panda_gripper"}
     - {range: [7, 9],   control_mode: "joint_velocity",   joint_names: ["base_x", "base_y", "base_yaw"]}
     - {range: [10, 10], discard: true}   # torso — std=0 in training; out[10]=0 ⇒ "hold torso position"
-    - {range: [11, 11], control_mode: "composite_mode"}   # HybridMobileBase mux flag (ADR-0028d)
+    - {range: [11, 11], control_mode: "composite_mode"}   # HybridMobileBase mux flag

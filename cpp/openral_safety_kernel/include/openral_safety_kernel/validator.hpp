@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — the allocation-free validator. Called from the hot path on
+// The allocation-free validator. Called from the hot path on
 // every /openral/candidate_action; the test_no_alloc.cpp gtest pins this
 // guarantee with a counting allocator.
 
@@ -23,7 +23,7 @@ enum class ViolationKind : std::uint8_t {
   kForce = 1,        ///< openral_msgs::FailureTrigger::KIND_FORCE
   kWorkspace = 2,    ///< openral_msgs::FailureTrigger::KIND_WORKSPACE
   kController = 5,   ///< openral_msgs::FailureTrigger::KIND_CONTROLLER
-  // ADR-0030 — geometric self/world collision. The value must exist so the
+  // Geometric self/world collision. The value must exist so the
   // enum stays 1:1 with the IDL; the geometric check that *emits* it lands
   // in a follow-up PR (this kernel does not yet produce kCollision).
   kCollision = 10,   ///< openral_msgs::FailureTrigger::KIND_COLLISION
@@ -95,7 +95,7 @@ enum class ControlMode : std::uint8_t {
   kGripperBinary = 9,
   kGripperPosition = 10,
   kDexHandJoint = 11,
-  // ADR-0028d — sim-only robosuite-composite multiplexer flag (e.g.
+  // Sim-only robosuite-composite multiplexer flag (e.g.
   // HybridMobileBase reads ``action[-1]`` to switch between arm-active
   // and base-active modes). 1-D, value range ``[-1, +1]``. Real-HW
   // adapters ignore this mode (independent controllers run concurrently).

@@ -1,6 +1,6 @@
 """Tests for :class:`ComputeSpec` and its integration with :class:`RobotDescription`.
 
-After the ``ComputeSpec`` split (ADR-0013 follow-up), GPU / runtime / dtype
+After the ``ComputeSpec`` split, GPU / runtime / dtype
 fields live on :class:`ComputeSpec` attached to :attr:`RobotDescription.compute`
 rather than on :class:`RobotCapabilities`.
 
@@ -58,7 +58,7 @@ class TestComputeSpecDefaults:
 
 
 class TestVisionSlamCapability:
-    """ADR-0064 — ``has_vision_slam`` stays on :class:`RobotCapabilities`."""
+    """``has_vision_slam`` stays on :class:`RobotCapabilities`."""
 
     def test_defaults_false(self) -> None:
         from openral_core.schemas import RobotCapabilities
@@ -74,7 +74,7 @@ class TestVisionSlamCapability:
 
 
 class TestSupportsCuMotion:
-    """``ComputeSpec.supports_cumotion()`` — the GPU gate for ADR-0065.
+    """``ComputeSpec.supports_cumotion()`` — the GPU gate for cuMotion.
 
     cuMotion requires Ampere+ (CC >= 8.0), CUDA >= 13.0, and a nominal 8 GB
     GPU.  Nominal-8 GB cards report ~7.99 GiB, so the VRAM floor sits just
@@ -134,7 +134,7 @@ class TestSupportsCuMotion:
 
 
 class TestRobotDescriptionComputeField:
-    """``RobotDescription`` compute slots (ADR-0069)."""
+    """``RobotDescription`` compute slots."""
 
     def test_compute_defaults_to_none(self) -> None:
         """All existing manifests load with all compute slots None (no accelerator declared)."""

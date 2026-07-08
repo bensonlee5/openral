@@ -1,11 +1,11 @@
-# rSkill manifest — moveit-eef-pose: plan to a Cartesian end-effector pose (ADR-0054)
+# rSkill manifest — moveit-eef-pose: plan to a Cartesian end-effector pose
 #
 # Wraps `moveit_msgs/action/MoveGroup`. `ros_integration.goal_builder: pose`
 # selects the `PoseGoalRskill` adapter, which consumes a `pose` block (target
 # position + quaternion orientation for a constrained link) and lowers it into
 # MoveGroup position + orientation constraints. The generic Cartesian sibling
 # of rskill-moveit-look-at (gaze is a computed-pose specialisation); new under
-# ADR-0054's rskill-moveit-* family.
+# the rskill-moveit-* family.
 #
 # Collision posture: MoveIt's internal FCL planner does self + planning-scene
 # (world) collision checking at plan time. `plan_only: true` so OpenRAL's
@@ -45,7 +45,7 @@ chunk_size: 1
 latency_budget:
   per_chunk_ms: 2000.0
 
-# ADR-0022 — surfaced to the Reasoner LLM tool palette.
+# Surfaced to the Reasoner LLM tool palette.
 description: >
   Plan and execute a collision-free motion that brings the end-effector link to
   a target 6-DOF Cartesian pose (position + orientation) via MoveIt's MoveGroup
@@ -65,7 +65,7 @@ ros_integration:
   interface_type: "MoveGroup"
   interface_name: "/move_action"
   result_trajectory_field: "planned_trajectory.joint_trajectory"
-  # ADR-0054 — selects the PoseGoalRskill goal-lowering adapter: the `pose`
+  # Selects the PoseGoalRskill goal-lowering adapter: the `pose`
   # block below is lowered into `request.goal_constraints[0]` (position +
   # orientation constraints) on the first step. Set `pose.tool_frame` to express
   # the target for a TCP/tool frame (TF-looked-up link←tool offset); omit it to
@@ -99,7 +99,7 @@ ros_integration:
     - "ros-${ROS_DISTRO}-moveit"
     - "ros-${ROS_DISTRO}-moveit-resources-panda-moveit-config"
 
-# ADR-0026 — per-skill JSON Schema surfaced to the Reasoner LLM tool palette.
+# Per-skill JSON Schema surfaced to the Reasoner LLM tool palette.
 # The LLM overrides the pose block's position/orientation; planner settings are
 # inherited. orientation is a quaternion in pose.quaternion_order (default xyzw).
 goal_params_schema:

@@ -1,4 +1,4 @@
-"""Shared scaffolding for the out-of-process VLA sidecars (ADR-0010 / ADR-0046).
+"""Shared scaffolding for the out-of-process VLA sidecars.
 
 Two policy families run their ~3B checkpoints out-of-process in an isolated
 Python 3.10 venv, because their upstream packages pin Python 3.10 + flash-attn

@@ -19,8 +19,7 @@ name: ``"sawyer_arm_controller"``) and the ``/robot/joint_states`` topic
 Per CLAUDE.md §7.4 ``intera_sdk`` is BSD-3 — fully compatible — so the
 manifest declares ``sdk_kind: "closed_with_api"`` (the original company is
 gone but the SDK + the forks need an explicit lineage tag) and sets
-``hal.real`` to this adapter (Sawyer has no sim HAL, so ``hal.sim`` is None;
-ADR-0031).
+``hal.real`` to this adapter (Sawyer has no sim HAL, so ``hal.sim`` is None).
 
 .. _RethinkRobotics-opensource/sawyer_robot:
    https://github.com/RethinkRobotics-opensource/sawyer_robot
@@ -127,7 +126,7 @@ def _sawyer_joint_specs() -> list[JointSpec]:
         )
         for name, parent, child in zip(_SAWYER_JOINT_NAMES, parents, children, strict=True)
     ]
-    # ADR-0028a — Rethink Electric Parallel Gripper as a 1-DoF prismatic
+    # Rethink Electric Parallel Gripper modeled as a 1-DoF prismatic
     # abstraction over the per-finger mimic. Matches
     # ``robots/sawyer/robot.yaml``; drift guarded by
     # ``tests/unit/test_robot_manifests_match_hal_constants.py``.

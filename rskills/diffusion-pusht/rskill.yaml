@@ -5,11 +5,11 @@
 # ── Identity ───────────────────────────────────────────────────────────────
 schema_version: "0.1"
 name: "OpenRAL/rskill-diffusion-pusht"
-evaluated_tasks: ["pusht"]  # ADR-0060: benchmark task this checkpoint is validated for (gate)
+evaluated_tasks: ["pusht"]  # benchmark task this checkpoint is validated for (gate)
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "diffusion"
@@ -29,11 +29,11 @@ sensors_required:
     min_width: 96
     min_height: 96
 
-# Output side (ADR-0013). The pusht_2d scene-pseudo-robot exposes its 2-D
+# Output side. The pusht_2d scene-pseudo-robot exposes its 2-D
 # (x, y) pusher position as two synthetic prismatic joints (tip_x, tip_y);
 # robots/pusht_2d/robot.yaml advertises `joint_position` over those 2 DoF.
 # The gym-pusht action IS the absolute target of those joints, so the
-# robot-side actuator is joint_position (ADR-0071 — matches every other
+# robot-side actuator is joint_position (matches every other
 # rSkill, where `kind` names the robot actuator, not the policy encoding).
 # The loader auto-fills n_dof (2) + vla_action_key from the robot YAML.
 actuators_required:
@@ -71,7 +71,7 @@ latency_budget:
 # ── Provenance ─────────────────────────────────────────────────────────────
 # Headline success rate from skills/diffusion-pusht/eval/pusht.json.
 benchmarks:
-  pusht: 0.60
+  pusht: 1.0
 
 paper_url: "https://arxiv.org/abs/2303.04137"
 source_repo: "hf://lerobot/diffusion_pusht"
@@ -83,7 +83,7 @@ description: >
   loop, so cached pops are essentially free — this is the extreme test
   of the queue-drain contract.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -93,11 +93,18 @@ objects:
 scenes:
   - "tabletop_2d"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 action_contract:
   dim: 2
-  # ADR-0071 — absolute positions of the 2 prismatic tip_x/tip_y joints.
+  # absolute positions of the 2 prismatic tip_x/tip_y joints.
   # Declared explicitly so the contract states joint-space rather than relying
   # on the undeclared-layout fallback.
   representation: "joint_positions"
+  # EXPLICIT joint units — PushT's 2-D action is a planar tip position in the
+  # 512×512 image frame (verified: observation.state normalizer max∈[496, 511],
+  # min∈[13, 33]), NOT angles. "radians" selects the identity (no deg↔rad
+  # conversion) so the 0–512 values pass through unchanged. It is declared to
+  # STOP the stats-magnitude heuristic — which sees peak ≫π and would wrongly
+  # flag "degrees" and corrupt the action with a ×π/180 scaling.
+  joint_units: "radians"

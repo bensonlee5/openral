@@ -1,4 +1,4 @@
-"""Unit tests for ADR-0076 — camera-space 2D detection identity.
+"""Unit tests for camera-space 2D detection identity.
 
 Pins the `DetectionTracker2D` (stable det_ids across frames, new-object minting,
 miss eviction) and the id propagation that makes it "all work when octomap is
@@ -58,7 +58,7 @@ def test_miss_eviction_retires_a_vanished_track() -> None:
 
 
 def test_det_id_propagates_through_lift_into_object_memory() -> None:
-    """ADR-0076 §3: a new lifted object ADOPTS its det_id (via DetectedObject.track_id)
+    """A new lifted object ADOPTS its det_id (via DetectedObject.track_id)
     instead of ObjectMemory minting a fresh one — one id across 2D and 3D."""
     mem = ObjectMemory(iou_threshold=0.3, max_misses=1)
     # The lift sets DetectedObject.track_id = ObjectDetection2D.det_id (here 7).

@@ -84,7 +84,7 @@ def test_constant_scan_no_hit_ranges_zero_beams_is_empty() -> None:
 
 
 def test_frame_id_constants_match_research_doc() -> None:
-    """The frame_ids match the ADR-0025 research doc + Nav2 / slam_toolbox defaults.
+    """The frame_ids match the research doc + Nav2 / slam_toolbox defaults.
 
     `odom` is the canonical odometry frame name. `base_link` is the
     REP-105 mobile-base root frame name. `base_scan` is the

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""RoboTwin 2.0 scene sidecar — runs the SAPIEN dual-arm env in a separate venv (ADR-0061).
+"""RoboTwin 2.0 scene sidecar — runs the SAPIEN dual-arm env in a separate venv.
 
 This is the **RoboTwin side** of the RoboTwin benchmark backend. It is launched
 (auto-spawned) by :mod:`openral_sim.backends.robotwin` running under the openral
@@ -183,8 +183,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 # LeRobot's `robotwin` env exposes its three cameras under these native keys
 # (head + per-wrist). The openral scene refers to them by the canonical sensor
-# names declared in robots/aloha_agilex/robot.yaml (per ADR-0070 — typically
-# ``top`` / ``wrist_left`` / ``wrist_right``); we re-key in fixed
+# names declared in robots/aloha_agilex/robot.yaml (the canonical camera-slot
+# names — typically ``top`` / ``wrist_left`` / ``wrist_right``); we re-key in fixed
 # head→left→right order to whatever names the scene's ``cameras`` list
 # provides.
 _ENV_CAMERA_NAMES = ("head_camera", "left_camera", "right_camera")
@@ -196,8 +196,8 @@ class _RoboTwinEnv:
     Builds a single gym env and adapts its observations to ``{"images", "state",
     "task"}``. LeRobot's robotwin obs is a dict with ``pixels`` (per-camera HWC
     uint8) + ``agent_pos``; we re-key the env's native cameras
-    (:data:`_ENV_CAMERA_NAMES`) to the openral scene camera names (canonical
-    per ADR-0070) in order and expose ``agent_pos`` as ``state``.
+    (:data:`_ENV_CAMERA_NAMES`) to the openral scene camera names (the canonical
+    camera-slot names) in order and expose ``agent_pos`` as ``state``.
     """
 
     def __init__(

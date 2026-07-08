@@ -1,14 +1,10 @@
 # openral-dataset
 
-**ADR-0019** — rosbag2 ↔ LeRobotDataset v3 bridge. Every skill execution (sim
+**openral-dataset** — rosbag2 ↔ LeRobotDataset v3 bridge. Every skill execution (sim
 or hardware) becomes a row in a LeRobotDataset v3.0 (`codebase_version="3.0"`,
 `lerobot>=0.5.1`). Successful and failed episodes are both persisted; the
 per-row `next.success` flag and the per-dataset `meta/info.json["metadata"]
 ["dataset_success_rate"]` let downstream consumers filter.
-
-See [`docs/adr/0019-rosbag2-lerobot-dataset-bridge.md`](../../docs/adr/0019-rosbag2-lerobot-dataset-bridge.md)
-for the architectural rationale (top-level package vs nested submodule, v3.0
-vs v2.1, persist-all vs discard, license posture, PR sequencing).
 
 ## Public API
 
@@ -59,13 +55,13 @@ with RolloutRecorder(
 - **`features_from_robot`** — pure `RobotDescription` → LeRobot v3 features
   dict mapping. No I/O, no lerobot import.
 
-The rest of the ADR-0019 PR series has since landed:
+The rest of the dataset-bridge PR series has since landed:
 
 - **PR2** *(partial)* — `SensorRosPublisher` in `python/sensors/`
   (`ros_publisher.py`) ships and is tested. The wrapping
-  `packages/openral_sensors_ros/` lifecycle node specified by ADR-0019 is
-  **not yet built**, so feeding live camera topics into a recorder on the
-  hardware path is the one remaining gap.
+  `packages/openral_sensors_ros/` lifecycle node specified by the
+  dataset-bridge design is **not yet built**, so feeding live camera topics
+  into a recorder on the hardware path is the one remaining gap.
 - **PR3** ✅ — `Rosbag2Sink` (mcap, daemon writer thread) + `openral_msgs/Tick`
   / `openral_msgs/Episode` IDLs + explicit `episode_start` / `episode_end`
   API on `DeployRunner` (`bag.py`).

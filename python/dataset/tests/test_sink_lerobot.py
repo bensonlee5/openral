@@ -12,7 +12,7 @@ What this test asserts end-to-end:
 * Per-frame ``observation.state`` / ``action`` / camera arrays round-trip.
 * ``dataset_success_rate`` lands in ``meta/info.json["metadata"]``.
 * Failed-episode rows tag ``next.success`` independently of success
-  episodes (the persist-all-with-flag decision in ADR-0019 §3).
+  episodes (the persist-all-with-flag decision).
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ lerobot = pytest.importorskip(
 def _zero_frame(robot: RobotDescription) -> tuple[np.ndarray, dict[str, np.ndarray], np.ndarray]:
     state = np.zeros(robot.observation_spec.state_shape, dtype=np.float32)
     action = np.zeros(robot.action_spec.dim, dtype=np.float32)
-    # ADR-0019: frame shape MUST match SensorSpec.intrinsics — SO-100
+    # Frame shape MUST match SensorSpec.intrinsics — SO-100
     # declares 256x256 for both cameras.
     images = {
         "camera1": np.zeros((256, 256, 3), dtype=np.uint8),
@@ -143,7 +143,7 @@ def test_sink_writes_dataset_success_rate(so100_robot: RobotDescription, tmp_pat
 def test_sink_camera_shape_comes_from_intrinsics(
     so100_robot: RobotDescription, tmp_path: Path
 ) -> None:
-    """ADR-0019: camera shapes are taken from SensorSpec.intrinsics, not the first frame.
+    """Camera shapes are taken from SensorSpec.intrinsics, not the first frame.
 
     The sink declares features at construction time using the
     intrinsics on every camera-bearing sensor. The SO-100 manifest
@@ -171,7 +171,7 @@ def test_sink_camera_shape_comes_from_intrinsics(
 def test_sink_rejects_camera_frame_shape_mismatch(
     so100_robot: RobotDescription, tmp_path: Path
 ) -> None:
-    """ADR-0019: per-frame shape validation rejects frames that don't match intrinsics.
+    """Per-frame shape validation rejects frames that don't match intrinsics.
 
     A camera frame that arrives at the wrong resolution is a wiring
     bug; the sink raises ValueError immediately rather than producing
@@ -194,7 +194,7 @@ def test_sink_rejects_camera_frame_shape_mismatch(
 def test_sink_construction_rejects_robot_without_intrinsics(
     tmp_path: Path, repo_root: Path
 ) -> None:
-    """ADR-0019: a robot whose camera sensors lack intrinsics is rejected at sink __init__.
+    """A robot whose camera sensors lack intrinsics is rejected at sink __init__.
 
     Loud failure at construction beats a confusing error inside lerobot
     on the first ``add_frame``.

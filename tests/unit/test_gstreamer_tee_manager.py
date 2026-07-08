@@ -1,4 +1,4 @@
-"""Live integration tests for the runtime tee-branch manager (ADR-0037).
+"""Live integration tests for the runtime tee-branch manager.
 
 No mocks (CLAUDE.md §1.11): these drive a **real** GStreamer pipeline
 (``videotestsrc ! tee`` set to PLAYING) and exercise real dynamic pad

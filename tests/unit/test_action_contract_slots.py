@@ -1,4 +1,4 @@
-"""Unit + property tests for ``ActionContract.slots`` (ADR-0028b).
+"""Unit + property tests for ``ActionContract.slots``.
 
 Covers:
 
@@ -13,8 +13,8 @@ Covers:
   slot ranges + correct per-mode fields validates.
 
 The full slot dispatcher (``rskill_runner_node._step_impl``) is tested
-in a sibling module (``test_skill_runner_slot_dispatch.py``) once
-ADR-0028b step 3 lands. This file is the schema-side guard.
+in a sibling module (``test_skill_runner_slot_dispatch.py``) once the
+dispatcher lands. This file is the schema-side guard.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from pydantic import ValidationError
 
 
 def _robocasa_slots() -> list[ActionSlot]:
-    """Canonical RoboCasa365 pi0.5 layout from ADR-0028b §"Manifest update"."""
+    """Canonical RoboCasa365 pi0.5 layout from the action-contract slots design."""
     return [
         ActionSlot(
             range=(0, 5),
@@ -62,7 +62,7 @@ def test_legacy_action_contract_without_slots_still_works() -> None:
 
 
 def test_robocasa_12d_layout_validates() -> None:
-    """The canonical RoboCasa365 slot block from ADR-0028b validates."""
+    """The canonical RoboCasa365 slot block validates."""
     c = ActionContract(dim=12, slots=_robocasa_slots())
     assert len(c.slots or []) == 5
     assert c.dim == 12

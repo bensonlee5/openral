@@ -28,7 +28,7 @@ Strategy (per the user's clarification):
    ``tensorrt_version``, ``gpu_supported_runtimes``,
    ``gpu_supported_dtypes``, ``nvmm_available``.
 
-   Tier selection (ADR-0069):
+   Tier selection:
 
    - Jetson / embedded SoC probe → ``compute_edge``
    - Discrete NVIDIA / Apple Silicon / CPU-only → ``compute_local``
@@ -414,7 +414,7 @@ def _merge_compute(existing: ComputeSpec | None, probed: ComputeSpec) -> Compute
 def _enrich_compute(description: RobotDescription, detection: DetectionReport) -> RobotDescription:
     """Populate ``compute_edge`` or ``compute_local`` from the GPU probe.
 
-    Tier selection (ADR-0069):
+    Tier selection:
     - Jetson SoC detected  → ``compute_edge``
     - Discrete NVIDIA / Apple Silicon / CPU-only → ``compute_local``
 
@@ -501,7 +501,7 @@ def _enrich_ros2(description: RobotDescription, detection: DetectionReport) -> R
         update["middleware"] = "zenoh"
     if detection.ros2.has_robot_description and description.assets.urdf is None:
         # The robot publishes its own URDF on /robot_description at runtime — mark
-        # it with the dynamic ros2:// asset ref (ADR-0058); no static file is
+        # it with the dynamic ros2:// asset ref; no static file is
         # vendored, the launch subscribes to the topic instead.
         update["assets"] = description.assets.model_copy(
             update={"urdf": UrdfAsset(ref="ros2://robot_description")}

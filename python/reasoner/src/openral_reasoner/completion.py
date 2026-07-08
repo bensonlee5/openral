@@ -1,4 +1,4 @@
-"""ADR-0074 §5 — VLM adjudication helpers (pure, no rclpy dependency).
+"""VLM adjudication helpers (pure, no rclpy dependency).
 
 These functions are imported by ``reasoner_node`` and tested standalone
 (without a ROS install) because they carry no rclpy dependency.
@@ -54,7 +54,7 @@ def resolve_band_edges(
     fallback_threshold: float,
     fallback_floor: float,
 ) -> tuple[float, float]:
-    """Resolve the three-tier verdict band edges (ADR-0074 §1/§5).
+    """Resolve the three-tier verdict band edges.
 
     The active reward model's calibration wins when present; otherwise the
     system fallback. Both contract values must be present to use the contract
@@ -96,7 +96,7 @@ def resolve_patience_s(
     contract_default: float | None,
     legacy_deadline_s: float,
 ) -> float:
-    """Resolve the patience ceiling for a dispatch (ADR-0074 §2/§3).
+    """Resolve the patience ceiling for a dispatch.
 
     Authority stack — system fallback < reward-model default < LLM override:
     the LLM's per-task ``patience_s`` override wins; else the reward model's
@@ -127,9 +127,9 @@ def resolve_patience_s(
 
 
 def is_reward_wake(*, source: str, severity: int, severity_fail: int) -> bool:
-    """Whether a ``FailureTrigger`` is a reward-watcher wake (ADR-0074 §2).
+    """Whether a ``FailureTrigger`` is a reward-watcher wake.
 
-    The reward-watcher rides the ADR-0064 critic path: a ``critic``-source
+    The reward-watcher rides the critic path: a ``critic``-source
     trigger at ``SEVERITY_FAIL`` is the "attempt is over" signal (success,
     plateau, or patience) that should preempt — and, while a VLA is in
     flight, stop it *now* rather than at the ``deadline_s`` clock.  A
@@ -155,7 +155,7 @@ def is_reward_wake(*, source: str, severity: int, severity_fail: int) -> bool:
     return source == "critic" and severity >= severity_fail
 
 
-# ADR-0074 §5 — VLM adjudication prompt for the ambiguous reward band.
+# VLM adjudication prompt for the ambiguous reward band.
 # Kept short and binary so the provider returns a parseable answer;
 # {task!r} is a repr-quoted task string so embedded quotes are escaped.
 COMPLETION_QUESTION: str = (

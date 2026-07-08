@@ -376,7 +376,7 @@ def detect_prequantized_nf4(spec: VLASpec) -> str | None:  # noqa: PLR0911  # re
     """Probe the rSkill's HF repo for a ``quantization_metadata.json`` sentinel.
 
     Returns the resolved HF repo id (e.g.
-    ``"OpenRAL/rskill-pi05-robocasa365-human300-nf4"``) when the
+    ``"OpenRAL/rskill-example-nf4"``) when the
     repo carries a prequantized nf4 pack we can fast-load, ``None``
     otherwise. The check is a single ``HEAD`` request (~100 ms warm,
     cached after the first call).
@@ -460,7 +460,7 @@ def load_prequantized_state_for_rskill(  # noqa: PLR0911  # reason: linear early
     Silently no-ops when the rSkill manifest does not point at an
     ``hf://`` repo, or when that repo does not carry a
     ``quantization_metadata.json``. Back-compat: rSkills that ship
-    bf16 weights (e.g. ``rskills/pi05-libero-nf4``) keep their existing
+    bf16 weights (e.g. ``rskills/pi05-libero-int8``) keep their existing
     on-line nf4 pack path.
 
     Args:

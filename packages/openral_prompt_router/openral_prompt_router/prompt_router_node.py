@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 F10 — ``prompt_router_node`` lifecycle node.
+"""``prompt_router_node`` lifecycle node.
 
 Single node that fans in operator prompts from any external source
 into a normalised :class:`openral_msgs/PromptStamped` stream on
@@ -9,7 +9,7 @@ which this node forwards onto ``/openral/prompt`` after enriching the
 ``metadata_json`` with the source tag). The reasoner consumes
 ``/openral/prompt`` exclusively — sources never publish there directly.
 
-Arbitration (per ADR-0018 §3 / capability review §3.F10):
+Arbitration (capability review §3.F10):
 
 * Single FIFO queue with KEEP_LAST=10 on each per-source input and on
   the fan-out topic.
@@ -55,7 +55,7 @@ except ImportError:  # pragma: no cover
 
 __all__ = ["DEFAULT_SOURCES", "PromptRouterNode"]
 
-# Per ADR-0018 §1 / capability review §3.F10: /openral/prompt uses
+# Per capability review §3.F10: /openral/prompt uses
 # RELIABLE + VOLATILE + KEEP_LAST=10.
 _QOS_PROMPT = QoSProfile(
     history=QoSHistoryPolicy.KEEP_LAST,
@@ -81,7 +81,7 @@ DEFAULT_SOURCES: dict[str, int] = {
 
 
 class PromptRouterNode(LifecycleNode):
-    """ROS 2 lifecycle prompt-fan-in node (ADR-0018 F10).
+    """ROS 2 lifecycle prompt-fan-in node.
 
     Each registered source listens on ``/openral/prompt_in/<source>``
     and republishes the message onto ``/openral/prompt`` after stamping
@@ -93,7 +93,7 @@ class PromptRouterNode(LifecycleNode):
         sources: Mapping ``source_name → priority``. Defaults to
             :data:`DEFAULT_SOURCES`. A deployment YAML may restrict
             this set; the router only listens to sources declared
-            here (per ADR-0018 §3.F10 "per-source allowlist").
+            here (per capability review §3.F10, the "per-source allowlist").
     """
 
     def __init__(
@@ -201,7 +201,7 @@ class PromptRouterNode(LifecycleNode):
         """
         if self._pub is None:
             return
-        # `/openral/prompt` is RELIABLE + VOLATILE (ADR-0018 §1), so a sample
+        # `/openral/prompt` is RELIABLE + VOLATILE, so a sample
         # published before the reasoner's subscriber has been discovered is
         # silently dropped — the reasoner would boot idle and emit "provide a
         # task" instead of seeing the scene's startup goal. The router activates

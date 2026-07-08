@@ -1,4 +1,4 @@
-"""Unit tests for the manifest ``hal.parameters`` block (ADR-0029, issue #191).
+"""Unit tests for the manifest ``hal.parameters`` block (issue #191).
 
 ``HalParameters.defaults`` lets a robot's HAL construction kwargs (serial
 ``port``, ``robot_ip``, …) live in ``robots/<id>/robot.yaml`` instead of a

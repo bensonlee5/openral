@@ -1,11 +1,11 @@
-# openral_safety_kernel — ADR-0020 C++ safety kernel
+# openral_safety_kernel — C++ safety kernel
 
 > Layer 6 (Safety). Separate process, real-time validator on the
 > chunk-rate boundary. Replaces F5's Python pass-through
 > (`packages/openral_safety/SafetyPassthroughNode`) behind the same
 > topic contract. **Python proposes, C++ disposes.** (CLAUDE.md §1.5).
 
-## Topic contract (locked by ADR-0018 §1)
+## Topic contract
 
 | Direction | Topic / Service | Type | QoS |
 | --- | --- | --- | --- |
@@ -65,7 +65,7 @@ std_srvs/srv/Trigger`. The service refuses to clear the latch until
 estop publish — `ROSEStopRequested` is never auto-cleared
 (CLAUDE.md §10).
 
-## Observability (ADR-0020 PR-F)
+## Observability
 
 The kernel emits one OTel `safety.check` span per candidate chunk over
 OTLP/HTTP — the same wire format the in-tree dashboard
@@ -88,8 +88,7 @@ events ledger ticks.
 
 The W3C `traceparent` carried on `ActionChunk.trace_id` is extracted
 with the stock propagator and used as the parent context, so each
-`safety.check` span is a child of the producer's `rskill.tick`
-(ADR-0018 §6).
+`safety.check` span is a child of the producer's `rskill.tick`.
 
 Endpoint resolution follows the standard OTel env vars:
 
@@ -155,8 +154,6 @@ Three tiers, all driving the **real** `safety_kernel_node` (no mocks):
 
 ## Related
 
-- ADR-0018 §5 — Safety contract that locks the topic surface.
-- ADR-0020 — This package; the deferred ADR ADR-0018 §5 named.
 - `cpp/opentelemetry_cpp_vendor` — ROS 2 vendor package this one
   depends on for `opentelemetry-cpp` at colcon-build time.
 - `packages/openral_safety/openral_safety/envelope_loader.py` — Python

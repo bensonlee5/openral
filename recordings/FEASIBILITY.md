@@ -12,7 +12,7 @@ costmap, and open-vocab perception are all verified. The reasoner's autonomous
 **`recall_object → dispatch`** loop is now verified too: it correctly *gates* the grab on a
 resolvable 3D pose and dispatches a VLA once recall succeeds (see below). Two gaps remain for a
 fully hands-off baguette grab — a goal-word↔detector-label vocabulary mismatch, and 8 GB
-detector↔VLA co-residency (ADR-0050 eviction).
+detector↔VLA co-residency (single-resident VRAM eviction).
 
 > **2026-06-12 (update — supersedes the "remaining blocker" claim below):** the object-lift was
 > live-verified working on current `master` (PR #317 merged). The earlier "lift is broken /
@@ -23,7 +23,7 @@ detector↔VLA co-residency (ADR-0050 eviction).
 
 | Item | Status | Evidence |
 |------|--------|----------|
-| **ADR-0050 single-resident-skill VRAM eviction** (P1 runner eviction + P2 detector LifecycleNode + P3 reasoner peer) | ✅ live-verified | deactivate detector → GPU **4385→1138 MiB** (-3.2 GB); reactivate rebuilds; 15 unit/structural tests, ruff clean |
+| **Single-resident-skill VRAM eviction** (P1 runner eviction + P2 detector LifecycleNode + P3 reasoner peer) | ✅ live-verified | deactivate detector → GPU **4385→1138 MiB** (-3.2 GB); reactivate rebuilds; 15 unit/structural tests, ruff clean |
 | **Costmap z-extent fix** (`nav2_panda_mobile.yaml` voxel 0.8→1.2 m) | ✅ live-verified | `out of map bounds … cannot raytrace` warnings: spamming → **0**; `/local_costmap/voxel_grid` populated |
 | **Open-vocab perception** (LocateAnything-3B @ 512²) | ✅ live-verified | `locate_in_view('baguette')` → **found=True, conf 1.0, bbox [180,307,231,348]**; continuous leg publishes `1 objects` |
 | **Scene render 128²→512²** (`robocasa_baguette.yaml`) | ✅ fix | at 128² every query returned found=False (baguette ~20 px, upscale-to-1024 too blurry); 512² resolves it |
@@ -53,7 +53,7 @@ openral deploy sim --config scenes/deploy/robocasa_baguette.yaml \
 
 The earlier root-cause ("detector on `agentview_left` RGB has no paired depth; stamped
 `sensor_id=front_depth`") was the **pre-#317** state. PR #317's cross-frame lift (RGB optical TF +
-octomap/kernel decoupling, ADR-0052/0051) projects the agentview bbox against the depth-built voxel
+octomap/kernel decoupling) projects the agentview bbox against the depth-built voxel
 map across frames via TF — no same-camera depth needed. The lift integration is regression-covered
 by `tests/integration/test_object_lift_world_state.py` (happy-path / no-voxels / eviction).
 
@@ -66,7 +66,7 @@ a minimal `--no-enable-slam` graph is the one config where the lift correctly pr
 
 Full stack booted (SLAM+Nav2+octomap+omdet detector+reasoner) and a goal injected on
 `/openral/prompt`. The reasoner ingests `world_state_slow.detected_objects` into spatial memory
-(`spatial_memory_ingest=true`) and runs the ADR-0044 `recall_object → (grid-refined) approach →
+(`spatial_memory_ingest=true`) and runs the `recall_object → (grid-refined) approach →
 grasp` ladder. Two goals, two outcomes — both confirm the gating works:
 
 - **`"pick up the baguette"`** → `recall_object` returns **no match** (the lift labels the object
@@ -102,11 +102,11 @@ So the **two real gaps** for a hands-off baguette grab were (both now addressed)
   blocker is resolved (object-lift closes), so full autonomy now hinges only on the downstream
   `recall_object → navigate → grab` reasoner loop (above), not on perception.
 - **Clip 2 — OpenArm pick:** deploy-sim renders viewer+cameras; not re-run this session.
-- **Clip 3 — Isaac Franka pick:** `sim run` path verified in ADR-0045; deploy-sim variant unverified.
-- **Clip 4 — Isaac panda_mobile nav:** deploy-sim verified live in ADR-0045.
+- **Clip 3 — Isaac Franka pick:** `sim run` path verified during the Isaac backend integration; deploy-sim variant unverified.
+- **Clip 4 — Isaac panda_mobile nav:** deploy-sim verified live during the Isaac backend integration.
 
 ## Uncommitted work (as of this report)
-ADR-0050 (P1/P2/P3), costmap fix, 512² scene change, `tools/record_demo.sh`, `tools/_demo_env.sh`.
+VRAM eviction (P1/P2/P3), costmap fix, 512² scene change, `tools/record_demo.sh`, `tools/_demo_env.sh`.
 Pending PR bookkeeping: `docs/METHODS` entry for `rSkillBase.on_unload_weights`, repo-state-map,
 and a commit. Pre-existing unrelated failure noted: `test_rskill_runner_node ...passthrough`
 (diagnostics-heartbeat timing) fails on clean source too.

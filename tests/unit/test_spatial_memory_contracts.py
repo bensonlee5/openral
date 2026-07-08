@@ -1,4 +1,4 @@
-"""Contract tests for the ADR-0038 persistent spatial-memory schemas.
+"""Contract tests for the persistent spatial-memory schemas.
 
 Covers the scene-graph typed surface: ``SpatialNode`` / ``SpatialEdge`` /
 ``SceneGraph`` with their integrity validators, the ``RecallObject*`` and
@@ -220,7 +220,7 @@ def test_object_not_in_memory_is_a_perception_stale_error() -> None:
         pass
 
 
-# ── ADR-0039 read-only query tools decode through the ReasonerToolCall union ──
+# ── read-only query tools decode through the ReasonerToolCall union ──────────
 
 
 def test_reasoner_tool_call_decodes_query_variants() -> None:

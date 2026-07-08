@@ -29,6 +29,10 @@ README presence and shape:
   **how it was trained**. See :data:`README_REQUIRED_SECTIONS`.
 * No unresolved template sentinels (``TEMPLATE_ORG`` / ``TEMPLATE_ID``)
   or generic placeholder strings (``TODO:``, ``FIXME``, ``<fill-in>``).
+* A preview image or video is present (a ``![](…)`` markdown image, an
+  ``<img>``, or a ``<video>``) — emitted as a **warning**, not an error,
+  so the pre-existing in-tree skills that lack a preview keep passing
+  while new skills get prompted via the template's ``## Preview`` section.
 
 Manifest content (beyond what the Pydantic schema already catches):
 
@@ -69,6 +73,17 @@ _README_FILENAME: Final[str] = "README.md"
 _MIN_README_BODY_LENGTH: Final[int] = 200
 _MIN_DESCRIPTION_LENGTH: Final[int] = 30
 
+_MEDIA_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"!\[[^\]]*\]\([^)]+\)|<img\b|<video\b", re.IGNORECASE
+)
+"""Matches a markdown image ``![alt](src)``, an ``<img>``, or a ``<video>`` tag.
+
+A published rSkill README should show *what the skill does* — a preview image or
+a demo clip. Enforced as a **warning** (not a publish-blocking error) so the 39
+in-tree skills that predate this requirement keep passing; new skills scaffolded
+from ``rskills/template/README.md`` get the ``## Preview`` section for free.
+"""
+
 README_REQUIRED_SECTIONS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
     # (display_label, lowercase substrings that satisfy this section)
     (
@@ -98,7 +113,7 @@ For each tuple, the README is acceptable if **any** of the substrings
 appears (case-insensitive) in **any** heading line. The set is
 deliberately permissive — ``## Model``, ``## Upstream model``,
 ``## Architecture``, and ``## Provenance`` all satisfy the first slot —
-so the diverse in-tree READMEs (smolvla-libero, pi05-libero-nf4,
+so the diverse in-tree READMEs (smolvla-libero, pi05-libero-int8,
 diffusion-pusht, …) pass without rewrites.
 """
 
@@ -324,6 +339,23 @@ def _validate_readme(skill_dir: Path) -> list[DocValidationIssue]:
                     ),
                 )
             )
+
+    if not _MEDIA_PATTERN.search(body):
+        issues.append(
+            DocValidationIssue(
+                severity="warning",
+                field="readme.media",
+                message=(
+                    "README.md has no preview image or video. Add a '## Preview' "
+                    "section with at least one image (markdown ![alt](media/...) "
+                    "or an <img> tag) or a <video> — a still, a progress overlay, "
+                    "or a demo clip showing what the skill does. HF model cards "
+                    "render images but not <video>, so for a video, also commit "
+                    "the .mp4 and show start/middle/end stills. See "
+                    "rskills/template/README.md."
+                ),
+            )
+        )
 
     return issues
 

@@ -1,11 +1,11 @@
-"""Thread-safe plain-data proprio snapshot (ADR-0049).
+"""Thread-safe plain-data proprio snapshot.
 
 Decouples the HAL's control-critical publishers (``odom`` / ``joint_state``)
 from its *sim* callback group so they publish at their configured rate without
 head-of-line blocking behind ``env.step`` / camera render / scan-raycast on the
 HAL's multi-threaded executor.
 
-Contract (ADR-0049):
+Contract:
 
 * A :class:`ProprioFrame` is **captured only from the sim callback group** —
   right after an ``env.step`` — where reading the HAL's proprio is safe (no
@@ -49,8 +49,8 @@ class ProprioFrame:
         base_twist: Base body twist ``(vx, vy, vz, wx, wy, wz)`` (REP-105 child
             frame), the latched commanded velocity Nav2's controller reads back.
         sim_time_ns: Cross-reset-monotonic elapsed simulation time in ns at this
-            step (`SimAttachedHAL.sim_time_ns`, ADR-0048), or ``None`` for a
-            clock-less / wall-clock HAL. Captured here so the ADR-0049 publisher
+            step (`SimAttachedHAL.sim_time_ns`), or ``None`` for a
+            clock-less / wall-clock HAL. Captured here so the publisher
             thread can emit ``/clock`` without touching the simulator.
     """
 

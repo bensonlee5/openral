@@ -1,4 +1,4 @@
-# ADR-0057 — ask the Robometer reward monitor (kind: "reward") how the CURRENT
+# Ask the Robometer reward monitor (kind: "reward") how the CURRENT
 # task is progressing / succeeding, on demand, over a rolling window.
 #
 # Called by the reasoner's read-only `query_task_progress` tool dispatch. The

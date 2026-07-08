@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0025 — stand-alone launch for slam_toolbox under ``/openral/slam_toolbox``.
+"""Stand-alone launch for slam_toolbox under ``/openral/slam_toolbox``.
 
 Includes the upstream ``slam_toolbox/async_slam_toolbox_node`` as a
 ``LifecycleNode`` parameterised from this package's
@@ -77,7 +77,7 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
     )
 
-    # ADR-0025 — leave slam_toolbox in UNCONFIGURED. The Reasoner
+    # Leave slam_toolbox in UNCONFIGURED. The Reasoner
     # promotes through CONFIGURE → ACTIVATE via
     # ``LifecycleTransitionTool(node="/openral_slam_toolbox",
     # transition=...)``. We deliberately do NOT auto-configure from

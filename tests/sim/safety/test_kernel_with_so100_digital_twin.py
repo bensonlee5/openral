@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — closed-loop SO-100 digital twin + C++ safety kernel.
+"""PR-H — closed-loop SO-100 digital twin + C++ safety kernel.
 
 Builds an in-process sense-think-act loop where every action passes
 through the real C++ safety kernel before reaching the digital twin:

@@ -1,6 +1,6 @@
 # openral_human_estop
 
-ADR-0018 §5 bullet 2 — **human-driven E-stop forwarder**. `forwarder_node`
+ROS 2 reasoner + supervisor graph spec §5 bullet 2 — **human-driven E-stop forwarder**. `forwarder_node`
 subscribes to a high-level `/openral/human_estop` request (from the dashboard,
 a voice/prompt channel, or any operator UI) and republishes it onto the canonical
 `/openral/estop` topic, alongside a `FailureTrigger(KIND_HUMAN, SEVERITY_ABORT,

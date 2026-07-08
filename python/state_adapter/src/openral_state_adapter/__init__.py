@@ -1,4 +1,4 @@
-"""Public surface for the layout-adapter registry (ADR-0027).
+"""Public surface for the layout-adapter registry.
 
 Importing this package registers every shipped layout in the registry.
 Consumers (skill_runner, reasoner palette filter) call

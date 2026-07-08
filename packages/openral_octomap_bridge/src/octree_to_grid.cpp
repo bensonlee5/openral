@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 — OctoMap → dense base-frame occupancy grid (testable core).
+// OctoMap → dense base-frame occupancy grid (testable core).
 
 #include "openral_octomap_bridge/octree_to_grid.hpp"
 

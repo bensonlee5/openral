@@ -1,5 +1,5 @@
 """Unit tests for ``resolve_launch_invocation(hal_mode="real")`` — the
-``openral deploy run`` resolution contract (ADR-0032).
+``openral deploy run`` resolution contract.
 
 These pin the *resolution layer* (which argv + HAL params the real-mode launch
 gets) without running ``ros2 launch`` — the live launch is HIL-verified on a
@@ -76,6 +76,54 @@ class TestRealModeResolution:
             hal_mode="real",
         )
         assert any(arg.startswith("workcell_json:=") for arg in inv.argv_template)
+
+    def test_scene_hal_binding_feeds_hal_params(self, tmp_path) -> None:
+        """A DeployScene ``hal:`` binding lands in hal_params so
+        ``deploy run --config <scene>`` needs no ``--hal`` (port + calibration)."""
+        (tmp_path / "calibration").mkdir()
+        (tmp_path / "calibration" / "so_follower.json").write_text("{}", encoding="utf-8")
+        config = tmp_path / "deploy.yaml"
+        config.write_text(
+            "scene:\n  id: so101_bench\n"
+            "robot_id: so101_follower\n"
+            "hal:\n"
+            "  defaults:\n"
+            "    port: /dev/ttyACM0\n"
+            "    id: so_follower\n"
+            "    calibration_dir: calibration\n"
+            "    calibrate_on_connect: false\n",
+            encoding="utf-8",
+        )
+        inv = resolve_launch_invocation(
+            config=config,
+            robot_override=None,
+            dashboard_port=4318,
+            reset_to_pose_service=None,
+            hal_mode="real",
+        )
+        assert inv.hal_params["port"] == "/dev/ttyACM0"
+        assert inv.hal_params["id"] == "so_follower"
+        # A relative calibration_dir resolves against the scene file's dir.
+        assert inv.hal_params["calibration_dir"] == str((tmp_path / "calibration").resolve())
+
+    def test_cli_hal_override_beats_scene_binding(self, tmp_path) -> None:
+        """Precedence: ``--hal`` > scene ``hal`` > ``robot.yaml`` defaults."""
+        config = tmp_path / "deploy.yaml"
+        config.write_text(
+            "scene:\n  id: so101_bench\n"
+            "robot_id: so101_follower\n"
+            "hal:\n  defaults:\n    port: /dev/ttyACM0\n",
+            encoding="utf-8",
+        )
+        inv = resolve_launch_invocation(
+            config=config,
+            robot_override=None,
+            dashboard_port=4318,
+            reset_to_pose_service=None,
+            hal_mode="real",
+            hal_param_overrides={"port": "/dev/ttyUSB9"},
+        )
+        assert inv.hal_params["port"] == "/dev/ttyUSB9"
 
 
 class TestSimModeUnchanged:

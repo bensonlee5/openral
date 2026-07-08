@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 — unit coverage for the OctoMap → OccupancyVoxels rasterization
+// Unit coverage for the OctoMap → OccupancyVoxels rasterization
 // core. Builds a real octree (no ROS graph / TF), queries it, and checks the
 // grid.
 

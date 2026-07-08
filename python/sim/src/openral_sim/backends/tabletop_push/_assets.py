@@ -1,4 +1,4 @@
-"""Compose the ``tabletop_push`` MJCF — robot-agnostic, MjSpec-based (ADR-0033).
+"""Compose the ``tabletop_push`` MJCF — robot-agnostic, MjSpec-based.
 
 Unlike :mod:`openral_sim.backends.so101_box._assets` (which regex-splices its
 task world into the SO-ARM101 MJCF and is therefore coupled to that robot's
@@ -416,5 +416,5 @@ def _append_wrist_camera(spec: mujoco.MjSpec, opts: TabletopOptions) -> None:
 
 
 # MuJoCo (w, x, y, z) look-at quaternion — promoted to the shared gaze-geometry
-# helper in ADR-0044 Phase 1; the "-z" default is the MuJoCo camera convention.
+# helper; the "-z" default is the MuJoCo camera convention.
 _look_at_quat = look_at_quat_wxyz

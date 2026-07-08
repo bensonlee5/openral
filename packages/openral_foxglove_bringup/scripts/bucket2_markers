@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Console entry point for the Bucket-2 converter node (ADR-0059 Phase 3).
+"""Console entry point for the Bucket-2 converter node (Foxglove live-scene visualization, Phase 3).
 
 Installed to ``lib/openral_foxglove_bringup/bucket2_markers`` so
 ``ros2 launch openral_foxglove_bringup bucket2.launch.py`` can resolve

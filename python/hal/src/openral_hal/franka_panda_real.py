@@ -12,7 +12,7 @@ License posture
 Per CLAUDE.md §7.4 the Franka FCI / ``libfranka`` stack is *closed but
 permissive* (vendor-licensed binaries, free for research / commercial), and
 ``franka_ros2`` is Apache-2.0.  The manifest therefore declares
-``sdk_kind: "closed_with_api"`` and sets ``hal.real`` to this adapter (ADR-0031).
+``sdk_kind: "closed_with_api"`` and sets ``hal.real`` to this adapter.
 
 Transport layering
 ------------------

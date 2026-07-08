@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Reusable, robot-agnostic depth-camera → PointCloud2 plumbing (ADR-0030).
+"""Reusable, robot-agnostic depth-camera → PointCloud2 plumbing.
 
 A deploy-sim HAL node turns each depth ``SensorSpec`` on its robot into a
 ``sensor_msgs/PointCloud2`` that ``octomap_server`` lifts into the 3-D
@@ -498,7 +498,7 @@ def depth_image_from_grid(
     """Pack an ``(H, W)`` metric-depth raster into a ``32FC1 sensor_msgs/Image``.
 
     The dense, organised depth image nvblox's projective depth integrator
-    consumes (ADR-0064) — produced by
+    consumes — produced by
     :func:`openral_sim.backends.depth_camera.synthesize_depth_image`. Pixels are
     perpendicular optical-Z metres, ``0.0`` = no measurement (nvblox skips them).
 

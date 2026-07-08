@@ -13,7 +13,7 @@ frame the backend has buffered, or raises
 :class:`~openral_core.exceptions.ROSPerceptionStale` when the
 freshest frame is older than the caller's ``max_age_ms`` budget.
 
-See ``docs/adr/0010-inference-runner.md`` §SensorReader for the design.
+See the OpenRAL architecture docs for the SensorReader design.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ class SensorReader(Protocol):
       thread on top of ``cv2.VideoCapture`` (mirrors lerobot's pattern).
     - :class:`Ros2ImageSensorReader` (planned) — subscribes to a ROS 2
       image topic published by a vendor driver.
-    - :class:`GStreamerSensorReader` (planned, ADR-0010 PR I) — pipeline
+    - :class:`GStreamerSensorReader` (planned) — pipeline
       string from config; appsink delivers frames. NVMM / DMA-BUF
       zero-copy on Jetson when ``nvv4l2decoder`` is present.
 

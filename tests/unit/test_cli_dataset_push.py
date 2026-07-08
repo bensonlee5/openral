@@ -1,4 +1,4 @@
-"""Unit tests for ``openral dataset push`` (ADR-0019 PR5).
+"""Unit tests for ``openral dataset push``.
 
 Per CLAUDE.md §1.11 — no mocks of openral_* types. The HF Hub API is the
 **network boundary**; the upload path is exercised via ``--dry-run``

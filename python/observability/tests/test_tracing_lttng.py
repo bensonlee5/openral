@@ -1,4 +1,4 @@
-"""ADR-0018 F9 — LTTng opt-in gate and JSON-fallback backend.
+"""LTTng tracing opt-in gate and JSON-fallback backend.
 
 The userspace ``lttngust`` Python binding is a system dep, not installable
 via uv on a generic CI runner, so these tests cover the gate semantics +

@@ -346,7 +346,7 @@ class TestClosedLoopMujoco:
         verifies it lands in the matching ``state.position`` slot.  Any
         future off-by-one in ``RIZON4_DESCRIPTION.sim.joint_qpos_addr`` /
         ``sim.actuator_index`` (or in the default 1:1 mapping derived
-        from ``description.joints`` order, ADR-0023) would fail one of
+        from ``description.joints`` order, per the manifest-driven HAL) would fail one of
         these assertions immediately.
         """
         # Pick distinct values; keep them small enough that joint4 / 6

@@ -33,11 +33,11 @@ name: "g1"
 embodiment_kind: "humanoid"
 base_frame: "pelvis"
 
-# ADR-0027 — robot_state_publisher wiring. The g1 URDF has a ``world →
+# robot_state_publisher wiring. The g1 URDF has a ``world →
 # pelvis`` virtual root; ``pelvis`` matches our base_frame so no static
 # transform is needed (the ``world`` link is a floating-base anchor RSP
 # treats as the implicit /tf root).
-# ADR-0058 — unified asset block (URDF / MJCF).
+# Unified asset block (URDF / MJCF).
 assets:
   urdf:
     ref: "rd:g1_description"
@@ -434,7 +434,7 @@ safety:
 # sim baseline via `make_real_description` and flip the sdk_kind (the
 # `hal` block is shared); that's tracked under the M2 milestone (CLAUDE.md §6.2).
 sdk_kind: "open"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # Sim-only → real: null until the M2 C++ S0 cerebellum (CLAUDE.md §6.2).
 hal:
   sim: "openral_hal.g1:G1MujocoHAL"
@@ -444,7 +444,7 @@ hal:
 # Source: ``unitree_g1/g1.xml`` in mujoco_menagerie.  The G1 MJCF has a
 # 6-DoF free joint before the 29 actuated joints, so ``floating_base``
 # offsets qpos by 7 (xyz + quat) and qvel by 6 (linear + angular).
-# Default 1:1 mapping (with offsets) applies. See ADR-0023.
+# Default 1:1 mapping (with offsets) applies.
 sim:
   floating_base: true
 

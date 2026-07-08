@@ -1,4 +1,4 @@
-"""Real-MuJoCo exercise of the ADR-0048 Phase 1 ``sim_time_ns`` seam.
+"""Real-MuJoCo exercise of the ``sim_time_ns`` seam.
 
 The hermetic offset / clock-less behaviour is covered by
 ``tests/unit/test_sim_attached_hal.py`` against the sanctioned ``FakeSimEnv``
@@ -111,7 +111,7 @@ def test_rollout_sim_time_ns_advances_on_real_mujoco_backend() -> None:
         "scenes/sim/so101_tube_insertion.yaml", robot_id_fallback="so101_follower"
     )
     # Before any reset the MjData clock is at 0 ns.
-    t0 = env.sim_time_ns()  # type: ignore[attr-defined]  # reason: SimRollout ADR-0048 surface
+    t0 = env.sim_time_ns()  # type: ignore[attr-defined]  # reason: SimRollout surface
     assert t0 == 0
     env.reset(seed=0)
     after_reset = env.sim_time_ns()  # type: ignore[attr-defined]  # reason: SimRollout surface
@@ -141,7 +141,7 @@ def test_sim_attached_sim_time_ns_monotonic_across_steps_real_mujoco() -> None:
 def test_sim_attached_sim_time_ns_does_not_rewind_across_reset_real_mujoco() -> None:
     """The cross-reset offset prevents a rewind even when MjData.time resets to 0.
 
-    Drive the ADR-0036 auto-reset via the ``_episode_done`` latch (the env's
+    Drive the auto-reset via the ``_episode_done`` latch (the env's
     own ``reset`` rewinds the real ``MjData.time``), then assert the
     HAL-published value never goes backwards.
     """

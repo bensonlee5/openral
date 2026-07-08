@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — envelope-violation flow against the real C++ kernel.
+"""Envelope-violation flow against the real C++ kernel.
 
 Brings up the real ``safety_kernel_node`` and publishes a chunk that
 violates the joint-position envelope. Asserts:
@@ -33,8 +33,7 @@ pytest.importorskip("openral_msgs")
 
 
 # Tight envelope: position_max=0.5 forces the +0.6 chunk to violate
-# the joint-position bound. Kernel reads each field as a ROS parameter
-# (ADR-0020 PR-K).
+# the joint-position bound. Kernel reads each field as a ROS parameter.
 _KERNEL_PARAM_ARGS: list[str] = [
     "-p",
     "n_dof:=3",
@@ -125,7 +124,7 @@ def test_envelope_violation_fires_failure_and_estop() -> None:
     from rclpy.executors import SingleThreadedExecutor
     from std_msgs.msg import Empty
 
-    with tempfile.TemporaryDirectory():  # ADR-0020 PR-K: no temp envelope file needed
+    with tempfile.TemporaryDirectory():  # No temp envelope file needed
         node_name = f"safety_kernel_violation_test_{uuid.uuid4().hex[:8]}"
         domain_id = 50 + (os.getpid() % 50)
         os.environ["ROS_DOMAIN_ID"] = str(domain_id)
@@ -220,7 +219,7 @@ def test_estop_latch_blocks_subsequent_chunks() -> None:
     from rclpy.executors import SingleThreadedExecutor
     from std_msgs.msg import Empty
 
-    with tempfile.TemporaryDirectory():  # ADR-0020 PR-K: no temp envelope file needed
+    with tempfile.TemporaryDirectory():  # No temp envelope file needed
         node_name = f"safety_kernel_latch_test_{uuid.uuid4().hex[:8]}"
         domain_id = 50 + (os.getpid() % 50)
         os.environ["ROS_DOMAIN_ID"] = str(domain_id)

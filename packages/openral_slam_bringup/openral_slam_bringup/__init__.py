@@ -1,4 +1,4 @@
-"""ADR-0025 — openral_slam_bringup.
+"""openral_slam_bringup.
 
 Per-deployment bringup wrapper around upstream slam_toolbox. The
 package ships only launch files and a default parameter YAML; no

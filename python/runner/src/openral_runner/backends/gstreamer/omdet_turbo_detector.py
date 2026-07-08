@@ -1,16 +1,15 @@
 """In-process open-vocabulary detector backed by a Transformers zero-shot model.
 
 Unlike the LocateAnything sidecar (a heavy VLM pinned to ``transformers==4.57.1``,
-hence out-of-process — ADR-0037 2026-06-09 amendment), a zero-shot detection
+hence out-of-process), a zero-shot detection
 model such as ``omlab/omdet-turbo-swin-tiny-hf`` is a first-class
 ``transformers`` architecture (``AutoModelForZeroShotObjectDetection``) that
 loads under the runtime's own ``transformers>=5``. It therefore runs **in
 process** — no sidecar venv, no ZMQ — and is selected as
 :attr:`~openral_runner.backends.gstreamer.objects_detector.DetectorTier.ZEROSHOT_HF`
-for manifests whose ``detector.engine`` is ``zeroshot_hf``
-(ADR-0037 2026-06-12 amendment).
+for manifests whose ``detector.engine`` is ``zeroshot_hf``.
 
-**Both detector modes (ADR-0051), chosen by the rSkill manifest.** OmDet-Turbo
+**Both detector modes, chosen by the rSkill manifest.** OmDet-Turbo
 is open-vocabulary, so this one backend serves either invocation mode; which one
 is intended is declared by the manifest's ``detector.mode``:
 
@@ -22,7 +21,7 @@ is intended is declared by the manifest's ``detector.mode``:
 * ``on_demand`` (e.g. ``rskills/omdet-turbo-locator``) — a prompted locator. The
   reasoner retargets it via :meth:`set_query` (the
   ``/openral/perception/detector_query`` topic) or asks one-shot via
-  :meth:`detect_with_query` (the read-only ``locate_in_view`` service, ADR-0043).
+  :meth:`detect_with_query` (the read-only ``locate_in_view`` service).
   A lightweight, real-time alternative to the 3B LocateAnything VLM for simple
   "find X" queries.
 
@@ -301,7 +300,7 @@ class OmDetTurboDetector:
     def set_query(self, text: str) -> None:
         """Override the persistent class vocabulary at runtime (on-demand hook).
 
-        For ``mode: on_demand`` detectors (ADR-0051): the
+        For ``mode: on_demand`` detectors: the
         ``/openral/perception/detector_query`` topic retargets the continuous
         leg by replacing the class list. Parsed via :func:`query_to_classes`.
 
@@ -332,7 +331,7 @@ class OmDetTurboDetector:
     ) -> ObjectsMetadata | None:
         """One-shot detect for ``query`` without mutating the persistent vocabulary.
 
-        Backs the read-only ``locate_in_view`` service (ADR-0043): a reasoner
+        Backs the read-only ``locate_in_view`` service: a reasoner
         query ("is X in view right now?") must not change what the continuous
         leg detects. ``query`` is parsed via :func:`query_to_classes`.
 

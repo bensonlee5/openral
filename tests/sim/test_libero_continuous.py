@@ -1,4 +1,4 @@
-"""Deploy-sim continuous mode for the LIBERO backend (ADR-0036).
+"""Deploy-sim continuous mode for the LIBERO backend.
 
 lerobot's ``LiberoEnv.step`` resets the episode *inline* the instant the task
 succeeds or the horizon is hit (``if terminated: self.reset()``), re-randomising

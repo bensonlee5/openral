@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 F1 — ``ros2 run openral_rskill_ros rskill_runner_node`` entry point."""
+"""F1 — ``ros2 run openral_rskill_ros rskill_runner_node`` entry point."""
 
 from openral_rskill_ros.rskill_runner_node import main
 

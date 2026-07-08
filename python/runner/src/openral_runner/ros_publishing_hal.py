@@ -1,4 +1,4 @@
-"""ADR-0018 F1 — HAL adapter that publishes ``ActionChunk`` on ROS.
+"""HAL adapter that publishes ``ActionChunk`` on ROS.
 
 `ROSPublishingHAL` satisfies the existing
 :class:`openral_hal.protocol.HAL` Protocol but **does not drive motors
@@ -15,12 +15,12 @@ directly**. Instead:
   its own (composing into the host's executor keeps QoS / lifecycle /
   shutdown in one place per CLAUDE.md §6.1).
 
-This is the **single change** to the in-process hot path mandated by
-ADR-0018 §F1: ``DeployRunner._tick_impl`` keeps calling
+This is the **single change** to the in-process hot path:
+``DeployRunner._tick_impl`` keeps calling
 ``hal.send_action(action)`` — only the sink moves from motors to a ROS
-topic, behind which sits ``safety_node`` (F5) → ``<robot>_hal_node``.
+topic, behind which sits ``safety_node`` → ``<robot>_hal_node``.
 
-`trace_id` is sourced from the active OTel context per ADR-0018 §6;
+`trace_id` is sourced from the active OTel context;
 ``rskill_id`` / ``rskill_revision`` are set per goal by the
 ``rskill_runner_node`` (an injected getter avoids tight-coupling).
 """
@@ -60,7 +60,7 @@ def _row_major_flatten(rows: list[list[float]] | None) -> list[float]:
 def _flatten_rows(rows: list[list[float]] | None, horizon: int) -> tuple[list[float], int, int]:
     """Flatten ``list[list[float]]`` rows + return ``(flat, n_dof, horizon)``.
 
-    ADR-0028b helper for ROSPublishingHAL._action_to_chunk dispatch on
+    Slot-dispatch helper for ROSPublishingHAL._action_to_chunk dispatch on
     joint-mode payloads. Raises :class:`ROSConfigError` when the
     payload is empty (a joint action with no target is a programming
     error — the slot dispatcher / legacy path always populates it).
@@ -79,7 +79,7 @@ def _flatten_tuple_rows(
 ) -> tuple[list[float], int, int]:
     """Flatten a sequence of fixed-width float tuples.
 
-    ADR-0028b helper for cartesian / twist Action payloads. The slot
+    Slot-dispatch helper for cartesian / twist Action payloads. The slot
     dispatcher upstream guarantees each row has exactly ``expected_n``
     components; this check is a runtime guard against future drift.
     """
@@ -129,7 +129,7 @@ class ROSPublishingHAL:
         joint_state_topic: Topic to subscribe for cached
             ``read_state()``. Defaults to ``/joint_states``.
         candidate_action_topic: Topic to publish ``ActionChunk`` on.
-            Defaults to ``/openral/candidate_action`` (ADR-0018 §F1).
+            Defaults to ``/openral/candidate_action``.
 
     Example:
         >>> # Real usage exercised in
@@ -156,7 +156,7 @@ class ROSPublishingHAL:
         self.description = description
         self._skill_id_getter = skill_id_getter
         self._skill_revision_getter = skill_revision_getter
-        # ADR-0019 — stamps every emitted ActionChunk with the current 1-based
+        # Stamps every emitted ActionChunk with the current 1-based
         # inference-tick index so a recorder can group a tick's slot chunks.
         self._tick_index_getter = tick_index_getter
         self._joint_state_topic = joint_state_topic
@@ -180,7 +180,7 @@ class ROSPublishingHAL:
         from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy
         from sensor_msgs.msg import JointState as RosJointState
 
-        # ADR-0028b — the slot dispatcher publishes N chunks per policy
+        # The slot dispatcher publishes N chunks per policy
         # tick (arm CARTESIAN_DELTA + gripper GRIPPER_POSITION, etc.).
         # KEEP_LAST=1 + back-to-back publishes => the kernel's subscriber
         # buffer holds only the most recent and silently drops the
@@ -287,14 +287,13 @@ class ROSPublishingHAL:
     def _action_to_chunk(self, action: Action) -> object:
         """Serialise the typed ``Action`` into ``openral_msgs/ActionChunk``.
 
-        ADR-0028b — the wire format is mode-agnostic (``flat`` +
+        The wire format is mode-agnostic (``flat`` +
         ``n_dof`` + ``control_mode``); this dispatcher chooses the
         per-mode source field on the Pydantic :class:`Action` and
         flattens it into the ActionChunk's ``flat`` array. The HAL
         decodes the flat array per its ``control_mode`` (the
         panda_mobile HAL already does this for JOINT_POSITION +
-        BODY_TWIST; ADR-0028c extends to CARTESIAN_DELTA +
-        GRIPPER_POSITION).
+        BODY_TWIST, CARTESIAN_DELTA, and GRIPPER_POSITION).
 
         ``n_dof`` carries the per-row width — for cartesian / twist
         modes that's 6, for gripper modes it's 1, for joint modes
@@ -317,7 +316,7 @@ class ROSPublishingHAL:
         chunk.rskill_id = self._skill_id_getter()
         chunk.rskill_revision = self._skill_revision_getter()
         chunk.tick_index = int(self._tick_index_getter()) & 0xFFFFFFFF
-        # ADR-0018 §6 — trace_id is the join key. Source it from the
+        # trace_id is the join key. Source it from the
         # active OTel span context via the existing W3C helper so the
         # field stays in lock-step with the OTel parent.
         chunk.trace_id = propagation.current_traceparent() or ""
@@ -329,7 +328,7 @@ class ROSPublishingHAL:
     ) -> tuple[list[float], int, int]:
         """Dispatch on ``control_mode`` to extract (flat, n_dof, horizon).
 
-        Centralises ADR-0028b's per-mode shape rules so the test
+        Centralises the per-mode shape rules so the test
         surface lives next to the serialiser. Raises
         :class:`ROSConfigError` for modes without a defined
         serialisation (today: ``CARTESIAN_POSE`` carries a
@@ -362,7 +361,7 @@ class ROSPublishingHAL:
                 )
             horizon = action.horizon or len(gripper)
             return [float(v) for v in gripper], 1, int(horizon)
-        # ── ADR-0028d — sim-only composite mux flag, 1-D per step ──
+        # ── Sim-only composite mux flag, 1-D per step ──
         if mode is ControlMode.COMPOSITE_MODE:
             composite = list(action.composite_mode or [])
             if not composite:

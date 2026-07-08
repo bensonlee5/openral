@@ -1,4 +1,4 @@
-"""ADR-0035 — IoU-gated object memory.
+"""IoU-gated object memory.
 
 Pure, ROS-free, stateful. Holds a table of remembered ``DetectedObject``s with
 stable track ids. Associates new lifted candidates by label + 3D AABB IoU,
@@ -99,7 +99,7 @@ class ObjectMemory:
                     tr.obj = tr.obj.model_copy(update={"confidence": cand.confidence})
                 matched.add(best_i)
             else:
-                # ADR-0076: a new track adopts the detection-time id propagated
+                # A new track adopts the detection-time id propagated
                 # from the 2D detector (DetectedObject.track_id, from
                 # ObjectDetection2D.det_id) when present, so a physical object
                 # carries one id across the 2D in_view line and the 3D

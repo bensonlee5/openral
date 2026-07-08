@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 PR-F — OTel tracing for the C++ safety kernel.
+// OTel tracing for the C++ safety kernel.
 
 #include "openral_safety_kernel/otel.hpp"
 

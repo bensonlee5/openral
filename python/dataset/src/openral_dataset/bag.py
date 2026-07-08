@@ -1,8 +1,8 @@
 """Rosbag2Sink — mcap-backed :class:`DatasetSink` for online hardware recording.
 
-ADR-0019 PR3. Writes every :class:`RolloutRecorder` event into a
+Writes every :class:`RolloutRecorder` event into a
 ``.mcap`` file that the offline :class:`Rosbag2ToLeRobotConverter`
-(PR4) replays into a LeRobotDataset v3. The same file is readable by
+replays into a LeRobotDataset v3. The same file is readable by
 ``ros2 bag info`` / ``mcap-cli`` / Foxglove / any rosbag2-mcap consumer
 because mcap is the file format — we just use it without going through
 the ``rosbag2_py`` Python wrapper.
@@ -65,7 +65,7 @@ _log = structlog.get_logger(__name__)
 # ROSPagrConfigError("bag has no /openral/episode markers").
 TOPIC_TICK: Final[str] = "/openral/tick"
 TOPIC_EPISODE: Final[str] = "/openral/episode"
-# Per-camera image frames (ADR-0019 PR4-follow-up). One message per
+# Per-camera image frames. One message per
 # (episode, step, camera) carrying the inline HWC uint8 pixels so the
 # converter can rebuild a video-bearing LeRobotDataset from the bag
 # alone — no separate `/joint_states` / camera-topic join required.
@@ -90,7 +90,7 @@ _TICK_SCHEMA: Final[dict[str, Any]] = {
         "action_applied": {"type": "boolean"},
         "trace_id": {"type": "string"},
         "span_id": {"type": "string"},
-        # Inline observation/action arrays (ADR-0019 PR4-follow-up). Absent
+        # Inline observation/action arrays. Absent
         # on legacy metadata-only bags — the converter falls back to a
         # zero vector of the robot's declared shape when missing.
         "observation_state": {"type": "array", "items": {"type": "number"}},
@@ -329,7 +329,7 @@ class Rosbag2Sink(DatasetSink):
                     "trace_id": frame.trace_id,
                     "span_id": frame.span_id,
                     # Inline arrays so the bag is self-sufficient for
-                    # conversion (ADR-0019 PR4-follow-up).
+                    # conversion.
                     "observation_state": _to_float_list(frame.observation_state),
                     "action": _to_float_list(frame.action),
                 },

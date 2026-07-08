@@ -1,8 +1,8 @@
-"""ADR-0054 — the joint-space MoveGroup builder (`goal_builder: "joint"`).
+"""The joint-space MoveGroup builder (`goal_builder: "joint"`).
 
 Pins the pure lowering of a ``joint`` goal block into a MoveGroup
 ``joint_constraints`` entry — the clean, LLM-facing replacement for the
-hand-written constraints JSON the pre-ADR-0054 `openral-moveit-plan-arm`
+hand-written constraints JSON the earlier `openral-moveit-plan-arm`
 (now `rskill-moveit-joints`) used to ship.
 """
 

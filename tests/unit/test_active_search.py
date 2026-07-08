@@ -1,4 +1,4 @@
-"""Tests for the bounded active-search frontier (ADR-0039 §3, Phase 4).
+"""Tests for the bounded active-search frontier.
 
 Pure-Python over the real home scene graph (CLAUDE.md §1.11) — exercises
 candidate generation/ranking, the budget bound, the attempt counter, and the

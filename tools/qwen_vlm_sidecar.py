@@ -1,6 +1,6 @@
 """Boot the Qwen3.5-4B scene-VLM inference server in an isolated sidecar venv.
 
-The ``query_scene`` reasoner tool (ADR-0047) asks a vision-language model
+The ``query_scene`` reasoner tool asks a vision-language model
 open-ended questions about the current camera view ("has the robot grasped the
 mug?", "is the task complete?"). The model is ``Qwen/Qwen3.5-4B``, loaded NF4
 via bitsandbytes, and is run **out-of-process** for three reasons:
@@ -16,8 +16,9 @@ via bitsandbytes, and is run **out-of-process** for three reasons:
   down the reasoner; the sidecar owns its own VRAM lifecycle and can be torn
   down independently.
 * **Same pattern as the rest of the tree.** ``tools/locateanything_sidecar.py``
-  (LocateAnything detector) and ``tools/gr00t_sidecar.py`` (GR00T) already run
-  models out-of-process over ZMQ REQ/REP + msgpack. This is that pattern.
+  (LocateAnything detector) and ``tools/rldx_sidecar.py`` (RLDX-1 / GR00T-N1.5)
+  already run models out-of-process over ZMQ REQ/REP + msgpack. This is that
+  pattern.
 
 The openral side is
 :class:`openral_runner.backends.gstreamer.qwen_scene_vlm.QwenSceneVlm`, which
@@ -34,7 +35,7 @@ CLAUDE.md compliance:
 * Real subprocess running real upstream model code — no mocks (§1.11). The
   openral-side wire protocol is a real ZMQ client.
 * ``Qwen/Qwen3.5-4B`` is Apache-2.0 (commercial OK) — no license guard needed
-  here (the ``RSkillManifest`` loader handles posture, ADR-0047 / ADR-0012).
+  here (the ``RSkillManifest`` loader handles posture).
 """
 
 from __future__ import annotations

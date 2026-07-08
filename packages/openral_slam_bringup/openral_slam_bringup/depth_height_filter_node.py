@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Filter metric depth to a robot-derived height band before nvblox mapping.
 
-ADR-0064 — nvblox's ``static_occupancy_grid`` is the backend-agnostic ``/map``
+nvblox's ``static_occupancy_grid`` is the backend-agnostic ``/map``
 OpenRAL gives Nav2 and the dashboard. Isaac ROS nvblox 4.4 applies
 ``static_mapper.workspace_bounds_*`` to TSDF integration, but the static
 occupancy camera integrator still projects all depth returns into 2D. A

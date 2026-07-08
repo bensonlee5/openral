@@ -24,7 +24,7 @@ def sim_time_ns_from_mujoco_handles(handles: tuple[Any, Any] | None) -> int | No
     Shared helper for the MuJoCo-backed :class:`SimRollout` adapters
     (``robocasa`` / ``libero`` / ``metaworld`` / ``aloha`` / the native
     backends) so the ``data.time``-to-nanoseconds conversion lives in exactly
-    one place (ADR-0048 Phase 1). ``mujoco.MjData.time`` is the authoritative
+    one place. ``mujoco.MjData.time`` is the authoritative
     elapsed simulation time in seconds, advanced by ``model.opt.timestep`` on
     every physics step; this rounds ``data.time * 1e9`` to the nearest integer
     nanosecond.
@@ -100,7 +100,7 @@ class SimRollout(Protocol):
             adapter's own ``MjModel`` / ``MjData``.
 
         ``sim_time_ns(self) -> int | None``
-            — ADR-0048 Phase 1. The backend's authoritative elapsed
+            — the backend's authoritative elapsed
             simulation time in nanoseconds — the seam a sim ``/clock``
             publisher reads so the deploy-sim ROS graph runs on simulation
             time rather than wall time. Contract:

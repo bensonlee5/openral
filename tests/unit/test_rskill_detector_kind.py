@@ -1,4 +1,4 @@
-"""Tests for the ``kind: "detector"`` rSkill manifest variant (ADR-0037).
+"""Tests for the ``kind: "detector"`` rSkill manifest variant.
 
 Covers:
 - :class:`~openral_core.schemas.DetectorContract` Hypothesis round-trip +
@@ -86,8 +86,8 @@ def test_rtdetr_coco_fixture_validates() -> None:
     """Load rskills/rtdetr-coco-r18/rskill.yaml and assert key invariants.
 
     This is the canonical contract test for the ``kind: "detector"``
-    manifest shape introduced by ADR-0037.  It exercises a real fixture,
-    not synthetic data, per CLAUDE.md §1.11.
+    manifest shape.  It exercises a real fixture, not synthetic data,
+    per CLAUDE.md §1.11.
     """
     assert _RTDETR_FIXTURE.exists(), f"Fixture not found: {_RTDETR_FIXTURE}"
 

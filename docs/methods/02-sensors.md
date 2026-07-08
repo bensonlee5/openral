@@ -52,7 +52,7 @@ _Sensor catalog — vendor-agnostic registry of `SensorSpec` / `SensorBundle` fa
 - `_scale_intrinsics(base, width, height) -> IntrinsicsPinhole` — Thin wrapper delegating to `openral_core.scale_intrinsics_to`; lets a caller pick a non-default stream resolution and still get a self-consistent (fx, fy, cx, cy). (L194)
 
 ### `python/sensors/src/openral_sensors/ros_publisher.py`
-_ADR-0019 PR2 — generalised sensor → ROS 2 image publisher; non-GStreamer fallback to `RosImagePublisher`._
+_Generalised sensor → ROS 2 image publisher; non-GStreamer fallback to `RosImagePublisher`._
 
 - `class SensorRosPublisher(*, reader, topic, rate_hz, node_name=None, frame_id=None, qos_depth=5, camera_info=None)` — Background-thread publisher that polls any `SensorReader.read_latest()` and republishes as `sensor_msgs/Image`. Lazy-imports rclpy; raises `RuntimeError` at `start()` with install hint when ROS 2 isn't sourced. Optional `CameraInfo` companion topic at `<topic>/camera_info` with RELIABLE QoS. Reader lifecycle (open/close) is owned by the caller. (L79)
   - `start() -> None` — Init rclpy if needed, create publishers, spawn the pump thread. (L183)

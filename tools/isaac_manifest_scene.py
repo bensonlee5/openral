@@ -1,4 +1,4 @@
-"""Robot-agnostic, URDF-driven Isaac Sim scene for the sidecar (ADR-0045 amendment).
+"""Robot-agnostic, URDF-driven Isaac Sim scene for the sidecar.
 
 Runs under the Isaac Sim py3.11 venv only; imported by ``isaac_sidecar.py`` AFTER
 ``SimulationApp`` is live (every import here needs a running Kit app).
@@ -9,7 +9,7 @@ The PoC scenes (``IsaacLiftScene`` in ``isaac_scene.py``, ``IsaacBowlPlateScene`
 in ``isaac_bowl_plate_scene.py``) hardcode Isaac's built-in ``Franka`` example USD
 asset and ignore the forwarded ``--robot``. That contradicts the ``DeployScene``
 contract, where a scene is *environment + backend* and the robot is pluggable from
-its ``RobotDescription`` (ADR-0033 / ADR-0034). This scene is the robot-agnostic
+its ``RobotDescription``. This scene is the robot-agnostic
 path: it builds the articulation by **importing the manifest robot's URDF**
 (Isaac's ``isaacsim.asset.importer.urdf`` extension) and wires joints / sensors /
 control from a plain-JSON "isaac robot spec" the openral-side backend marshals
@@ -96,7 +96,7 @@ def map_dof_to_manifest(
 
 
 class IsaacManifestScene(IsaacSceneBase):
-    """A URDF-imported, manifest-driven Isaac Sim scene (ADR-0045 amendment)."""
+    """A URDF-imported, manifest-driven Isaac Sim scene."""
 
     warmup_steps = 4
     physics_substeps = 1
@@ -125,7 +125,7 @@ class IsaacManifestScene(IsaacSceneBase):
             )
         )
 
-        # Kinematic planar base (ADR-0045 amendment M3): the arm is imported
+        # Kinematic planar base: the arm is imported
         # fix_base=True (pinned) and the whole articulation root is teleported each
         # step from an integrated (x, y, yaw) pose driven by the action's last 3
         # base-twist channels (vx, vy, wyaw, base frame). No PhysX base joints.
@@ -187,7 +187,7 @@ class IsaacManifestScene(IsaacSceneBase):
                 key = (
                     str(s["vla_feature_key"]).rsplit(".", 1)[-1]
                     if s.get("vla_feature_key")
-                    else s.get("name", "camera1")  # sensor name (canonical per ADR-0070)
+                    else s.get("name", "camera1")  # sensor name (canonical form)
                 )
                 plan.append(
                     {
@@ -226,7 +226,7 @@ class IsaacManifestScene(IsaacSceneBase):
         self._ArticulationAction = ArticulationAction
 
         # NOTE: no device="cuda:0" — forcing GPU PhysX hangs the first warmup for
-        # minutes on an 8 GB laptop GPU (see ADR-0045 PoC notes). Default device
+        # minutes on an 8 GB laptop GPU (per the PoC notes). Default device
         # renders the same scene in ~15 s.
         self._world = World(stage_units_in_meters=1.0)
         self._world.scene.add_default_ground_plane()

@@ -1,4 +1,4 @@
-"""ADR-0065 live e2e — MoveIt planning through the cuMotion pipeline.
+"""Live e2e — MoveIt planning through the cuMotion pipeline.
 
 Launches a real Panda MoveIt graph with ``isaac_ros_cumotion`` registered as a
 planning pipeline, starts NVIDIA's real cuMotion action server on the local GPU,

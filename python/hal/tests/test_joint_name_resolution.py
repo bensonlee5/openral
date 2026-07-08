@@ -1,5 +1,5 @@
 # python/hal/tests/test_joint_name_resolution.py
-"""Unified joint-name resolution (ADR-0034 §3.6): exact wins; robosuite prefix stripped."""
+"""Unified joint-name resolution: exact wins; robosuite prefix stripped."""
 
 from __future__ import annotations
 

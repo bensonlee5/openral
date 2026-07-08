@@ -1,4 +1,4 @@
-"""ADR-0074 amendment — progress-gated verdict, two-head context, locate budget.
+"""Progress-gated verdict, two-head context, locate budget.
 
 Pure-Python (no rclpy / no openral_msgs): exercises the reasoner-internal
 ``mission`` + ``context`` modules that the libero_object plateau fix lives in.

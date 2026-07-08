@@ -1,6 +1,6 @@
 # SimplerEnv WidowX (Bridge Data V2) benchmark suite — real-to-sim correlator.
 #
-# ADR-0010. Opt-in via `uv sync --group simpler-env`; without the extra
+# Opt-in via `uv sync --group simpler-env`; without the extra
 # `openral benchmark run` will fail at lazy import inside the scene
 # factory with a typed ROSConfigError pointing at the install command.
 #
@@ -11,7 +11,7 @@
 # leaderboard — OpenRAL reports per-task success rate and the user
 # computes MMRV against the matching real-robot run themselves.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename
+# Shape: bare list of BenchmarkScenes; suite id = filename
 # stem ("simpler_env_widowx"). The shared scene + metadata is anchored
 # on the first item via &simpler_scene; subsequent items merge it and
 # override only their task. Suite-level invariants are enforced by

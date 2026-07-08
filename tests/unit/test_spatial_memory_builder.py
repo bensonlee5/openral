@@ -1,4 +1,4 @@
-"""Tests for the ADR-0038 Phase 2 SpatialMemory builder + query engine.
+"""Tests for the Phase 2 SpatialMemory builder + query engine.
 
 Exercises instance association, find/resolve queries, the camera-facing
 approach-viewpoint geometry, and persistence — including the full
@@ -173,13 +173,13 @@ def test_wine_fixture_resolve_requester_return_goal() -> None:
     assert res.node_id == "living_room_sofa"
 
 
-# ── track_id durability across world-state-node sessions (ADR-0038) ───────────
+# ── track_id durability across world-state-node sessions ─────────────────────
 
 
 def test_recycled_track_id_with_different_label_does_not_merge() -> None:
     """A reused track_id (world-state restart) must not merge a cup into a mug.
 
-    ADR-0035 ObjectMemory track_ids are per-session monotonic and reset on
+    ObjectMemory track_ids are per-session monotonic and reset on
     restart, so a durable memory keyed only on track_id would corrupt a node
     when the id is recycled for a different object. The label-guarded fast path
     + label/proximity fallback keeps them distinct.
@@ -213,7 +213,7 @@ def test_returning_object_with_fresh_track_id_reassociates_by_proximity() -> Non
 def test_accumulates_objects_across_snapshots() -> None:
     """The reasoner's live-ingest loop: folding successive WorldState snapshots
     accumulates a durable map (stable tracks bump observation_count; new objects
-    are added) and recall_object recalls what was seen (ADR-0038)."""
+    are added) and recall_object recalls what was seen."""
     mem = SpatialMemory()
     # Snapshot 1 — the gripper camera sees the wine bottle.
     mem.ingest_detected_objects([_obj("wine_bottle", (3.0, 1.0, 0.9), track_id=1)], now_ns=10)

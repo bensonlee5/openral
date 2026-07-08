@@ -426,7 +426,7 @@ def test_safety_kernel_latches_into_identity_from_safety_check() -> None:
 
 def test_reasoner_tick_populates_reasoner_topic_with_mission() -> None:
     """A reasoner.tick span feeds the Reasoner/Mission card, including the
-    ADR-0073 ``reasoner.mission_json`` task queue (decoded to a dict)."""
+    mission ``reasoner.mission_json`` task queue (decoded to a dict)."""
     import json
 
     from openral_reasoner.mission import MissionState

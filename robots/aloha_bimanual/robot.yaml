@@ -3,8 +3,8 @@
 # This describes the *physical* Trossen ALOHA: two 7-DoF ViperX 300 arms
 # with parallel grippers (14-DoF action space), one top-down RGB camera.
 # gym-aloha's MuJoCo scene mirrors the real robot one-to-one, so the
-# same manifest covers both — no robot/sim conflation here (see
-# docs/adr/0007-robot-sim-split.md). Used by tests/sim/test_aloha_bimanual_act_aloha*.py.
+# same manifest covers both — no robot/sim conflation here.
+# Used by tests/sim/test_aloha_bimanual_act_aloha*.py.
 #
 # Joint kinematic detail is approximate — gym-aloha does not expose the
 # URDF through its gym API. Sufficient for capability matching and
@@ -16,7 +16,7 @@ embodiment_kind: "bimanual"
 
 base_frame: "world"
 
-# ADR-0027 — robot_state_publisher: `assets.urdf` deliberately unset.
+# robot_state_publisher: `assets.urdf` deliberately unset.
 # The ALOHA arms (Trossen ViperX-300) have an upstream xacro at
 # github.com/Interbotix/interbotix_ros_manipulators/blob/main/
 # interbotix_ros_xsarms/interbotix_xsarm_descriptions/urdf/vx300s.urdf.xacro
@@ -26,7 +26,7 @@ base_frame: "world"
 # `robot_descriptions` Python package ships an MJCF (`aloha_mj_description`)
 # only. Wire one of these once a wrapped-task-space VLA targets aloha.
 
-# ADR-0058 — unified asset block. MJCF-only (no URDF/SRDF wired yet).
+# Unified asset block. MJCF-only (no URDF/SRDF wired yet).
 assets:
   mjcf: "gym_aloha:bimanual_viperx_transfer_cube"
 
@@ -230,7 +230,7 @@ safety:
 # the same `hal` block; gym-aloha is constructed directly by
 # openral_sim.adapters.aloha.
 sdk_kind: "closed_with_api"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 hal:
   sim: "openral_hal.aloha:AlohaMujocoHAL"
   real: "openral_hal.aloha:AlohaHAL"
@@ -242,7 +242,7 @@ hal:
 # mirror_actuator_index=positive+1).  The MJCF's keyframe 0 seeds the
 # fingers inside ``ctrlrange=[0.021, 0.057]`` — without it, ``qpos=0``
 # (the MjData default) sits below the joint limit and the position
-# actuator can't recover in a finite number of steps.  See ADR-0023.
+# actuator can't recover in a finite number of steps.
 sim:
   joint_qpos_addr:
     left_waist: 0

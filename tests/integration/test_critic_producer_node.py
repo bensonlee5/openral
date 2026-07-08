@@ -1,4 +1,4 @@
-"""Live ROS integration test for the Tier-C critic producer (ADR-0064 / audit R3).
+"""Live ROS integration test for the Tier-C critic producer.
 
 Stands up the **real** ``CriticProducerNode`` and ``ReasonerNode`` on one
 executor, publishes a stalled ``openral_msgs/CriticScore`` series on
@@ -38,7 +38,7 @@ _LIVE_ROS_REASON = (
 )
 
 # A real W3C traceparent to assert the critic score's trace_id is propagated
-# onto the emitted FailureTrigger (ADR-0064 / observability §6).
+# onto the emitted FailureTrigger (observability §6).
 _TRACEPARENT = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
 

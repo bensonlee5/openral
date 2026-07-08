@@ -15,13 +15,13 @@ doctor              Diagnose the host environment (Python, OS, ROS 2, GPU, USB).
 detect              Probe hardware and write a full RobotDescription robot.yaml.
 connect             Open a HAL connection to a robot and verify it responds.
 calibrate camera    Calibrate a camera sensor using ros2 camera_calibration.
-install             Install opt-in dependency groups (sim, ros, libero, …) — see ADR-0021.
-rskill search       Find installable rSkills on the OpenRAL HF Hub org (ADR-0055).
+install             Install opt-in dependency groups (sim, ros, libero, …).
+rskill search       Find installable rSkills on the OpenRAL HF Hub org.
 rskill install      Download an rSkill from the HF Hub and register it locally.
 rskill list         List all locally installed rSkills.
 rskill check        Report which installed rSkills will run on the current host.
 rskill new          Scaffold a new local rSkill from rskills/template/.
-collision lower     Lower a robot's URDF/SRDF into its self-collision model (ADR-0030).
+collision lower     Lower a robot's URDF/SRDF into its self-collision model.
 collision check     Fail if a manifest drifts from its lowered collision model.
 check               Cross-validate every robot/skill/scene manifest in one pass.
 
@@ -71,11 +71,13 @@ from openral_cli.prompt import prompt_command
 if TYPE_CHECKING:
     from openral_core import (
         BenchmarkScene,
+        RobotDescription,
         RSkillEvalResult,
+        SensorSpec,
         VLASpec,
     )
     from openral_core.schemas import RSkillManifest
-    from openral_detect import CompatibilityReport, RSkillCompatRow
+    from openral_detect import CompatibilityReport, DetectionReport, RSkillCompatRow
     from openral_detect.report import GpuProbeResult
 
     from openral_cli._rskill_intel import RSkillFamily, RSkillPatch
@@ -371,7 +373,7 @@ _RUN_MODE_BY_SUBCOMMAND: dict[str, str] = {
 }
 
 # Hardware deployments at >=100 Hz over 24 h would emit millions of tick spans
-# per day at ALWAYS_ON. ADR-0010 (2026-05-17 amendment) calls for a
+# per day at ALWAYS_ON. The 2026-05-17 sampling-policy amendment calls for a
 # 10% ratio sampler on hardware mode and ALWAYS_ON for sim / benchmark
 # / one-shot subcommands (doctor / detect / skill install / …) where the
 # total volume is bounded by a single invocation.
@@ -389,7 +391,7 @@ def _root(ctx: typer.Context) -> None:
     if typed on the shell. Subcommand invocations behave exactly as before:
     a single ``cli.command`` root span wraps the call and the sampler is
     chosen by ``openral.run.mode`` (hardware → 10% ratio, others → always-on)
-    per ADR-0010's 2026-05-17 amendment. ``OPENRAL_OTEL_SAMPLE_RATIO``
+    per the 2026-05-17 sampling-policy amendment. ``OPENRAL_OTEL_SAMPLE_RATIO``
     overrides for ad-hoc debugging.
     """
     if ctx.invoked_subcommand is None:
@@ -536,7 +538,7 @@ def _check_compute_spec(result: GpuProbeResult) -> list[CheckResult]:
     by :func:`_check_gpu` so no second probe is issued.  The assembled
     ``ComputeSpec`` mirrors exactly what ``openral detect`` would write into
     ``RobotDescription.compute_edge`` / ``compute_local`` — doctor and detect
-    stay in sync (ADR-0069).
+    stay in sync.
 
     Tier labelling:
     - Jetson SoC detected → rows prefixed ``ComputeSpec (edge)``
@@ -880,6 +882,22 @@ def detect(
     no_write: bool = typer.Option(
         False, "--no-write", help="Print summary and skip writing robot.yaml"
     ),
+    deployment: Path | None = typer.Option(
+        None,
+        "--deployment",
+        help="Also scaffold a DeployScene YAML at this path (robot_id + "
+        "`sensors:` bindings from the --interactive camera wizard; safety "
+        "left to the robot manifest). Paste-able as `openral deploy run --config`.",
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Camera-binding wizard: per probed /dev/video* device, grab a "
+        "thumbnail and ask which sensor it is — a robot manifest sensor name "
+        "or w:<name> for a workcell camera; either way the binding lands in "
+        "the --deployment DeployScene's sensors list.",
+    ),
     yes: bool = typer.Option(
         False, "--yes", "-y", help="Overwrite existing file without prompting"
     ),
@@ -927,6 +945,20 @@ def detect(
     except ROSConfigError as exc:
         console.print(f"[red]detect:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+    # Camera-binding wizard: every binding lands in the --deployment
+    # DeployScene (a manifest-named entry is that robot sensor's binding;
+    # `deploy run` reads the canonical robots/<id>/robot.yaml, never this
+    # detect output, so the scene is the operative home for bindings).
+    scene_sensor_specs: list[SensorSpec] = []
+    if interactive and deployment is None:
+        console.print(
+            "[yellow]--interactive has no effect without --deployment "
+            "(bindings live in the DeployScene).[/yellow]"
+        )
+    elif interactive:
+        scene_sensor_specs = _run_camera_binding_wizard(description, detection)
+
     yaml_text = _yaml.safe_dump(
         description.model_dump(mode="json"),
         sort_keys=False,
@@ -936,17 +968,174 @@ def detect(
     if no_write:
         console.print("\n[dim]--no-write set — printing yaml to stdout:[/dim]\n")
         console.print(yaml_text)
-        return
+    else:
+        if output.exists() and not yes:
+            overwrite = typer.confirm(f"{output} already exists. Overwrite?", default=False)
+            if not overwrite:
+                console.print("[yellow]Aborted.[/yellow]")
+                raise typer.Exit(code=0)
 
-    if output.exists() and not yes:
-        overwrite = typer.confirm(f"{output} already exists. Overwrite?", default=False)
+        output.write_text(yaml_text, encoding="utf-8")
+        console.print(f"\n[green]Wrote[/green] {output} (RobotDescription, {description.name})")
+        console.print(f"[dim]Next step:[/dim] openral rskill check --robot {output}")
+
+    if deployment is not None:
+        _write_deploy_scene_scaffold(deployment, description, scene_sensor_specs, assume_yes=yes)
+
+
+def _run_camera_binding_wizard(
+    description: RobotDescription, detection: DetectionReport
+) -> list[SensorSpec]:
+    """Per probed ``/dev/video*``: thumbnail + ask which sensor it is.
+
+    Every answer becomes a ``DeployScene.sensors`` entry: a manifest RGB
+    sensor name yields a same-named entry (that robot sensor's deploy-time
+    binding — identity fields copied from the manifest, which stays
+    authoritative for frames/intrinsics); ``w:<name>`` yields a new
+    workcell camera. Enter skips the device.
+    """
+    import tempfile
+
+    from openral_core import SensorDeployBinding, SensorSpec
+
+    manifest_rgb = {s.name: s for s in description.sensors if s.modality == "rgb"}
+    scene_specs: list[SensorSpec] = []
+    thumb_dir = Path(tempfile.mkdtemp(prefix="openral_detect_cams_"))
+
+    for cam in detection.cameras.v4l2:
+        thumb = _grab_camera_thumbnail(cam.device_path, thumb_dir)
+        console.print(
+            f"\n[bold]{cam.device_path}[/bold] — {cam.name}"
+            + (f"  [dim](thumbnail: {thumb})[/dim]" if thumb else "  [dim](no thumbnail)[/dim]")
+        )
+        options = ", ".join(manifest_rgb) if manifest_rgb else "<none in manifest>"
+        hint = f"[{options}] or w:<name> for a workcell camera"
+        answer = typer.prompt(
+            f"  Which sensor is this? {hint} (Enter = skip)", default="", show_default=False
+        ).strip()
+        if not answer:
+            continue
+        fps = 30
+        binding = SensorDeployBinding(
+            backend_params={"device": cam.device_path, "fps": fps},
+        )
+        if answer in manifest_rgb:
+            ref = manifest_rgb[answer]
+            scene_specs.append(
+                SensorSpec(
+                    name=ref.name,
+                    modality=ref.modality,
+                    frame_id=ref.frame_id,
+                    rate_hz=float(fps),
+                    deploy_binding=binding,
+                )
+            )
+            console.print(f"  [green]bound[/green] {answer} → {cam.device_path} (robot sensor)")
+        elif answer.startswith("w:") and answer.removeprefix("w:").strip():
+            name = answer.removeprefix("w:").strip()
+            scene_specs.append(
+                SensorSpec(
+                    name=name,
+                    modality="rgb",
+                    frame_id=name,
+                    rate_hz=float(fps),
+                    deploy_binding=binding,
+                )
+            )
+            console.print(f"  [green]workcell[/green] {name} → {cam.device_path}")
+        else:
+            console.print(f"  [yellow]{answer!r} is not a listed sensor — skipping.[/yellow]")
+
+    return scene_specs
+
+
+def _grab_camera_thumbnail(device_path: str, out_dir: Path) -> Path | None:
+    """Grab one JPEG frame from ``device_path`` so the operator can SEE the camera.
+
+    Best-effort: returns ``None`` when opencv is missing or the device won't
+    deliver a frame (in use, no permission). Never raises — a thumbnail is a
+    convenience, not a requirement.
+    """
+    try:
+        import cv2  # reason: optional `opencv` extra
+    except ImportError:
+        return None
+    cap = cv2.VideoCapture(device_path)
+    try:
+        ok, frame = cap.read()
+    finally:
+        cap.release()
+    if not ok or frame is None:
+        return None
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / (device_path.strip("/").replace("/", "_") + ".jpg")
+    if not cv2.imwrite(str(out), frame):
+        return None
+    return out
+
+
+def _write_deploy_scene_scaffold(
+    path: Path,
+    description: RobotDescription,
+    sensor_specs: list[SensorSpec],
+    *,
+    assume_yes: bool,
+) -> None:
+    """Scaffold a ``DeployScene`` YAML next to the detected robot.
+
+    Carries ``robot_id`` + the wizard's ``sensors:`` bindings (manifest-named
+    = robot-sensor binding, new name = workcell camera); ``safety`` is left
+    unset so the robot manifest's own envelope applies. Validated through
+    :class:`DeployScene` before writing so a malformed scaffold fails here,
+    not on ``deploy run``.
+    """
+    import yaml as _yaml
+    from openral_core import DeployScene, HalParameters, SceneSpec
+
+    robot_id = str(description.name)
+    # Seed the scene's HAL binding from the robot manifest's own
+    # hal.parameters.defaults (e.g. serial port) + lerobot calibration
+    # placeholders, so the scaffolded scene is a self-contained `deploy run`
+    # target (no `--hal` needed once the operator fills the real port + commits
+    # the calibration). Only serial (`port`) HALs get the calibration stub.
+    hal_defaults: dict[str, object] = dict(description.hal.parameters.defaults)
+    if "port" in hal_defaults:
+        hal_defaults.setdefault("id", f"{robot_id}")
+        hal_defaults.setdefault("calibration_dir", "calibration")
+        hal_defaults.setdefault("calibrate_on_connect", False)
+    scene = DeployScene(
+        scene=SceneSpec(id=f"{robot_id}_workcell"),
+        robot_id=robot_id,
+        hal=HalParameters(defaults=hal_defaults) if hal_defaults else None,
+        sensors=list(sensor_specs),
+    )
+    if path.exists() and not assume_yes:
+        overwrite = typer.confirm(f"{path} already exists. Overwrite?", default=False)
         if not overwrite:
-            console.print("[yellow]Aborted.[/yellow]")
-            raise typer.Exit(code=0)
-
-    output.write_text(yaml_text, encoding="utf-8")
-    console.print(f"\n[green]Wrote[/green] {output} (RobotDescription, {description.name})")
-    console.print(f"[dim]Next step:[/dim] openral rskill check --robot {output}")
+            console.print("[yellow]Deployment scaffold aborted.[/yellow]")
+            return
+    banner = (
+        "# DeployScene scaffolded by `openral detect --deployment` — review before\n"
+        "# `openral deploy run --config <this file>`.\n"
+        "# - safety: unset → the robot manifest's envelope applies as-is.\n"
+        "# - hal: host-specific HAL binding — set the real serial `port` for this\n"
+        "#   host and commit the lerobot calibration to `<scene dir>/calibration/`\n"
+        "#   (a relative `calibration_dir` resolves against this file's directory).\n"
+        "# - sensors: deploy-time camera bindings (manifest-named entry = that robot\n"
+        "#   sensor's binding; new name = workcell camera).\n"
+        "# - No rSkill is pinned here: the reasoner selects it at runtime.\n"
+    )
+    path.write_text(
+        banner
+        + _yaml.safe_dump(
+            scene.model_dump(mode="json", exclude_none=True),
+            sort_keys=False,
+            default_flow_style=False,
+        ),
+        encoding="utf-8",
+    )
+    console.print(f"[green]Wrote[/green] {path} (DeployScene, {robot_id})")
+    console.print(f"[dim]Next step:[/dim] openral deploy run --config {path}")
 
 
 def _render_detection_summary(detection: object) -> None:
@@ -1179,7 +1368,7 @@ rskill_app = typer.Typer(
 )
 app.add_typer(rskill_app, name="rskill")
 
-#: Canonical HF Hub org for first-party rSkills (ADR-0055). Used to suggest a
+#: Canonical HF Hub org for first-party rSkills. Used to suggest a
 #: repair when ``rskill install`` is handed an org-less id, and as the ``author``
 #: filter for ``rskill search``.
 _DEFAULT_RSKILL_ORG: Final[str] = "OpenRAL"
@@ -1394,7 +1583,7 @@ def rskill_search(
     limit: int = typer.Option(50, "--limit", help="Max OpenRAL repos to inspect."),
     json: bool = typer.Option(False, "--json", help="Output machine-readable JSON."),
 ) -> None:
-    """Search the OpenRAL HF Hub org for installable rSkills (ADR-0055 D4).
+    """Search the OpenRAL HF Hub org for installable rSkills.
 
     Lists every ``OpenRAL/*`` repo whose ``rskill.yaml`` manifest validates and
     matches the optional facet filters, so the printed ids are paste-able into
@@ -2218,8 +2407,8 @@ def benchmark_run(
         ...,
         "--suite",
         help=(
-            "Benchmark suite to evaluate — a bare ``list[BenchmarkScene]`` YAML "
-            "(ADR-0042). Either a built-in id (resolved to "
+            "Benchmark suite to evaluate — a bare ``list[BenchmarkScene]`` YAML. "
+            "Either a built-in id (resolved to "
             "`benchmarks/<id>.yaml`) or a direct YAML path."
         ),
     ),
@@ -2318,9 +2507,9 @@ def benchmark_run(
     delegating each rollout to ``openral_sim.SimRunner`` so the
     rSkill compatibility check, OTel spans, and latency-budget reporting
     are identical to ``openral sim run``. Each :class:`BenchmarkScene`
-    carries its own scene + task + robot (ADR-0041 / Task 10); ADR-0042
-    deleted the ``BenchmarkSpec`` wrapper class so the suite is a bare
-    list of scenes whose id is the YAML filename stem.
+    carries its own scene + task + robot; the ``BenchmarkSpec`` wrapper
+    class was removed so the suite is a bare list of scenes whose id is
+    the YAML filename stem.
 
     Example:
         >>> # openral benchmark run --suite libero_spatial \\
@@ -2432,7 +2621,7 @@ def _resolve_benchmark_suite(
 ) -> tuple[list[BenchmarkScene], str]:
     """Map a ``--suite`` argument to a validated ``(scenes, suite_id)`` tuple.
 
-    ADR-0042: a benchmark suite is a bare ``list[BenchmarkScene]`` YAML;
+    A benchmark suite is a bare ``list[BenchmarkScene]`` YAML;
     the suite id is the filename stem. Accepts either a built-in id
     (resolved to ``benchmarks/<id>.yaml``) or a direct path. Bare ids
     that don't resolve raise ``typer.BadParameter`` listing the catalogue
@@ -2947,19 +3136,19 @@ def _summarize_results(results: dict[str, object]) -> str:
 # `tests/unit/test_cli_eval.py::test_bh_cli_import_is_light` guards this.
 app.add_typer(sim_app, name="sim")
 
-# ADR-0021 — `openral install <group>` post-install escape hatch for the
+# `openral install <group>` — post-install escape hatch for the
 # Tier-0 curl-bash installer (`scripts/install.sh`). The base install puts
 # `openral` on $PATH with the CLI's own thin runtime; sim physics, LIBERO,
 # MetaWorld, RoboCasa, and the sudo+apt ROS 2 bootstrap layer in on demand.
 app.add_typer(install_app, name="install")
 
-# ADR-0019 PR5: `openral dataset push` (publish a LeRobotDataset v3 to the HF Hub).
+# `openral dataset push` — publish a LeRobotDataset v3 to the HF Hub.
 # Importing `dataset` at module top is cheap; the `push` command itself lazy-
 # imports huggingface_hub only when actually publishing so `openral --help` stays
 # sub-second.
 app.add_typer(dataset_app, name="dataset")
 
-# ADR-0030: `openral collision lower|check` — offline URDF/SRDF → manifest
+# `openral collision lower|check` — offline URDF/SRDF → manifest
 # self-collision model. The `lower_robot` import is deferred inside the commands
 # (it pulls yourdfpy/trimesh) so `openral --help` stays fast.
 app.add_typer(collision_app, name="collision")
@@ -2970,13 +3159,13 @@ app.add_typer(collision_app, name="collision")
 # JSON-Schema emission lives in `tools/schema_export.py` (CI-gated), not here.
 app.command("check")(check_command)
 
-# ADR-0058: `openral robot vendor-urdf <id>` — expand an upstream xacro to a
+# `openral robot vendor-urdf <id>` — expand an upstream xacro to a
 # flat, committed URDF so end users need no xacro tooling at runtime. The
 # `vendor_urdf` import is deferred inside the command (it pulls robot_descriptions/
 # xacrodoc/yourdfpy) so `openral --help` stays fast.
 robot_app = typer.Typer(
     name="robot",
-    help="Robot description assets — vendor a flat URDF from an upstream xacro (ADR-0058).",
+    help="Robot description assets — vendor a flat URDF from an upstream xacro.",
     no_args_is_help=True,
 )
 app.add_typer(robot_app, name="robot")
@@ -3020,7 +3209,7 @@ def robot_vendor_urdf(
         ),
     ),
 ) -> None:
-    """Expand an upstream description to a flat, committed URDF (ADR-0058)."""
+    """Expand an upstream description to a flat, committed URDF."""
     from openral_cli.robot import vendor_urdf
 
     rename_pairs: list[tuple[str, str]] | None = None
@@ -3037,14 +3226,14 @@ def robot_vendor_urdf(
     typer.echo(f"Wrote {written}")
 
 
-# ADR-0018 F10: `openral prompt "do X"` publishes a one-shot PromptStamped
+# `openral prompt "do X"` publishes a one-shot PromptStamped
 # onto /openral/prompt_in/cli; the prompt_router_node fans it out to
-# /openral/prompt for the F4 reasoner. rclpy import is deferred inside
+# /openral/prompt for the reasoner. rclpy import is deferred inside
 # the command body so `openral --help` stays sub-second.
 app.command(
     name="prompt",
     help=(
-        "Publish a one-shot operator prompt to the prompt-router (ADR-0018 F10). "
+        "Publish a one-shot operator prompt to the prompt-router. "
         "Requires a sourced ROS 2 install."
     ),
 )(prompt_command)
@@ -3189,13 +3378,34 @@ def deploy_run(
         "--dashboard-port",
         help="Dashboard OTLP port.",
     ),
+    enable_reward_monitor: bool | None = typer.Option(
+        None,
+        "--enable-reward-monitor/--no-enable-reward-monitor",
+        help=(
+            "Bring up the Robometer reward monitor parallel to the "
+            "VLA (same leg `deploy sim` exposes): it scores the robot's first RGB "
+            "camera topic and serves /openral/perception/query_task_progress. The "
+            "manifest is auto-paired from the VLA palette's reward_rskill_name; "
+            "override with --reward-monitor-manifest. Unset = the "
+            "scene's runtime.enable_reward_monitor, else off."
+        ),
+    ),
+    reward_monitor_manifest: str | None = typer.Option(
+        None,
+        "--reward-monitor-manifest",
+        help=(
+            "Path to a kind:reward rSkill manifest. Empty auto-pairs "
+            "from the VLA palette, falling back to rskills/robometer-4b. Ignored "
+            "unless --enable-reward-monitor."
+        ),
+    ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
         help="Print the resolved real-mode launch argv and exit without shelling out.",
     ),
 ) -> None:
-    """Run an rSkill on REAL hardware via the production ROS graph (ADR-0032).
+    """Run an rSkill on REAL hardware via the production ROS graph.
 
     Unlike `openral deploy sim`, this drives the **real** hardware HAL: it
     resolves the robot from `--config` (a DeployScene) and shells the SAME
@@ -3223,15 +3433,25 @@ def deploy_run(
 
     overrides = _parse_hal_overrides(hal)
 
+    # A committed, config-relative `calibration_dir` (deploy owns its calibration
+    # instead of the ambient HF cache) is resolved against THIS config's
+    # directory so it works regardless of the CWD `deploy run` is invoked from.
+    cal_dir = overrides.get("calibration_dir")
+    if isinstance(cal_dir, str) and cal_dir and not Path(cal_dir).is_absolute():
+        overrides["calibration_dir"] = str((config.parent / cal_dir).resolve())
+
     try:
         invocation = resolve_launch_invocation(
             config=config,
             robot_override=robot or deploy_scene.robot_id,
             dashboard_port=dashboard_port,
             reset_to_pose_service=None,
+            deploy_config=config,
             hal_param_overrides=overrides,
             hal_mode="real",
             enable_dashboard=dashboard,
+            enable_reward_monitor=enable_reward_monitor,
+            reward_monitor_manifest=reward_monitor_manifest,
         )
     except (ROSConfigError, ROSCapabilityMismatch) as exc:
         console.print(f"[red]deploy run:[/red] {exc}")
@@ -3254,7 +3474,138 @@ def deploy_run(
     raise typer.Exit(code=returncode)
 
 
-# ── openral replay — bag↔OTel correlator (ADR-0018 F7) ──────────────────────────
+@deploy_app.command("validate")
+def deploy_validate(
+    config: Path = typer.Option(  # reason: typer Option idiom
+        ...,
+        "--config",
+        "-c",
+        exists=True,
+        readable=True,
+        dir_okay=False,
+        help="DeployScene YAML to check for real-run readiness.",
+    ),
+    robot: str | None = typer.Option(
+        None,
+        "--robot",
+        help="Override the robot_id resolved from --config.",
+    ),
+    hal: list[str] | None = typer.Option(
+        None,
+        "--hal",
+        help="HAL overrides applied before validation (same precedence as deploy run).",
+    ),
+) -> None:
+    """Pre-run readiness check for `openral deploy run` — no hardware, no ROS launch.
+
+    Validates the DeployScene + robot manifest resolve, then checks the
+    runtime-required inputs a real run needs are present *before* the launch —
+    the exact gaps that otherwise fail late at HAL configure / sensor leg:
+
+    * **HAL transport** — a serial `port` is declared, and its device exists now.
+    * **Calibration** — a serial HAL with `calibrate_on_connect=false` has an
+      `id` + `calibration_dir`, and the `<calibration_dir>/<id>.json` file exists
+      (missing → "has no calibration registered" at every send_action).
+    * **Camera bindings** — each scene sensor has a `deploy_binding` (else it is
+      never published and a camera VLA gets an empty observation), and any
+      `/dev/*` device path exists now.
+
+    Reports ERROR (missing committed data — exits non-zero) vs WARN (device just
+    not attached right now). HAL param precedence matches `deploy run`
+    (`--hal` > scene `hal` > `robot.yaml`).
+    """
+    from openral_core import DeployScene  # reason: defer schema import
+    from openral_core.exceptions import ROSCapabilityMismatch  # reason: defer
+    from pydantic import ValidationError  # reason: defer CLI import
+
+    from openral_cli.deploy_sim import (  # reason: defer heavy CLI import
+        _parse_hal_overrides,
+        resolve_launch_invocation,
+    )
+
+    try:
+        deploy_scene = DeployScene.from_yaml(str(config))
+    except (FileNotFoundError, ROSConfigError, ValidationError) as exc:
+        console.print(f"[red]✗ config:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    overrides = _parse_hal_overrides(hal)
+    cal_dir_override = overrides.get("calibration_dir")
+    if (
+        isinstance(cal_dir_override, str)
+        and cal_dir_override
+        and not Path(cal_dir_override).is_absolute()
+    ):
+        overrides["calibration_dir"] = str((config.parent / cal_dir_override).resolve())
+
+    # Reuse the deploy-run resolver: raises on sim-only robot, name mismatch,
+    # unknown HAL, missing manifest — and produces the merged hal_params
+    # (registry → scene hal → --hal) we then inspect for readiness.
+    try:
+        invocation = resolve_launch_invocation(
+            config=config,
+            robot_override=robot or deploy_scene.robot_id,
+            dashboard_port=4318,
+            reset_to_pose_service=None,
+            deploy_config=config,
+            hal_param_overrides=overrides,
+            hal_mode="real",
+            enable_dashboard=False,
+        )
+    except (ROSConfigError, ROSCapabilityMismatch) as exc:
+        console.print(f"[red]✗ resolve:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    errors: list[str] = []
+    warns: list[str] = []
+    hp = invocation.hal_params
+
+    port = hp.get("port")
+    if isinstance(port, str) and port and not Path(port).exists():
+        warns.append(f"serial port {port!r} does not exist now (arm not attached?)")
+
+    if isinstance(port, str) and port and not bool(hp.get("calibrate_on_connect", False)):
+        cal_id = hp.get("id")
+        cal_dir = hp.get("calibration_dir")
+        if not cal_id or not cal_dir:
+            errors.append(
+                "serial HAL with calibrate_on_connect=false but no id/calibration_dir "
+                "→ every send_action/read_state raises 'has no calibration registered'. "
+                "Add a scene `hal:` binding with id + calibration_dir."
+            )
+        else:
+            cal_file = Path(str(cal_dir)) / f"{cal_id}.json"
+            if not cal_file.exists():
+                errors.append(f"calibration file {cal_file} does not exist (id={cal_id!r}).")
+
+    if not deploy_scene.sensors:
+        warns.append("scene declares no sensors → a camera VLA will get an empty observation")
+    for sensor in deploy_scene.sensors:
+        binding = sensor.deploy_binding
+        if binding is None:
+            warns.append(
+                f"sensor {sensor.name!r} has no deploy_binding → not published, VLA won't see it"
+            )
+            continue
+        dev = binding.backend_params.get("device")
+        if isinstance(dev, str) and dev.startswith("/dev/") and not Path(dev).exists():
+            warns.append(f"sensor {sensor.name!r} device {dev!r} does not exist now")
+
+    console.print(f"[cyan]deploy validate[/cyan] {invocation.robot_id} ← {config}")
+    for warn in warns:
+        console.print(f"  [yellow]⚠ {warn}[/yellow]")
+    for err in errors:
+        console.print(f"  [red]✗ {err}[/red]")
+    if errors:
+        console.print(
+            f"[red]{len(errors)} error(s), {len(warns)} warning(s) — "
+            "not ready for `deploy run`.[/red]"
+        )
+        raise typer.Exit(code=1)
+    console.print(f"[green]✓ ready for `deploy run` ({len(warns)} warning(s)).[/green]")
+
+
+# ── openral replay — bag↔OTel correlator ──────────────────────────
 
 
 def _resolve_frame_trace_id(frame_spec: str, dataset_root: Path) -> str:
@@ -3298,8 +3649,8 @@ def _resolve_frame_trace_id(frame_spec: str, dataset_root: Path) -> str:
 @app.command(
     "replay",
     help=(
-        "Join a rosbag2/.mcap file with OTel spans from the live dashboard "
-        "(ADR-0018 F7). Prints a chronological JSON timeline keyed by trace_id; "
+        "Join a rosbag2/.mcap file with OTel spans from the live dashboard. "
+        "Prints a chronological JSON timeline keyed by trace_id; "
         "writes to `--out` when given. `--dashboard` may be omitted for a "
         "bag-only timeline."
     ),
@@ -3369,13 +3720,13 @@ def replay(
     print(_json.dumps(result.to_json(), indent=2, sort_keys=False))
 
 
-# ── openral record — wrap `ros2 bag record` with profile presets (ADR-0018 F7) ──
+# ── openral record — wrap `ros2 bag record` with profile presets ──
 
 
 @app.command(
     "record",
     help=(
-        "Spawn `ros2 bag record` for the ADR-0018 graph with a slim/full profile. "
+        "Spawn `ros2 bag record` for the OpenRAL ROS graph with a slim/full profile. "
         "Requires a sourced ROS 2 install. Use `--dry-run` to print the argv "
         "instead of executing."
     ),
@@ -3413,7 +3764,7 @@ def record(
         help="Print the composed argv instead of executing.",
     ),
 ) -> None:
-    """Wrap `ros2 bag record` with ADR-0018 F7's slim/full topic presets."""
+    """Wrap `ros2 bag record` with slim/full topic presets."""
     from openral_observability.replay.cli import run_record
 
     if profile not in {"slim", "full"}:
@@ -3439,11 +3790,11 @@ def record(
         raise typer.Exit(code=completed.returncode)
 
 
-# ── openral profile session — LTTng opt-in profiling (ADR-0018 F9) ──────────────
+# ── openral profile session — LTTng opt-in profiling ──────────────
 
 profile_app = typer.Typer(
     name="profile",
-    help="Microsecond-accurate profiling via ros2_tracing / LTTng (ADR-0018 F9).",
+    help="Microsecond-accurate profiling via ros2_tracing / LTTng.",
     no_args_is_help=True,
 )
 app.add_typer(profile_app, name="profile")

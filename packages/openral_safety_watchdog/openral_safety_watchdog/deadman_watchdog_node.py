@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 §5 bullet 4 — deadman_watchdog_node.
+"""ROS 2 reasoner + supervisor graph spec §5 bullet 4 — deadman_watchdog_node.
 
 Fires ``/openral/estop`` if no ``/openral/safe_action`` message arrives
 within :attr:`safe_action_deadline_s` (default 0.2 s — 6 chunks at the

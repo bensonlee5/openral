@@ -1,4 +1,4 @@
-"""Deploy-sim representation→slot expansion in rskill_runner_node (ADR-0036).
+"""Deploy-sim representation→slot expansion in rskill_runner_node.
 
 A VLA skill may declare only ``action_contract.representation`` (e.g.
 ``delta_ee_6d_plus_gripper``) and NO explicit ``action_contract.slots``.

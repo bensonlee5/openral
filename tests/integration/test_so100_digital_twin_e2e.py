@@ -1,4 +1,4 @@
-"""End-to-end HIL (digital-twin) verification for ADR-0018 step 1.
+"""End-to-end HIL (digital-twin) verification for the F1+F5+F8 graph rollout, step 1.
 
 Brings up the **full** F1 + F5 + F8 graph in one process against a real
 ``SO100DigitalTwin`` (no USB hardware required) and asserts the action

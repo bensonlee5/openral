@@ -23,8 +23,9 @@ confirmed by the project lead.
 Because OpenRAL drives physical actuators, the **Safety Working Group**
 (`@openral/safety`) has mandatory review authority over everything under
 `packages/openral_safety/` and `cpp/openral_safety_kernel/`. A safety-WG
-reviewer, a hazard-log update, and tests proving the change is *at least as
-conservative* are required for any safety-touching change (see CLAUDE.md §3).
+reviewer, an update to the safety hazard log (private `OpenRAL/management`
+repo), and tests proving the change is *at least as conservative* are
+required for any safety-touching change (see CLAUDE.md §3).
 Safety reviewers can block a change on safety grounds regardless of other
 approvals. For hazard reports or coordinated safety disclosure, email security@openral.dev
 with "[safety]" in the subject line.
@@ -38,8 +39,9 @@ contribute — see [CONTRIBUTING.md](CONTRIBUTING.md).
 1. **Day-to-day changes** (bug fixes, features, docs) are decided by normal PR
    review: at least one maintainer approval, CODEOWNERS satisfied, CI green.
 2. **Architectural changes that cross a layer boundary** require an
-   **Architecture Decision Record** in [`docs/adr/`](docs/adr/) before
-   implementation (CLAUDE.md §3, §4.2).
+   **Architecture Decision Record**, authored in the private `OpenRAL/management`
+   repo (see [`docs/decisions.md`](docs/decisions.md)), before implementation
+   (CLAUDE.md §3, §4.2).
 3. **Safety-critical changes** additionally require Safety Working Group
    sign-off as described above.
 4. **Disagreements** are resolved by discussion first. If consensus cannot be
@@ -49,9 +51,10 @@ contribute — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licensing & contributions
 
-OpenRAL is licensed entirely under Apache-2.0
-([ADR-0012](docs/adr/0012-open-core-licensing.md)) — there is no commercial
-or source-available tier. Contributions are accepted under the Developer
+OpenRAL is licensed entirely under Apache-2.0 — there is no
+source-available or copy-left tier in this repo; see
+[`docs/decisions.md`](docs/decisions.md) for the licensing/commercial-tier
+boundary. Contributions are accepted under the Developer
 Certificate of Origin (DCO) — see [CONTRIBUTING.md](CONTRIBUTING.md#developer-certificate-of-origin-dco).
 
 ## Code of Conduct

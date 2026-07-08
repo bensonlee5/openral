@@ -1,4 +1,4 @@
-"""ADR-0018 F4 — reasoner_node ROS 2 lifecycle wrapper.
+"""reasoner_node ROS 2 lifecycle wrapper.
 
 Thin rclpy wrapper around :class:`openral_reasoner.ReasonerCore`.
 Subscriptions, action client, service clients, and the tick timer live

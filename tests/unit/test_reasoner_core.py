@@ -1,4 +1,4 @@
-"""Unit tests for :class:`openral_reasoner.ReasonerCore` (ADR-0018 F4).
+"""Unit tests for :class:`openral_reasoner.ReasonerCore`.
 
 Real ContextRenderer + real ToolPalette + real Pydantic tool calls;
 the LLM endpoint is replaced by the deterministic
@@ -193,7 +193,7 @@ def test_retry_cap_suppresses_after_n_identical_kinds() -> None:
     core = ReasonerCore(client=client, min_interval_s=0.0, retry_cap_per_kind=3, clock=clock)
     # Reuse one renderer and push a fresh prompt before each tick so
     # ContextRenderer.seq advances — without that the new heartbeat_idle
-    # gate (ADR-0018 amendment 2026-05-25 §2) suppresses tick 2 before
+    # gate suppresses tick 2 before
     # the retry-cap gate ever runs.
     renderer = ContextRenderer()
     results = []
@@ -207,7 +207,7 @@ def test_retry_cap_suppresses_after_n_identical_kinds() -> None:
 def test_reset_kind_streak_lets_the_next_same_kind_tick_through() -> None:
     """reset_kind_streak() clears the streak so the next same-kind tick is not
     suppressed — the mechanism the reasoner_node uses on mission-task advancement
-    (ADR-0073) so a new task is not blocked by the retry_cap the just-finished
+    so a new task is not blocked by the retry_cap the just-finished
     task ended on.
     """
     palette = _palette()
@@ -341,16 +341,15 @@ def test_lifecycle_transition_round_trips_through_tick() -> None:
     assert ROSReasonerInvalidPlan is not None
 
 
-# ── ADR-0018 amendment 2026-05-25 §2 — heartbeat_idle suppression ────────────
+# ── heartbeat_idle suppression ─────────────────────────────────────────────────
 
 
 def test_heartbeat_idle_suppresses_when_renderer_unchanged() -> None:
     """A non-forced tick whose renderer hasn't budged since the last tick is suppressed.
 
-    The reasoner is event-driven with a slow heartbeat per the
-    ADR-0018 amendment of 2026-05-25; the LLM call is wasted when no
-    new failure / prompt / perception event has arrived since the
-    last successful tick.
+    The reasoner is event-driven with a slow heartbeat; the LLM call is
+    wasted when no new failure / prompt / perception event has arrived since
+    the last successful tick.
     """
     palette = _palette("openral/rskill-x")
     client = FakeToolUseClient(

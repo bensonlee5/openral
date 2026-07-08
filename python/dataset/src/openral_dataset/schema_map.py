@@ -72,8 +72,8 @@ def features_from_robot(
     Args:
         robot: Normative robot description. ``observation_spec.state_shape``
             and ``action_spec.dim`` are consulted when present; when absent
-            or empty (the typical pre-spec robot in the catalogue per
-            ADR-0007 — Franka, GR1, Sawyer, etc., where the sim-specific
+            or empty (the typical pre-spec robot in the catalogue,
+            e.g. Franka, GR1, Sawyer, etc., where the sim-specific
             contract lives on the rSkill manifest or the scene adapter),
             the caller MUST supply ``state_shape_override`` /
             ``action_dim_override``. Sensors with image modalities and a
@@ -164,7 +164,7 @@ def features_from_robot(
     # AND a vla_feature_key contribute — sensors without a feature key
     # are not addressable by name in the v3 row.
     #
-    # ADR-0019 / ADR-0007: per-camera shape resolution order:
+    # Per-camera shape resolution order:
     #   1. ``camera_shape_override`` (sim CLI passes
     #      ``SceneSpec.observation_height/width`` here — sim renders all
     #      cameras at a single scene-level resolution that differs from
@@ -184,8 +184,8 @@ def features_from_robot(
                 raise ValueError(
                     f"robot {robot.name!r} sensor {sensor.name!r} declares "
                     f"vla_feature_key={sensor.vla_feature_key!r} but has no "
-                    "intrinsics; ADR-0019 requires intrinsics.{width,height} "
-                    "for every bridge-bindable camera sensor (or a "
+                    "intrinsics; every bridge-bindable camera sensor requires "
+                    "intrinsics.{width,height} (or a "
                     "camera_shape_override from the sim scene config)"
                 )
             height = int(sensor.intrinsics.height)

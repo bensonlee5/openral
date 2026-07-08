@@ -1,8 +1,8 @@
 # Sim Environments
 
 Scene YAMLs under [`scenes/`](https://github.com/OpenRAL/openral/tree/master/scenes)
-follow the three-tier hierarchy introduced by
-[ADR-0041](../adr/0041-scene-three-tier-hierarchy.md): `DeployScene ⊆ SimScene
+follow a three-tier hierarchy:
+`DeployScene ⊆ SimScene
 ⊆ BenchmarkScene`. Each tier has its own directory, its own loader-strictness
 gate, and its own CLI consumer. The conceptual overview, decision matrix,
 authoring guide, and per-backend `scene.id` catalogue all live in the in-tree
@@ -72,7 +72,7 @@ Consumed by `openral sim run`.
 | [`robocasa_panda_mobile_kitchen.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/robocasa_panda_mobile_kitchen.yaml) | `panda_mobile` *(scene-fixed)* | `robocasa/NavigateKitchen` | `robocasa/NavigateKitchen/0` | Mobile-base kitchen navigation; `deploy sim` Nav2 graph compatible |
 | [`robocasa_pnp.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/robocasa_pnp.yaml) | `panda_mobile` *(scene-fixed)* | `robocasa/PickPlaceCounterToCabinet` | `robocasa/PickPlaceCounterToCabinet/0` | RoboCasa kitchen pnp smoke |
 | [`so101_tube_insertion.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/so101_tube_insertion.yaml) | `so101_follower` *(scene-fixed)* | `so101_box` | `so101_box/tube_insertion` | Box-arena tube-insertion smoke; geometry/sensors/spawn ranges configurable via `BoxSceneOptions` |
-| [`tabletop_cube_push.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/tabletop_cube_push.yaml) | `so101_follower` *(free-axis default; pass `--robot` to override)* | `tabletop_push` | `tabletop_push/push_to_goal` | Robot-agnostic cube push-to-goal ([ADR-0033](../adr/0033-robot-parameterized-native-scenes.md)) |
+| [`tabletop_cube_push.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/tabletop_cube_push.yaml) | `so101_follower` *(free-axis default; pass `--robot` to override)* | `tabletop_push` | `tabletop_push/push_to_goal` | Robot-agnostic cube push-to-goal |
 | [`widowx_carrot_on_plate.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/widowx_carrot_on_plate.yaml) | `widowx` *(scene-fixed)* | `simpler_env` | `simpler_env/widowx_carrot_on_plate` | SimScene sibling of the SimplerEnv WidowX carrot benchmark; used by the OpenVLA-OFT issue #55 reproduction path |
 
 ## BenchmarkScene catalogue (`scenes/benchmark/`)
@@ -82,8 +82,8 @@ Consumed by `openral sim run`.
 match the canonical paper protocol; running `openral benchmark scene` against
 one of these writes `rskills/<vla>/eval/<scene_id>.json` with
 `reproduced_locally=true`. Consumed by `openral benchmark scene`. Most are
-also aggregated into a multi-scene suite (bare `list[BenchmarkScene]` per
-ADR-0042) under
+also aggregated into a multi-scene suite (bare `list[BenchmarkScene]` at the
+YAML root) under
 [`benchmarks/`](https://github.com/OpenRAL/openral/tree/master/benchmarks).
 
 | Config | Fixed / declared robot | `scene.id` | `task.id` | `n_episodes` | Paper |
@@ -113,7 +113,7 @@ and MT50 task sets — `benchmarks/metaworld_mt10.yaml` (10 tasks) and
 `benchmarks/metaworld_mt50.yaml` (50 tasks) — all 4 SimplerEnv WidowX tasks)
 live in
 [`benchmarks/`](https://github.com/OpenRAL/openral/tree/master/benchmarks).
-A suite YAML is a bare `list[BenchmarkScene]` at the YAML root (ADR-0042);
+A suite YAML is a bare `list[BenchmarkScene]` at the YAML root;
 suite-level invariants (uniform `robot_id`, `seed`, `n_episodes`, and full
 `metadata` block) are enforced by `openral_core.raise_on_invalid_suite`.
 
@@ -154,9 +154,9 @@ metrics. `just sim-eval` runs the full benchmark suites end-to-end.
 - [Tutorial — Create a sim environment](../tutorials/sim/create-a-sim-environment.md)
   — long-form YAML authoring guide (new scene adapter, new robot manifest,
   custom policy).
-- [ADR-0002](../adr/0002-eval-and-sim-environments.md) — original
-  scene/eval design.
-- [ADR-0041](../adr/0041-scene-three-tier-hierarchy.md) — three-tier
+- The original scene/eval design established the base `sim run` +
+  eval-layer split.
+- A later decision introduced the three-tier
   hierarchy (`DeployScene ⊆ SimScene ⊆ BenchmarkScene`) + loader strictness.
-- [ADR-0009](../adr/0009-separate-sim-and-benchmarking.md) — separation
-  of `sim run` (debug) and `benchmark *` (paper-comparable eval).
+- Another decision separated
+  `sim run` (debug) from `benchmark *` (paper-comparable eval).

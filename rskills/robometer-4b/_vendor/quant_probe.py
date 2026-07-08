@@ -1,4 +1,4 @@
-"""Phase 2 NF4 quantization probe for Robometer-4B (ADR-0057).
+"""Phase 2 NF4 quantization probe for Robometer-4B.
 
 Replicates the repo's NF4 rewrite rule from openral_sim._quantization
 (quantize_nf4_in_place: nn.Linear with weight.numel() >= 4M -> bnb.nn.Linear4bit,

@@ -1,4 +1,4 @@
-# ADR-0030 — bounded set of world obstacles for the safety kernel's
+# Bounded set of world obstacles for the safety kernel's
 # world-collision check. Each obstacle is a capsule (a sphere is a capsule with
 # half_length 0) expressed in `header.frame_id`, which MUST be the robot base
 # frame the kernel computes forward kinematics in (no TF transform is applied in

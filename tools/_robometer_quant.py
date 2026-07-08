@@ -1,13 +1,13 @@
 """Shared NF4 quantize + pre-quantized meta-load helpers for the Robometer
-reward sidecar (ADR-0057). Runs inside the isolated sidecar venv, so it CANNOT
-import ``openral_sim._quantization`` — it re-implements the same NF4 rule
+reward scorer. It does not import ``openral_sim._quantization``;
+it re-implements the same NF4 rule
 (``nn.Linear`` with ``numel >= MIN_PARAMS`` -> ``bitsandbytes`` ``Linear4bit``
 nf4/bf16) plus a pre-quantized direct-load path.
 
 Used by both:
   * ``tools/build_robometer_nf4_checkpoint.py`` — produces the publishable 3.32 GB
     pre-quantized checkpoint (and folds the non-persistent rotary buffers in).
-  * ``tools/_robometer_server.py`` — loads that checkpoint directly as 4-bit (no
+  * ``tools/_robometer_scorer.py`` — loads that checkpoint directly as 4-bit (no
     bf16 materialization, no requantize) via the meta device.
 
 Determinism (CLAUDE.md §8 reproducibility): the reward ramp must be byte-stable

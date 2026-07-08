@@ -300,7 +300,7 @@ class SimRunner(InferenceRunnerBase):
                 ``None`` when the user passed nothing — the env/YAML language
                 then takes over. See :func:`_resolve_step_instruction`.
             deadline_overrun_policy: Forwarded to the base class.
-            recorder: ADR-0019 optional :class:`openral_dataset.RolloutRecorder`.
+            recorder: Optional :class:`openral_dataset.RolloutRecorder`.
                 When set, per-step state / images / action plus episode
                 boundaries are fanned out to the recorder's sinks in
                 addition to the existing :class:`_EpisodeBuffer`. The
@@ -443,7 +443,7 @@ class SimRunner(InferenceRunnerBase):
         # Flush partial episode (e.g. when max_ticks cut us short).
         if self._buf.has_data:
             self._finalize_episode()
-        # ADR-0019: if an episode opened on the recorder never reached
+        # If an episode opened on the recorder never reached
         # _finalize_episode (e.g. activate() succeeded but no ticks ran),
         # close it as a failure before finalising the recorder.
         if self._recorder is not None:
@@ -479,7 +479,7 @@ class SimRunner(InferenceRunnerBase):
         """Stop once ``n_episodes`` EpisodeResults have been emitted."""
         return len(self.episode_results) >= self._env_cfg.n_episodes
 
-    # ── ADR-0019 PR3 — episode boundary overrides (sim no-ops) ──────────────
+    # ── Episode boundary overrides (sim no-ops) ──────────────────────────────
     #
     # SimRunner derives episode boundaries from the env's terminated /
     # truncated flags inside _reset_tick / _finalize_episode; the
@@ -550,7 +550,7 @@ class SimRunner(InferenceRunnerBase):
         self._step_idx = 0
         self._needs_reset = False
 
-        # ADR-0019: open a new episode on the recorder so the first
+        # Open a new episode on the recorder so the first
         # _step_tick's record_frame has a target. The recorder is
         # additive — _EpisodeBuffer continues to drive in-memory video /
         # benchmark output as before.
@@ -698,7 +698,7 @@ class SimRunner(InferenceRunnerBase):
                 truncated = True
                 self._needs_reset = True
 
-            # ADR-0019: fan out per-step state / images / action to the
+            # Fan out per-step state / images / action to the
             # recorder. We render here unconditionally when a recorder
             # is attached — the existing _buf.frames branch above only
             # captures frames when record_video=True. The recorder is
@@ -721,7 +721,7 @@ class SimRunner(InferenceRunnerBase):
             truncated=truncated,
         )
 
-    # ── ADR-0019 recorder fan-out ───────────────────────────────────────────
+    # ── Recorder fan-out ──────────────────────────────────────────────────
 
     def _record_to_recorder(
         self,
@@ -832,7 +832,7 @@ class SimRunner(InferenceRunnerBase):
             budget_violations=out.budget_violations,
         )
 
-        # ADR-0019: close the recorder's view of the episode AFTER the
+        # Close the recorder's view of the episode AFTER the
         # buffer has been drained but BEFORE the index advances, so the
         # recorder's episode_idx aligns with the EpisodeResult that was
         # just appended.

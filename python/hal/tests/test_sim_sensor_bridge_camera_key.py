@@ -1,4 +1,4 @@
-"""SimSensorBridge resolves camera obs-key via vla_feature_key suffix (ADR-0034).
+"""SimSensorBridge resolves camera obs-key via vla_feature_key suffix.
 
 Also covers the dual-keying fallback (issue #88): a frame dict may be keyed by
 the VLA slot (``camera1`` — SimAttachedHAL) or by the sensor name (``front`` —

@@ -1,4 +1,4 @@
-"""ADR-0018 F3 — integration tests for the namespaced FailureTrigger bus.
+"""Integration tests for the namespaced FailureTrigger bus.
 
 Drives the real
 :class:`openral_observability.FailureBusPublisher` against the

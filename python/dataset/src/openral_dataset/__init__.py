@@ -1,4 +1,4 @@
-"""openral_dataset — rosbag2 ↔ LeRobotDataset v3 bridge (ADR-0019).
+"""openral_dataset — rosbag2 ↔ LeRobotDataset v3 bridge.
 
 Public API:
     RolloutRecorder       — in-memory per-rollout accumulator with multi-sink fan-out.

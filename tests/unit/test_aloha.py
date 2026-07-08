@@ -115,7 +115,7 @@ class TestAlohaDescription:
 
     def test_sim_baseline_sdk_pointer(self) -> None:
         """The sim baseline keeps ``sdk_kind: open``; its ``hal`` block names
-        both the sim HAL (AlohaMujocoHAL) and real HAL (AlohaHAL) — ADR-0031.
+        both the sim HAL (AlohaMujocoHAL) and real HAL (AlohaHAL).
         """
         assert ALOHA_DESCRIPTION.sdk_kind == "open"
         assert ALOHA_DESCRIPTION.hal.sim == "openral_hal.aloha:AlohaMujocoHAL"
@@ -132,7 +132,7 @@ class TestAlohaDescription:
         for shared_field in ("name", "joints", "end_effectors", "capabilities", "safety"):
             assert sim[shared_field] == real[shared_field]
         assert sim["sdk_kind"] != real["sdk_kind"]
-        # ADR-0031: the hal entrypoints are shared; only sdk_kind differs.
+        # The hal entrypoints are shared; only sdk_kind differs.
         assert sim["hal"] == real["hal"]
 
     def test_description_round_trip_through_json(self) -> None:

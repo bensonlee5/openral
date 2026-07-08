@@ -10,7 +10,7 @@
     "reproduced_locally": false,
     "reproduction_planned": "Requires a CUDA host with the so101_box MuJoCo scene and the NF4 weights pack.",
     "reproduction_cli": {
-      "description": "Re-run this benchmark inside the OpenRAL repo. ADR-0009 PR D: openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
+      "description": "Re-run this benchmark inside the OpenRAL repo. openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
       "command": "openral benchmark run --suite so101_tabletop --rskill molmoact2-so101",
       "status": "pending — so101_tabletop benchmark suite not yet registered in tree",
       "notes": [

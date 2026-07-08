@@ -1,7 +1,7 @@
 # Jetson detection fixtures
 
-Recorded real-device output for `_probe_jetson()` unit tests
-(ADR-0013 PR 2/3). No mocks per CLAUDE.md §1.11 — each `model` file
+Recorded real-device output for `_probe_jetson()` unit tests.
+No mocks per CLAUDE.md §1.11 — each `model` file
 is the contents of `/proc/device-tree/model` on a real board, and
 each `nv_tegra_release` file is the first line of `/etc/nv_tegra_release`
 from a real JetPack install.

@@ -10,9 +10,9 @@
 # ``task.scene_id`` to point at any of them once a checkpoint exists,
 # the suite structure is unchanged.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename
+# Shape: bare list of BenchmarkScenes; suite id = filename
 # stem ("gr1_tabletop"). Only the VLA (rSkill) varies across runs.
-# Consumed by `openral benchmark run` (PR D of ADR-0009); writes a
+# Consumed by `openral benchmark run`; writes a
 # RSkillEvalResult JSON to rskills/<vla>/eval/gr1_tabletop.json with
 # reproduced_locally=true AND updates `benchmarks.gr1_tabletop` in the
 # matching rskill.yaml with the headline avg_success_rate. Suite-level

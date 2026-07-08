@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — exercise envelope_loader against every in-tree manifest.
+"""PR-H — exercise envelope_loader against every in-tree manifest.
 
 This is the production envelope-loading flow:
 
@@ -99,7 +99,7 @@ def test_cross_product_so100_against_compatible_skills(tmp_path: pathlib.Path) -
 def test_real_so100_envelope_round_trips_to_kernel_params() -> None:
     """End-to-end: load SO-100 manifest → EnvelopeIntersection → ROS param dict.
 
-    Replaces the old write_envelope_file path (deleted in ADR-0020
+    Replaces the old write_envelope_file path (deleted in
     PR-K): the kernel reads each canonical field as a ROS parameter,
     not as a YAML file.
     """
@@ -129,7 +129,7 @@ def test_synthetic_looser_skill_is_rejected_against_so100(tmp_path: pathlib.Path
         "weights_uri": "hf://lerobot/smolvla_base@main",
         "chunk_size": 16,
         "latency_budget": {"per_chunk_ms": 100.0},
-        # description + actions are required by RSkillManifest (ADR-0022,
+        # description + actions are required by RSkillManifest (they're
         # surfaced to the reasoner tool palette); this synthetic fixture
         # predates that requirement and must carry them to validate.
         "description": "Synthetic attacker skill that loosens the force ceiling.",

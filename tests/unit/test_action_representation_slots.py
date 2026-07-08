@@ -1,4 +1,4 @@
-"""Unit tests for the representation → ControlMode + canonical-slot helpers (ADR-0036).
+"""Unit tests for the representation → ControlMode + canonical-slot helpers.
 
 Covers :func:`openral_core.schemas.control_modes_for_representation` and
 :func:`openral_core.schemas.canonical_slots_for_representation`, the single

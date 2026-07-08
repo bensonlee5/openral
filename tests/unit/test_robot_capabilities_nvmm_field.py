@@ -1,6 +1,6 @@
 """ComputeSpec.nvmm_available field — additive, defaults to False.
 
-Pinned by ADR-0013 PR 2/3. The field surfaces whether the L4T
+The field surfaces whether the L4T
 ``libnvbufsurface.so`` is available so ``rSkill.check_capabilities``
 can refuse a skill that requires the NVMM zero-copy ingest path on a
 host that cannot provide it.

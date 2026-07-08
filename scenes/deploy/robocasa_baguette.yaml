@@ -1,4 +1,4 @@
-# RoboCasa kitchen — deterministic baguette PnP (ADR-0044 find→navigate→grab e2e).
+# RoboCasa kitchen — deterministic baguette PnP (find→navigate→grab e2e).
 #
 # Same digital twin as robocasa_pnp.yaml (panda_mobile mobile manipulator, full
 # OpenRAL stack with SLAM + Nav2), but pins the PnP target object to a baguette

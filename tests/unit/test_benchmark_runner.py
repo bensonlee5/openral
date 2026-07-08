@@ -1,11 +1,11 @@
-"""Unit tests for the benchmark runner (ADR-0009 PR D + ADR-0042).
+"""Unit tests for the benchmark runner.
 
 End-to-end coverage of ``openral_sim.run_benchmark`` against the mock
 scene + zero policy — no GPU, no HF Hub, no physics. The mock adapter
 terminates each episode at step ``success_step`` so a full
 ``tasks × n_episodes`` matrix completes in well under a second.
 
-ADR-0042 (June 2026) deleted ``BenchmarkSpec``; ``run_benchmark`` and
+``BenchmarkSpec`` was deleted; ``run_benchmark`` and
 ``_aggregate_results`` now take a bare ``list[BenchmarkScene]`` + a
 keyword-only ``suite_id``. Tests build the list directly via
 ``_mini_suite``.
@@ -61,7 +61,7 @@ def _mini_suite(
     n_tasks: int = 2,
     n_episodes: int = 3,
 ) -> tuple[list[BenchmarkScene], str]:
-    """Build a tiny mock benchmark suite in the post-ADR-0042 shape.
+    """Build a tiny mock benchmark suite in the bare-list suite shape.
 
     Every BenchmarkScene shares the same scene / robot / protocol /
     metadata — the suite-level invariants in
@@ -157,7 +157,7 @@ def test_aggregate_results_records_reproduction_cli() -> None:
 
 
 def test_aggregate_results_uses_display_name_and_simulator_from_metadata() -> None:
-    """ADR-0042: ``benchmark.name`` / ``simulator`` flow from per-scene metadata."""
+    """``benchmark.name`` / ``simulator`` flow from per-scene metadata."""
     scenes, suite_id = _mini_suite()
     result = _aggregate_results(
         scenes, suite_id=suite_id, vla=_vla_zero(), per_task={"mock/0": [True]}, episodes=[]
@@ -238,7 +238,7 @@ def test_run_benchmark_writes_validated_skill_eval_result(tmp_path: Path) -> Non
     out.write_text(result.model_dump_json(indent=2))
 
     rehydrated = RSkillEvalResult.from_json(str(out))
-    # ADR-0042: ``robot_id`` lives on every ``BenchmarkScene`` (suite
+    # ``robot_id`` lives on every ``BenchmarkScene`` (suite
     # invariants guarantee uniformity). Read it from the first scene to
     # mirror what the aggregator copies into ``RSkillEvalBenchmark.robot``.
     assert rehydrated.benchmark.robot == scenes[0].robot_id

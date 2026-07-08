@@ -200,8 +200,15 @@ jobs:
           # here anymore.
           for t in ${{ steps.select.outputs.isolated_targets }}; do
             echo "::group::pytest (isolated) ${t}"
-            uv run pytest "$t" -q -p no:launch_testing -p no:launch_ros || rc=1
+            iso_rc=0
+            uv run pytest "$t" -q -p no:launch_testing -p no:launch_ros || iso_rc=$?
             echo "::endgroup::"
+            # pytest exit 5 == "no tests collected": an isolated file whose every
+            # test needs an optional extra (e.g. lerobot[dataset]) skips its whole
+            # module via `importorskip`, collecting nothing. On a runner without
+            # the extra that is a legitimate all-skipped outcome, not a failure —
+            # only a real non-zero (1 failed / 2 interrupted / 139 crash) fails.
+            if [ "$iso_rc" -ne 0 ] && [ "$iso_rc" -ne 5 ]; then rc=1; fi
           done
           exit $rc
 
@@ -262,7 +269,12 @@ jobs:
           # here anymore.
           for t in ${{ steps.select.outputs.isolated_targets }}; do
             echo "::group::pytest (isolated) ${t}"
-            uv run pytest "$t" -q -p no:launch_testing -p no:launch_ros || rc=1
+            iso_rc=0
+            uv run pytest "$t" -q -p no:launch_testing -p no:launch_ros || iso_rc=$?
             echo "::endgroup::"
+            # pytest exit 5 == "no tests collected" (whole module importorskip'd
+            # because an optional extra is absent) is a legitimate all-skipped
+            # outcome, not a failure. See the full-run step for the rationale.
+            if [ "$iso_rc" -ne 0 ] && [ "$iso_rc" -ne 5 ]; then rc=1; fi
           done
           exit $rc

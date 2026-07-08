@@ -1,11 +1,4 @@
-"""Unit tests for ``openral_sim.benchmark.update_rskill_benchmarks``.
-
-Closes the ``openral benchmark run`` → ``rskill.yaml`` loop without touching any
-sim. Uses the real, in-tree ``rskills/pi05-robocasa365-human300-nf4/rskill.yaml``
-manifest (copied into ``tmp_path`` so the source-of-truth file is never
-mutated by the test) so the test exercises the same schema and YAML shape
-the production runner sees — no placeholder strings (CLAUDE.md §1.11).
-"""
+"""Unit tests for ``openral_sim.benchmark.update_rskill_benchmarks``."""
 
 from __future__ import annotations
 
@@ -21,7 +14,7 @@ from openral_sim.benchmark import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_REAL_SKILL_DIR = _REPO_ROOT / "rskills" / "pi05-robocasa365-human300-nf4"
+_REAL_SKILL_DIR = _REPO_ROOT / "rskills" / "rldx1-ft-rc365-nf4"
 _REAL_MANIFEST = _REAL_SKILL_DIR / "rskill.yaml"
 
 
@@ -30,7 +23,7 @@ def skill_dir(tmp_path: Path) -> Path:
     """Copy the real rSkill into a tmp directory so the source file stays clean."""
     if not _REAL_MANIFEST.exists():
         pytest.skip(f"real fixture rSkill not present at {_REAL_MANIFEST}")
-    dst = tmp_path / "pi05-robocasa365-human300-nf4"
+    dst = tmp_path / "rldx1-ft-rc365-nf4"
     dst.mkdir()
     shutil.copy2(_REAL_MANIFEST, dst / "rskill.yaml")
     return dst
@@ -40,7 +33,7 @@ def test_update_writes_into_empty_benchmarks_block(skill_dir: Path) -> None:
     """Manifest with no ``benchmarks:`` block gets one appended; subsequent
     runs land in the just-created block.
 
-    The pi05-robocasa365-human300-nf4 manifest omits the empty
+    The rldx1-ft-rc365-nf4 manifest omits the empty
     ``benchmarks: {}`` line (schema default fills it back in); the
     writeback's "missing block → append" branch is what's exercised here.
     """
@@ -63,18 +56,17 @@ def test_update_preserves_comments_outside_benchmarks_block(skill_dir: Path) -> 
     before = (skill_dir / "rskill.yaml").read_text()
     # Pull a couple of distinctive comments out of the real manifest.
     assert "# rSkill manifest" in before
-    assert "Pre-quantized nf4" in before
-    assert "No published benchmark numbers yet" in before
+    assert "RoboCasa-365 cross-task finetune" in before
+    assert "LICENSE: RLWRLD Model License" in before
 
     update_rskill_benchmarks(skill_dir, "robocasa_pnp", 0.55)
     after = (skill_dir / "rskill.yaml").read_text()
 
     # Every comment except (possibly) the leading-edge of the benchmarks block
-    # itself is preserved verbatim. The comment "No published benchmark
-    # numbers yet" lives ABOVE `benchmarks: {}` and must survive.
+    # itself is preserved verbatim.
     assert "# rSkill manifest" in after
-    assert "Pre-quantized nf4" in after
-    assert "No published benchmark numbers yet" in after
+    assert "RoboCasa-365 cross-task finetune" in after
+    assert "LICENSE: RLWRLD Model License" in after
 
 
 def test_update_overwrites_existing_benchmark_key(skill_dir: Path) -> None:

@@ -76,7 +76,7 @@ class FakeSimEnv:
     emit_proprio: bool = False
     base_joint_names: tuple[str, str, str] | None = None
     base_z: float = 0.7
-    # ADR-0048 Phase 1 — opt-in fake sim clock for ``sim_time_ns`` tests.
+    # Opt-in fake sim clock for ``sim_time_ns`` tests.
     #   * ``has_sim_clock=True`` → :meth:`sim_time_ns` returns a per-episode
     #     elapsed-time counter that advances by ``sim_dt_ns`` on every ``step``
     #     and REWINDS to 0 on every ``reset`` (modelling robocasa's MjData.time

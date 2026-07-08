@@ -2,10 +2,10 @@
 
 How the **reasoner (S2)** actually thinks — the connective narrative behind the
 individual decisions. Where [`reasoner.md`](reasoner.md) is the *reference* (the
-contract, the cadence, the env vars) and each ADR is *one decision in isolation*,
-this page is organized **by the logic problem the reasoner has to solve**. For
-each problem: what it is, how we solve it, why we chose that, and the governing
-ADR(s) to read for the full record.
+contract, the cadence, the env vars) and each decision is recorded in isolation in
+the private management decision log, this page is organized **by the logic
+problem the reasoner has to solve**. For each problem: what it is, how we solve
+it, and why we chose that.
 
 It deliberately does **not** restate mechanism detail that lives in
 [`reasoner.md`](reasoner.md) or the [`openral_reasoner_ros` README](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/README.md) —
@@ -29,7 +29,7 @@ of the choices.
 tokens doing nothing, and a free-form LLM that emits prose or multiple
 simultaneous actions can't be safely dispatched or replayed.
 
-**Solution** ([ADR-0018](../adr/0018-ros2-reasoner-supervisor.md)). The reasoner
+**Solution.** The reasoner
 is **event-driven with a slow heartbeat**:
 
 - **Heartbeat** at `tick_hz = 0.2` (one tick / 5 s). A heartbeat tick that has
@@ -52,7 +52,7 @@ is **event-driven with a slow heartbeat**:
 
 **Authority boundary.** The reasoner holds **no actuation authority**: it never
 publishes `ActionChunk`. Only `rskill_runner_node` does, and every action passes
-the C++ safety kernel ([ADR-0020](../adr/0020-cpp-safety-kernel.md)) before it
+the C++ safety kernel before it
 reaches a motor. *Python proposes; C++ disposes.*
 
 **Why.** Event-driven cuts idle LLM calls ~85% vs a fast timer; the heartbeat is
@@ -72,31 +72,30 @@ This is exactly what made a real run loop forever on a collective goal.
 **Solution.** Two complementary perception surfaces, both **read-only**, neither
 requiring depth:
 
-- **Camera-space `in_view` enumeration** ([ADR-0076](../adr/0076-detection-identity-and-camera-space-enumeration.md)).
+- **Camera-space `in_view` enumeration**.
   The continuous detector stamps a stable per-object `det_id` (via a 2D-IoU
   `DetectionTracker2D`) and the context renders a line the LLM can refer to:
   `in_view[top]: #0 milk @px(412,233), #1 ketchup @px(388,251), …`. Pixel
   centers, not 3D poses — kept in a separate line from `scene_objects[map]:
   …@(x,y,z)` so coordinate spaces never blur. Identity exists with or without
   depth.
-- **A sticky `located` line** ([ADR-0076 §4](../adr/0076-detection-identity-and-camera-space-enumeration.md)).
+- **A sticky `located` line**.
   The continuous detector's fixed ~230-class vocab *mislabels* the goal objects
   (a basket read as "box", ketchup as "bottle"). So every successful open-vocab
   `locate_in_view` hit is folded by `ContextRenderer.note_located()` into a
   persistent `located[<cam>]` line (latest-wins, `_LOCATED_CAP=12`). The prompt
   tells the LLM `located` is authoritative over the noisy `in_view`.
 
-**On-demand localization** ([ADR-0043](../adr/0043-locate-in-view-reasoner-tool.md),
-[ADR-0056](../adr/0056-on-demand-detectors-as-promptable-reasoner-tools.md)). The
+**On-demand localization.** The
 `locate_in_view` tool asks a live detector "is X in camera Y right now?" via the
-`/openral/perception/<detector>/locate_in_view` service. ADR-0056 makes detectors
+`/openral/perception/<detector>/locate_in_view` service. Detectors run
 **node-per-detector** so a continuous detector and one or more on-demand locators
-coexist, and gives `LocateInViewTool` a `detector` selector (fast
+coexist, and `LocateInViewTool` gets a `detector` selector (fast
 `omdet-turbo-locator` for simple "find X", `locateanything-3b` for referring
 expressions). A `recall_object` miss auto-escalates to a live `locate_in_view`
 before handoff — policy in the node, not dependent on the LLM picking the tool.
 
-> **Two hard-won usability fixes** ([ADR-0056 amendment 2026-06-29](../adr/0056-on-demand-detectors-as-promptable-reasoner-tools.md)):
+> **Two hard-won usability fixes** (as of the 2026-06-29 amendment):
 > (1) `omdet-turbo-locator` is a multi-label detector — query it with concrete
 > object **nouns** / a comma-list (`"cup, bowl, basket"`), never a collective
 > phrase (`"the objects on the table"`), which it matches as one nonexistent
@@ -105,8 +104,7 @@ before handoff — policy in the node, not dependent on the LLM picking the tool
 > missed against a frame stored under `"default"`. Both surfaced as the same
 > `found=False` loop.
 
-**Active search** ([ADR-0039](../adr/0039-llm-task-planning-active-search.md),
-*proposed*). When an object isn't in memory at all, `recall_object` /
+**Active search** (*proposed*). When an object isn't in memory at all, `recall_object` /
 `resolve_place` plus a bounded `SearchBudget` (max places **and** wall-clock,
 no hidden default) drive a *look → navigate → re-query* loop, opening occluding
 containers first, terminating in human-handoff.
@@ -128,13 +126,13 @@ object list in context.
 
 **Solution.**
 
-- **A structural contract, not a prompt** ([ADR-0075](../adr/0075-grounded-decomposition-contract.md)).
+- **A structural contract, not a prompt**.
   `DecomposeMissionTool.subtasks` is `list[GroundedSubtask]`, where
   `GroundedSubtask(object_ref, text)` carries a Pydantic `@model_validator` that
   **rejects** a collective `object_ref`/`text` (shared `is_collective_target`
   predicate) and requires `text` to name `object_ref`. The type makes a vague
   subtask un-representable on the wire.
-- **A sequential task queue** ([ADR-0073](../adr/0073-reasoner-success-gating-and-task-queue.md)).
+- **A sequential task queue**.
   `MissionState(tasks, current)` holds `TaskState`s with a strict lifecycle
   `pending → active → verifying → {done|abandoned}` (at most one active). The
   operator goal seeds a single task (`MissionState.from_prompt`); the LLM
@@ -160,24 +158,24 @@ misclassifies a physically-successful result scored 0.78.
 
 **Solution** — a layered signal stack:
 
-1. **A reward model running parallel to the VLA** ([ADR-0057](../adr/0057-robometer-reward-rskill.md)).
+1. **A reward model running parallel to the VLA**.
    `kind: reward` rSkills (default Robometer-4B, NF4, ~3.6 GB) score the shared
    camera stream every ~1–2 s and expose `progress_now` / `success_now` /
    trends through the read-only `query_task_progress` tool. Its `RewardContract`
    manifest block declares the calibration (`success_threshold`,
    `frame_window_s`, …). Advisory only.
-2. **A stall watchdog that fires a stream, not a poll** ([ADR-0064](../adr/0064-critic-score-topic-and-tier-c-producer.md)).
+2. **A stall watchdog that fires a stream, not a poll**.
    Every reward model publishes self-describing `CriticScore` on
    `/openral/critic/score`; a `critic_id`-keyed `CriticWatchdogGroup` watches for
    a stall and publishes a Tier-C `FailureTrigger` on `/openral/failure/critic`
    — so a plateau *preempts a tick* instead of silently running to timeout.
-3. **A reward-watcher wake** ([ADR-0074](../adr/0074-vlm-adjudicated-completion-and-reward-driven-progress.md)).
+3. **A reward-watcher wake**.
    The instant the reward signal hits **success**, **plateau**, or the
    **patience ceiling**, the in-flight VLA is cancelled and a normal reasoner
    tick wakes with the reward trajectory injected. `patience_s` (an
    `ExecuteRskillTool` field, default from the contract) replaces the
    LLM-guessed `deadline_s` as the execution backstop.
-4. **A three-tier verdict** ([ADR-0074](../adr/0074-vlm-adjudicated-completion-and-reward-driven-progress.md)).
+4. **A three-tier verdict**.
    `evaluate_task_verdict` replaces the hardcoded threshold:
    - **auto-pass** (`score ≥ success_threshold`) → `complete_active`, no VLM call;
    - **vlm_check** (`check_floor ≤ score < success_threshold`) → adjudicate the
@@ -208,7 +206,7 @@ VLA. Pairing used to be an implicit deploy flag decoupled from which VLA the
 reasoner picks at runtime, and nothing guaranteed both fit on the GPU before
 loading — you'd discover the mismatch as a mid-run CUDA OOM.
 
-**Solution** ([ADR-0077](../adr/0077-vla-reward-pairing-and-vram-fit.md)). A VLA
+**Solution.** A VLA
 manifest **names its reward model** (`reward_rskill_name`, allowed only for
 `kind == "vla"`; `None` = deployment default) and declares per-dtype VRAM
 (`min_vram_gb`, read by `active_min_vram_gb()`). A pure helper
@@ -220,7 +218,7 @@ before `from_pretrained`. The deploy CLI adds a **pre-launch** preflight
 (`_preflight_reward_vram_fit`, torch-free `nvidia-smi` probe) that hard-exits only
 when *no* capability-matched VLA fits — **`deploy sim` / `deploy run` only**, not
 `benchmark` / `sim run`. (Eviction of *other* peers — detectors before the VLA —
-is the complementary [ADR-0050](../adr/0050-single-resident-skill-vram-eviction.md).)
+is handled by a complementary decision.)
 
 **Why.** A VLA without a reward model is blind to its own success, so it should
 never run alone. Sizes are knowable from the manifests; an oversized pair should
@@ -234,8 +232,7 @@ fail before launch with an actionable message, not as an opaque OOM mid-grasp.
 disruptive* recovery, and must be guaranteed to terminate (no infinite retry
 storm).
 
-**Solution** ([ADR-0018](../adr/0018-ros2-reasoner-supervisor.md),
-[ADR-0073](../adr/0073-reasoner-success-gating-and-task-queue.md)). A fixed ladder:
+**Solution.** A fixed ladder:
 **retry → param-tweak → substitute-skill → goal-replan → human-handoff**. The
 shipped gate is `ReasonerCore`'s per-kind retry cap (`retry_cap_per_kind`,
 default 3) — consecutive same-kind selections beyond the cap are suppressed
@@ -259,8 +256,7 @@ ship today — see [`reasoner.md` §Bounded replanning](reasoner.md#bounded-repl
 procedures lived as bespoke Python, it didn't learn across episodes, and it never
 saw its own body or its execution outcomes.
 
-**Solution** ([ADR-0072](../adr/0072-reasoner-playbooks-and-self-maintained-memory.md),
-*proposed/phased*):
+**Solution** (*proposed/phased*):
 
 - **Playbooks** (`kind: "playbook"`, `role: "s2"`) — Markdown SOPs the LLM
   *reads and interprets*, never executes. Their `PlaybookContract` (trigger,
@@ -271,7 +267,7 @@ saw its own body or its execution outcomes.
   `stage-for-manipulation`, `clarify-ambiguity`, `subtask-with-goal`).
 - **Self-maintained `MEMORY.md`** — *semantic/narrative* memory (preferences,
   corrections, lessons, durable home facts), complementary to the *geometric*
-  scene graph ([ADR-0038](../adr/0038-persistent-semantic-spatial-memory.md)):
+  scene graph:
   the scene graph answers "where is the mug?", `MEMORY.md` answers "how does this
   household like things done?". The LLM edits it only through typed
   `MemoryWriteTool` / `MemorySearchTool` ops (add/update/supersede/delete) — a
@@ -334,25 +330,6 @@ individual decisions follow:
    claimed-uncertain success — the attempt runs to the bound and hands off.
 5. **Types are the contract** (CLAUDE.md §1.3). A vague subtask or an unpaired
    reward model is made *un-representable on the wire*, not merely discouraged.
-
----
-
-## ADR index — logic problem → decision record
-
-| Logic problem | ADR(s) |
-|---|---|
-| Tick loop, tiers, one-tool-per-tick, authority boundary | [0018](../adr/0018-ros2-reasoner-supervisor.md) |
-| Camera-space `in_view` enumeration, `det_id`, sticky `located` | [0076](../adr/0076-detection-identity-and-camera-space-enumeration.md) |
-| On-demand `locate_in_view`, node-per-detector, model selection | [0043](../adr/0043-locate-in-view-reasoner-tool.md), [0056](../adr/0056-on-demand-detectors-as-promptable-reasoner-tools.md) |
-| Scene VLM Q&A (`query_scene`) | [0047](../adr/0047-vlm-rskill-kind.md) |
-| Active object search over the scene graph | [0039](../adr/0039-llm-task-planning-active-search.md) |
-| Grounded decomposition (`GroundedSubtask`) | [0075](../adr/0075-grounded-decomposition-contract.md) |
-| Mission queue, success-gating | [0073](../adr/0073-reasoner-success-gating-and-task-queue.md) |
-| Reward model (`kind: reward`, Robometer) | [0057](../adr/0057-robometer-reward-rskill.md) |
-| Critic-score stall → Tier-C replan | [0064](../adr/0064-critic-score-topic-and-tier-c-producer.md) |
-| Reward-watcher + three-tier VLM-adjudicated verdict | [0074](../adr/0074-vlm-adjudicated-completion-and-reward-driven-progress.md) |
-| VLA↔reward pairing + VRAM fit | [0077](../adr/0077-vla-reward-pairing-and-vram-fit.md), [0050](../adr/0050-single-resident-skill-vram-eviction.md) |
-| Playbooks + self-maintained `MEMORY.md` | [0072](../adr/0072-reasoner-playbooks-and-self-maintained-memory.md) |
 
 ---
 

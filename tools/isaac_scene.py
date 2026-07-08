@@ -1,4 +1,4 @@
-"""Minimal Isaac Sim lift-cube scene for the sidecar (ADR-0045).
+"""Minimal Isaac Sim lift-cube scene for the sidecar.
 
 Runs under the Isaac Sim py3.11 venv only; imported by ``isaac_sidecar.py`` AFTER
 ``SimulationApp`` is live (every import here needs a running Kit app).
@@ -13,7 +13,7 @@ which are not on PyPI. The Isaac Sim *core* API (``isaacsim.core.api.World``,
 ``isaacsim.sensors.camera.Camera``) IS fully present in the pip install and is
 enough to stand up a real PhysX + RTX manipulation scene. The PoC therefore
 targets Isaac Sim core; wiring the full Isaac Lab manager-based env (OSC action
-terms, task MDP) is the documented next step in ADR-0045 once the source install
+terms, task MDP) is the documented next step once the source install
 is provisioned.
 
 Scene: a Franka on a ground plane with a red cube in front of it and two RTX
@@ -27,7 +27,7 @@ is lifted above ``_LIFT_SUCCESS_Z``. The lifecycle/obs skeleton lives in
 
 .. note::
    The ``camera1`` / ``camera2`` output keys are LEGACY ordinal slots that
-   pre-date ADR-0070's canonical camera vocabulary. The HAL bridge tolerates
+   pre-date the canonical camera-name vocabulary. The HAL bridge tolerates
    the mismatch via the ``vla_feature_key`` lookup fallback. TODO: extend the
    isaac-sidecar protocol so the host can pass scene-side camera names
    (``front`` / ``wrist`` ...) and emit those directly.

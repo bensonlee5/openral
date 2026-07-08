@@ -1,6 +1,6 @@
 r"""Isaac Sim scene adapter — drives an Isaac Lab env through an out-of-process sidecar.
 
-ADR-0045. NVIDIA Isaac Sim (Omniverse Kit + PhysX + RTX) ships per-interpreter
+NVIDIA Isaac Sim (Omniverse Kit + PhysX + RTX) ships per-interpreter
 wheels: 4.x→py3.10, 5.x→py3.11, 6.x→py3.12. The openral workspace pins
 ``>=3.12,<3.13``, and Isaac Sim's stack (its own torch / CUDA build, the rigid
 ``SimulationApp``-before-``omni.*`` import order, a libgomp/OpenMP ``LD_PRELOAD``
@@ -42,7 +42,7 @@ Franka-based today but the scene is robot-flagged for forward compatibility with
 other Isaac Lab embodiments; ``robot_id`` from the YAML is forwarded to the
 launcher.
 
-Licensing (ADR-0045 §Decision-2 / CLAUDE.md §1.9, §3): Isaac Sim's Omniverse Kit
+Licensing (CLAUDE.md §1.9, §3): Isaac Sim's Omniverse Kit
 components are proprietary and **never vendored** — the sidecar venv is an
 externally-provisioned dependency the user installs (and, by running the
 launcher, accepts the NVIDIA Omniverse EULA via ``OMNI_KIT_ACCEPT_EULA=YES``).
@@ -177,7 +177,7 @@ class _IsaacSimSidecar:
 
         ``openral deploy sim`` wraps this rollout in ``SimAttachedHAL``, whose
         ``_probe_env_action_dim`` reads ``env.action_dim`` to size the HAL's
-        action packing (ADR-0036). The sidecar's ``ping`` reply already carries
+        action packing. The sidecar's ``ping`` reply already carries
         the scene's action width (8 for ``lift_cube``, 7 for ``bowl_plate``); we
         cache it on first access.
         """
@@ -194,7 +194,7 @@ class _IsaacSimSidecar:
     def step(self, action: NDArray[np.float32]) -> StepResult:
         action_np = np.asarray(action, dtype=np.float32).reshape(-1)
         reply = self._client.call("step", {"action": action_np})
-        # ADR-0048 Phase 2 — cache the sidecar's elapsed sim time so the
+        # Cache the sidecar's elapsed sim time so the
         # deploy-sim HAL can publish /clock with an Isaac backend. Optional in
         # the wire protocol (older sidecars omit it) → stays None, /clock off.
         self._last_sim_time_ns = _coerce_sim_time_ns(reply.get("sim_time_ns"))
@@ -209,7 +209,7 @@ class _IsaacSimSidecar:
     def sim_time_ns(self) -> int | None:
         """Elapsed simulation time in ns from the last sidecar reply, or ``None``.
 
-        ADR-0048 Phase 2 — the value the deploy-sim HAL reads (through
+        The value the deploy-sim HAL reads (through
         ``SimAttachedHAL.sim_time_ns``, which adds the cross-reset offset) to
         publish ``/clock``. ``None`` when the sidecar does not report sim time
         (older protocol), so the graph stays on wall-clock.
@@ -244,7 +244,7 @@ class _IsaacSimSidecar:
         }
         # Real robot joint angles (manifest order), when the sidecar provides
         # them — `openral deploy sim`'s SimAttachedHAL.read_state reads this for
-        # a non-MuJoCo backend's /joint_states (ADR-0045 / ADR-0034 amendment).
+        # a non-MuJoCo backend's /joint_states.
         joints = raw.get("joint_positions")
         if joints is not None:
             obs["joint_positions"] = np.asarray(joints, dtype=np.float32).reshape(-1)
@@ -252,20 +252,19 @@ class _IsaacSimSidecar:
         if joint_vel is not None:
             obs["joint_velocities"] = np.asarray(joint_vel, dtype=np.float32).reshape(-1)
         # Kinematic planar-base pose (x, y, yaw), when the manifest scene drives a
-        # mobile base — the deploy-sim odom path reads this (ADR-0045 amendment M3).
+        # mobile base — the deploy-sim odom path reads this.
         base_pose = raw.get("base_pose")
         if base_pose is not None:
             obs["base_pose"] = np.asarray(base_pose, dtype=np.float32).reshape(-1)
         # Per-depth-sensor point clouds ((N,3) base_link), when the manifest scene
-        # renders a depth camera — SimSensorBridge publishes them as PointCloud2
-        # (ADR-0045 amendment, perception leg).
+        # renders a depth camera — SimSensorBridge publishes them as PointCloud2.
         clouds = raw.get("depth_points")
         if isinstance(clouds, dict):
             obs["depth_points"] = {
                 k: np.asarray(v, dtype=np.float32).reshape(-1, 3) for k, v in clouds.items()
             }
         # 2-D LaserScan range fan (base_link), when the manifest scene has a lidar
-        # — SimSensorBridge publishes it as /scan (ADR-0045 perception leg).
+        # — SimSensorBridge publishes it as /scan.
         scan = raw.get("scan")
         if scan is not None:
             obs["scan"] = np.asarray(scan, dtype=np.float32).reshape(-1)
@@ -355,8 +354,8 @@ def _sidecar_python() -> Path:
         return _provision_isaac_venv()
     raise ROSConfigError(
         "Isaac Sim sidecar venv not found. It is an externally-provisioned "
-        "dependency (NVIDIA Isaac Sim / Isaac Lab, separate license, RTX GPU; "
-        "ADR-0045). Set "
+        "dependency (NVIDIA Isaac Sim / Isaac Lab, separate license, RTX GPU). "
+        "Set "
         f"{_AUTO_PROVISION_ENV}=1 to auto-provision it (a multi-GB download), or "
         f"provision it manually and point {_SIDECAR_PYTHON_ENV} at its py3.11 python:\n"
         "  uv venv --python 3.11 ~/.cache/openral/isaac-sidecar/.venv\n"
@@ -387,7 +386,7 @@ def _locate_sidecar_script() -> Path:
     )
 
 
-# ── robot-spec marshalling (ADR-0045 amendment: robot-agnostic manifest scene) ──
+# ── robot-spec marshalling (robot-agnostic manifest scene) ──
 
 
 def _sensor_dict(sensor: SensorSpec) -> dict[str, Any]:
@@ -423,7 +422,7 @@ def _sensor_dict(sensor: SensorSpec) -> dict[str, Any]:
 
 
 def _build_robot_spec(desc: RobotDescription, robot_id: str) -> dict[str, Any]:
-    """Marshal a ``RobotDescription`` to the JSON isaac robot spec (ADR-0045).
+    """Marshal a ``RobotDescription`` to the JSON isaac robot spec.
 
     Resolves the manifest ``assets.urdf.ref`` to an on-disk file (the
     ``python:<module>:<attr>`` form resolves where ``robot_descriptions`` lives,
@@ -503,7 +502,7 @@ def _build_robot_spec(desc: RobotDescription, robot_id: str) -> dict[str, Any]:
         "base_frame": desc.base_frame,
         # The arm is always pinned to its (possibly moving) root: a fixed arm is
         # pinned to the world; a mobile base teleports that pinned root each step
-        # (kinematic base, ADR-0045 amendment M3). Either way fix_base=True keeps
+        # (kinematic base). Either way fix_base=True keeps
         # the arm from falling.
         "fix_base": True,
         "joints": [
@@ -613,7 +612,7 @@ def _build_isaac_sim_scene(env_cfg: SimEnvironment) -> _IsaacSimSidecar:
     if headless:
         launch_argv.append("--headless")
 
-    # ADR-0045 amendment — the robot-agnostic layout imports the manifest robot's
+    # The robot-agnostic layout imports the manifest robot's
     # URDF. Marshal the RobotDescription to a temp JSON the py3.11 sidecar reads
     # (it cannot import openral_core) and pass it via --robot-spec.
     robot_spec_path: str | None = None

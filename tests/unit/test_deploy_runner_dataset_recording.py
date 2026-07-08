@@ -1,4 +1,4 @@
-"""ADR-0019 PR3 integration tests — DeployRunner episode API + Rosbag2Sink.
+"""Dataset-bridge integration tests — DeployRunner episode API + Rosbag2Sink.
 
 Real components per CLAUDE.md §1.11:
   * Real SO100FollowerHAL backed by SO100DigitalTwin (no serial port).

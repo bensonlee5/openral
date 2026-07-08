@@ -1,7 +1,7 @@
-"""Three-tier evaluate_task_verdict tests (ADR-0074 Decision 5 + amendment).
+"""Three-tier evaluate_task_verdict tests (the completion gate plus its amendment).
 
-Tests the auto-pass / vlm_check / attempts-ladder logic of the ADR-0074 gate.
-The ADR-0074 amendment gates the band on the PROGRESS head (task closeness) — the
+Tests the auto-pass / vlm_check / attempts-ladder logic of the completion gate.
+The amendment gates the band on the PROGRESS head (task closeness) — the
 ``success_threshold`` / ``check_floor`` bars were calibrated against progress, not
 the compressed success head — and keeps ``success_now`` as a secondary
 corroborating signal surfaced in the verdict text. Complements the broader
@@ -176,7 +176,7 @@ def test_vlm_declined_in_band_abandons_once_attempts_exhausted() -> None:
     assert action == "abandon"
 
 
-# ── ADR-0074 amendment: gate on PROGRESS, corroborate with SUCCESS ────────────
+# ── amendment: gate on PROGRESS, corroborate with SUCCESS ────────────────────
 # These pin the amendment that fixed the libero_object sub-0.5 plateau: the band
 # is gated on the progress head (which reaches ~0.85 on a real success), NOT the
 # compressed success head (~0.56–0.79 even on a genuine success). success_now is

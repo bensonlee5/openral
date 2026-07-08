@@ -1,4 +1,4 @@
-"""Tests for the reward-monitor ``query_task_progress`` reasoner tool (ADR-0057).
+"""Tests for the reward-monitor ``query_task_progress`` reasoner tool.
 
 Schema / wiring only (no GPU, no ROS): the tool parses via the ReasonerToolCall
 union, and the LLM sees it in the palette exactly when a reward monitor is
@@ -54,7 +54,7 @@ def test_query_task_progress_palette_gated_on_availability() -> None:
 
 
 def test_query_task_progress_independent_of_scene_query() -> None:
-    """query_task_progress and query_scene are independently provisioned (ADR-0057)."""
+    """query_task_progress and query_scene are independently provisioned."""
     from openral_reasoner.palette import ToolPalette
     from openral_reasoner.tool_use import _tool_palette_to_anthropic_tools
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Unit coverage for ``openral_core.scale_intrinsics_to`` (ADR-0035, Task 8).
+"""Unit coverage for ``openral_core.scale_intrinsics_to`` (Task 8).
 
 The deploy-sim detection pipeline renders the same MuJoCo camera at the scene's
 ``observation_width``/``height`` (e.g. 256 canonical, 640 for the det640

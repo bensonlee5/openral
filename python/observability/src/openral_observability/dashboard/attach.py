@@ -66,8 +66,8 @@ def spawn_dashboard(
         or ``None`` if the child could not be started or never reported
         healthy — caller should continue the workload either way.
     """
-    # The CLI entry point is ``openral`` per ADR-0021 (single console
-    # script; bare ``ral`` was renamed). When the workload runs in an
+    # The CLI entry point is ``openral`` (single console script; bare
+    # ``ral`` was renamed). When the workload runs in an
     # environment where ``.venv/bin`` isn't on PATH (e.g. inside
     # ``ros2 launch`` whose env was built from
     # ``/opt/ros/jazzy/setup.bash``) ``shutil.which('openral')``

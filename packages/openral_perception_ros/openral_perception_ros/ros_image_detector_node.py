@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""ROS-Image object-detection producer (ADR-0037/0035/0043, no GStreamer).
+"""ROS-Image object-detection producer (no GStreamer).
 
 Subscribes one or more camera ``sensor_msgs/Image`` streams, runs a
 GStreamer-free ``openral_runner`` detector backend, and publishes the detector's
 ``ObjectsMetadata`` as ``openral_msgs/PromptStamped`` on
 ``/openral/perception/objects``.
 
-Backends, selected by ``manifest_path`` (ADR-0037 2026-06-09 amendment):
+Backends, selected by ``manifest_path`` (2026-06-09 amendment):
 
 * **legacy / RT-DETR** — with no ``manifest_path``, builds an ``ObjectsDetector``
   (RT-DETR ONNX) from ``onnx_path`` + ``labels`` (unchanged behaviour).
@@ -14,7 +14,7 @@ Backends, selected by ``manifest_path`` (ADR-0037 2026-06-09 amendment):
   ``build_manifest_detector``: ONNX for ``runtime: onnx``, or the open-vocabulary
   ``LocateAnythingDetector`` (``VLM_SIDECAR``) for ``runtime: pytorch``.
 
-**Detector mode (ADR-0051).** The manifest's ``detector.mode`` selects how the
+**Detector mode.** The manifest's ``detector.mode`` selects how the
 node wires the detector (via ``detector_node_wiring``):
 
 * ``continuous`` (default; RT-DETR, ``omdet-turbo-indoor``) — the **primary**
@@ -26,12 +26,12 @@ node wires the detector (via ``detector_node_wiring``):
   **not** publish continuously; every camera's latest frame is still cached so
   the service can answer about the current view.
 
-**Camera-agnostic (ADR-0043).** The node does not bake in a camera name. The
+**Camera-agnostic.** The node does not bake in a camera name. The
 ``cameras`` param maps logical camera ids to image topics; with none given it
 falls back to the single ``image_topic`` under id ``primary_camera``. The
 reasoner picks a viewpoint by camera id.
 
-**locate_in_view service (ADR-0043, on_demand only).** Offers
+**locate_in_view service (on_demand only).** Offers
 ``/openral/perception/locate_in_view`` (``openral_msgs/srv/LocateInView``): a
 read-only "is object X visible in camera Y right now?" — runs a one-shot
 detection (``detect_with_query``, without disturbing the persistent query) on the
@@ -114,7 +114,7 @@ def classify_continuous_tick(
     The continuous leg is a best-effort background producer, so a single bad
     frame must not kill it — but it must never fail *silently* (CLAUDE.md §1.4).
     The trap is that the real detector publishes nothing when it sees nothing
-    (the ADR-0035 contract the world-state eviction relies on), so on
+    (the object-lift contract the world-state eviction relies on), so on
     ``/openral/perception/objects`` a *crashing* detector (e.g. a CUDA OOM under
     VLA co-residency on a small GPU) is indistinguishable from one watching a
     quiet scene — both leave the topic empty. This pure decision surfaces each
@@ -181,7 +181,7 @@ def main(args: Any = None) -> None:
     class RosImageObjectDetectorNode(LifecycleNode):  # type: ignore[misc]
         """Subscribe camera Image(s), detect objects, publish + serve queries.
 
-        ADR-0050 — a *managed* lifecycle node. The (GPU-heavy) detector backend
+        A *managed* lifecycle node. The (GPU-heavy) detector backend
         is built on ``on_activate`` and released on ``on_deactivate``, so the
         reasoner can free the detector's VRAM (via ``LifecycleTransitionTool``)
         before a co-resident grab policy loads on an 8 GB GPU. Cameras, the
@@ -205,7 +205,7 @@ def main(args: Any = None) -> None:
             self.declare_parameter("labels", [""])
             self.declare_parameter("query", "")
             self.declare_parameter("query_topic", "/openral/perception/detector_query")
-            # ADR-0056 — per-detector service namespace so several on-demand
+            # Per-detector service namespace so several on-demand
             # locators co-exist. The deploy launch sets these to
             # /openral/perception/<alias>/locate_in_view for each locator node;
             # the legacy single-detector default keeps back-compat. ``detector_id``
@@ -217,10 +217,10 @@ def main(args: Any = None) -> None:
             self._last_pub_ns = 0
             # Latest BGR frame per camera id, for the on-demand locate_in_view service.
             self._frames: dict[str, tuple[bytes, int, int]] = {}
-            # Built across lifecycle transitions (ADR-0050). The detector model
+            # Built across lifecycle transitions. The detector model
             # is the only GPU-resident piece; it tracks active→inactive.
             self._detector: Any = None
-            # ADR-0076: 2D-IoU tracker for the continuous leg — stamps a stable
+            # 2D-IoU tracker for the continuous leg — stamps a stable
             # per-camera ``det_id`` on each detection so the reasoner can enumerate
             # and de-duplicate objects without the 3D lift. Built in on_configure.
             self._tracker: Any = None
@@ -232,7 +232,7 @@ def main(args: Any = None) -> None:
             self._query_sub: Any = None
             self._pub: Any = None
             self._srv: Any = None
-            # ADR-0051 detector-mode wiring (continuous publish leg vs on-demand
+            # Detector-mode wiring (continuous publish leg vs on-demand
             # locate_in_view service); resolved from the manifest at on_configure.
             self._wiring: Any = None
 
@@ -264,7 +264,7 @@ def main(args: Any = None) -> None:
             self._pub = self.create_publisher(
                 PromptStamped, gp("output_topic").get_parameter_value().string_value, out_qos
             )
-            # One subscription per camera. ADR-0051: the primary camera runs the
+            # One subscription per camera. The primary camera runs the
             # continuous detect+publish leg ONLY for a `continuous` detector; an
             # `on_demand` locator caches frames but does not publish. Bind cid via
             # a default arg.
@@ -277,8 +277,8 @@ def main(args: Any = None) -> None:
                 )
                 self._subs.append(self.create_subscription(Image, topic, cb, img_qos))
 
-            # locate_in_view service (ADR-0043) — only for `on_demand` detectors
-            # (ADR-0051) and only if the IDL is built.
+            # locate_in_view service — only for `on_demand` detectors
+            # and only if the IDL is built.
             self._srv = None
             if self._wiring.serve_on_demand:
                 try:
@@ -309,13 +309,13 @@ def main(args: Any = None) -> None:
             return TransitionCallbackReturn.SUCCESS
 
         def on_activate(self, state: LifecycleState) -> TransitionCallbackReturn:
-            """Build (load) the detector backend — acquires GPU VRAM (ADR-0050)."""
+            """Build (load) the detector backend — acquires GPU VRAM."""
             gp = self.get_parameter
             if self._detector is None:
                 onnx_path = gp("onnx_path").get_parameter_value().string_value
                 manifest_path = gp("manifest_path").get_parameter_value().string_value
                 self._detector = self._build_detector(onnx_path, manifest_path)
-                # ADR-0076: the continuous leg stamps stable det_ids; the on-demand
+                # The continuous leg stamps stable det_ids; the on-demand
                 # locator (visibility queries) does not need identity.
                 if self._wiring.run_continuous_leg and self._tracker is None:
                     from openral_core import DetectionTracker2D
@@ -324,7 +324,7 @@ def main(args: Any = None) -> None:
                 initial_query = gp("query").get_parameter_value().string_value
                 if initial_query and hasattr(self._detector, "set_query"):
                     self._detector.set_query(initial_query)
-                # ADR-0051: the detector_query retarget topic is wired only for an
+                # The detector_query retarget topic is wired only for an
                 # `on_demand` locator — a `continuous` background producer is not
                 # reasoner-retargetable even if its backend exposes set_query.
                 if (
@@ -342,7 +342,7 @@ def main(args: Any = None) -> None:
             return super().on_activate(state)
 
         def on_deactivate(self, state: LifecycleState) -> TransitionCallbackReturn:
-            """Release the detector backend — frees its (GPU) VRAM (ADR-0050)."""
+            """Release the detector backend — frees its (GPU) VRAM."""
             self._release_detector()
             self.get_logger().info("ros_image_detector deactivated (detector VRAM released).")
             return super().on_deactivate(state)
@@ -370,7 +370,7 @@ def main(args: Any = None) -> None:
             return self.on_cleanup(state)
 
         def _release_detector(self) -> None:
-            """ADR-0050 — release the detector backend, freeing its VRAM.
+            """Release the detector backend, freeing its VRAM.
 
             Best-effort + idempotent: a backend without ``close()`` (the ONNX
             path) or one whose teardown raises must not break the transition.
@@ -387,7 +387,7 @@ def main(args: Any = None) -> None:
                     self.get_logger().warning(f"detector close failed: {exc}")
 
         def _resolve_wiring(self) -> Any:
-            """Resolve the ADR-0051 detector-mode node wiring from the manifest.
+            """Resolve the detector-mode node wiring from the manifest.
 
             With a ``manifest_path``, the detector's ``mode`` selects continuous
             (publish leg) vs on-demand (locate_in_view service). The legacy ONNX
@@ -404,7 +404,7 @@ def main(args: Any = None) -> None:
             return detector_node_wiring(DetectorMode.CONTINUOUS)
 
         def _resolve_cameras(self) -> dict[str, str]:
-            """Resolve the camera-id -> topic map (camera-agnostic, ADR-0043)."""
+            """Resolve the camera-id -> topic map (camera-agnostic)."""
             gp = self.get_parameter
             entries = [s for s in gp("cameras").get_parameter_value().string_array_value if s]
             cameras: dict[str, str] = {}
@@ -511,7 +511,7 @@ def main(args: Any = None) -> None:
             )
 
         def _detect_and_publish(self, msg: Any) -> None:
-            if self._detector is None:  # inactive (ADR-0050 — VRAM released)
+            if self._detector is None:  # inactive (VRAM released)
                 return
             now_ns = self.get_clock().now().nanoseconds
             if now_ns - self._last_pub_ns < self._min_period_ns:
@@ -522,7 +522,7 @@ def main(args: Any = None) -> None:
             bgr, w, h = frame
             # Best-effort producer: one bad frame must not kill the leg — but it
             # must never fail SILENTLY. The real detector publishes nothing when it
-            # sees nothing (ADR-0035), so a swallowed detect() crash (e.g. a CUDA
+            # sees nothing, so a swallowed detect() crash (e.g. a CUDA
             # OOM under VLA co-residency) is invisible on /openral/perception/objects
             # — identical to a quiet scene. classify_continuous_tick raises that
             # crash to WARNING and logs a quiet-scene liveness heartbeat at INFO so
@@ -540,7 +540,7 @@ def main(args: Any = None) -> None:
             self._log_throttled(level, message)
             if md is None:
                 return
-            # ADR-0076: stamp a stable per-camera det_id on each detection so the
+            # Stamp a stable per-camera det_id on each detection so the
             # reasoner can enumerate + de-duplicate objects (and the lift can carry
             # the id into 3D). Only the continuous leg tracks identity.
             if self._tracker is not None:
@@ -554,15 +554,15 @@ def main(args: Any = None) -> None:
             self._pub.publish(out)
 
         def _on_locate_in_view(self, request: Any, response: Any) -> Any:
-            """Service (ADR-0043): one-shot 'is X in camera Y right now?'."""
+            """Service: one-shot 'is X in camera Y right now?'."""
             query = request.query.strip()
             camera = request.camera.strip() or self._primary_id
             response.camera = camera
-            # ADR-0056 — echo which locator answered (the request's selector, or
+            # Echo which locator answered (the request's selector, or
             # this node's own id when the caller left it empty).
             own_id = self.get_parameter("detector_id").get_parameter_value().string_value
             response.detector = request.detector.strip() or own_id
-            if self._detector is None:  # inactive (ADR-0050 — VRAM released)
+            if self._detector is None:  # inactive (VRAM released)
                 response.found = False
                 response.metadata_json = ""
                 return response

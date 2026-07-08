@@ -5,7 +5,7 @@ mounted side-by-side, exposing a 14-DoF joint-position action space
 (2 * (6 arm + 1 gripper)).  The gym-aloha simulator uses an MJCF that mirrors
 the same kinematics and scene layout, so the manifest and the in-code
 :data:`ALOHA_DESCRIPTION` describe both the real robot and the simulator
-one-to-one (CLAUDE.md / ADR-0007 robot/sim split).
+one-to-one (CLAUDE.md robot/sim split).
 
 This module wires the **real-hardware** Layer-0 path; the gym-aloha sim
 path is owned by ``openral_sim.backends.aloha`` and invokes the
@@ -26,7 +26,7 @@ Per CLAUDE.md §7.4 the Trossen Interbotix XS SDK is BSD-3 / Apache-2.0
 (fully compatible) but ships as vendor-distributed packages, so the
 real-hardware manifest (:data:`ALOHA_REAL_DESCRIPTION`, derived from
 :data:`ALOHA_DESCRIPTION` via :func:`make_real_description`) declares
-``sdk_kind: "closed_with_api"``.  Both share the same ``hal`` block (ADR-0031):
+``sdk_kind: "closed_with_api"``.  Both share the same ``hal`` block:
 ``hal.sim = "openral_hal.aloha:AlohaMujocoHAL"`` and
 ``hal.real = "openral_hal.aloha:AlohaHAL"``; the sim baseline keeps
 ``sdk_kind: "open"``. ``deploy sim`` / ``deploy run`` pick the HAL via
@@ -235,7 +235,7 @@ ALOHA_DESCRIPTION = RobotDescription(
     # MuJoCo wiring for the gym-aloha sim twin.  Two passthrough grippers
     # with mirror_actuator_index (positive finger + mirror to negative
     # finger).  keyframe_index=0 seeds the fingers inside their
-    # ctrlrange — gym-aloha's reset does the same.  See ADR-0023.
+    # ctrlrange — gym-aloha's reset does the same.
     assets=AssetRefs(mjcf="gym_aloha:bimanual_viperx_transfer_cube"),
     sim=SimDescription(
         joint_qpos_addr={
@@ -563,7 +563,7 @@ def _default_publish(topic: str, msg: dict[str, object]) -> None:  # pragma: no 
 
 
 # ── MuJoCo HAL (digital twin) ────────────────────────────────────────────────
-# Post-ADR-0023, the gym-aloha bimanual sim twin is a thin
+# The gym-aloha bimanual sim twin is a thin
 # :class:`MujocoArmHAL` subclass — all wiring (MJCF URI, joint→qpos/
 # actuator maps, two passthrough grippers with mirror_actuator_index,
 # keyframe seeding) lives in :data:`ALOHA_DESCRIPTION.sim`.
@@ -575,7 +575,7 @@ class AlohaMujocoHAL(MujocoArmHAL):
     Thin manifest-driven wrapper around :class:`MujocoArmHAL`; all wiring
     (MJCF URI, joint→qpos/actuator maps, two ``PASSTHROUGH`` grippers with
     ``mirror_actuator_index`` for the antisymmetric finger pair, keyframe
-    seeding) lives in :data:`ALOHA_DESCRIPTION.sim` (ADR-0023).
+    seeding) lives in :data:`ALOHA_DESCRIPTION.sim`.
 
     Public surface mirrors :class:`AlohaHAL`: a 14-DoF
     :class:`openral_core.Action` with the

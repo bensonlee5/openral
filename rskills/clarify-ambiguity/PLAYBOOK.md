@@ -3,7 +3,7 @@
 > **Hand-authored decision procedure (SOP).** Unlike the generated `SKILL.md`
 > discovery view, this file is the *content the S2 Reasoner reads and follows*.
 > It is injected into the reasoner's system prompt when this playbook is
-> installed. The `rskill.yaml` `playbook.body_uri` points here. ADR-0072.
+> installed. The `rskill.yaml` `playbook.body_uri` points here.
 
 ## Trigger
 The instruction has more than one valid interpretation — e.g. "put the bowl in
@@ -53,5 +53,4 @@ This playbook only *decides* — it resolves the goal and then **gates** the
 downstream skill. Refusing to guess on an irreversible action is the safe
 default (CLAUDE.md §1.1, §1.4): a wrong referent would yield a wrong placement
 the C++ safety kernel cannot un-do, so the playbook asks first rather than
-relaxing any check. Every motion it eventually unblocks still crosses the kernel
-(ADR-0030).
+relaxing any check. Every motion it eventually unblocks still crosses the kernel.

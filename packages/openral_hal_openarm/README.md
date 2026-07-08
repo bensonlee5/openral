@@ -7,7 +7,7 @@ Enactic **OpenArm v2** 16-DoF bimanual arm can participate in the
 Spawned by `openral deploy sim --robot openarm` via
 `_ROBOT_HAL_REGISTRY["openarm"]` (see
 `python/cli/src/openral_cli/deploy_sim.py`). Subscribes `/openral/safe_action`
-+ `/openral/estop`, publishes `/joint_states`, and — under ADR-0034 sim
++ `/openral/estop`, publishes `/joint_states`, and — under sim
 scene-attach — `/openral/cameras/*` + the MuJoCo viewer.
 
 The HAL is MuJoCo-backed (sim path only — a real-HW OpenArm driver via lerobot

@@ -1,6 +1,6 @@
 r"""Live perception-tee round-trip — runs inside the x86-ros Docker image.
 
-Exercises the GStreamer perception event tee (ADR-0018 F6) end-to-end
+Exercises the GStreamer perception event tee end-to-end
 without pytest / conftest / torch in the loop:
 
 1. Build a ``videotestsrc pattern=ball`` → ``tee`` pipeline directly via

@@ -1,4 +1,4 @@
-"""Unit slice for the #123 blocked-task subdivision offer (ADR-0073 amendment).
+"""Unit slice for the #123 blocked-task subdivision offer.
 
 The pure node decision ``_should_offer_subdivision`` — does a just-abandoned task
 get one chance to decompose before the abandon/handoff ladder runs? It is bounded

@@ -1,4 +1,4 @@
-"""Tests for the ``kind: "playbook"`` rSkill manifest variant (ADR-0072).
+"""Tests for the ``kind: "playbook"`` rSkill manifest variant.
 
 Covers:
 - :class:`~openral_core.schemas.PlaybookContract` Hypothesis round-trip +
@@ -201,12 +201,12 @@ def test_non_playbook_kind_rejects_playbook_block() -> None:
         RSkillManifest.model_validate(data)
 
 
-# ─── Embodiment-approval contract (ADR-0072) ───────────────────────────────────
+# ─── Embodiment-approval contract ───────────────────────────────────
 
 
 def test_playbook_any_tag_is_embodiment_agnostic() -> None:
-    """A playbook declares ``embodiment_tags: ["any"]`` to run on every robot
-    (ADR-0072); an EMPTY list is rejected (agnosticism is declared, not derived),
+    """A playbook declares ``embodiment_tags: ["any"]`` to run on every robot;
+    an EMPTY list is rejected (agnosticism is declared, not derived),
     and declared specific tags still gate. Exercises the real loader gate.
     """
     from openral_core.exceptions import ROSCapabilityMismatch

@@ -290,14 +290,32 @@ class SO100FollowerHAL(HALBase):
         port: str = "/dev/ttyUSB0",
         *,
         calibrate_on_connect: bool = False,
+        id: str | None = None,  # reason: mirrors lerobot RobotConfig.id verbatim
+        calibration_dir: str | None = None,  # reason: mirrors lerobot RobotConfig.calibration_dir
         max_relative_target: float | dict[str, float] | None = None,
         staleness_limit_s: float = 0.5,
         robot: _LeRobotRobot | None = None,
     ) -> None:
-        """Initialise the adapter; does not open any connection yet."""
+        """Initialise the adapter; does not open any connection yet.
+
+        ``id`` is lerobot's calibration identity: the stored calibration file
+        resolves to ``<calibration_dir>/<id>.json``. ``calibration_dir``
+        defaults (in lerobot) to ``~/.cache/huggingface/lerobot/calibration/
+        robots/so_follower/``; pass it to load a calibration committed
+        alongside the deploy config instead — so the deploy owns its own
+        calibration and never silently picks up a stale/other cached file
+        (two ``so_follower/*.json`` for one arm is a real footgun). Without an
+        ``id`` (and with ``calibrate_on_connect=False``) the bus connects but
+        every ``get_observation()`` raises ``has no calibration registered`` —
+        pass the same ``id`` the arm was calibrated with
+        (``lerobot-calibrate --robot.id=<id>``), e.g. via the deploy config's
+        ``hal.params.id`` + ``hal.params.calibration_dir``.
+        """
         self.description: RobotDescription = SO100_DESCRIPTION
         self._port = port
         self._calibrate_on_connect = calibrate_on_connect
+        self._id = id
+        self._calibration_dir = calibration_dir
         self._max_relative_target = max_relative_target
         self._staleness_limit_s = staleness_limit_s
         self._injected_robot: _LeRobotRobot | None = robot
@@ -343,8 +361,14 @@ class SO100FollowerHAL(HALBase):
                     "uv add lerobot --package openral-hal"
                 ) from exc
 
+            from pathlib import Path  # noqa: PLC0415
+
             cfg: _SOFollowerRobotConfig = SOFollowerRobotConfig(
                 port=self._port,
+                id=self._id,  # calibration identity → <calibration_dir>/<id>.json
+                # None → lerobot's default HF cache dir; a path → the deploy's
+                # committed calibration (see __init__).
+                calibration_dir=Path(self._calibration_dir) if self._calibration_dir else None,
                 max_relative_target=self._max_relative_target,
                 use_degrees=True,  # adapter converts degrees ↔ radians
             )
@@ -371,9 +395,47 @@ class SO100FollowerHAL(HALBase):
                 ) from exc
             self._robot = robot
 
+        self._preflight_servo_ping(self._robot)
         self._connected = True
         self._last_obs_time = time.monotonic()
         log.info("hal.connect", robot="so100_follower", port=self._port)
+
+    def _preflight_servo_ping(self, robot: _LeRobotRobot) -> None:
+        """Ping every servo so a dark/half-powered bus fails LOUD at connect.
+
+        lerobot's ``send_action`` is fire-and-forget — the write expects no
+        status packet — so a bus that drops every *read* still ``connect()``s
+        cleanly and then silently freezes mid-run: the policy commands big
+        moves while ``read_state`` returns ``"There is no status packet!"`` on
+        every id and the observed joint state never changes (exactly the SO-101
+        symptom we hit — 1500+ read failures, frozen ``state_to_policy``, no
+        motion). Ping each motor once here and raise a typed
+        :class:`ROSConfigError` naming the unresponsive ids, so a comms/power
+        fault surfaces at bring-up instead of as a mystery freeze under load.
+
+        No-op when the robot exposes no pingable ``bus`` (an injected
+        ``SO100DigitalTwin`` in tests) — there is no real servo to verify.
+        """
+        bus = getattr(robot, "bus", None)
+        ping = getattr(bus, "ping", None)
+        if not callable(ping):
+            return
+        dark: list[str] = []
+        for name in _SO100_JOINT_NAMES:
+            try:
+                if ping(name, num_retry=2) is None:
+                    dark.append(name)
+            except Exception:  # reason: any comms error = that servo is dark
+                dark.append(name)
+        if dark:
+            raise ROSConfigError(
+                f"SO-100 pre-flight servo ping failed for {dark} on {self._port!r}: "
+                "the motor bus is not answering. Check the arm's 12 V power (a "
+                "USB-only ~5 V feed browns out the servos), the USB-serial "
+                "adapter/cable, and that no other process holds the port. "
+                "send_action is fire-and-forget, so without this pre-flight the "
+                "arm would silently freeze mid-run instead of failing here."
+            )
 
     def disconnect(self) -> None:
         """Close the USB connection, disabling motor torque.  Idempotent."""

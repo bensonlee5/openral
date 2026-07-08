@@ -128,7 +128,7 @@ def test_load_dataset_stats_v3_layout(tmp_path: Path) -> None:
 
 def test_load_dataset_stats_v21_fallback(tmp_path: Path) -> None:
     """v2.1 datasets ship per-episode JSONL; aggregator runs for real."""
-    pytest.importorskip("lerobot.datasets.compute_stats")
+    pytest.importorskip("lerobot.datasets.compute_stats", exc_type=ImportError)
     from openral_sim.policies.smolvla import _load_lerobot_dataset_stats
 
     episodes_path = tmp_path / "episodes_stats.jsonl"

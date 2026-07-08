@@ -1,11 +1,11 @@
-# rSkill manifest — moveit-joints: plan to a joint configuration (ADR-0024/0052)
+# rSkill manifest — moveit-joints: plan to a joint configuration
 #
 # Wraps `moveit_msgs/action/MoveGroup`. `ros_integration.goal_builder: joint`
 # selects the `JointGoalRskill` adapter, which consumes a `joint` block
 # (`joint_names` + `positions`) and lowers it into a MoveGroup
 # `joint_constraints` goal — the clean, LLM-facing form (positions, not
 # hand-written constraint dicts). Renamed from `openral/rskill-moveit-plan-arm`
-# under ADR-0054 (the `rskill-moveit-*` family: -joints / -eef-pose / -look-at
+# as part of the `rskill-moveit-*` family (-joints / -eef-pose / -look-at
 # over one ROSActionRskill engine).
 #
 # Collision posture: MoveIt's internal FCL planner does self + planning-scene
@@ -50,7 +50,7 @@ chunk_size: 1
 latency_budget:
   per_chunk_ms: 2000.0
 
-# ADR-0022 — surfaced to the Reasoner LLM tool palette.
+# Surfaced to the Reasoner LLM tool palette.
 description: >
   Plan and execute a collision-free motion to a target JOINT configuration via
   MoveIt's MoveGroup (self + planning-scene collision checked). Provide one
@@ -73,7 +73,7 @@ ros_integration:
   # `MoveGroup.Result.planned_trajectory.joint_trajectory` is reordered into the
   # host RobotDescription.joints order before per-waypoint chunk emission.
   result_trajectory_field: "planned_trajectory.joint_trajectory"
-  # ADR-0054 — selects the JointGoalRskill goal-lowering adapter: the `joint`
+  # Selects the JointGoalRskill goal-lowering adapter: the `joint`
   # block below (joint_names + positions) is lowered into
   # `request.goal_constraints[0].joint_constraints` at configure time.
   goal_builder: "joint"
@@ -103,7 +103,7 @@ ros_integration:
     - "ros-${ROS_DISTRO}-moveit"
     - "ros-${ROS_DISTRO}-moveit-resources-panda-moveit-config"
 
-# ADR-0026 — per-skill JSON Schema surfaced to the Reasoner LLM tool palette.
+# Per-skill JSON Schema surfaced to the Reasoner LLM tool palette.
 # The LLM overrides only `joint.positions` (one per planning-group joint, in
 # the manifest's joint_names order); planner / tolerance defaults are inherited.
 goal_params_schema:

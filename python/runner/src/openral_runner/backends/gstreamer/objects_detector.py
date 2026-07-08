@@ -1,7 +1,7 @@
-"""CPU-tier object detector for the ADR-0037 perception event tee.
+"""CPU-tier object detector for the perception event tee.
 
 This module implements the **CPU (ONNXRuntime, system-memory BGR)** tier of
-the ADR-0037 object detector. It implements the :class:`EventDetector` protocol
+the perception-tee object detector. It implements the :class:`EventDetector` protocol
 defined in :mod:`openral_runner.backends.gstreamer.perception_tee`, and so
 plugs directly into the existing :class:`PerceptionEventPublisher` — pass an
 :class:`ObjectsDetector` instance in the ``detectors`` list and it publishes
@@ -21,12 +21,13 @@ dispatches the resolved tier:
 
 * :attr:`DetectorTier.CPU_ONNX` → :class:`ObjectsDetector` (ONNXRuntime,
   system-memory BGR frames).
-* :attr:`DetectorTier.NVMM_AGGREGATOR` →
-  :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
-  (clean-room zero-copy NVMM path, lazily imported so this module loads without
-  pycuda / tensorrt).
+* :attr:`DetectorTier.NVMM_AGGREGATOR` → resolved via the
+  ``openral.detector_tiers`` entry-point group: the clean-room
+  zero-copy NVMM path ships in the private ``openral-pro-trt`` package, not
+  here. A miss raises a typed :exc:`~openral_core.exceptions.ROSConfigError`
+  naming it.
 * :attr:`DetectorTier.NVINFER` is the spike-gated DeepStream follow-up
-  (ADR-0037 PR5b PR D) and raises a clear
+  and raises a clear
   :exc:`~openral_core.exceptions.ROSConfigError`.
 
 Lazy import
@@ -41,13 +42,11 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import Enum
+from importlib.metadata import entry_points
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, cast
 
 import structlog
-
-if TYPE_CHECKING:
-    from openral_runner.backends.gstreamer.nvmm_detector import NvmmObjectsDetector
 from openral_core import ObjectDetection2D, ObjectsMetadata
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
 
@@ -68,32 +67,37 @@ __all__ = [
 
 log = structlog.get_logger(__name__)
 
+# OpenRAL Pro extraction seam: a detector tier that is not built in-tree (today,
+# only NVMM_AGGREGATOR) registers its factory under this entry-point group,
+# keyed by the tier's ``.value``. Mirrors
+# ``openral_rskill.backend_registry.resolve_runtime_backend``.
+_DETECTOR_TIERS_GROUP = "openral.detector_tiers"
+
 
 # ── Tier enum ──────────────────────────────────────────────────────────────────
 
 
 class DetectorTier(str, Enum):
-    """Execution tier for the ADR-0037 object detector.
+    """Execution tier for the perception-tee object detector.
 
     Attributes:
         CPU_ONNX: ONNXRuntime on system-memory BGR frames. Available on any
             host; implemented in this module.
         NVINFER: NVIDIA DeepStream ``nvinfer`` element. Present when the
             DeepStream GStreamer plugin registry is available on the host.
-            **Not yet implemented** (ADR-0037 PR5b).
+            **Not yet implemented**.
         NVMM_AGGREGATOR: Zero-copy NVMM aggregator for Jetson / Spark without
-            DeepStream. **Not yet implemented** (ADR-0037 PR5b).
+            DeepStream. **Not yet implemented**.
         VLM_SIDECAR: Out-of-process open-vocabulary VLM detector (e.g.
             LocateAnything-3B) reached over ZMQ. Selected for ``runtime:
             pytorch`` detector manifests; consumes the same system-memory BGR
-            appsink branch as :attr:`CPU_ONNX` (ADR-0037 2026-06-09 amendment).
+            appsink branch as :attr:`CPU_ONNX`.
         ZEROSHOT_HF: In-process Transformers open-vocabulary detector
             (``AutoModelForZeroShotObjectDetection`` — e.g. OmDet-Turbo) run
             against a **fixed** class vocabulary, so it behaves as an unprompted
             large closed-vocabulary detector. Selected for manifests whose
             ``detector.engine`` is ``zeroshot_hf``; consumes the same
-            system-memory BGR appsink branch as :attr:`CPU_ONNX` (ADR-0037
-            2026-06-12 amendment).
+            system-memory BGR appsink branch as :attr:`CPU_ONNX`.
 
     Example:
         >>> DetectorTier.CPU_ONNX.value
@@ -557,8 +561,8 @@ def make_objects_detector(
     labels: list[str],
     model_id: str,
     tier: DetectorTier | None = None,
-    **kwargs: Any,  # noqa: ANN401  # reason: forwarded to ObjectsDetector / NvmmObjectsDetector constructor
-) -> ObjectsDetector | NvmmObjectsDetector:
+    **kwargs: Any,  # noqa: ANN401  # reason: forwarded to ObjectsDetector / the entry-point-resolved NVMM detector constructor
+) -> ObjectsDetector | object:
     """Create an object detector for the resolved or requested tier.
 
     Args:
@@ -570,19 +574,23 @@ def make_objects_detector(
             ``DetectorTier.CPU_ONNX`` to force the CPU path regardless of
             platform.
         **kwargs: Extra keyword arguments forwarded to :class:`ObjectsDetector`
-            (``input_size``, ``score_threshold``, ``device``) or
-            :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
-            (``input_size``, ``score_threshold``, ``device_index``,
-            ``quantization``).
+            (``input_size``, ``score_threshold``, ``device``) or to the
+            NVMM_AGGREGATOR tier's constructor (``input_size``,
+            ``score_threshold``, ``device_index``, ``quantization``).
 
     Returns:
-        An :class:`ObjectsDetector` for :attr:`DetectorTier.CPU_ONNX`, or a
-        :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
-        for :attr:`DetectorTier.NVMM_AGGREGATOR`.
+        An :class:`ObjectsDetector` for :attr:`DetectorTier.CPU_ONNX`. For
+        :attr:`DetectorTier.NVMM_AGGREGATOR`, whatever class the
+        ``openral.detector_tiers`` entry point constructs — this module
+        cannot name that type statically since it lives in a package this
+        one does not depend on.
 
     Raises:
+        ROSConfigError: For :attr:`DetectorTier.NVMM_AGGREGATOR` when no
+            ``openral.detector_tiers`` entry point named ``"nvmm_aggregator"``
+            is installed — names ``openral-pro-trt``.
         ROSConfigError: For :attr:`DetectorTier.NVINFER` — the DeepStream
-            ``nvinfer`` tier is spike-gated (ADR-0037 PR5b PR D); pass
+            ``nvinfer`` tier is spike-gated; pass
             ``tier=DetectorTier.NVMM_AGGREGATOR`` for the clean-room zero-copy
             path or ``tier=DetectorTier.CPU_ONNX`` for the CPU path.
         ROSConfigError: For any unrecognised tier value.
@@ -597,15 +605,24 @@ def make_objects_detector(
     if tier is DetectorTier.CPU_ONNX:
         return ObjectsDetector(onnx_path, labels=labels, model_id=model_id, **kwargs)
     if tier is DetectorTier.NVMM_AGGREGATOR:
-        from openral_runner.backends.gstreamer.nvmm_detector import (  # noqa: PLC0415
-            NvmmObjectsDetector,
+        for ep in entry_points(group=_DETECTOR_TIERS_GROUP):
+            if ep.name == tier.value:
+                detector_cls = ep.load()
+                log.debug("detector_tier.resolved", tier=tier.value, entry_point=ep.value)
+                built = detector_cls(onnx_path, labels=labels, model_id=model_id, **kwargs)
+                return cast(object, built)
+        raise ROSConfigError(
+            "ObjectsDetector: the 'nvmm_aggregator' detector tier requires "
+            "the private openral-pro-trt package — the zero-copy NVMM aggregator ships "
+            "in the private OpenRAL Pro package, not the public repo, and "
+            f"registers itself via the {_DETECTOR_TIERS_GROUP!r} entry-point "
+            "group. Pass tier=DetectorTier.CPU_ONNX for the open ONNXRuntime "
+            "path."
         )
-
-        return NvmmObjectsDetector(onnx_path, labels=labels, model_id=model_id, **kwargs)
     if tier is DetectorTier.NVINFER:
         raise ROSConfigError(
-            "ObjectsDetector: the 'nvinfer' tier is the spike-gated follow-up "
-            "(ADR-0037 PR5b PR D). Pass tier=DetectorTier.NVMM_AGGREGATOR for the "
+            "ObjectsDetector: the 'nvinfer' tier is the spike-gated follow-up. "
+            "Pass tier=DetectorTier.NVMM_AGGREGATOR for the "
             "clean-room zero-copy path, or tier=DetectorTier.CPU_ONNX."
         )
     raise ROSConfigError(f"ObjectsDetector: unknown tier {tier!r}.")

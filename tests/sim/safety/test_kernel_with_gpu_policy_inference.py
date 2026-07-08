@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — GPU-aware soak test.
+"""PR-H — GPU-aware soak test.
 
 When a CUDA-capable GPU is available, run real ``torch`` policy inference
 on a small set of synthetic observations and feed the resulting action
@@ -13,7 +13,7 @@ chunks through the C++ safety kernel via a child rclpy publisher. Assert:
 This is the "the GPU code path actually runs and the kernel handles its
 output cleanly" smoke. It does NOT load a full VLA + sim environment
 because that requires the F1 ``rskill_runner_node`` (still pending — see
-ADR-0020 §"Rollout"). Instead we use a deterministic PyTorch tensor
+the kernel rollout plan's "Rollout" section). Instead we use a deterministic PyTorch tensor
 network to emit shape-correct ActionChunks; the GPU code path is
 exercised through the tensor ops.
 """

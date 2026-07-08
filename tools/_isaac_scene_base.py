@@ -1,4 +1,4 @@
-"""Shared base for the Isaac Sim sidecar scenes (ADR-0045).
+"""Shared base for the Isaac Sim sidecar scenes.
 
 Runs under the Isaac Sim py3.11 venv only (imported by the scene modules, which
 ``isaac_sidecar.py`` imports after ``SimulationApp`` is live). Owns the bits both
@@ -119,13 +119,13 @@ class IsaacSceneBase:
             "terminated": bool(terminated),
             "truncated": bool(self._step_idx >= self.max_steps),
             "info": info,
-            # ADR-0048 Phase 2 — elapsed sim time so the deploy-sim ROS graph
+            # Elapsed sim time so the deploy-sim ROS graph
             # can run on /clock with an Isaac backend (None if unavailable).
             "sim_time_ns": self.sim_time_ns(),
         }
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed simulation time in ns, or ``None`` (ADR-0048 Phase 2).
+        """Elapsed simulation time in ns, or ``None`` if unavailable.
 
         Best-effort: prefer the Isaac ``SimulationContext.current_time`` (seconds
         since sim start); else integrate the step count by the physics dt. The

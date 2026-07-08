@@ -1,4 +1,4 @@
-"""``PoseGoalRskill`` — move the end-effector to a Cartesian pose via MoveGroup (ADR-0054).
+"""``PoseGoalRskill`` — move the end-effector to a Cartesian pose via MoveGroup.
 
 A :class:`~openral_rskill.ros_action_rskill.ROSActionRskill` whose goal is a
 small ``pose`` block (target position + orientation for a constrained link),
@@ -10,11 +10,11 @@ directly and constrains all three axes.
 
 The pose→constraints lowering (:func:`build_pose_constraints`) is the **shared**
 implementation `LookAtRskill` also uses, so there is one place the link-offset
-math lives (ADR-0054 D2/D3). Orientation is a quaternion array whose component
-order the manifest declares via ``quaternion_order`` (default ``"xyzw"``, Q2).
+math lives. Orientation is a quaternion array whose component
+order the manifest declares via ``quaternion_order`` (default ``"xyzw"``).
 
-The constrained link's tool offset (``link_t_target``) is identity in v1; the
-ADR-0054 phase-6 follow-up sources it from a ``RobotDescription`` tool frame
+The constrained link's tool offset (``link_t_target``) is identity in v1; a
+planned follow-up sources it from a ``RobotDescription`` tool frame
 (mirroring how look-at sources the camera mount from ``SensorSpec``).
 """
 
@@ -144,10 +144,10 @@ def pose_from_block(block: dict[str, Any]) -> tuple[Pose6D, str, str | None, flo
     Returns ``(pose, link_name, tool_frame, pos_tol, orient_tol)``. Orientation
     is a 4-float quaternion whose component order is given by
     ``block["quaternion_order"]`` (``"xyzw"`` default, or ``"wxyz"`` — the
-    manifest fixes the convention, ADR-0054 Q2). Position is ``[x, y, z]``.
+    manifest fixes the convention). Position is ``[x, y, z]``.
     ``tool_frame`` (optional) is the TCP/tool frame the target pose is expressed
     *for*; when set, the executor TF-looks-up ``link_name ← tool_frame`` to offset
-    the constraint (ADR-0054 Q3) — otherwise the pose is for ``link_name`` itself.
+    the constraint — otherwise the pose is for ``link_name`` itself.
 
     Raises:
         ROSConfigError: On a missing/ill-typed field or an unknown
@@ -224,7 +224,7 @@ class PoseGoalRskill(ROSActionRskill):
         if self._tool_frame is not None:
             # A tool/TCP offset is requested → TF is the only source of frames
             # (CLAUDE.md). Build the listener now; the lookup runs lazily on the
-            # first step() once the host node is spinning (ADR-0054 Q3).
+            # first step() once the host node is spinning.
             try:
                 import tf2_ros  # noqa: PLC0415  # reason: ROS runtime dep, absent in pure-unit environments
             except ImportError as exc:

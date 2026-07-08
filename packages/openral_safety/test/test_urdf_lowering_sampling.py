@@ -1,4 +1,5 @@
-"""Sampling-based ACM fallback (ADR-0030): deterministic, adjacency-disabling, and
+"""Sampling-based ACM fallback (part of the geometric safety collision-checking
+system): deterministic, adjacency-disabling, and
 conservative w.r.t. the SRDF ground truth.
 
 The sampler reconstructs the allowed-collision matrix from a URDF when no SRDF

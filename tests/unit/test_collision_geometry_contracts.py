@@ -1,4 +1,4 @@
-"""Contract tests for the ADR-0030 geometric-safety schemas.
+"""Contract tests for the geometric-safety schemas.
 
 Covers the typed surface added for self/world-collision checking: the
 ``CollisionShape`` discriminated union, ``LinkCollisionGeometry`` /
@@ -60,7 +60,7 @@ def test_capsule_rejects_nonpositive_radius() -> None:
 
 
 def test_collision_evidence_dispatches_through_failure_union() -> None:
-    """A ``kind="collision"`` payload decodes to ``CollisionEvidence`` (ADR-0030)."""
+    """A ``kind="collision"`` payload decodes to ``CollisionEvidence``."""
     ev = CollisionEvidence(
         collision_kind="self",
         link_a="openarm_left_link3",
@@ -123,7 +123,7 @@ def test_openarm_fixture_loads_collision_geometry() -> None:
 
 
 def test_openarm_allowed_collision_matrix_excludes_adjacent_not_cross_arm() -> None:
-    """Adjacent links are allowed to touch; the two arms are not (ADR-0030)."""
+    """Adjacent links are allowed to touch; the two arms are not."""
     desc = RobotDescription.from_yaml(_OPENARM_YAML)
     pairs = {frozenset(p) for p in desc.allowed_collision_pairs}
 
@@ -166,7 +166,7 @@ _PANDA_CAPSULE_JUNCTION_EXTRAS = frozenset({frozenset({"panda_link5", "panda_lin
 
 
 def test_panda_mobile_acm_matches_franka_srdf() -> None:
-    """panda_mobile's self-collision ACM mirrors the Franka SRDF (ADR-0030).
+    """panda_mobile's self-collision ACM mirrors the Franka SRDF.
 
     Regression guard: the ACM was once re-derived independently and dropped the
     SRDF ``Never`` pairs (notably link1↔link4), which false-E-stopped a live

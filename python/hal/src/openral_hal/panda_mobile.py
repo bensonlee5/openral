@@ -1,4 +1,4 @@
-"""HAL stub for the panda_mobile mobile-manipulator (ADR-0025).
+"""HAL stub for the panda_mobile mobile-manipulator.
 
 In-process digital-twin HAL for the ``panda_mobile`` embodiment: a
 Franka 7-DoF arm mounted on a holonomic three-DoF planar base. The
@@ -24,7 +24,7 @@ The HAL maintains 10-DoF integrator state:
   Franka HAL already covers it; Nav2 + SLAM exercise does not need
   the gripper.
 
-The follow-up ADR-0025 implementation steps are documented in the
+The follow-up implementation steps are documented in the
 plan: a real ament-python ``packages/openral_hal_panda_mobile/`` ROS
 lifecycle node that subscribes ``/openral/safe_action`` and publishes
 ``/joint_states`` + ``/odom`` + a MuJoCo-ray-cast-derived ``/scan``;
@@ -105,7 +105,7 @@ _PANDA_MOBILE_ARM_JOINT_NAMES: list[str] = [
     j.name for j in PANDA_MOBILE_DESCRIPTION.joints if j.role == "arm"
 ]
 
-# ADR-0028a — the parallel gripper is declared as a 1-DoF joint
+# The parallel gripper is declared as a 1-DoF joint
 # (role ``"gripper"``); the digital-twin HAL tracks it as the trailing
 # qpos slot so the published JointState aligns with the robot.yaml
 # inventory.
@@ -119,7 +119,7 @@ PANDA_MOBILE_JOINT_NAMES: list[str] = [
     _PANDA_MOBILE_GRIPPER_JOINT_NAME,
 ]
 """Full 11-DoF joint order: base (3) + arm (7) + gripper (1).
-Matches ``robots/panda_mobile/robot.yaml`` after ADR-0028a."""
+Matches ``robots/panda_mobile/robot.yaml`` since the gripper became a declared joint."""
 
 # `BODY_TWIST` is the canonical 6-vec velocity command (linear xyz +
 # angular xyz; width ``openral_core.BODY_TWIST_DIM``). The planar base
@@ -219,12 +219,12 @@ class PandaMobileHAL:
     def send_action(self, action: Action) -> None:
         """Apply the action to the in-memory state. Branches on control_mode.
 
-        ADR-0028c — accepts the four surfaces the slot dispatcher
+        Accepts the four surfaces the slot dispatcher
         emits: ``JOINT_POSITION``, ``BODY_TWIST``, ``CARTESIAN_DELTA``,
         ``GRIPPER_POSITION``. Each reads its mode-specific payload
         from the matching :class:`Action` field (joint_targets,
         body_twist, cartesian_delta, gripper) — NOT joint_targets for
-        every mode, which was the pre-0028c lie that conflated all
+        every mode, which was the earlier convention that conflated all
         surfaces onto one field.
 
         Raises:
@@ -235,7 +235,7 @@ class PandaMobileHAL:
         if not self._connected:
             raise ROSConfigError("PandaMobileHAL.send_action called before connect().")
         if self._estop_latched:
-            # ADR-0025 / CLAUDE.md §1.1 — don't silently honour actions
+            # CLAUDE.md §1.1 — don't silently honour actions
             # after an estop; the supervisor reset path must clear the
             # latch explicitly.
             return
@@ -258,7 +258,7 @@ class PandaMobileHAL:
                 )
             self._apply_body_twist(list(action.body_twist[0]))
         elif mode is ControlMode.CARTESIAN_DELTA:
-            # ADR-0028c — apply OSC delta to the cached arm joint
+            # Apply OSC delta to the cached arm joint
             # vector via a Jacobian-free approximation: treat the
             # cartesian delta as an additive bias on the gripper
             # frame's qpos snapshot. Real motion lives in the
@@ -278,7 +278,7 @@ class PandaMobileHAL:
             raise ROSConfigError(
                 f"PandaMobileHAL.send_action: unsupported control_mode "
                 f"{mode!r}; expected JOINT_POSITION / BODY_TWIST / "
-                f"CARTESIAN_DELTA / GRIPPER_POSITION (ADR-0028c)."
+                f"CARTESIAN_DELTA / GRIPPER_POSITION."
             )
 
     def estop(self) -> None:
@@ -361,10 +361,11 @@ class PandaMobileHAL:
         * ``len(row) == 7`` — arm-only; the seven joints map onto
           ``panda_joint1..7``, the base + gripper stay where they were.
         * ``len(row) == 10`` — base (3) + arm (7); the gripper stays
-          where it was. Pre-ADR-0028a state-replay shape preserved
-          for legacy callers / MoveIt trajectory replay.
+          where it was. The state-replay shape from before the
+          gripper-as-joint change, preserved for legacy callers /
+          MoveIt trajectory replay.
         * ``len(row) == 11`` — full chain: base (3) + arm (7) +
-          gripper (1). The post-ADR-0028a canonical width matching
+          gripper (1). The current canonical width matching
           ``robots/panda_mobile/robot.yaml``.
         """
         n_arm = len(_PANDA_MOBILE_ARM_JOINT_NAMES)
@@ -384,7 +385,7 @@ class PandaMobileHAL:
             )
 
     def _apply_cartesian_delta(self, row: list[float]) -> None:
-        """Track the OSC delta for dashboard observability (ADR-0028c).
+        """Track the OSC delta for dashboard observability.
 
         The digital-twin HAL has no Jacobian / kinematic chain to
         translate ``[dx, dy, dz, drx, dry, drz]`` into joint motion
@@ -408,13 +409,13 @@ class PandaMobileHAL:
         self._last_cartesian_delta: tuple[float, ...] = tuple(float(v) for v in row)
 
     def _apply_gripper_position(self, width: float) -> None:
-        """Set the gripper qpos slot to ``width`` (ADR-0028c).
+        """Set the gripper qpos slot to ``width``.
 
         The slot lives at ``len(PANDA_MOBILE_JOINT_NAMES) - 1`` —
         index 10 today (3 base + 7 arm + 1 gripper). Mirror the
         joint's declared ``position_limits`` from
         ``robots/panda_mobile/robot.yaml`` (``[0.0, 1.0]``); the
-        safety supervisor's per-mode envelope (ADR-0028b step 5)
+        safety supervisor's per-mode envelope
         already clamps via ``gripper_min`` / ``gripper_max`` when
         configured, so the HAL trusts its input.
         """

@@ -1,4 +1,4 @@
-"""Sim test: `openral deploy sim` HAL bring-up against the Isaac Sim sidecar (ADR-0045).
+"""Sim test: `openral deploy sim` HAL bring-up against the Isaac Sim sidecar.
 
 Exercises the deploy-sim seam — `build_sim_env_from_yaml(<DeployScene>)` →
 `SimAttachedHAL(SimRollout)` — for a real Isaac Sim scene, in-process (no ROS
@@ -15,8 +15,8 @@ What is asserted
 * `read_images()` returns the Isaac RTX camera frame(s).
 * `read_state()` returns a JointState shaped to the franka manifest (8 joints,
   matching names) with REAL joint angles sourced from the sidecar's
-  `obs["joint_positions"]` (ADR-0034 amendment — non-MuJoCo backends are no
-  longer stuck at all-zeros).
+  `obs["joint_positions"]` (the deploy-sim HAL generalization amendment —
+  non-MuJoCo backends are no longer stuck at all-zeros).
 * `send_action()` (JOINT_POSITION, 8 targets → env_action_dim=8) steps the env
   without raising.
 
@@ -96,7 +96,7 @@ def test_read_state_has_real_joint_values(hal) -> None:
     state = _hal.read_state()
     assert len(state.position) == len(description.joints)
     assert state.name == [j.name for j in description.joints]
-    # ADR-0034 amendment: SimAttachedHAL now sources real joint angles from the
+    # Deploy-sim HAL generalization amendment: SimAttachedHAL now sources real joint angles from the
     # sidecar's obs["joint_positions"] for a non-MuJoCo backend (was all-zeros).
     # The Franka's default reset pose has non-zero arm angles.
     assert any(abs(p) > 1e-6 for p in state.position)

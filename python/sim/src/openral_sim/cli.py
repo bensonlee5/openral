@@ -3,7 +3,7 @@ r"""``openral sim run`` driver — Typer-based.
 Canonical invocation::
 
     openral sim run --config scenes/sim/robocasa_pnp.yaml \
-               --rskill rskills/pi05-robocasa365-human300-nf4
+               --rskill rskills/rldx1-ft-rc365-nf4
 
 The YAML carries the scene + task (and an optional robot_id for free-axis
 scenes); the policy is supplied entirely via ``--rskill``. The CLI loads
@@ -11,7 +11,7 @@ the YAML as a `SimScene` (strict — `openral sim run` accepts SimScene only;
 DeployScene and BenchmarkScene YAMLs are rejected with a redirect message),
 the manifest via `openral_rskill.loader.load_rskill_manifest`, and composes
 them into the runtime `SimEnvironment` that's driven by `SimRunner`
-(ADR-0010 amendment 1: sim and hardware share the same `InferenceRunner`
+(sim and hardware share the same `InferenceRunner`
 Protocol).
 
 The sim runner accepts bare rSkill references (name, path, or HF repo id).
@@ -173,7 +173,7 @@ def _sim_run_callback(
         None,
         "--dataset-out",
         help=(
-            "ADR-0019: write a LeRobotDataset v3.0 to PATH as the sim "
+            "Write a LeRobotDataset v3.0 to PATH as the sim "
             "runs. Every episode (success or failure) becomes rows in "
             "the dataset; meta/info.json carries the per-dataset success "
             "rate. Path MUST NOT pre-exist (lerobot v3 refuses to write "
@@ -622,9 +622,9 @@ def _maybe_build_recorder(args: SimpleNamespace, env_cfg: SimEnvironment) -> Any
         else 30.0
     )
 
-    # ADR-0019: the sim-side state / action contract belongs on the
+    # The sim-side state / action contract belongs on the
     # per-checkpoint rSkill manifest (state_contract / action_contract),
-    # not on the physical RobotDescription (ADR-0007 split). Load the
+    # not on the physical RobotDescription (a deliberate layer split). Load the
     # manifest and pass its contracts as overrides to the sink so the
     # right dims are used even when the robot manifest is sim-agnostic
     # (Franka 8-D for LIBERO vs 16-D for RoboCasa, same robot.yaml).
@@ -651,7 +651,7 @@ def _maybe_build_recorder(args: SimpleNamespace, env_cfg: SimEnvironment) -> Any
     # observation_spec + action_spec to the robot manifest for hardware).
     from openral_core.exceptions import ROSConfigError as _ROSConfigError
 
-    # ADR-0019: sim renders all cameras at the scene's resolution
+    # Sim renders all cameras at the scene's resolution
     # (potentially different from the physical sensor's intrinsics).
     # Pass that as a uniform per-camera shape override.
     camera_shape_override: tuple[int, int] = (
@@ -725,7 +725,7 @@ def _run(args: SimpleNamespace) -> int:
 
     view, strict_view = _resolve_view(args.view)
 
-    # ADR-0019: build a RolloutRecorder + LeRobotDatasetSink when
+    # Build a RolloutRecorder + LeRobotDatasetSink when
     # --dataset-out was passed. The recorder is fanned out alongside
     # the existing _EpisodeBuffer — buffer drives in-memory video /
     # benchmark JSON, recorder drives the durable LeRobotDataset v3.

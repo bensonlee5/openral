@@ -7,7 +7,7 @@ so we run the upstream inference server out-of-process and talk to it from
 the ``rldx`` policy adapter (python/sim/src/openral_sim/policies/rldx.py)
 over its native ZMQ + msgpack wire protocol. This script is the boot helper;
 the clone / venv / env-isolation / exec scaffolding it shares with the gr00t
-sidecar (ADR-0046 — RLDX-1 is a GR00T-N1.5 finetune) lives in
+sidecar (RLDX-1 is a GR00T-N1.5 finetune) lives in
 ``tools/_sidecar_common.py``.
 
 Usage::

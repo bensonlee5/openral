@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0064 — generate `nav2_visual.yaml` from the base lidar Nav2 config.
+"""Generate `nav2_visual.yaml` from the base lidar Nav2 config.
 
 `nav2_visual.yaml` is the Nav2 costmap profile for the VISUAL SLAM backend
 (cuVSLAM + nvblox): the global + local costmaps consume the backend-agnostic
@@ -24,7 +24,7 @@ _BASE = _DIR / "nav2_panda_mobile.yaml"
 _OUT = _DIR / "nav2_visual.yaml"
 
 _HEADER = (
-    "# ADR-0064 — Nav2 costmap profile for the VISUAL SLAM backend (cuVSLAM + nvblox),\n"
+    "# Nav2 costmap profile for the VISUAL SLAM backend (cuVSLAM + nvblox),\n"
     "# DERIVED from nav2_panda_mobile.yaml. The ONLY differences vs the base (lidar)\n"
     "# profile: the global+local costmaps consume the backend-agnostic `/map`\n"
     "# OccupancyGrid via `static_layer` (instead of ray-casting `/scan`), with\n"

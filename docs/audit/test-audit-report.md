@@ -103,7 +103,7 @@ double-registration). Ambient ROS env preserved; no `PYTHONPATH` override.
 
 1. **`python/hal/tests/test_sim_attached_idle_step.py`** — the fake
    `_RecordingNode.create_timer()` didn't accept the `clock=` kwarg that
-   production passes (ADR-0048 Phase 2). Real `rclpy.Node.create_timer` accepts
+   production passes (the deploy-sim `/clock` publisher work). Real `rclpy.Node.create_timer` accepts
    it; the fake was stale → `TypeError`, red on the **cheap** tier. Added
    `clock=` to the fake. *(This slipped through because the full test lane is
    `workflow_dispatch`-disabled and selective testing didn't re-run it.)*

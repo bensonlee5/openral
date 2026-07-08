@@ -1,8 +1,8 @@
-"""Build the publishable pre-quantized Robometer-4B NF4 checkpoint (ADR-0057).
+"""Build the publishable pre-quantized Robometer-4B NF4 checkpoint.
 
 Loads the upstream Apache-2.0 ``robometer/Robometer-4B`` bf16 via the pinned
 robometer loader (vanilla, ``use_unsloth=False``), NF4-quantizes in place, and
-saves a self-contained directory the sidecar can meta-load directly as 4-bit:
+saves a self-contained directory the scorer can meta-load directly as 4-bit:
 
   model.safetensors          packed NF4 weights + folded non-persistent rotary
                              buffers (~3.32 GB, ~1914 tensors)
@@ -11,8 +11,8 @@ saves a self-contained directory the sidecar can meta-load directly as 4-bit:
   tokenizer*/vocab/merges    tokenizer WITH robometer's added progress token
   *preprocessor_config.json  image/video processor
 
-Run in the sidecar venv:
-  ~/.cache/openral/robometer-sidecar/.venv/bin/python \
+Run with Robometer build dependencies installed:
+  .venv/bin/python \
       tools/build_robometer_nf4_checkpoint.py --out /tmp/robometer-nf4-ckpt
 
 Then upload the directory to ``OpenRAL/rskill-robometer-4b-nf4`` (see README).
@@ -97,7 +97,7 @@ def main() -> int:
     processor.save_pretrained(str(args.out))
     tokenizer.save_pretrained(str(args.out))
     model.config.save_pretrained(str(args.out))
-    # Ship the robometer ExperimentConfig so the sidecar can rebuild RBM offline.
+    # Ship the robometer ExperimentConfig so the scorer can rebuild RBM offline.
     with open(args.out / "config.yaml", "w") as f:
         yaml.safe_dump(raw, f, sort_keys=False)
 

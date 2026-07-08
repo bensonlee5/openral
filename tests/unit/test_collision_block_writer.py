@@ -1,7 +1,7 @@
 """The collision-block splicer/renderer replaces only the two collision blocks.
 
 `openral collision lower --write` must preserve every hand comment outside the
-`collision_geometry` / `allowed_collision_pairs` blocks (ADR-0030), so it does a
+`collision_geometry` / `allowed_collision_pairs` blocks, so it does a
 targeted textual splice rather than a full manifest round-trip. No mocks (§1.11).
 """
 

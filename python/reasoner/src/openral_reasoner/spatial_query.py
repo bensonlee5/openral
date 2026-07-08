@@ -1,11 +1,11 @@
-"""Spatial-memory query bridge for the S2 reasoner (ADR-0039 Phase 2).
+"""Spatial-memory query bridge for the S2 reasoner.
 
 The reasoner emits the read-only :class:`~openral_core.RecallObjectTool` /
 :class:`~openral_core.ResolvePlaceTool` variants; this module turns such a tool
-call into an ADR-0038 query, runs it against an injected spatial-memory backend,
+call into a query, runs it against an injected spatial-memory backend,
 and renders the result as an LLM-readable text block to feed back into the
 reasoning loop (republished as a ``PromptStamped`` by ``reasoner_node`` — the
-"result-return via prompt cascade" path of ADR-0018 §F10).
+"result-return via prompt cascade" path).
 
 The backend is duck-typed via :class:`SpatialMemoryQuerier` so this Layer-4
 module does not import the Layer-2 ``openral_world_state`` package — the concrete
@@ -36,7 +36,7 @@ SpatialQueryTool = RecallObjectTool | ResolvePlaceTool
 ApproachRefiner = Callable[
     [ApproachViewpoint, tuple[float, float, float]], ApproachViewpoint | None
 ]
-"""ADR-0044 Phase 4 — optional occupancy-grid approach refinement.
+"""Optional occupancy-grid approach refinement.
 
 Called per match as ``refiner(viewpoint, target_xyz)``; returns the
 grid-validated (possibly snapped) viewpoint, or ``None`` when no reachable
@@ -86,7 +86,7 @@ def format_recall_object_result(
 ) -> str:
     """Render a :class:`RecallObjectResult` as an LLM-readable text block.
 
-    ``blocked_node_ids`` (ADR-0044 Phase 4) marks matches whose approach
+    ``blocked_node_ids`` marks matches whose approach
     viewpoint failed occupancy-grid refinement — rendered as an explicit
     "approach blocked" note rather than a pose the robot can't reach (never
     a fabricated viewpoint, CLAUDE.md §1.2).
@@ -140,7 +140,7 @@ class SpatialQueryOutcome(NamedTuple):
     even if every approach is grid-BLOCKED — the object is still known) or
     ``resolve_place`` resolved the reference; ``False`` on a "not in memory"
     miss. The reasoner node uses ``found`` to decide whether to escalate a
-    recall miss to a live ``locate_in_view`` (ADR-0043/0056) before handoff.
+    recall miss to a live ``locate_in_view`` before handoff.
     """
 
     text: str
@@ -164,10 +164,10 @@ def run_spatial_query_detailed(
     Args:
         call: A :class:`~openral_core.RecallObjectTool` or
             :class:`~openral_core.ResolvePlaceTool`.
-        querier: The spatial-memory backend (e.g. an ADR-0038 ``SpatialMemory``).
+        querier: The spatial-memory backend (e.g. a ``SpatialMemory``).
         now_ns: Current time in nanoseconds (recency filtering).
         from_node_id: Optional origin node for ``resolve_place`` path planning.
-        refine_approach: ADR-0044 Phase 4 — optional occupancy-grid refiner
+        refine_approach: Optional occupancy-grid refiner
             applied to every ``recall_object`` match's approach viewpoint before
             rendering, so the LLM only ever sees grid-valid approach poses.
             ``None`` from the refiner marks the match's approach BLOCKED in the

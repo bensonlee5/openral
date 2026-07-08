@@ -1,7 +1,7 @@
 """SAFETY regression: panda_mobile + robocasa → /scan + depth PointCloud2 + /odom survive
-the SimSensorBridge refactor (ADR-0034 Phase 2 / T13).
+the SimSensorBridge refactor (Phase 2 / T13).
 
-**What this test proves** — "at-least-as-conservative" evidence for the ADR-0034 Phase 2
+**What this test proves** — "at-least-as-conservative" evidence for the Phase 2
 safety claim.  Before T13, the panda_mobile lifecycle node published ``/scan``
 (ray-cast), ``/openral/cameras/front_depth/points`` (depth cloud → octomap input),
 and ``/odom`` directly in its own timers.  T13 delegated the first two streams to the
@@ -44,7 +44,7 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SCENE_YAML = str(_REPO_ROOT / "scenes" / "sim" / "robocasa_panda_mobile_kitchen.yaml")
 
-# The depth sensor name declared in robots/panda_mobile/robot.yaml (§ ADR-0030).
+# The depth sensor name declared in robots/panda_mobile/robot.yaml.
 # SimSensorBridge publishes on /openral/cameras/<name>/points.
 _DEPTH_SENSOR_NAME = "front_depth"
 _DEPTH_TOPIC = f"/openral/cameras/{_DEPTH_SENSOR_NAME}/points"
@@ -74,7 +74,7 @@ def _robosuite_compatible() -> str:
     NOTE: the uv workspace venv **cannot** reach robosuite>=1.5.2 — ``lerobot``
     (0.5.1, required workspace-wide) caps robosuite at <=1.5.1, so
     ``robosuite>=1.5.2`` makes the lock unsatisfiable. This is the same
-    mutual-exclusion shape as the ADR-0011 libero⊥robocasa conflict. So this
+    mutual-exclusion shape as the libero⊥robocasa conflict. So this
     test runs in a **dedicated robocasa environment** (e.g. the conda/miniforge
     env that ships robosuite>=1.5.2 without lerobot), or CI provisioned with it
     — never via ``just sync --group robocasa`` in the uv venv.
@@ -130,7 +130,7 @@ pytestmark = [
         not _ROBOCASA_AVAILABLE,
         reason=(
             "robocasa not importable — run in a dedicated robocasa env "
-            "(robosuite>=1.5.2, no lerobot; see ADR-0011), not the uv workspace venv"
+            "(robosuite>=1.5.2, no lerobot), not the uv workspace venv"
         ),
     ),
 ]
@@ -188,7 +188,7 @@ def _drive_configure(node: object, executor: object, timeout_s: float) -> bool:
 
 
 def test_panda_mobile_robocasa_sensor_bridge_regression() -> None:
-    """ADR-0034 Phase 2 safety regression: SimSensorBridge preserves /scan + /points + /odom.
+    """Phase 2 safety regression: SimSensorBridge preserves /scan + /points + /odom.
 
     Brings up ``_PandaMobileLifecycleNode`` with
     ``sim_env_yaml=scenes/sim/robocasa_panda_mobile_kitchen.yaml``,

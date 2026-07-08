@@ -1,4 +1,4 @@
-"""ADR-0035 — geometry for lifting 2D detections to 3D object centers.
+"""Geometry for lifting 2D detections to 3D object centers.
 
 Pure, ROS-free. The world-state lifecycle node feeds this with occupied voxel
 centers, the camera intrinsics, and homogeneous transforms; it returns
@@ -289,7 +289,7 @@ class VoxelFrustumLifter:
                         float(mx[1]),
                         float(mx[2]),
                     ),
-                    # ADR-0076: carry the detection-time id through the lift so a
+                    # Carry the detection-time id through the lift so a
                     # physical object keeps one id across 2D (in_view) and 3D
                     # (scene_objects). >= 0 → propagate; -1 (untracked) → None,
                     # leaving ObjectMemory to mint as before.

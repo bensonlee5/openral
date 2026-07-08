@@ -1,6 +1,6 @@
 """ROS 2 ``diagnostic_msgs/DiagnosticArray`` heartbeat helper.
 
-ADR-0018 §F8 mandates a uniform 1 Hz ``DiagnosticArray`` publication from
+OpenRAL mandates a uniform 1 Hz ``DiagnosticArray`` publication from
 every lifecycle node in the OpenRAL graph. Centralising the publisher
 here keeps the cadence, ``hardware_id`` shape, and level-mapping
 identical across `openral_world_state`, `openral_hal_*`,
@@ -11,8 +11,8 @@ module stays import-safe on pure-Python hosts (CI, tests that do not
 build the colcon workspace). Consumers that do not call
 :meth:`DiagnosticsHeartbeat.start` pay zero ROS cost.
 
-Per ADR-0018 §F8 the diagnostics topic answers *"what is the system
-state right now"*; the ``/openral/failure/*`` bus (F3, next PR) answers
+The diagnostics topic answers *"what is the system
+state right now"*; the ``/openral/failure/*`` bus (the namespaced FailureTrigger bus) answers
 *"what just happened"*. Sustained ``ERROR`` keeps the level latched on
 this topic; the matching ``FailureTrigger`` fires once on the
 transition. No duplication.
@@ -61,7 +61,7 @@ class DiagnosticsHeartbeat:
         node: The owning ``rclpy.lifecycle.LifecycleNode``. The helper
             uses ``node.create_publisher`` / ``node.create_timer`` /
             ``node.get_clock``; nothing else.
-        hardware_id: ADR-0018 §F8 disambiguator — the ``hardware_id``
+        hardware_id: The 1 Hz DiagnosticArray disambiguator — the ``hardware_id``
             field on every ``DiagnosticStatus``. Convention:
             ``"<component>:<instance>"`` e.g.
             ``"openral_skill_runner:so100"``.
@@ -72,7 +72,7 @@ class DiagnosticsHeartbeat:
             :class:`Level`, ``message`` is a short human-readable
             summary, and ``key_values`` is a flat ``dict[str, str]`` of
             extra metadata.
-        rate_hz: Publish rate. Defaults to 1.0 Hz per ADR-0018 §F8;
+        rate_hz: Publish rate. Defaults to 1.0 Hz;
             override only with safety-working-group sign-off.
 
     Example:

@@ -1,4 +1,4 @@
-"""ADR-0018 F7 — dashboard per-trace span index + /api/traces / /api/spans.
+"""Dashboard per-trace span index (bag↔OTel replay) + /api/traces / /api/spans.
 
 Exercises the real :class:`TelemetryStore` against real
 :class:`opentelemetry.proto.trace.v1.trace_pb2.Span` protobuf payloads

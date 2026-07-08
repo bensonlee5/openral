@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(openral_safety_kernel CXX)
 
-# ADR-0020 / CLAUDE.md §5.2 — C++17 minimum; prefer C++20 where the
+# CLAUDE.md §5.2 — C++17 minimum; prefer C++20 where the
 # distro's compiler supports it. We keep 17 here so the package builds
 # on ROS 2 Humble (Ubuntu 22.04, GCC 11) and Jazzy (Ubuntu 24.04, GCC 13)
 # without conditional flags. The validator itself is C++17-clean.
@@ -50,10 +50,10 @@ find_package(diagnostic_msgs REQUIRED)
 find_package(openral_msgs REQUIRED)
 # nlohmann_json: distro package on Ubuntu 22.04+; the dependency is
 # header-only so we tolerate it being optional behind a feature flag
-# until ADR-0020 PR-E ships FailureTrigger emission.
+# until PR-E ships FailureTrigger emission.
 find_package(nlohmann_json QUIET)
 
-# ADR-0020 PR-F — OTel trace emission. opentelemetry-cpp comes from the
+# OTel trace emission. opentelemetry-cpp comes from the
 # in-tree vendor package (cpp/opentelemetry_cpp_vendor) which fetches
 # and builds the upstream library at colcon-build time; CMake's
 # CONFIG-mode find_package finds the installed cmake/ files under the

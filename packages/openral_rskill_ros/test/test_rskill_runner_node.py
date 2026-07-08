@@ -1,10 +1,10 @@
-"""Integration tests for the ADR-0018 F1 ``rskill_runner_node``.
+"""Integration tests for the ROS 2 reasoner/supervisor graph's ``rskill_runner_node``.
 
 Drives the real :class:`RskillRunnerNode` + the colocated
 :class:`_WorldStateLifecycleNode` + a real :class:`SafetyPassthroughNode`
 through ``rclpy`` (in-process equivalent of ``launch_testing`` per the
 existing repo convention) and asserts the end-to-end topic flow that
-ADR-0018 step 1 locks:
+the ROS 2 reasoner/supervisor graph's step 1 locks:
 
 1. An ``ExecuteRskill`` goal accepted by ``rskill_runner_node``.
 2. ``ActionChunk`` lands on ``/openral/candidate_action``.
@@ -219,7 +219,7 @@ def _spin_for(executor: Any, duration_s: float) -> None:
 
 
 def test_compose_factory_shares_one_aggregator() -> None:
-    """ADR-0018 §3 contract: world_state + skill_runner share **one** aggregator."""
+    """Single-aggregator contract: world_state + skill_runner share **one** aggregator."""
     import rclpy
     from openral_rskill_ros.compose import compose_so100_runtime
 
@@ -227,7 +227,7 @@ def test_compose_factory_shares_one_aggregator() -> None:
     try:
         runtime = compose_so100_runtime()
         # Same Python object by identity — not two equal-but-distinct
-        # aggregators (the assertion that ADR-0018 actually mandates).
+        # aggregators (the assertion that the single-aggregator contract actually mandates).
         assert runtime.aggregator is runtime.world_state_node._aggregator
         assert runtime.aggregator is runtime.skill_runner_node._aggregator
         # Destroy to clean shutdown.
@@ -304,7 +304,7 @@ def test_execute_skill_goal_publishes_chunks_through_safety_passthrough() -> Non
     assert not missing, f"missing /diagnostics from {sorted(missing)}"
 
 
-# ── ADR-0050 single-resident-skill eviction ─────────────────────────────────
+# ── Single-resident-skill VRAM eviction ─────────────────────────────────────
 
 
 def _run_goal(executor: Any, node: Any, rskill_id: str, deadline_s: float = 0.4) -> None:
@@ -346,7 +346,9 @@ def _tracking_resolver(built: list[Any]) -> Any:
 
 
 def test_switching_rskill_id_evicts_prior_resident_skill() -> None:
-    """ADR-0050: dispatching a different rskill_id shuts down (unloads) the prior resident skill."""
+    """Single-resident-skill eviction: dispatching a different rskill_id shuts down
+    (unloads) the prior resident skill.
+    """
     from openral_rskill.base import RSkillState
 
     built: list[Any] = []
@@ -360,7 +362,9 @@ def test_switching_rskill_id_evicts_prior_resident_skill() -> None:
 
 
 def test_redispatching_same_rskill_id_reuses_resident_skill() -> None:
-    """ADR-0050: re-dispatching the same (id, revision) reuses the resident skill — no reload."""
+    """Single-resident-skill eviction: re-dispatching the same (id, revision) reuses
+    the resident skill — no reload.
+    """
     built: list[Any] = []
     with _compose_harness(resolver=_tracking_resolver(built)) as (executor, runtime, _s, _o):
         _run_goal(executor, runtime.skill_runner_node, "openral/skill-a")

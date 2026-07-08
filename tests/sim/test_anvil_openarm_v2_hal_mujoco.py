@@ -289,7 +289,7 @@ class TestAnvilLifecycle:
 
     def test_connect_seeds_ctrl_from_qpos(self, hal: AnvilOpenArmV2MujocoHAL) -> None:
         # Driven by ``ANVIL_OPENARM_V2_DESCRIPTION.sim.seed_ctrl_from_qpos``
-        # (ADR-0023) — the native <position> actuators must hold the
+        # — the native <position> actuators must hold the
         # rest pose on the first mj_step rather than yanking to ctrl=0.
         hal.connect()
         try:

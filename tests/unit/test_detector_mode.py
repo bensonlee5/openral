@@ -1,4 +1,4 @@
-"""ADR-0051 — detector invocation mode (continuous background vs on-demand locator).
+"""Detector invocation mode (continuous background vs on-demand locator).
 
 Drives the **real** in-tree detector manifests through the **real** palette
 builder + tool-schema renderer (no mocks, CLAUDE.md §1.11):
@@ -52,7 +52,6 @@ def test_detector_mode_defaults_to_continuous() -> None:
 def test_intree_detectors_declare_expected_modes() -> None:
     expected = {
         "rtdetr-coco-r18": DetectorMode.CONTINUOUS,
-        "rtdetr-v2-r50vd": DetectorMode.CONTINUOUS,
         "omdet-turbo-indoor": DetectorMode.CONTINUOUS,
         "omdet-turbo-locator": DetectorMode.ON_DEMAND,
         "locateanything-3b-nf4": DetectorMode.ON_DEMAND,
@@ -86,7 +85,7 @@ def test_palette_collects_continuous_detectors_not_the_on_demand_locator() -> No
     assert omdet.num_labels > 200  # the curated indoor vocabulary
 
 
-# ── ADR-0056: on-demand locators surfaced as selectable locate_in_view options ──
+# ── on-demand locators surfaced as selectable locate_in_view options ─────────
 
 
 def test_palette_surfaces_on_demand_locators_with_aliases() -> None:
@@ -186,7 +185,7 @@ def test_locate_in_view_description_plain_without_continuous_detectors() -> None
     assert "already tracked continuously" not in tools["locate_in_view"]["description"].lower()
 
 
-# ── node wiring policy (ADR-0051): continuous publishes, on_demand serves ────
+# ── node wiring policy: continuous publishes, on_demand serves ───────────────
 
 
 def test_detector_node_wiring_continuous_publishes_not_serves() -> None:
@@ -210,7 +209,7 @@ def test_node_wiring_matches_intree_detector_manifests() -> None:
     # node wiring (continuous bank publishes; locators serve locate_in_view).
     from openral_runner.backends.gstreamer.detector_factory import detector_node_wiring
 
-    publishes = {"rtdetr-coco-r18", "rtdetr-v2-r50vd", "omdet-turbo-indoor"}
+    publishes = {"rtdetr-coco-r18", "omdet-turbo-indoor"}
     serves = {"omdet-turbo-locator", "locateanything-3b-nf4"}
     for rid in publishes | serves:
         m = _load(rid)

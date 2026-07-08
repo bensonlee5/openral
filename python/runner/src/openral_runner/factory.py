@@ -211,6 +211,7 @@ def _gstreamer_spec_from_params(
     _copy_int_if_present(spec_kwargs, params, "height", cfg.sensor_id)
     _copy_int_if_present(spec_kwargs, params, "fps", cfg.sensor_id)
     _copy_bool_if_present(spec_kwargs, params, "encoded")
+    _copy_bool_if_present(spec_kwargs, params, "jpeg")
     _copy_bool_if_present(spec_kwargs, params, "enable_nvmm")
     if cfg.publish_to_ros:
         spec_kwargs["enable_ros_tee"] = True

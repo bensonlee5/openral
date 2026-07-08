@@ -1,4 +1,4 @@
-"""Sim test: real Isaac Sim Franka lift-cube via the out-of-process sidecar (ADR-0045).
+"""Sim test: real Isaac Sim Franka lift-cube via the out-of-process sidecar.
 
 Exercises ``openral_sim.backends.isaac_sim`` end-to-end: the openral (py3.12)
 process auto-spawns the Isaac Lab sidecar (py3.11 venv), which launches a real

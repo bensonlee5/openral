@@ -1,4 +1,4 @@
-"""ADR-0024 / ADR-0025 — `openral_hal_panda_mobile` package marker.
+"""`openral_hal_panda_mobile` package marker.
 
 The ament-Python entry point is the executable script
 ``lifecycle_node.py`` installed under ``lib/openral_hal_panda_mobile/``.

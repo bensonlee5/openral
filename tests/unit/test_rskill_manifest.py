@@ -5,8 +5,8 @@ on-disk descriptor distributed via HuggingFace Hub. Distinct from the
 in-process ``Skill`` ABC (tested in ``test_skill.py``).
 
 ``schema_version`` stays at ``"0.1"`` deliberately: the schema has not
-been published, so ADR-0013 extended the surface in place rather than
-bumping. ADR-0013 added two symmetric guards on top of the initial
+been published, so the surface was extended in place rather than
+bumping. That extension added two symmetric guards on top of the initial
 shape:
 
 - ``actuators_required`` mirrors ``sensors_required`` on the output side
@@ -31,10 +31,12 @@ import pathlib
 import pytest
 import yaml
 from openral_core import (
+    ActionRepresentation,
     ActuatorRequirement,
     ControlMode,
     ControlModeSemantics,
     EmbodimentExtra,
+    JointUnits,
     QuantizationBackend,
     QuantizationConfig,
     QuantizationDtype,
@@ -49,7 +51,7 @@ from pydantic import ValidationError
 def _minimal_manifest_dict() -> dict[str, object]:
     """Return a minimal valid manifest dict for tests.
 
-    ADR-0013 extended the surface with actuators_required +
+    The schema surface was extended with actuators_required +
     embodiment_extra; the rSkill self-containment audit added
     ``control_mode_semantics`` (required per actuator, Gap 2) and a
     ``processors`` block (required for modern lerobot families, Gap 1+3).
@@ -561,7 +563,7 @@ class TestRSkillManifestYAML:
         assert m1 == m2
 
 
-# ── actuators_required (ADR-0013) ────────────────────────────────────────────────────
+# ── actuators_required ────────────────────────────────────────────────────────────────
 
 
 class TestActuatorsRequired:
@@ -635,7 +637,7 @@ class TestActuatorsRequired:
             RSkillManifest.model_validate(d)
 
 
-# ── "custom" embodiment escape hatch (ADR-0013) ───────────────────────────
+# ── "custom" embodiment escape hatch ──────────────────────────────────────
 
 
 class TestCustomEmbodimentHatch:
@@ -780,7 +782,62 @@ class TestInTreeManifests:
             RSkillManifest.from_yaml(str(p))
 
 
-# ── Optional rSkill envelope (ADR-0018 §5 / ADR-0020) ────────────────────────
+# ── joint_units declaration on joint-position rSkills (issue #135) ────────────
+
+
+class TestJointUnitsDeclared:
+    """Every joint-position rSkill must declare ``action_contract.joint_units``.
+
+    The skill_runner converts deg↔rad at the policy boundary; an undeclared
+    checkpoint falls back to a stats-magnitude heuristic that silently
+    mis-detected a degrees-trained SmolVLA SO-101 checkpoint as radians and
+    drove a real arm into its joint limits (issue #135). The schema validator
+    (:meth:`RSkillManifest._check_joint_units_declared`) makes this a hard,
+    fail-loud requirement so a new joint-position rSkill cannot merge without a
+    verified declaration.
+    """
+
+    def test_every_intree_joint_position_manifest_declares_units(self) -> None:
+        """No ``rskills/*/rskill.yaml`` joint-position manifest may omit units."""
+        repo_root = pathlib.Path(__file__).resolve().parents[2]
+        manifest_paths = sorted(repo_root.glob("rskills/*/rskill.yaml"))
+        assert manifest_paths, f"No rskills/*/rskill.yaml manifests under {repo_root}."
+        offenders: list[str] = []
+        for p in manifest_paths:
+            m = RSkillManifest.from_yaml(str(p))
+            ac = m.action_contract
+            if (
+                ac is not None
+                and ac.representation is ActionRepresentation.JOINT_POSITIONS
+                and ac.joint_units is None
+            ):
+                offenders.append(p.parent.name)
+        assert not offenders, (
+            "joint-position rSkills missing action_contract.joint_units "
+            f"(verify against the checkpoint's normalizer stats): {offenders}"
+        )
+
+    def test_validator_rejects_joint_positions_without_units(self) -> None:
+        """A joint-position action_contract with no joint_units fails to load."""
+        d = _minimal_manifest_dict()
+        d["action_contract"] = {"dim": 6, "representation": "joint_positions"}
+        with pytest.raises(ValidationError, match="joint_units"):
+            RSkillManifest.model_validate(d)
+
+    def test_validator_accepts_joint_positions_with_units(self) -> None:
+        """Declaring joint_units lets a joint-position manifest load."""
+        d = _minimal_manifest_dict()
+        d["action_contract"] = {
+            "dim": 6,
+            "representation": "joint_positions",
+            "joint_units": "degrees",
+        }
+        m = RSkillManifest.model_validate(d)
+        assert m.action_contract is not None
+        assert m.action_contract.joint_units is JointUnits.DEGREES
+
+
+# ── Optional rSkill envelope ──────────────────────────────────────────────────
 
 
 class TestRSkillEnvelope:
@@ -788,7 +845,7 @@ class TestRSkillEnvelope:
 
     Pre-existing manifests without ``envelope`` continue to parse — the field
     is optional and defaults to ``None``. When set, the C++ safety kernel
-    (cpp/openral_safety_kernel/, ADR-0020) enforces the intersection of the
+    (cpp/openral_safety_kernel/) enforces the intersection of the
     skill envelope and the robot ceiling; the intersection algebra and the
     loosening-rejection live in :mod:`openral_safety.envelope_loader`, not
     here on the schema.
@@ -852,7 +909,7 @@ class TestRSkillEnvelope:
         assert m.envelope.max_force_n == 5.0
 
 
-# ── vlm kind (ADR-0047) ──────────────────────────────────────────────────────
+# ── vlm kind ──────────────────────────────────────────────────────────────────
 
 
 def _vlm_manifest_dict() -> dict[str, object]:

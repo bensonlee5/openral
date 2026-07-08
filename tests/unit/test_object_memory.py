@@ -1,4 +1,4 @@
-"""Unit tests for ADR-0035 ObjectMemory (freeze-on-match, FOV-guarded evict)."""
+"""Unit tests for ObjectMemory (freeze-on-match, FOV-guarded evict)."""
 
 from __future__ import annotations
 

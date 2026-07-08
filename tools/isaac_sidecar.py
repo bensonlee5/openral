@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Isaac Sim scene sidecar — runs Isaac Lab in its own py3.11 venv (ADR-0045).
+"""Isaac Sim scene sidecar — runs Isaac Lab in its own py3.11 venv.
 
 This is the **Isaac side** of the Isaac Sim backend. It is launched (auto-spawned)
 by :mod:`openral_sim.backends.isaac_sim` running under the openral py3.12 venv,
@@ -82,7 +82,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help=(
             "lift_cube = 8-D joint-delta PoC; bowl_plate = LIBERO-shaped 7-D "
             "EE-delta scene; manifest = robot-agnostic URDF-driven scene "
-            "(needs --robot-spec, ADR-0045 amendment)"
+            "(needs --robot-spec)"
         ),
     )
     p.add_argument(
@@ -182,7 +182,7 @@ def _serve(scene: Any, *, host: str, port: int, sim_app: Any, task: str, layout:
                     "layout": layout,
                 }
             elif endpoint == "reset":
-                # ADR-0048 Phase 2 — carry sim time on reset too (≈0 after the
+                # Carry sim time on reset too (≈0 after the
                 # world reset) so the HAL's cross-reset offset stays monotonic.
                 reply = {
                     "observation": scene.reset(seed=data.get("seed")),

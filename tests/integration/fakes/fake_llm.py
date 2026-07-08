@@ -1,4 +1,4 @@
-"""ADR-0018 F4 — deterministic LLM stand-in for the integration tier.
+"""Deterministic LLM stand-in for the integration tier.
 
 The :class:`FakeToolUseClient` satisfies the
 :class:`openral_reasoner.tool_use.ToolUseClient` Protocol exactly the

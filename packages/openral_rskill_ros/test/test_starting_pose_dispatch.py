@@ -1,4 +1,4 @@
-"""ADR-0053 — the runner's pure starting-pose dispatch decision.
+"""Collision-aware approach-to-pose — the runner's pure starting-pose dispatch decision.
 
 Pins the precedence (approach > reset > none) and the fatal-on-failure contract
 that makes a failed collision-aware approach abort the ExecuteSkill goal while a
@@ -70,7 +70,7 @@ def test_none_when_no_starting_pose_even_when_wired() -> None:
         assert action.pose == []
 
 
-# ── MoveIt goal shaping (ADR-0054 joint block) ───────────────────────────────
+# ── MoveIt goal shaping (goal_builder joint block) ───────────────────────────
 
 _GOAL_JSON = (
     '{"joint": {"group_name": "panda_arm", '

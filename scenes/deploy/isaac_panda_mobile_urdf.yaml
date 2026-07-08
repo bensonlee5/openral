@@ -1,5 +1,5 @@
 # panda_mobile in Isaac Sim, imported from the robot's URDF — robot-agnostic
-# deploy scene (ADR-0045 amendment, M3).
+# deploy scene (M3).
 #
 # Demonstrates the point of the robot-agnostic path: the SAME manifest-driven
 # scene that brings up franka_panda (scenes/deploy/isaac_franka_urdf.yaml) brings

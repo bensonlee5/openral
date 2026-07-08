@@ -45,6 +45,8 @@ for _pkg in (
     "openral_human_estop",
     # pure-Python image_convert (no rclpy) — tests/unit/test_image_convert.py
     "openral_perception_ros",
+    # pure-Python sensor_leg (rclpy deferred) — tests/unit/test_sensor_leg.py
+    "openral_rskill_ros",
 ):
     _pkg_dir = _REPO_ROOT / "packages" / _pkg
     if _pkg_dir.is_dir() and str(_pkg_dir) not in sys.path:

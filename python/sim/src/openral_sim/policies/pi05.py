@@ -351,7 +351,7 @@ def _load_bf16_state_for_int8(policy: Any, repo_id: str, *, torch: Any) -> None:
     state + policy params), and the ``.to(<cuda>)`` allocator dance
     can overshoot 8 GiB GPUs that handled the slow path fine
     (observed 6.65 GiB peak vs the slow path's 4.72 GiB final on a
-    7.62 GiB RTX 4070 Laptop with ``pi05-libero-nf4`` + int8).
+    7.62 GiB RTX 4070 Laptop with ``pi05-libero-int8`` + int8).
     """
     del torch  # consumed by the caller's `.to(device)`; kept for API parity
     try:
@@ -415,7 +415,7 @@ def _resolve_pretrained_path(spec: Any, repo_id: str) -> str:
       -- per-file ``hf_hub_download`` of exactly the two processor URIs
       via :func:`openral_sim.policies._processors.resolve_processor_dir`
       (which delegates to :func:`materialize_processor_dir`). Mirrors
-      the SmolVLA / modern-ACT path; ADR-0013.
+      the SmolVLA / modern-ACT path, per the manifest-declared processors convention.
     * Bare HF Hub repo id (``namespace/name``) -- snapshot-downloaded as
       before. The prequantized fast path
       (``load_prequantized_state_for_rskill``) pulls only ``config.json``

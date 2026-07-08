@@ -93,6 +93,103 @@ class TestBhDetect:
         assert result.exit_code == 1
         assert "no committed" in result.output
 
+    def test_detect_deployment_scaffolds_deploy_scene(self, tmp_path: Path) -> None:
+        out = tmp_path / "robot.yaml"
+        deploy = tmp_path / "workcell.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "detect",
+                "--robot",
+                "so101",
+                "--output",
+                str(out),
+                "--deployment",
+                str(deploy),
+                "--include",
+                "network",
+                "--dds-timeout",
+                "0",
+                "--yes",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert deploy.exists()
+        # The scaffold loads back as a valid DeployScene.
+        from openral_core import DeployScene
+
+        scene = DeployScene.from_yaml(str(deploy))
+        assert scene.robot_id == "so101_follower"
+        assert scene.scene.id == "so101_follower_workcell"
+        # safety unset → the robot manifest's envelope applies as-is.
+        assert scene.safety is None
+        assert scene.sensors == []
+        banner = deploy.read_text()
+        assert "review before" in banner
+        assert "reasoner selects it at runtime" in banner
+
+    def test_detect_interactive_binds_cameras(self, tmp_path: Path) -> None:
+        """Wizard routing: every binding lands in the DeployScene — a manifest
+        name yields a same-named entry (that robot sensor's binding, frame_id
+        copied from the manifest); w:<name> yields a new workcell camera."""
+        from openral_detect.report import V4l2CameraInfo
+
+        out = tmp_path / "robot.yaml"
+        deploy = tmp_path / "workcell.yaml"
+        cams = [
+            V4l2CameraInfo(device_path="/dev/video7", name="fake wrist cam"),
+            V4l2CameraInfo(device_path="/dev/video8", name="fake overhead cam"),
+        ]
+        # Answers in device order: bind video7 → manifest "wrist";
+        # video8 → new workcell camera "overhead".
+        with patch("openral_detect.detect.probe_v4l2_cameras", return_value=cams):
+            result = runner.invoke(
+                app,
+                [
+                    "detect",
+                    "--robot",
+                    "so101",
+                    "--output",
+                    str(out),
+                    "--deployment",
+                    str(deploy),
+                    "--interactive",
+                    "--include",
+                    "network,cameras_v4l2",
+                    "--dds-timeout",
+                    "0",
+                    "--yes",
+                ],
+                input="wrist\nw:overhead\n",
+            )
+        assert result.exit_code == 0, result.output
+
+        from openral_core import DeployScene, RobotDescription
+
+        # The detect output manifest is untouched by the wizard — bindings are
+        # host-specific and `deploy run` reads the canonical robots/<id>/ dir.
+        desc = RobotDescription.from_yaml(str(out))
+        assert all(s.deploy_binding is None for s in desc.sensors)
+
+        scene = DeployScene.from_yaml(str(deploy))
+        by_name = {s.name: s for s in scene.sensors}
+        assert set(by_name) == {"wrist", "overhead"}
+        # Manifest-named entry: binding for the robot's wrist cam, manifest
+        # frame_id preserved.
+        wrist_manifest = next(s for s in desc.sensors if s.name == "wrist")
+        assert by_name["wrist"].frame_id == wrist_manifest.frame_id
+        assert by_name["wrist"].deploy_binding.backend_params["device"] == "/dev/video7"
+        # New name: workcell camera.
+        assert by_name["overhead"].deploy_binding.backend_params["device"] == "/dev/video8"
+
+    def test_interactive_without_deployment_warns(self) -> None:
+        result = runner.invoke(
+            app,
+            ["detect", "--no-write", "--interactive", "--include", "network", "--dds-timeout", "0"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "--interactive has no effect without --deployment" in result.output
+
     def test_detect_with_report_dump(self, tmp_path: Path) -> None:
         out = tmp_path / "robot.yaml"
         report = tmp_path / "detection.json"

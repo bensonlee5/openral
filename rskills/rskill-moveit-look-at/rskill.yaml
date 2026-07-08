@@ -1,4 +1,4 @@
-# rSkill manifest — moveit-look-at: aim a robot camera at a 3-D point (ADR-0044/0052)
+# rSkill manifest — moveit-look-at: aim a robot camera at a 3-D point
 #
 # Wraps `moveit_msgs/action/MoveGroup`; the goal is authored as a `look_at`
 # block (target point + camera name) instead of raw constraints:
@@ -9,8 +9,8 @@
 # roll about the optical axis left free for reachability), and lowers it into
 # MoveGroup position + orientation constraints for the camera's mount link.
 #
-# Renamed from `openral/rskill-look-at` under ADR-0054 (the `rskill-moveit-*`
-# family: -joints / -eef-pose / -look-at over one ROSActionRskill engine).
+# Renamed from `openral/rskill-look-at` as part of the `rskill-moveit-*`
+# family (-joints / -eef-pose / -look-at over one ROSActionRskill engine).
 #
 # `plan_only: true` deliberately: OpenRAL's actuation path is the per-waypoint
 # replay through /openral/candidate_action (safety kernel checks every step,
@@ -50,7 +50,7 @@ chunk_size: 1
 latency_budget:
   per_chunk_ms: 2000.0
 
-# ADR-0022 — surfaced to the Reasoner LLM tool palette.
+# Surfaced to the Reasoner LLM tool palette.
 description: >
   Aim a robot-mounted camera (default the wrist camera) at a 3-D point so a
   later perception query or manipulation skill sees the object framed.
@@ -70,7 +70,7 @@ ros_integration:
   interface_type: "MoveGroup"
   interface_name: "/move_action"
   result_trajectory_field: "planned_trajectory.joint_trajectory"
-  # ADR-0044/0052 — selects the LookAtRskill goal-lowering adapter: the
+  # Selects the LookAtRskill goal-lowering adapter: the
   # `look_at` block below is consumed by the adapter (popped before the
   # MoveGroup goal message is built); `request.goal_constraints` is filled in
   # at dispatch.
@@ -106,7 +106,7 @@ ros_integration:
     - "ros-${ROS_DISTRO}-moveit"
     - "ros-${ROS_DISTRO}-moveit-resources-panda-moveit-config"
 
-# ADR-0026 — per-skill JSON Schema surfaced to the Reasoner LLM tool palette.
+# Per-skill JSON Schema surfaced to the Reasoner LLM tool palette.
 # The LLM overrides only the look_at block; planner settings are inherited.
 goal_params_schema:
   type: object

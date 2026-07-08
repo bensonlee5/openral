@@ -1,4 +1,4 @@
-"""ADR-0030 — unit coverage for the robot-perspective world-cloud bridge.
+"""Unit coverage for the robot-perspective world-cloud bridge.
 
 Two layers, both runnable without rclpy / a ROS 2 workspace (mirrors
 ``tests/unit/test_slam_bridge.py``):
@@ -89,7 +89,7 @@ def test_color_varies_with_distance() -> None:
 def test_chase_view_preserves_vertical_structure() -> None:
     """A full-height scene must spread across the frame, not pancake to the floor.
 
-    ADR-0030 regression: the chase camera sits behind+above the robot and looks
+    Regression: the chase camera sits behind+above the robot and looks
     forward-and-down, so a cloud filling the crop box in height (floor → ~2 m)
     must project onto a wide band of image rows in height order — not collapse
     onto the bottom edge (the "flattened octomap" symptom).

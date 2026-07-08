@@ -85,7 +85,7 @@ def test_constructor_rejects_empty_joints() -> None:
 
 
 def test_constructor_rejects_gripper_pointing_at_unknown_joint() -> None:
-    """ADR-0023: a ``SimGripperDescription`` referring to a joint not in
+    """A ``SimGripperDescription`` referring to a joint not in
     ``description.joints`` must be rejected at HAL construction time.
     """
     from openral_core import GripperReadMode, SimGripperDescription
@@ -121,7 +121,7 @@ def test_constructor_rejects_duplicate_gripper_joints() -> None:
 
 
 def test_constructor_accepts_full_gripper_config() -> None:
-    """ADR-0023: ``grippers=[SimGripperDescription(...)]`` replaces the old
+    """``grippers=[SimGripperDescription(...)]`` replaces the old
     flat ``gripper_*`` kwargs.  A complete entry passes validation."""
     from openral_core import SimGripperDescription
 

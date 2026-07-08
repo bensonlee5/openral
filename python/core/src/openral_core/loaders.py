@@ -142,16 +142,16 @@ def _load_as_benchmark(path: str, raw: dict[str, object]) -> BenchmarkScene:
         ) from exc
 
 
-# ── Benchmark suite loader (ADR-0042) ──────────────────────────────────────
+# ── Benchmark suite loader ─────────────────────────────────────────────────
 
 
 def load_benchmark_suite(path: str) -> list[BenchmarkScene]:
     """Load a bare list of :class:`BenchmarkScene`s from ``benchmarks/<id>.yaml``.
 
-    ADR-0042 (June 2026) deleted the ``BenchmarkSpec`` wrapper class. A
+    A June 2026 schema change deleted the ``BenchmarkSpec`` wrapper class. A
     benchmark suite YAML is now a bare YAML list at the root; the suite id
     is derived from the filename stem (e.g. ``benchmarks/libero_spatial.yaml``
-    has suite id ``"libero_spatial"``). Pre-ADR-0042 the YAML root was a
+    has suite id ``"libero_spatial"``). Previously the YAML root was a
     ``{id, tasks, metadata}`` mapping wrapping the scenes — this loader
     rejects that shape with an explicit redirect message.
 
@@ -170,7 +170,7 @@ def load_benchmark_suite(path: str) -> list[BenchmarkScene]:
     Raises:
         FileNotFoundError: If ``path`` does not exist.
         ROSConfigError: If the YAML root is not a list (legacy dict-shape
-            gets an explicit ADR-0042 redirect), or any entry fails
+            gets an explicit redirect), or any entry fails
             :class:`BenchmarkScene` validation.
 
     Example:
@@ -186,7 +186,7 @@ def load_benchmark_suite(path: str) -> list[BenchmarkScene]:
 
     if isinstance(raw_obj, dict):
         raise ROSConfigError(
-            f"{path}: YAML root is a mapping, but ADR-0042 (June 2026) "
+            f"{path}: YAML root is a mapping, but the June 2026 schema change "
             "deleted the BenchmarkSpec wrapper. A benchmark suite YAML is "
             "now a bare list of BenchmarkScene mappings at the root; the "
             "suite id is derived from the filename stem. Remove the "
@@ -198,8 +198,8 @@ def load_benchmark_suite(path: str) -> list[BenchmarkScene]:
 
     if not isinstance(raw_obj, list):
         raise ROSConfigError(
-            f"{path}: YAML root must be a list of BenchmarkScene mappings "
-            f"(ADR-0042), got {type(raw_obj).__name__}."
+            f"{path}: YAML root must be a list of BenchmarkScene mappings, "
+            f"got {type(raw_obj).__name__}."
         )
 
     scenes: list[BenchmarkScene] = []
@@ -228,7 +228,7 @@ def raise_on_invalid_suite(
     """Raise :class:`ROSConfigError` if ``scenes`` violates suite-level invariants.
 
     Originally enforced inside ``BenchmarkSpec.model_post_init`` (deleted in
-    ADR-0042). Extracted as a free function so callers can validate freshly
+    June 2026). Extracted as a free function so callers can validate freshly
     loaded suites independently and so tests can exercise the rules without
     touching the filesystem.
 

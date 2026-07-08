@@ -32,9 +32,9 @@ from typer.testing import CliRunner
 runner = CliRunner()
 
 # Locate the workspace root pyproject.toml so we can assert the duplicated
-# [dependency-groups] table in install.py stays in lockstep (per ADR-0021
-# "Negative / accepted tradeoffs"). When the tests run from an installed
-# wheel without a checkout, the file is absent and the lockstep check skips.
+# [dependency-groups] table in install.py stays in lockstep. When the tests
+# run from an installed wheel without a checkout, the file is absent and the
+# lockstep check skips.
 _REPO_ROOT_PYPROJECT = Path(__file__).resolve().parents[2] / "pyproject.toml"
 
 
@@ -45,9 +45,10 @@ class TestInstallGroupRegistry:
             assert pkgs, f"group `{name}` has no packages"
 
     def test_libero_robocasa_are_marked_as_conflicting(self) -> None:
-        # ADR-0011 invariant. If this drifts, the curl-bash installer will
-        # let users install both into one venv and uv's solver will fail
-        # with a less helpful error than our typed ROSConfigError.
+        # Invariant: these groups conflict. If this drifts, the curl-bash
+        # installer will let users install both into one venv and uv's
+        # solver will fail with a less helpful error than our typed
+        # ROSConfigError.
         assert frozenset({"libero", "robocasa"}) in _CONFLICTS
 
     @pytest.mark.skipif(
@@ -55,7 +56,7 @@ class TestInstallGroupRegistry:
         reason="repo root pyproject.toml not present (running from installed wheel?)",
     )
     def test_groups_mirror_workspace_root_pyproject(self) -> None:
-        # Lockstep check (ADR-0021): the curl-bash installer publishes its
+        # Lockstep check: the curl-bash installer publishes its
         # own copy of the [dependency-groups] table because it must work
         # before the workspace is cloned. Drift means a user who runs
         # `openral install sim` gets a different set of packages than a
@@ -82,7 +83,7 @@ class TestInstallConflictGuard:
             _check_conflicts("libero", frozenset({"robocasa"}))
         msg = str(excinfo.value)
         assert "libero" in msg and "robocasa" in msg
-        assert "ADR-0011" in msg  # cite the source-of-truth ADR
+        assert "mutually exclusive" in msg  # name the conflict
         assert "--force" in msg  # surface the escape hatch
 
     def test_no_conflict_no_raise(self) -> None:

@@ -7,12 +7,12 @@ the same publisher / subscriber / heartbeat / OTel-span wiring.
 
 There are three ways to use this module, in decreasing order of preference:
 
-1. **Manifest-driven** (preferred — ADR-0032 / issue #191): call
+1. **Manifest-driven** (preferred — issue #191): call
    :func:`make_lifecycle_main_from_manifest`, which spins up the generic
    :class:`ManifestHALLifecycleNode`. It reads ``robot_yaml`` + ``hal_mode``
    ROS parameters and builds its HAL through :func:`openral_hal.build_hal`,
    so a robot's construction kwargs (serial ``port``, ``robot_ip``, …) live
-   in the manifest's ``hal.parameters.defaults`` block (ADR-0029) rather than
+   in the manifest's ``hal.parameters.defaults`` block rather than
    a per-robot subclass. Adding a robot needs only a ``robot.yaml`` + a HAL
    class + a registry entry — no new node class.
 
@@ -35,8 +35,8 @@ Either way, the base class owns:
 
 * The standard publishers (``/joint_states`` + ``~/joint_states``).
 * The standard subscribers (``/openral/safe_action``,
-  ``/openral/estop``) per ADR-0018 F1/F5.
-* The 1 Hz ``DiagnosticsHeartbeat`` (ADR-0018 F8).
+  ``/openral/estop``).
+* The 1 Hz ``DiagnosticsHeartbeat``.
 * The per-tick OTel ``hal.read_state`` + ``hal.send_action`` spans
   consumed by the live dashboard's Robot State / Commands / Identity
   cards.
@@ -76,7 +76,7 @@ Example (SO-100 / franka — manifest-driven, the preferred path)::
     main = make_lifecycle_main_from_manifest(node_name="openral_hal_so100")
     # `openral deploy sim` injects `robot_yaml` + `hal_mode=sim`; real-HAL
     # construction kwargs (the SO-100's serial `port`) live in the manifest's
-    # `hal.parameters` block (ADR-0029), threaded by build_hal.
+    # `hal.parameters` block, threaded by build_hal.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ __all__ = [
 
 
 def decode_action_chunk(msg: object) -> object | None:
-    """Reverse the ADR-0028b wire encoding back into a typed ``Action``.
+    """Reverse the action-chunk wire encoding back into a typed ``Action``.
 
     The publisher (``ros_publishing_hal._flatten_action_payload``) packs
     the typed :class:`openral_core.schemas.Action` into ``ActionChunk``'s
@@ -151,7 +151,7 @@ def decode_action_chunk(msg: object) -> object | None:
         # nested rows.
         kwargs["gripper"] = [float(v) for v in flat[:horizon]]
     elif mode is ControlMode.COMPOSITE_MODE:
-        # ADR-0028d — sim-only mux flag. Same wire layout as gripper
+        # Sim-only mux flag. Same wire layout as gripper
         # (n_dof=1, horizon 1-D values).
         kwargs["composite_mode"] = [float(v) for v in flat[:horizon]]
     else:
@@ -250,7 +250,7 @@ def make_lifecycle_main(
 
 
 def make_lifecycle_main_from_manifest(node_name: str) -> Callable[[], None]:
-    """Build a ``main()`` for a manifest-driven HAL lifecycle node (ADR-0032).
+    """Build a ``main()`` for a manifest-driven HAL lifecycle node.
 
     Unlike :func:`make_lifecycle_main` (which pins a single hardcoded HAL
     class), the returned node reads two ROS parameters and constructs its HAL
@@ -262,7 +262,7 @@ def make_lifecycle_main_from_manifest(node_name: str) -> Callable[[], None]:
 
     So a single node serves both modes for every robot, and "add a robot"
     needs no per-package HAL class wiring — just a manifest declaring
-    ``hal.sim`` / ``hal.real`` (ADR-0031). A robot whose manifest lacks the
+    ``hal.sim`` / ``hal.real``. A robot whose manifest lacks the
     requested mode raises ``ROSCapabilityMismatch`` at configure time.
 
     Args:
@@ -290,7 +290,7 @@ def make_lifecycle_main_from_manifest(node_name: str) -> Callable[[], None]:
 
         rclpy.init()
         node = ManifestHALLifecycleNode(node_name)
-        # ADR-0049 — deliberately single-threaded. MuJoCo's EGL/GL context is
+        # Deliberately single-threaded. MuJoCo's EGL/GL context is
         # thread-affine, so a MultiThreadedExecutor (whose worker pool hops
         # threads between callbacks) crashes env.step with EGLError. Instead the
         # node offloads odom/joint_state to a dedicated publisher thread reading
@@ -341,7 +341,8 @@ if _ROS2_AVAILABLE:
             self._joint_state_pub: Any = None
             self._safe_action_sub: Any = None
             self._estop_sub: Any = None
-            # ADR-0049 — decouple the cheap, latency-sensitive publishers (odom /
+            self._estop_reset_sub: Any = None
+            # Decouple the cheap, latency-sensitive publishers (odom /
             # joint_state / TF) from the single executor thread, which is
             # head-of-line-blocked by env.step + render + scan raycast. They run
             # on a dedicated publisher thread reading ``_proprio`` (a plain-data
@@ -354,18 +355,18 @@ if _ROS2_AVAILABLE:
             self._proprio: ProprioSnapshot | None = None
             self._pub_thread: threading.Thread | None = None
             self._pub_stop: threading.Event | None = None
-            # ADR-0048 Phase 2 — /clock publisher. Created at activate iff the
+            # /clock publisher. Created at activate iff the
             # graph runs on sim time (the node's ``use_sim_time`` is True,
             # derived from ClockAuthority.origin=simulation) AND the HAL exposes a sim
             # clock; the publisher thread emits sim_time_ns so Nav2/slam/octomap
             # advance in lockstep with the sim. The HAL is the single /clock
             # authority (deploy-sim steps the sim, so only it knows sim time).
             self._clock_pub: Any = None
-            # ADR-0018 F8 — uniform 1 Hz /diagnostics heartbeat. Built lazily
+            # Uniform 1 Hz /diagnostics heartbeat. Built lazily
             # in on_configure so module import stays import-safe without
             # ``openral_observability`` on the path.
             self._heartbeat: Any = None
-            # ADR-0018 §F5 / CLAUDE.md §1.5 — estop latch.
+            # CLAUDE.md §1.5 — estop latch.
             self._estopped: bool = False
             # Monotonic tick counters stamped on hal.read_state /
             # hal.send_action spans so the dashboard correlates ticks
@@ -490,7 +491,7 @@ if _ROS2_AVAILABLE:
                 durability=QoSDurabilityPolicy.VOLATILE,
                 depth=10,
             )
-            # ADR-0018 F1: HAL publishes /joint_states on the global topic
+            # HAL publishes /joint_states on the global topic
             # so the world_state aggregator's single subscriber reads it
             # without per-node remapping. The legacy `~/joint_states`
             # publication is kept for back-compat with existing CLI
@@ -499,14 +500,14 @@ if _ROS2_AVAILABLE:
                 RosJointState, "/joint_states", control_qos
             )
             self._publisher = self.create_publisher(RosJointState, "~/joint_states", control_qos)
-            # ADR-0049 — sim-attached HALs (those exposing ``idle_step``) read
+            # Sim-attached HALs (those exposing ``idle_step``) read
             # MjData; publish odom/joint_state off a dedicated thread (below)
             # from a plain-data snapshot, so they aren't starved by env.step.
             # A real HAL keeps ``_proprio = None`` and uses the legacy timers.
             self._proprio = (
                 ProprioSnapshot() if callable(getattr(self._hal, "idle_step", None)) else None
             )
-            # ADR-0048 Phase 2 — sim /clock publisher. When the graph is on sim
+            # Sim /clock publisher. When the graph is on sim
             # time (``use_sim_time`` true via ClockAuthority.origin=simulation) and this is a
             # sim-attached HAL, the publisher thread emits the captured
             # ``sim_time_ns`` on ``/clock``. RELIABLE so it satisfies any
@@ -519,7 +520,7 @@ if _ROS2_AVAILABLE:
             if self._proprio is not None and (
                 self.get_parameter("use_sim_time").get_parameter_value().bool_value
             ):
-                # Gate on a real sim clock (ADR-0048 §4): use_sim_time without a
+                # Gate on a real sim clock: use_sim_time without a
                 # /clock pins every node at t=0 — the exact frozen-clock failure
                 # this whole effort fixed. If the backend exposes no sim time
                 # (sidecar / clock-less env), refuse to claim the /clock role and
@@ -535,14 +536,14 @@ if _ROS2_AVAILABLE:
                         depth=10,
                     )
                     self._clock_pub = self.create_publisher(_ClockMsg, "/clock", clock_qos)
-                    self.get_logger().info("publishing /clock from sim time (ADR-0048 Phase 2).")
+                    self.get_logger().info("publishing /clock from sim time.")
                 else:
                     self.get_logger().error(
                         "use_sim_time=true but this backend exposes no sim clock "
                         "(sim_time_ns is None) — NO /clock will be published and the "
                         "graph would freeze at t=0. Use host_wall clock_origin for this backend."
                     )
-            # ADR-0018 F1/F5: consume /openral/safe_action. Depth=10
+            # Consume /openral/safe_action. Depth=10
             # mirrors the candidate_action upstream — depth=1 coalesces
             # the multi-slot chunks the safety kernel forwards per
             # policy tick (CARTESIAN_DELTA + GRIPPER_POSITION arrive
@@ -561,7 +562,7 @@ if _ROS2_AVAILABLE:
                 self._on_safe_action,
                 chunk_qos,
             )
-            # ADR-0018 §F5 / CLAUDE.md §1.5 — defense-in-depth estop.
+            # CLAUDE.md §1.5 — defense-in-depth estop.
             estop_qos = QoSProfile(
                 reliability=QoSReliabilityPolicy.RELIABLE,
                 durability=QoSDurabilityPolicy.VOLATILE,
@@ -570,11 +571,20 @@ if _ROS2_AVAILABLE:
             self._estop_sub = self.create_subscription(
                 Empty, "/openral/estop", self._on_estop, estop_qos
             )
+            # Reset-cleared broadcast (symmetric to /openral/estop). The estop
+            # TRIGGER is a topic every node latches on, but reset was a
+            # kernel-only service, so the HAL stayed latched after
+            # /openral/estop_reset — the robot never resumed until a restart.
+            # The reset authority (the kernel via the dashboard, after its
+            # cooldown-gated reset succeeds) publishes here so the HAL clears too.
+            self._estop_reset_sub = self.create_subscription(
+                Empty, "/openral/estop_cleared", self._on_estop_cleared, estop_qos
+            )
 
             rate_hz: float = (
                 self.get_parameter("publish_rate_hz").get_parameter_value().double_value
             )
-            # ADR-0049 — for sim-attached HALs, joint_state (and odom, in
+            # For sim-attached HALs, joint_state (and odom, in
             # MobileBaseBridge) is published off a dedicated thread reading the
             # snapshot, NOT a timer on the single executor thread (which is busy
             # with env.step / render / raycast). Seed the snapshot first so the
@@ -588,7 +598,7 @@ if _ROS2_AVAILABLE:
                 self._heartbeat.start()
             self.get_logger().info(f"HAL activated at {rate_hz:.1f} Hz.")
             result = self.on_activate_post_subs()
-            # ADR-0049 — start the proprio publisher thread after the bridges are
+            # Start the proprio publisher thread after the bridges are
             # up (it may publish odom via ``self._mobile_base``). Sim HALs only.
             if result == TransitionCallbackReturn.SUCCESS and self._proprio is not None:
                 self._start_publisher_thread(max(rate_hz, 1.0))
@@ -596,10 +606,10 @@ if _ROS2_AVAILABLE:
 
         def on_deactivate(self, state: object) -> TransitionCallbackReturn:
             """Stop timers + tear down subs/pubs. Calls the pre-teardown hook first."""
-            # ADR-0049 — stop the proprio publisher thread before tearing down the
+            # Stop the proprio publisher thread before tearing down the
             # publishers it writes to.
             self._stop_publisher_thread()
-            if self._clock_pub is not None:  # ADR-0048 Phase 2
+            if self._clock_pub is not None:
                 self.destroy_publisher(self._clock_pub)
                 self._clock_pub = None
             self.on_deactivate_pre_teardown()
@@ -614,6 +624,9 @@ if _ROS2_AVAILABLE:
             if self._estop_sub is not None:
                 self.destroy_subscription(self._estop_sub)
                 self._estop_sub = None
+            if self._estop_reset_sub is not None:
+                self.destroy_subscription(self._estop_reset_sub)
+                self._estop_reset_sub = None
             if self._publisher is not None:
                 self.destroy_publisher(self._publisher)
                 self._publisher = None
@@ -640,7 +653,7 @@ if _ROS2_AVAILABLE:
         # ── Internal callbacks (do not override) ─────────────────────────
 
         def _start_publisher_thread(self, rate_hz: float) -> None:
-            """Start the ADR-0049 dedicated proprio publisher thread (sim HALs).
+            """Start the dedicated proprio publisher thread (sim HALs).
 
             Publishes joint_state + odom/TF from the plain-data snapshot at
             ``rate_hz``, off the single executor thread (busy stepping/rendering
@@ -654,7 +667,7 @@ if _ROS2_AVAILABLE:
             from rosgraph_msgs.msg import Clock as _ClockMsg
 
             def _publish_clock() -> None:
-                # ADR-0048 Phase 2 — emit the captured sim time on /clock so the
+                # Emit the captured sim time on /clock so the
                 # rest of the graph (use_sim_time) advances with the sim. Read
                 # from the snapshot (never the simulator) — same thread-safety
                 # contract as the other publishers. Published first so the node's
@@ -697,7 +710,7 @@ if _ROS2_AVAILABLE:
             self._pub_stop = None
 
         def _capture_proprio(self) -> None:
-            """Snapshot the HAL's proprio into ``self._proprio`` (ADR-0049).
+            """Snapshot the HAL's proprio into ``self._proprio``.
 
             MUST run in the default ("sim") callback group — right after an
             ``env.step`` (from ``_send_action_traced`` / the bridge's
@@ -713,7 +726,7 @@ if _ROS2_AVAILABLE:
             getter = getattr(self._hal, "base_pose_6dof", None)
             pose_6dof = getter() if getter is not None else None
             twist = getattr(self._hal, "base_twist", (0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
-            # ADR-0048 Phase 2 — capture sim time here (executor thread, safe
+            # Capture sim time here (executor thread, safe
             # MjData read) so the publisher thread can emit /clock without racing
             # env.step. ``None`` for clock-less / sidecar HALs → no /clock.
             sim_time_getter = getattr(self._hal, "sim_time_ns", None)
@@ -731,7 +744,7 @@ if _ROS2_AVAILABLE:
         def _publish_joint_state(self) -> None:
             """Timer callback: publish joint state.
 
-            From the ADR-0049 snapshot for sim-attached HALs, else a live
+            From the proprio snapshot for sim-attached HALs, else a live
             ``hal.read_state``.
             """
             from openral_observability import producer as ral_producer
@@ -755,7 +768,7 @@ if _ROS2_AVAILABLE:
                 },
             ) as hal_read_span:
                 if self._proprio is not None:
-                    # ADR-0049 — read the post-step snapshot (plain data), never
+                    # Read the post-step snapshot (plain data), never
                     # the simulator: this callback runs on the control thread
                     # concurrent with env.step.
                     frame = self._proprio.latest()
@@ -793,9 +806,9 @@ if _ROS2_AVAILABLE:
                 self._joint_state_pub.publish(msg)
 
         def _on_safe_action(self, msg: object) -> None:
-            """``/openral/safe_action`` callback (ADR-0018 F1/F5).
+            """``/openral/safe_action`` callback.
 
-            Decodes the ADR-0028b wire shape back into the typed
+            Decodes the action-chunk wire shape back into the typed
             :class:`Action` via :func:`decode_action_chunk`. Hardcoding
             ``ControlMode.JOINT_POSITION`` here (the prior behaviour)
             silently misrouted per-mode chunks: a 6-D CARTESIAN_DELTA
@@ -815,7 +828,7 @@ if _ROS2_AVAILABLE:
         def _send_action_traced(self, action: Any, *, source: str) -> None:  # noqa: ANN401  # reason: action shape is HAL-adapter-specific (numpy ndarray / dict / typed namedtuple)
             """Forward ``action`` to ``self._hal.send_action`` inside a ``hal.send_action`` span.
 
-            Centralises OTel wiring for the ADR-0018 F1/F5
+            Centralises OTel wiring for the
             ``/openral/safe_action`` path; the ``source`` argument is
             stamped on the span so the dashboard's Commands card can
             disambiguate the originating subscription.
@@ -846,7 +859,7 @@ if _ROS2_AVAILABLE:
                     hal_send_span.record_exception(exc)
                     applied = False
                     self.get_logger().warn(f"send_action ({source}) failed: {exc}")
-                # ADR-0049 — refresh the proprio snapshot after the step (this
+                # Refresh the proprio snapshot after the step (this
                 # runs in the default/"sim" group, so the MjData read is safe).
                 if applied:
                     self._capture_proprio()
@@ -886,13 +899,27 @@ if _ROS2_AVAILABLE:
                 )
 
         def _on_estop(self, _msg: object) -> None:
-            """ADR-0018 §F5 / CLAUDE.md §1.5 — latch the estop flag."""
+            """CLAUDE.md §1.5 — latch the estop flag."""
             if self._estopped:
                 return
             self._estopped = True
             self.get_logger().error(
                 "openral_hal.estop_received; ignoring further commands until reset."
             )
+
+        def _on_estop_cleared(self, _msg: object) -> None:
+            """Clear the estop latch when the reset authority broadcasts /openral/estop_cleared.
+
+            Without this the HAL stayed latched after the kernel's estop_reset —
+            it dropped every command (``_on_safe_action`` returns early on
+            ``_estopped``) so the robot never resumed until a node restart. The
+            kernel's cooldown gate has already passed by the time this fires
+            (the dashboard publishes it only after estop_reset returns success).
+            """
+            if not self._estopped:
+                return
+            self._estopped = False
+            self.get_logger().info("openral_hal.estop_cleared; resuming command execution.")
 
     class _FactoryHALLifecycleNode(HALLifecycleNodeBase):
         """Thin subclass that takes a zero-arg HAL factory.
@@ -913,12 +940,12 @@ if _ROS2_AVAILABLE:
     class ManifestHALLifecycleNode(HALLifecycleNodeBase):
         """Manifest-driven node: builds its HAL via ``build_hal(mode=...)``.
 
-        Used by :func:`make_lifecycle_main_from_manifest` (ADR-0032). Reads
+        Used by :func:`make_lifecycle_main_from_manifest`. Reads
         ``robot_yaml`` + ``hal_mode`` params and routes through the single
         resolver seam, so one node class serves sim and real for every robot.
 
         The HAL's construction kwargs (serial ``port``, ``robot_ip``, …) come
-        from the manifest's ``hal.parameters.defaults`` block (ADR-0029),
+        from the manifest's ``hal.parameters.defaults`` block,
         threaded by :func:`openral_hal.build_hal` — so a parameterised robot
         needs no bespoke ``_create_hal`` subclass, only a manifest entry. This
         is the generic node that the per-robot lifecycle packages collapse
@@ -931,7 +958,25 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("robot_yaml", "")
             self.declare_parameter("hal_mode", "sim")
             self.declare_parameter("sim_env_yaml", "")
-            # ADR-0066 — scene-level MJCF composition (a `SceneComposition` as
+            # Real-HW transport overrides: `openral deploy run`
+            # forwards the robot manifest's hal transport overrides (serial `port` /
+            # `robot_ip` / `fci_ip`) + hal.params (calibration `id`) via the
+            # HAL params file. They MUST be declared here or rclpy silently
+            # drops them and build_hal falls back to the manifest's defaults —
+            # observed as the SO-101 node connecting to /dev/ttyUSB0 while the
+            # arm sat on /dev/ttyACM0, then reading with no calibration.
+            # Empty string = unset (manifest default applies).
+            self.declare_parameter("port", "")
+            self.declare_parameter("robot_ip", "")
+            self.declare_parameter("fci_ip", "")
+            self.declare_parameter("id", "")
+            # Calibration directory override. `deploy run` forwards
+            # the deploy's `calibration_dir` HAL override so a deploy can
+            # load a calibration committed next to its config instead of the
+            # ambient HF cache (which may hold several stale `<id>.json` for one
+            # arm). Empty string = unset (lerobot's default HF cache dir).
+            self.declare_parameter("calibration_dir", "")
+            # Scene-level MJCF composition (a `SceneComposition` as
             # JSON). `openral deploy sim` forwards the DeployScene's `composition`
             # here so the SCENE (not the robot manifest) owns its arena. Takes
             # precedence over `scene_defaults.composition`; "" = none.
@@ -946,7 +991,7 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("scan_n_beams", 360)
             self.declare_parameter("scan_max_range_m", 12.0)
             self.declare_parameter("scan_min_range_m", 0.05)
-            # depth_* params for ADR-0030 PointCloud2 streams (Phase 2).
+            # depth_* params for PointCloud2 streams (Phase 2).
             # Gated by bridge on live MuJoCo handles + manifest depth sensor.
             self.declare_parameter("depth_publish_rate_hz", 10.0)
             self.declare_parameter("depth_max_range_m", 5.0)
@@ -960,8 +1005,8 @@ if _ROS2_AVAILABLE:
             self.declare_parameter("cmd_vel_topic", "/cmd_vel")
             self._bridge: Any = None
             self._mobile_base: Any = None
-            # Reflective ``ResetToPose`` service (issue #191 Phase 2 / ADR-0029
-            # blocker #4): opened in on_configure_post_hal only when the built
+            # Reflective ``ResetToPose`` service (issue #191 Phase 2):
+            # opened in on_configure_post_hal only when the built
             # HAL exposes ``reset_to_pose`` (every MujocoArmHAL sim arm does;
             # PandaMobileHAL / SimAttachedHAL do not), so a robot needs no
             # bespoke service wiring.
@@ -988,13 +1033,13 @@ if _ROS2_AVAILABLE:
                 f"{hal_mode} mode: building HAL for robot={description.name} from {robot_yaml}"
                 + (f" scene={sim_env_yaml}" if sim_env_yaml else "")
             )
-            # Declarative MJCF scene composition (issue #191 Phase 3b; ADR-0066).
+            # Declarative MJCF scene composition (issue #191 Phase 3b).
             # When building a bare sim HAL (no scene-attach), call the named
             # composer and thread the resulting MJCF in as the HAL's `mjcf_path`.
             # The SCENE's `composition` (forwarded as `scene_composition_json`)
             # wins over the robot manifest's `scene_defaults.composition` — the
-            # scene owns its arena, the robot manifest describes the robot
-            # (ADR-0066). The manifest fallback is retained for back-compat.
+            # scene owns its arena, the robot manifest describes the robot.
+            # The manifest fallback is retained for back-compat.
             from openral_core.schemas import SceneComposition
 
             transport: dict[str, object] = {}
@@ -1008,9 +1053,14 @@ if _ROS2_AVAILABLE:
                 composition = description.scene_defaults.composition
             if hal_mode == "sim" and sim_env_yaml is None and composition is not None:
                 transport["mjcf_path"] = self._compose_scene_mjcf(description, composition)
-            # Phase 1 (ADR-0032) routes sim through the seam; real-HW transport
-            # params (port / robot_ip / fci_ip) arrive with the `deploy run`
-            # launch path. mode is validated by build_hal (sim|real).
+            # Real-HW transport overrides (`deploy run` → HAL params file →
+            # the params declared in __init__). Only non-empty values are
+            # threaded so build_hal's manifest-defaults fallback still applies
+            # per-key. mode is validated by build_hal (sim|real).
+            for _transport_key in ("port", "robot_ip", "fci_ip", "id", "calibration_dir"):
+                _value = self.get_parameter(_transport_key).get_parameter_value().string_value
+                if _value:
+                    transport[_transport_key] = _value
             return build_hal(
                 description,
                 mode=hal_mode,  # type: ignore[arg-type]  # reason: hal_mode is a ROS param string validated as sim|real by build_hal
@@ -1086,7 +1136,7 @@ if _ROS2_AVAILABLE:
 
             A failure surfaces as ``success=False`` + a typed ``failure_reason``
             rather than an exception across the IPC boundary (mirrors the
-            ADR-0024 openarm handler the reflection replaces).
+            original per-robot openarm handler the reflection replaces).
             """
             from openral_core.exceptions import ROSConfigError, ROSError
 
@@ -1108,7 +1158,7 @@ if _ROS2_AVAILABLE:
                 response.success = False  # type: ignore[attr-defined]
                 response.failure_reason = f"{type(exc).__name__}: {exc!s}"  # type: ignore[attr-defined]
                 return response
-            # ADR-0049 — reset_to_pose mutates MjData directly but is neither an
+            # reset_to_pose mutates MjData directly but is neither an
             # idle_step nor a send_action, so the proprio snapshot the
             # /joint_states publisher serves would otherwise stay at the
             # PRE-reset pose. The policy's first inference fires ~20 ms after the
@@ -1166,7 +1216,7 @@ if _ROS2_AVAILABLE:
                 depth_pixel_stride=self.get_parameter("depth_pixel_stride")
                 .get_parameter_value()
                 .integer_value,
-                # ADR-0049 — refresh the proprio snapshot after each idle step,
+                # Refresh the proprio snapshot after each idle step,
                 # so odom/joint_state stay fresh while the scene idles.
                 on_step=self._capture_proprio,
             )
@@ -1188,7 +1238,7 @@ if _ROS2_AVAILABLE:
                     cmd_vel_topic=self.get_parameter("cmd_vel_topic")
                     .get_parameter_value()
                     .string_value,
-                    # ADR-0049 — odom published from the node's dedicated thread
+                    # Odom published from the node's dedicated thread
                     # reading this snapshot, so it isn't starved by env.step.
                     proprio=self._proprio,
                 )

@@ -219,7 +219,7 @@ class rSkillBase(abc.ABC):  # noqa: N801  # reason: rSkill is the official packa
             return
         log.info("rskill.shutdown", name=self.name)
         try:
-            # ADR-0050 — release GPU weights on the way down so the skill
+            # Release GPU weights on the way down so the skill
             # runner's single-resident eviction frees VRAM before the next
             # skill loads. Guarded by ``weights_loaded`` so a shutdown before
             # configure() never invokes a subclass hook that assumes loaded
@@ -247,8 +247,8 @@ class rSkillBase(abc.ABC):  # noqa: N801  # reason: rSkill is the official packa
         Returns:
             Either a single :class:`~openral_core.schemas.Action` chunk
             (the legacy single-control-surface path used by every skill
-            shipped before ADR-0028b) OR a list of :class:`Action`
-            chunks (ADR-0028b multi-surface dispatch — used by skills
+            shipped before multi-surface action dispatch was introduced) OR
+            a list of :class:`Action` chunks (multi-surface action dispatch — used by skills
             whose manifest declares an ``action_contract.slots`` block;
             each slot in the manifest becomes one :class:`Action` in
             the returned list, all routed by the HAL according to their
@@ -288,7 +288,7 @@ class rSkillBase(abc.ABC):  # noqa: N801  # reason: rSkill is the official packa
         """
 
     def on_unload_weights(self) -> None:
-        """Release model weights from memory (ADR-0050).
+        """Release model weights from memory.
 
         Symmetric with :meth:`on_load_weights`. Called by :meth:`shutdown`
         when ``weights_loaded`` is set (before :meth:`_shutdown_impl`), so the

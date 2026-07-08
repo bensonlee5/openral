@@ -51,7 +51,7 @@ canonical `EmbodimentTag` literal (e.g. `so100_follower`, `franka_panda`,
 
 Open `rskills/<id>/rskill.yaml`. The fields that matter most for consumers
 (modeled on the in-tree
-[`rskills/pi05-libero-nf4/rskill.yaml`](https://github.com/OpenRAL/openral/blob/master/rskills/pi05-libero-nf4/rskill.yaml)):
+[`rskills/pi05-libero-int8/rskill.yaml`](https://github.com/OpenRAL/openral/blob/master/rskills/pi05-libero-int8/rskill.yaml)):
 
 | Field | What it does |
 | --- | --- |
@@ -66,7 +66,7 @@ Open `rskills/<id>/rskill.yaml`. The fields that matter most for consumers
 | `weights_uri` | `hf://<owner>/<repo>` — the rSkill does **not** copy weights. |
 | `chunk_size` / `n_action_steps` | Action-chunk size and replan cadence. |
 | `latency_budget.per_chunk_ms` | Contractual — enforced by sim-tier latency tests. |
-| `actions` / `objects` / `scenes` | ADR-0022 vocabulary the reasoner's LLM palette uses to pick the skill. |
+| `actions` / `objects` / `scenes` | Vocabulary the reasoner's LLM palette uses to pick the skill. |
 
 The full schema is
 [`openral_core.schemas.RSkillManifest`](https://github.com/OpenRAL/openral/blob/master/python/core/src/openral_core/schemas.py).
@@ -135,7 +135,7 @@ Two things to know:
   private; you flip it public on the Hub when you're ready. This is deliberate
   for license-restricted weights.
 - **Provenance is not yet signed.** Sigstore signing/verification is the
-  *planned* control (ADR-0006) but is **not implemented**. Until it lands,
+  *planned* control but is **not implemented**. Until it lands,
   `rSkill.from_pretrained` / `from_yaml` emit an `rskill.unverified_provenance`
   warning. Consumers can fail closed with `OPENRAL_REQUIRE_SIGNED_SKILLS=1`.
   `*.pt` weights are treated as untrusted pickle and need

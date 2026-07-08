@@ -1,4 +1,4 @@
-"""ADR-0040 — mobile-base world collision via the REAL kernel + REAL manifest.
+"""Base-relative frame fix — mobile-base world collision via the REAL kernel + REAL manifest.
 
 End-to-end proof of the base-relative frame fix (HZ-0040-1) on the actual
 ``safety_kernel_node`` binary loaded from the real ``robots/panda_mobile``
@@ -76,7 +76,7 @@ def _kernel_params() -> dict[str, object]:
             "world_voxel_margin_m": 0.0,
             "world_voxel_deadline_ms": 5000.0,
             "world_voxel_max_cells": _SX * _SY * _SZ,
-            # ADR-0040 — exactly what sim_e2e.launch.py emits for this robot.
+            # Exactly what sim_e2e.launch.py emits for this robot.
             "collision_joint_names": [j.name for j in desc.joints],
             "collision_base_dofs": [
                 i for i, j in enumerate(desc.joints) if j.name in set(desc.base_joints or [])

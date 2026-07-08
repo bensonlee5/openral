@@ -1,4 +1,4 @@
-"""ADR-0018 F4 / ADR-0022 — :class:`ToolPalette` + builder.
+"""Typed tool-call dispatch, per-skill tool palette — :class:`ToolPalette` + builder.
 
 The palette is the *closed set* of choices the LLM sees on every
 :meth:`ToolUseClient.select_tool` call. It is built at reasoner
@@ -7,18 +7,16 @@ by the active robot's :class:`~openral_core.RobotCapabilities`, and
 refreshed when ``/openral/skill_registry_changed`` fires (fired by
 ``ral skill install|remove``).
 
-Per ADR-0018 §4 "Tool palette built at lifecycle configure ... LLM
-cannot dispatch a skill that isn't installed, isn't capability-matched,
-or isn't licensed for the deployment." This module enforces the
-"installed + capability-matched" half; license posture is checked
-downstream by the action server (defense in depth) when the goal is
-accepted.
+Tool palette built at lifecycle configure: the LLM cannot dispatch a
+skill that isn't installed, isn't capability-matched, or isn't
+licensed for the deployment. This module enforces the "installed +
+capability-matched" half; license posture is checked downstream by the
+action server (defense in depth) when the goal is accepted.
 
-ADR-0022 amendment: the palette carries per-skill metadata
-(:class:`RSkillToolEntry`) so the LLM tool schema can present each
-skill as its own tool with a real description + action verbs + object
-/ scene discriminators, instead of a single ``execute_rskill`` tool
-with an opaque list of ids.
+The palette carries per-skill metadata (:class:`RSkillToolEntry`) so
+the LLM tool schema can present each skill as its own tool with a real
+description + action verbs + object / scene discriminators, instead of
+a single ``execute_rskill`` tool with an opaque list of ids.
 """
 
 from __future__ import annotations
@@ -59,9 +57,10 @@ def task_space_disagreement(
     hal_mode: str,
     legacy_ok: bool,
 ) -> str | None:
-    """Compare the ADR-0071 ``task_space_compatible`` gate to the legacy verdict.
+    """Compare the ``task_space_compatible`` gate to the legacy verdict.
 
-    Phase 2 of ADR-0071 (warn-only). The reasoner's deploy palette filter and
+    Phase 2 of the task-space compatibility gate rollout (warn-only). The
+    reasoner's deploy palette filter and
     ``rskill_publisher`` both run the legacy mode check (``_action_executable`` /
     ``control_modes_for_representation``) to decide whether a VLA skill is
     offered / publishable. This helper runs the canonical
@@ -102,16 +101,16 @@ def task_space_disagreement(
     if match.ok == legacy_ok:
         return None
     return (
-        f"ADR-0071 task_space_compatible disagrees with the legacy action gate "
+        f"task_space_compatible disagrees with the legacy action gate "
         f"for rSkill {manifest.name!r} on robot {description.name!r} "
         f"(hal_mode={mode!r}): task_space_compatible.ok={match.ok}, "
         f"legacy_ok={legacy_ok}; reasons={match.reasons or ['<compatible>']}. "
-        f"Warn-only (ADR-0071 Phase 2) — not yet enforced."
+        f"Warn-only (Phase 2) — not yet enforced."
     )
 
 
 class ContinuousDetectorEntry(BaseModel):
-    """A ``mode: continuous`` detector's coverage, surfaced to the reasoner (ADR-0051).
+    """A ``mode: continuous`` detector's coverage, surfaced to the reasoner.
 
     Continuous detectors are *not* ExecuteSkill tools and the reasoner never
     prompts them — they stream ``ObjectsMetadata`` into
@@ -139,7 +138,7 @@ class ContinuousDetectorEntry(BaseModel):
 
 
 def detector_alias(rskill_name: str) -> str:
-    """Short, LLM- and operator-facing id for a detector rSkill (ADR-0056).
+    """Short, LLM- and operator-facing id for a detector rSkill.
 
     Strips the ``OpenRAL/`` org prefix and the ``rskill-`` kind prefix, so
     ``"OpenRAL/rskill-omdet-turbo-locator"`` → ``"omdet-turbo-locator"``. This is
@@ -151,7 +150,7 @@ def detector_alias(rskill_name: str) -> str:
 
 
 def detector_service_segment(alias: str) -> str:
-    """ROS-safe service-namespace segment for a detector alias (ADR-0056).
+    """ROS-safe service-namespace segment for a detector alias.
 
     ROS 2 names allow only ``[A-Za-z0-9_]`` per token, so hyphens in the alias
     become underscores: ``"omdet-turbo-locator"`` → ``"omdet_turbo_locator"``. The
@@ -162,7 +161,7 @@ def detector_service_segment(alias: str) -> str:
 
 
 def locate_in_view_service(detector: str, *, default: str = "") -> str:
-    """Resolve the ``locate_in_view`` service for a (possibly empty) detector selector (ADR-0056).
+    """Resolve the ``locate_in_view`` service for a (possibly empty) detector selector.
 
     Single source of truth shared by the reasoner dispatch (resolves
     ``LocateInViewTool.detector``) and the deploy launch (names each on-demand
@@ -179,7 +178,7 @@ def locate_in_view_service(detector: str, *, default: str = "") -> str:
 
 
 class OnDemandDetectorEntry(BaseModel):
-    """A ``mode: on_demand`` open-vocab locator, surfaced as a locate_in_view option (ADR-0056).
+    """A ``mode: on_demand`` open-vocab locator, surfaced as a locate_in_view option.
 
     On-demand locators are prompt-able **read-only** tools: the reasoner picks one
     by :attr:`alias` in ``LocateInViewTool.detector`` and asks it "is object X in
@@ -204,7 +203,7 @@ class OnDemandDetectorEntry(BaseModel):
 class RSkillToolEntry(BaseModel):
     """Per-skill metadata surfaced to the reasoner LLM as one tool.
 
-    ADR-0022. The reasoner constructs one tool per :class:`RSkillToolEntry`
+    The reasoner constructs one tool per :class:`RSkillToolEntry`
     in :attr:`ToolPalette.skills` so the LLM can pick a skill by what it
     does (description + actions + objects + scenes) rather than by
     inferring meaning from a slug.
@@ -219,8 +218,8 @@ class RSkillToolEntry(BaseModel):
             (:class:`~openral_core.RSkillAction`). At least one entry.
         objects: Free-form object keywords (``"cube"``, ``"pipe"``, …).
         scenes: Free-form scene keywords (``"tabletop"``, ``"kitchen"``).
-        goal_params_schema: ADR-0026 — per-skill JSON-Schema 7 / OpenAPI
-            shape describing the ``goal_params_json`` payload the LLM may
+        goal_params_schema: Per-skill JSON-Schema 7 / OpenAPI shape
+            describing the ``goal_params_json`` payload the LLM may
             attach. ``None`` (the common case for VLAs) means the LLM
             sees no structured params for this skill — only the flat
             ``(rskill_id, prompt, deadline_s)`` surface. When set,
@@ -250,7 +249,7 @@ class ToolPalette(BaseModel):
     actually drive actuators via the ``rskill_runner_node`` action
     server (F1).
 
-    ADR-0022: when :attr:`skills` is populated the reasoner emits one
+    When :attr:`skills` is populated the reasoner emits one
     LLM tool per skill (named ``execute_rskill__<slug>``) carrying the
     skill's description + actions + objects + scenes. When only
     :attr:`execute_rskill_ids` is populated (e.g. synthetic test
@@ -260,7 +259,7 @@ class ToolPalette(BaseModel):
 
     Attributes:
         skills: Per-skill metadata records. The LLM sees one tool per
-            entry. The primary surface (ADR-0022).
+            entry — the primary tool surface.
         execute_rskill_ids: Set of skill ids the LLM may pass to
             ``ExecuteRskillTool.rskill_id``. Auto-derived from
             :attr:`skills` when ``skills`` is non-empty; may also be
@@ -283,29 +282,30 @@ class ToolPalette(BaseModel):
     sensor_ids: frozenset[str] = frozenset()
     node_ids: frozenset[str] = frozenset()
     continuous_detectors: tuple[ContinuousDetectorEntry, ...] = ()
-    """ADR-0051 — ``mode: continuous`` detectors installed for the active robot.
+    """``mode: continuous`` detectors installed for the active robot.
     Not tools (the reasoner never prompts them); surfaced so the LLM knows which
     object classes are already tracked in world state for free, and can reserve
     the on-demand ``locate_in_view`` locator for objects outside that coverage."""
     spatial_memory_available: bool = False
-    """ADR-0039 — when ``True`` the LLM additionally sees the two **read-only**
+    """When ``True`` the LLM additionally sees the two **read-only**
     spatial-memory query tools (``recall_object`` / ``resolve_place``). Set by the
-    reasoner_node only when an ADR-0038 ``SpatialMemory`` query backend is wired
-    (Phase 2); off by default so the tools never appear without a dispatcher."""
+    reasoner_node only when a spatial-memory scene-graph ``SpatialMemory`` query
+    backend is wired (Phase 2); off by default so the tools never appear without
+    a dispatcher."""
     detector_available: bool = False
-    """ADR-0043 — when ``True`` the LLM additionally sees the **read-only**
+    """When ``True`` the LLM additionally sees the **read-only**
     ``locate_in_view`` tool (ask a live VLM detector whether an object is in the
     current camera frame). Set by the reasoner_node only when a detector exposes a
     ``/openral/perception/<detector>/locate_in_view`` service; off by default so the
     tool never appears without a dispatcher."""
     on_demand_detectors: tuple[OnDemandDetectorEntry, ...] = ()
-    """ADR-0056 — ``mode: on_demand`` open-vocab locators installed for the active
+    """``mode: on_demand`` open-vocab locators installed for the active
     robot. Surfaced as the selectable ``detector`` options of the read-only
     ``locate_in_view`` tool so the LLM can choose the model (e.g. a light real-time
     locator vs a high-quality grounding VLM). Gated by ``detector_available`` like
     the tool itself; empty = the tool keeps its single default-locator behaviour."""
     scene_query_available: bool = False
-    """ADR-0047 — when ``True`` the LLM additionally sees the **read-only**
+    """When ``True`` the LLM additionally sees the **read-only**
     ``query_scene`` tool (ask a scene VLM an open-ended question about the current
     view — task progress / success-failure verification). Set by the reasoner_node
     only when a scene VLM exposes the ``/openral/perception/query_scene`` service;
@@ -313,7 +313,7 @@ class ToolPalette(BaseModel):
     ``detector_available``: localization (``locate_in_view``) and scene-state
     reasoning (``query_scene``) are independently provisioned backends."""
     task_progress_available: bool = False
-    """ADR-0058 — when ``True`` the LLM additionally sees the **read-only**
+    """When ``True`` the LLM additionally sees the **read-only**
     ``query_task_progress`` tool (ask the Robometer reward monitor for a
     quantitative windowed progress/success assessment of the current task). Set
     by the reasoner_node only when a reward monitor exposes the
@@ -321,7 +321,7 @@ class ToolPalette(BaseModel):
     from ``scene_query_available``: ``query_scene`` returns free text, this
     returns normalized progress/success scalars + trends."""
     memory_available: bool = False
-    """ADR-0072 §3 — when ``True`` the LLM additionally sees the self-maintained
+    """When ``True`` the LLM additionally sees the self-maintained
     semantic-memory tools: the write-capable ``memory_write``
     (``add``/``update``/``supersede``/``delete`` over a ``MemorySection``) and the
     read-only ``memory_search`` (archival recall). Set by the reasoner_node only
@@ -397,8 +397,8 @@ def build_tool_palette(
        ``ExecuteRskillTool`` per CLAUDE.md §6.2 (S0/S2 slots are
        reserved and have separate dispatch paths) — **and**
        ``kind != "detector"``: detector rSkills are S1-rate perception
-       producers (ADR-0035/0037), not ExecuteSkill-dispatchable; they
-       activate as the perception ROS node / GStreamer tee consumer.
+       producers, not ExecuteSkill-dispatchable; they activate as the
+       perception ROS node / GStreamer tee consumer.
     4. If ``commercial_deployment`` is ``True``, the skill's license
        posture allows commercial use
        (:attr:`RSkillManifest.is_commercial_use_allowed`). Defense in
@@ -408,8 +408,8 @@ def build_tool_palette(
 
     Each included skill is materialised as a :class:`RSkillToolEntry`
     carrying the manifest's ``description`` + ``actions`` + ``objects``
-    + ``scenes`` (ADR-0022), so the reasoner LLM sees one tool per
-    skill with a real description.
+    + ``scenes``, so the reasoner LLM sees one tool per skill with a
+    real description.
 
     Args:
         installed_skills: Iterable of every installed
@@ -423,20 +423,20 @@ def build_tool_palette(
             skills (e.g. NVIDIA GR00T weights). Defaults to ``False``
             (research / lab deployment).
         spatial_memory_available: When ``True`` the palette advertises the
-            read-only ``recall_object`` / ``resolve_place`` query tools (ADR-0039);
+            read-only ``recall_object`` / ``resolve_place`` query tools;
             set by the reasoner when a ``SpatialMemory`` backend is wired.
         detector_available: When ``True`` the palette advertises the read-only
-            ``locate_in_view`` query tool (ADR-0043); set by the reasoner when an
+            ``locate_in_view`` query tool; set by the reasoner when an
             object detector exposes ``/openral/perception/locate_in_view``.
         scene_query_available: When ``True`` the palette advertises the read-only
-            ``query_scene`` tool (ADR-0047); set by the reasoner when a scene VLM
+            ``query_scene`` tool; set by the reasoner when a scene VLM
             exposes ``/openral/perception/query_scene``.
         task_progress_available: When ``True`` the palette advertises the
-            read-only ``query_task_progress`` tool (ADR-0057); set by the reasoner
+            read-only ``query_task_progress`` tool; set by the reasoner
             when a reward monitor exposes
             ``/openral/perception/query_task_progress``.
         memory_available: When ``True`` the palette advertises the ``memory_write``
-            + ``memory_search`` tools (ADR-0072 §3); set by the reasoner when a
+            + ``memory_search`` tools; set by the reasoner when a
             ``MEMORY.md`` is wired via the ``memory_md_path`` param.
 
     Returns:
@@ -469,11 +469,11 @@ def build_tool_palette(
         if skill.is_scaffold_placeholder:
             continue
         # ``detector`` rSkills are S1-rate perception producers (RT-DETR →
-        # ObjectsMetadata, ADR-0035/0037), not ExecuteSkill-dispatchable
-        # policies — they are activated as the perception ROS node / GStreamer
-        # tee consumer, never via ExecuteRskillTool. Admitting them here would
-        # let the reasoner dispatch a detector as if it actuated the robot.
-        # A ``mode: continuous`` detector (ADR-0051) is still surfaced — not as a
+        # ObjectsMetadata), not ExecuteSkill-dispatchable policies — they are
+        # activated as the perception ROS node / GStreamer tee consumer, never
+        # via ExecuteRskillTool. Admitting them here would let the reasoner
+        # dispatch a detector as if it actuated the robot.
+        # A ``mode: continuous`` detector is still surfaced — not as a
         # tool, but as coverage the LLM reads from world state — so it can reserve
         # the on-demand ``locate_in_view`` locator for objects outside that bank.
         if skill.kind == "detector":
@@ -488,7 +488,7 @@ def build_tool_palette(
                     )
                 )
             elif skill.detector is not None and skill.detector.mode is DetectorMode.ON_DEMAND:
-                # ADR-0056 — on-demand locators are prompt-able read-only tools, not
+                # On-demand locators are prompt-able read-only tools, not
                 # ExecuteSkill policies: surfaced as selectable ``detector`` options
                 # of locate_in_view, never admitted to the actuating palette.
                 on_demand_detectors.append(

@@ -1,4 +1,4 @@
-"""Tests for the in-process OmDet-Turbo zero-shot detector backend (ADR-0037).
+"""Tests for the in-process OmDet-Turbo zero-shot detector backend.
 
 Two tiers:
 
@@ -135,7 +135,7 @@ def test_build_rejects_length_mismatch() -> None:
 
 
 # --------------------------------------------------------------------------
-# On-demand query path (ADR-0051): pure parsing + lazy set_query (no GPU).
+# On-demand query path: pure parsing + lazy set_query (no GPU).
 # --------------------------------------------------------------------------
 
 
@@ -210,7 +210,7 @@ def test_build_manifest_detector_dispatches_zeroshot_in_process() -> None:
         assert isinstance(det, OmDetTurboDetector)
         assert det._labels == m.detector.labels  # fixed vocabulary
         assert weights_source_from_manifest(m) == "omlab/omdet-turbo-swin-tiny-hf"
-        # ADR-0051: the "unprompted" intent is declared by the manifest mode, not
+        # The "unprompted" intent is declared by the manifest mode, not
         # by the backend lacking the capability (one backend serves both modes).
         from openral_core.schemas import DetectorMode
 

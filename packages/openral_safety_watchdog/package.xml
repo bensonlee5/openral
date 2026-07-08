@@ -4,7 +4,7 @@
   <name>openral_safety_watchdog</name>
   <version>0.1.0</version>
   <description>
-    ADR-0018 §5 defense-in-depth: deadman_watchdog_node fires
+    ROS 2 reasoner + supervisor graph spec §5 defense-in-depth: deadman_watchdog_node fires
     /openral/estop when /openral/safe_action goes silent past a deadline;
     hardware_estop_node bridges a GPIO / USB pendant onto /openral/estop.
     Both are independent of the C++ safety kernel so a kernel crash still

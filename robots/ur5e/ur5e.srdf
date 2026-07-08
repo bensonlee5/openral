@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <!-- Vendored from ros-industrial/universal_robot ur5_e_moveit_config/config/ur5e.srdf (kinetic-devel).
-     Self-collision ACM source for the offline lowering tool (ADR-0030). Do not hand-edit. -->
+     Self-collision ACM source for the offline URDF/SRDF collision-lowering pipeline. Do not hand-edit. -->
 <!--This does not replace URDF, and is not an extension of URDF.
     This is a format for representing semantic information about the robot structure.
     A URDF file must exist for this robot as well, where the joints and the links that are referenced are defined

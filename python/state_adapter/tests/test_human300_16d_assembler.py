@@ -1,4 +1,4 @@
-"""ADR-0027 — human300_16d assembler. Per-field correctness pinned.
+"""human300_16d assembler. Per-field correctness pinned.
 
 No mocks (CLAUDE.md §1.11). The TF lookup is a real callable
 (``tf_lookup: TfLookup``), implemented in-test as a dict-backed function

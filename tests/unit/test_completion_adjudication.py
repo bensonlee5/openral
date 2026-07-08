@@ -1,4 +1,4 @@
-"""TDD tests for ADR-0074 §5 completion-adjudication helpers.
+"""TDD tests for the completion-adjudication helpers.
 
 Three test sections:
 
@@ -200,7 +200,7 @@ def test_completion_question_contains_task_placeholder() -> None:
     assert "yes" in q.lower() or "no" in q.lower()
 
 
-# ── 2b. is_reward_wake (the cancel-in-flight predicate, ADR-0074 §2) ─────────
+# ── 2b. is_reward_wake (the cancel-in-flight predicate) ──────────────────────
 
 
 def test_is_reward_wake_critic_fail_is_a_wake() -> None:
@@ -220,7 +220,7 @@ def test_is_reward_wake_non_critic_source_is_never_a_wake() -> None:
         assert is_reward_wake(source=src, severity=2, severity_fail=2) is False
 
 
-# ── 2c. resolve_band_edges / resolve_patience_s (ADR-0074 §1/§2/§3) ──────────
+# ── 2c. resolve_band_edges / resolve_patience_s ───────────────────────────────
 
 
 def test_resolve_band_edges_prefers_contract() -> None:

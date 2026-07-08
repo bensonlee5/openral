@@ -1,4 +1,4 @@
-"""``LookAtRskill`` — aim a robot camera at a 3-D point via MoveGroup (ADR-0044 Phase 3).
+"""``LookAtRskill`` — aim a robot camera at a 3-D point via MoveGroup.
 
 A :class:`~openral_rskill.ros_action_rskill.ROSActionRskill` whose goal is not
 authored as raw MoveGroup constraints but as a small ``look_at`` block
@@ -59,7 +59,7 @@ def resolve_camera_sensor(description: RobotDescription | None, camera: str) -> 
     Raises:
         ROSConfigError: When no description is available or no sensor matches
             ``camera`` — the message lists the robot's sensor names rather
-            than silently guessing which camera to aim (ADR-0044).
+            than silently guessing which camera to aim.
     """
     if description is None:
         raise ROSConfigError(
@@ -115,7 +115,7 @@ def build_look_at_constraints(
     axis (link ``z`` when the offset is identity) gets tolerance π — what the
     camera sees is roll-invariant.
     """
-    # Delegate to the shared ADR-0054 lowering. Look-at is the gaze specialisation:
+    # Delegate to the shared pose-goal constraint lowering. Look-at is the gaze specialisation:
     # roll about the optical (z) axis is free (tolerance π) — seeing the target is
     # roll-invariant, and the slack buys planner reachability.
     return build_pose_constraints(

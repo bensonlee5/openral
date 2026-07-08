@@ -232,6 +232,11 @@ async def test_api_config_defaults_to_empty_jaeger_url(monkeypatch: pytest.Monke
         body = resp.json()
         assert body["jaeger_ui_url"] == ""
         assert body["write_controls_enabled"] is False
+        # voice_prompt_enabled (vad_assets.py) reflects whether the offline
+        # VAD binary assets are present on disk — not asserted True/False
+        # here since that depends on whether they were ever downloaded on
+        # this host; only the shape of the flag is contractual.
+        assert isinstance(body["voice_prompt_enabled"], bool)
 
 
 @pytest.mark.asyncio
@@ -550,7 +555,7 @@ async def test_api_robots_lists_registry() -> None:
 
 # ─────────────────────── POST /api/skill/execute ─────────────────────────────
 #
-# issue #75c / ADR-0064 — flag-gated skill switch. DEFAULT OFF. Tests are
+# issue #75c — flag-gated skill switch. DEFAULT OFF. Tests are
 # written BEFORE the implementation (TDD — safety-touching per CLAUDE.md §4.2).
 # The "no ros2" case reuses the empty-PATH trick from
 # test_post_prompt_returns_503_when_openral_missing above.
@@ -589,7 +594,7 @@ async def test_skill_execute_503_without_ros2(
     assert resp.status_code == 503
 
 
-# ── async accept-then-track tests (issue #75c, ADR-0064) ─────────────────────
+# ── async accept-then-track tests (issue #75c) ────────────────────────────────
 #
 # Fake `ros2` shims (process-boundary doubles, allowed per CLAUDE.md §1.11)
 # that simulate: goal accepted, goal rejected, slow action server (accept
@@ -719,7 +724,7 @@ async def test_skill_execute_accept_timeout_returns_504(
 async def test_skill_execute_rejects_non_one_truthy_value(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Only the exact string "1" enables write-controls (ADR-0064 §1).
+    """Only the exact string "1" enables write-controls.
 
     Common truthy strings ("true", "yes", "on", "True") must NOT unlock the
     endpoint. This locks the safety default against a future refactor that
@@ -739,7 +744,7 @@ async def test_skill_execute_rejects_non_one_truthy_value(
 
 # ─────────────────────── POST /api/param/set ─────────────────────────────────
 #
-# issue #75c / ADR-0064 — flag-gated param tune. DEFAULT OFF; safety params
+# issue #75c — flag-gated param tune. DEFAULT OFF; safety params
 # refused via denylist. Tests written BEFORE implementation (TDD — safety-
 # touching per CLAUDE.md §4.2).
 
@@ -784,7 +789,7 @@ async def test_param_set_allowed_param_503_without_ros2(
     assert resp.status_code == 503
 
 
-# ── Denylist gap regression (issue #75c, ADR-0064) ───────────────────────────
+# ── Denylist gap regression (issue #75c) ──────────────────────────────────────
 #
 # Before this fix, "estop" did not match "e_stop_enable" and "deadman" did not
 # match "dead_man_timeout" because the substring "estop" ∉ "e_stop_enable" and
@@ -807,7 +812,7 @@ async def test_param_set_refuses_underscored_safety_params(
 ) -> None:
     """Underscored ROS 2 safety param names must return 403 and never shell out.
 
-    Regression lock for issue #75c / ADR-0064: the original denylist missed
+    Regression lock for issue #75c: the original denylist missed
     e_stop_enable, dead_man_timeout, and safe_mode because substring matching
     on the compact tokens (estop, deadman, safety) does not cover the
     underscored ROS 2 naming convention.

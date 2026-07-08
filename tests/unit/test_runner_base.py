@@ -177,7 +177,7 @@ def test_latency_budget_violation_counter() -> None:
     assert result.budget_violations == 4
 
 
-# ── _should_terminate hook (ADR-0010 amendment 1) ────────────────────────────
+# ── _should_terminate hook (amendment 1) ─────────────────────────────────────
 
 
 class StopAfterNRunner(FixedLatencyRunner):

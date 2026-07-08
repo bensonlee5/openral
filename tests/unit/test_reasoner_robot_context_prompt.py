@@ -1,6 +1,6 @@
 """Unit tests for :func:`openral_reasoner.render_robot_context_prompt`.
 
-Option B (ADR-0018 F4): the reasoner's system prompt carries a
+Option B: the reasoner's system prompt carries a
 ``## THIS ROBOT`` block built from the active robot's
 :class:`~openral_core.RobotCapabilities`. We validate against real
 ``robots/`` fixtures (CLAUDE.md §1.11) — ``panda_mobile`` (a wheeled
@@ -128,7 +128,7 @@ def test_env_override_without_robot_is_brief_only() -> None:
     assert "## THIS ROBOT" not in rendered
 
 
-# ── ADR-0044 Phase 4b — the go-see-then-act ladder in the base prompt ─────────
+# ── Phase 4b — the go-see-then-act ladder in the base prompt ──────────────────
 
 
 def test_default_prompt_carries_the_full_ladder() -> None:
@@ -178,10 +178,10 @@ def test_ladder_rungs_stay_conditional_not_imperative() -> None:
 
 
 def test_prompt_grounds_before_decomposing_collective_goal() -> None:
-    """ADR-0075/0076 — the collective-goal rule prefers `located` over raw `in_view`.
+    """The collective-goal rule prefers `located` over raw `in_view`.
 
-    A direct glm-5.2 probe (recorded in ADR-0076 §"decompose gate"; the probe
-    script itself was deploy scratch, since removed) showed the LLM decomposing a collective
+    A direct glm-5.2 probe (recorded in the "decompose gate" investigation; the
+    probe script itself was deploy scratch, since removed) showed the LLM decomposing a collective
     goal straight from the continuous detector's mislabelled `in_view` clutter
     (0/3 correct) until told that the open-vocab `located` line is authoritative
     and goal objects must be confirmed into it before decomposing (3/3). This
@@ -199,7 +199,7 @@ def test_prompt_grounds_before_decomposing_collective_goal() -> None:
 
 
 def test_prompt_allows_manipulation_when_seen_but_not_lifted() -> None:
-    """ADR-0043/0052 — a live in-view confirmation lets the reasoner attempt a
+    """A live in-view confirmation lets the reasoner attempt a
     manipulation skill even when recall_object cannot resolve a 3-D pose (the
     object is seen but not yet lifted into spatial memory). Without this, the
     reasoner stalls on the search ladder / hands off for a target the depth

@@ -1,4 +1,4 @@
-# ADR-0025 — default parameter set for upstream slam_toolbox running
+# Default parameter set for upstream slam_toolbox running
 # under OpenRAL's `/openral/slam_toolbox` namespace as a LifecycleNode.
 #
 # Only fields the Reasoner / deployment commonly cares about are

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0064 — monocular metric-depth provider node (RGB -> depth for nvblox).
+"""Monocular metric-depth provider node (RGB -> depth for nvblox).
 
 Subscribes a mono RGB camera stream, forwards each frame to the DA3 depth
 sidecar (`tools/_da3_depth_server.py`, default `depth-anything/DA3-SMALL` —

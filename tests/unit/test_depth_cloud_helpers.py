@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Unit coverage for the reusable depth-cloud HAL helpers (ADR-0030).
+"""Unit coverage for the reusable depth-cloud HAL helpers.
 
 These are the robot-agnostic pieces a deploy-sim HAL node uses to turn a
 depth ``SensorSpec`` into a ``sensor_msgs/PointCloud2`` for octomap_server:

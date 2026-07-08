@@ -1,4 +1,4 @@
-"""``human300_16d`` layout assembler (ADR-0027).
+"""``human300_16d`` layout assembler.
 
 Mirrors the RoboCasa365 ``pi05_pretrain_human300`` training-time layout
 verbatim — verified against
@@ -10,11 +10,7 @@ verbatim — verified against
     base_quat        (4) +
     gripper_qpos     (2) = 16
 
-The pi05 checkpoint distributed at:
-
-* ``hf://OpenRAL/rskill-pi05-robocasa365-human300-nf4``
-
-consumes this layout. Picking the wrong field order silently feeds a
+RoboCasa365 policy adapters consume this layout. Picking the wrong field order silently feeds a
 quaternion component into a gripper slot — the gripper finger angles
 occupy the LAST two dims (dims 12-13 are the base quaternion), so the
 concatenation order above is load-bearing.

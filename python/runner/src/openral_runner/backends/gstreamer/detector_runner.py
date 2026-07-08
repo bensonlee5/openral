@@ -1,4 +1,4 @@
-"""Runtime glue (ADR-0037) that runs a ``kind: detector`` rSkill against a live pipeline.
+"""Runtime glue that runs a ``kind: detector`` rSkill against a live pipeline.
 
 Loads the :class:`~openral_core.schemas.DetectorContract` from the manifest, builds an
 :class:`~openral_runner.backends.gstreamer.objects_detector.ObjectsDetector` (CPU tier)
@@ -57,7 +57,7 @@ __all__ = ["DetectorRunner"]
 
 
 class DetectorRunner:
-    """Runtime glue (ADR-0037) that wires a ``kind: detector`` rSkill to a live pipeline.
+    """Runtime glue that wires a ``kind: detector`` rSkill to a live pipeline.
 
     Validates the manifest, builds an :class:`ObjectsDetector` (CPU tier) or
     :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
@@ -284,7 +284,7 @@ class DetectorRunner:
         """
         import ctypes  # noqa: PLC0415  # reason: only the NVMM path needs ctypes
 
-        from openral_runner.backends.gstreamer.nvbufsurface import wrap_buffer  # noqa: PLC0415
+        from openral_pro_trt.nvbufsurface import wrap_buffer  # noqa: PLC0415
 
         ok_flow = int(Gst.FlowReturn.OK)
         sample = appsink.emit("pull-sample")

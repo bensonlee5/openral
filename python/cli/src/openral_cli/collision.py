@@ -3,7 +3,7 @@
 Lowers a robot's URDF (geometry) and SRDF (allowed-collision matrix, when present;
 random-pose sampling otherwise) into ``robot.yaml``'s ``collision_geometry`` +
 ``allowed_collision_pairs`` — the blocks the C++ safety kernel consumes via
-``collision_params_from_description`` (ADR-0030). Because those manifests carry
+``collision_params_from_description``. Because those manifests carry
 hand-written safety commentary, the writer splices **only** the two collision
 blocks, leaving every other line (and its comments) byte-for-byte intact.
 
@@ -119,7 +119,7 @@ def inject_joint_fk(text: str, joint_fk: dict[str, tuple[_Vec3, _Vec3, _Vec3]]) 
     For each joint in ``joint_fk`` (keyed by manifest joint name), find its
     ``- name: "<name>"`` list item under ``joints:``, drop any existing
     origin/axis lines in that item, and insert the lowered values right after the
-    name line. The kernel needs these to place the link capsules (ADR-0030). Joints
+    name line. The kernel needs these to place the link capsules. Joints
     not in ``joint_fk`` are untouched. Idempotent: re-running drops and re-inserts
     the same lines. Every other line and comment is preserved.
     """
@@ -197,7 +197,7 @@ def render_blocks(model: LoweredCollisionModel) -> tuple[str, str]:
 
 collision_app = typer.Typer(
     name="collision",
-    help="Lower a robot's URDF/SRDF into its self-collision model (ADR-0030).",
+    help="Lower a robot's URDF/SRDF into its self-collision model.",
     no_args_is_help=True,
 )
 
@@ -207,7 +207,7 @@ def _lower(
 ) -> tuple[RobotDescription, LoweredCollisionModel]:
     """Load a manifest and lower its collision model via the provenance dispatcher.
 
-    Route via the provenance-correct dispatcher (ADR-0058 §5): SRDF+URDF → SRDF
+    Route via the provenance-correct dispatcher: SRDF+URDF → SRDF
     ACM, URDF-with-usable-meshes → sampling, MJCF-native → MJCF. The naive
     ``urdf if assets.urdf else mjcf`` wrongly sent openarm (unusable URDF meshes)
     to the URDF path. The byte-identical regression test routes through this same
@@ -261,7 +261,7 @@ def lower(
     emit_cumotion: Path | None = typer.Option(
         None,
         "--emit-cumotion",
-        help="Also write a cuRobo robot-config (collision spheres + ACM) to this path (ADR-0065).",
+        help="Also write a cuRobo robot-config (collision spheres + ACM) to this path.",
     ),
 ) -> None:
     """Lower URDF/SRDF → collision model. Prints a diff; mutates only with ``--write``.
@@ -269,7 +269,7 @@ def lower(
     A regenerated allowed-collision matrix is a safety input — review the diff with
     the safety WG before merging (CLAUDE.md §3). ``--emit-cumotion <path>`` also
     derives a cuRobo robot-config from the *same* lowered geometry so cuMotion's
-    plan-time collision matches the kernel's (ADR-0065 D4); it writes only with
+    plan-time collision matches the kernel's; it writes only with
     ``--write`` (dry run prints the config).
     """
     if acm_only and geometry_only:

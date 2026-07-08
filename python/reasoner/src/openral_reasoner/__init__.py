@@ -1,4 +1,4 @@
-"""OpenRAL S2 reasoner — typed LLM tool dispatch (ADR-0018 F4).
+"""OpenRAL S2 reasoner — typed LLM tool dispatch.
 
 The reasoner is the slow planning loop (CLAUDE.md §6.2 — S2, 5-10 Hz)
 that consumes a :class:`~openral_core.WorldState` snapshot, a rolling

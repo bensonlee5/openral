@@ -6,16 +6,14 @@ point cloud (voxels), joint states, TF, the robot model (**Bucket-1**, native),
 plus the custom OpenRAL world types re-published as standard markers/clouds
 (**Bucket-2**, via a converter node).
 
-Governed by [**ADR-0059**](../../docs/adr/0059-foxglove-live-scene-visualization.md):
-this is the live-scene half of a **hybrid** — Foxglove owns the live 3D/2D
-scene; the `openral dashboard` OTel receiver (ADR-0017) keeps traces, metrics,
+This is the live-scene half of a **hybrid** — Foxglove owns the live 3D/2D
+scene; the `openral dashboard` OTel receiver keeps traces, metrics,
 system health, and the reasoner/safety cards. Foxglove is a visualization tool,
-not an observability backend, so the OTel plane does **not** port here
-(ADR-0059 records the rationale).
+not an observability backend, so the OTel plane does **not** port here.
 
 The surface is **read-only and cannot actuate the robot**. Any path that
 re-enables a write capability (E-stop reset, Publish/Teleop, prompt input) is out
-of scope and requires safety-WG sign-off (CLAUDE.md §3, ADR-0059 §Safety).
+of scope and requires safety-WG sign-off (CLAUDE.md §3).
 
 ## What it does
 
@@ -37,7 +35,7 @@ sudo apt install -y ros-jazzy-foxglove-bridge
 ## Run inside deploy-sim (recommended)
 
 `openral deploy sim` can spawn the read-only bridge as part of the runtime
-graph (ADR-0059 Phase 1), ordered **after** the topic producers to dodge the
+graph, ordered **after** the topic producers to dodge the
 stale-bridge gotcha (see `VERIFICATION.md`):
 
 ```bash
@@ -47,7 +45,7 @@ openral deploy sim --config scenes/deploy/<scene>.yaml --foxglove --foxglove-por
 ```
 
 Default is `--no-foxglove`. The flag is view-only — it cannot actuate the robot.
-When a manifest robot carries an `assets.urdf` (ADR-0058), deploy-sim already
+When a manifest robot carries an `assets.urdf`, deploy-sim already
 runs a `robot_state_publisher`, so `/tf` + `/robot_description` are on the bus
 and the 3D panel draws the robot with no extra wiring.
 
@@ -102,10 +100,10 @@ Under a real deploy-sim, set **only** `with_robot_state_publisher:=true` — the
 sim is the real `/joint_states` source; a second publisher would fight it.
 Resolve a manifest robot's URDF via `robot_descriptions` (e.g.
 `panda_description` for `franka_panda` / `panda_mobile`). `openarm` has no local
-URDF (ADR-0027). Meshes render only when the URDF's `package://` paths resolve
+URDF. Meshes render only when the URDF's `package://` paths resolve
 to an ament package on the ROS path. See `VERIFICATION.md`.
 
-## Compress camera images (ADR-0059 Phase 2)
+## Compress camera images
 
 Raw `sensor_msgs/Image` is ~9 MB/s per camera and saturates a laptop link and
 Foxglove's send buffer. Opt in to `image_transport` republishers that emit
@@ -121,7 +119,7 @@ ros2 launch openral_foxglove_bringup foxglove.launch.py \
 
 Default is off, so the raw path stays available for fidelity-sensitive use.
 
-## Bucket-2 markers (ADR-0059 Phase 3)
+## Bucket-2 markers
 
 The custom OpenRAL world types don't render richly in Foxglove on their own. A
 small read-only converter node re-publishes them as **standard** viz types so
@@ -140,7 +138,7 @@ Capsules are approximated as cylinders (the hemispherical end-caps aren't a
 single standard Marker type); a sphere obstacle renders as a zero-length
 cylinder. The conversion math lives in pure, unit-tested functions.
 
-## Record an MCAP (ADR-0059 Phase 4)
+## Record an MCAP
 
 Record the Bucket-1 topics to Foxglove's native MCAP format for offline replay,
 scoped by the same allowlist (the safety/e-stop/action topics are **not**
@@ -166,4 +164,4 @@ robot-connected run.
 
 Traces, OTLP metrics, system-health gauges, the reasoner/safety cards — these
 live on the OpenTelemetry plane, which Foxglove cannot ingest. Keep
-Jaeger/OTLP for those (ADR-0059).
+Jaeger/OTLP for those.

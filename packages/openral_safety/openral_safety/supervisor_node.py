@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 F5 — Day-1 safety_node pass-through (Python).
+"""Day-1 safety_node pass-through (Python).
 
 Owns the chunk-rate safety boundary on the OpenRAL graph:
 
@@ -14,12 +14,13 @@ Owns the chunk-rate safety boundary on the OpenRAL graph:
   recovery only; ``ROSEStopRequested`` is never auto-cleared
   (CLAUDE.md §10).
 * Publishes 1 Hz ``/diagnostics`` via
-  :class:`openral_observability.DiagnosticsHeartbeat` (ADR-0018 F8).
+  :class:`openral_observability.DiagnosticsHeartbeat`.
 
-This node is the topic-shape lock for ADR-0018 step 1: the topic
-contract is real and tested; the envelope checks are deliberately
-minimal so the C++ kernel that lands in ADR-0020 can replace internals
-**behind the same topic surface** without renegotiating the graph. Per
+This node is the topic-shape lock for the safety boundary's first
+increment: the topic contract is real and tested; the envelope checks
+are deliberately minimal so the C++ kernel that lands later can
+replace internals **behind the same topic surface** without
+renegotiating the graph. Per
 CLAUDE.md §1.5 ("Python proposes, C++ disposes") and §7.7 (safety
 working-group review), any addition of enforcement beyond what is in
 this file requires safety-WG sign-off.
@@ -39,8 +40,7 @@ On envelope violation:
    AND ≥``estop_reset_cooldown_s`` (default 500 ms) have passed since
    the last estop publish.
 
-Stub for velocity / force / workspace lands when the C++ kernel does
-(ADR-0020).
+Stub for velocity / force / workspace lands when the C++ kernel does.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ from rclpy.lifecycle import LifecycleNode, LifecycleState, TransitionCallbackRet
 # Matches the ``SAFETY_KERNEL_NULL`` semconv constant by spirit — the
 # Day-1 passthrough is functionally a null kernel that only enforces
 # n_dof + per-joint limits, leaving velocity/force/workspace to the C++
-# kernel that lands in ADR-0020.
+# kernel that lands later.
 _KERNEL_LABEL_PASSTHROUGH = "passthrough"
 
 __all__ = [
@@ -76,7 +76,7 @@ DEFAULT_ESTOP_RESET_COOLDOWN_S = 0.5
 
 
 class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rclpy untyped
-    """ADR-0018 F5 — Day-1 safety_node pass-through.
+    """Day-1 safety_node pass-through.
 
     Owns ``/openral/candidate_action → /openral/safe_action`` plus the
     ``/openral/estop`` / ``/openral/estop_reset`` pair. See module
@@ -113,7 +113,7 @@ class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rcl
         self.declare_parameter("min_joint", None, _dyn)
         self.declare_parameter("max_joint", None, _dyn)
         self.declare_parameter("estop_reset_cooldown_s", DEFAULT_ESTOP_RESET_COOLDOWN_S)
-        # ADR-0028b per-control-mode envelope bounds. Sentinel ``-1.0``
+        # Per-control-mode envelope bounds. Sentinel ``-1.0``
         # means "no enforcement declared, skip the check" — same
         # semantics as ``n_dof=-1`` above. Launches that route
         # cartesian / twist / gripper chunks (panda_mobile + RoboCasa
@@ -268,7 +268,7 @@ class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rcl
     def _on_candidate_action(self, msg: object) -> None:
         """Validate one ``ActionChunk`` and forward it on ``/openral/safe_action``.
 
-        Per ADR-0018 §5:
+        Per the safety envelope contract:
 
         * Drop and estop on envelope violation.
         * Drop (no estop) when an estop is already latched — recovery must
@@ -320,7 +320,7 @@ class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rcl
     ) -> tuple[str | None, str]:
         """Return ``(violation_kind, reason)`` or ``(None, '')`` if OK.
 
-        Dispatches on the chunk's ``control_mode`` (ADR-0028b). Joint
+        Dispatches on the chunk's ``control_mode``. Joint
         chunks keep their Day-1 ``n_dof`` + per-joint position bounds
         verbatim; cartesian / twist / gripper chunks get their own
         per-mode bound checks. All new bounds default to ``-1.0``
@@ -351,7 +351,7 @@ class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rcl
         ):
             return self._envelope_violation_joint(flat=flat, n_dof=n_dof)
 
-        # ── Cartesian / twist / gripper — ADR-0028b per-mode checks ──
+        # ── Cartesian / twist / gripper — per-mode checks ──
         if mode is ControlMode.CARTESIAN_DELTA:
             return self._envelope_violation_cartesian_delta(flat=flat, n_dof=n_dof)
         if mode is ControlMode.CARTESIAN_TWIST:
@@ -369,9 +369,9 @@ class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rcl
     def _envelope_violation_joint(self, *, flat: list[float], n_dof: int) -> tuple[str | None, str]:
         """Day-1 joint envelope: n_dof + per-joint position bounds.
 
-        Behaviour is byte-identical to the pre-ADR-0028b
-        ``_envelope_violation`` body for any chunk whose control_mode
-        is a JOINT_* mode. Tests in ``test_supervisor_node.py`` pin
+        Behaviour is byte-identical to the ``_envelope_violation`` body
+        before the per-mode dispatch was added, for any chunk whose
+        control_mode is a JOINT_* mode. Tests in ``test_supervisor_node.py`` pin
         this — adding the per-mode dispatch must not regress the
         joint-only path.
         """
@@ -557,7 +557,7 @@ class SafetyPassthroughNode(LifecycleNode):  # type: ignore[misc]  # reason: rcl
         self._last_estop_ns = time.time_ns()
         assert self._estop_pub is not None  # invariant on active state
         self._estop_pub.publish(Empty())
-        # ADR-0018 §5 — log structured for the F7 query-time correlator.
+        # Log structured for the query-time correlator.
         self.get_logger().error(
             "safety.envelope_violation "
             f"kind={kind!r} reason={reason!r} "

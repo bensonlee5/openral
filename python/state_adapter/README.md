@@ -1,6 +1,6 @@
 # openral-state-adapter
 
-OpenRAL layout-adapter registry — assembles per-checkpoint state vectors (ADR-0027)
+OpenRAL layout-adapter registry — assembles per-checkpoint state vectors.
 
 Part of [**OpenRAL**](https://github.com/OpenRAL/openral) — the open Robot
 Abstraction Layer for vision-language-action robotics. This package is one
@@ -12,4 +12,4 @@ eight-layer model in the project docs.
 - **License:** Apache-2.0
 
 > All OpenRAL workspace packages move in lockstep at `0.1.x` until the first
-> public release (ADR-0021).
+> public release.

@@ -1,5 +1,5 @@
 name: release-pypi
-# ADR-0021 — multi-package PyPI publishing. CANONICAL release workflow.
+# Multi-package PyPI publishing. CANONICAL release workflow.
 #
 # release.yml was dropped (2026-06-17): its root `uv build` was broken — the
 # workspace root has no [build-system], so it fell back to legacy setuptools

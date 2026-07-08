@@ -1,10 +1,13 @@
-"""Regression test for the one-shot autostart in ``sim_e2e.launch.py`` (ADR-0050).
+"""Regression test for the one-shot autostart in ``sim_e2e.launch.py``.
+
+Guards single-resident-skill VRAM eviction (unload-on-switch).
 
 ``_autostart_lifecycle`` drives a node UNCONFIGURED → INACTIVE → ACTIVE at boot.
 The activate handler must be scoped to the **configure** transition
 (``start_state="configuring"``), NOT a bare ``goal_state="inactive"`` — otherwise
 it also re-fires on a *runtime* deactivate (``active → deactivating → inactive``)
-and immediately re-activates the node. That fights ADR-0050 VRAM eviction: the
+and immediately re-activates the node. That fights single-resident-skill VRAM
+eviction: the
 reasoner deactivates the object detector to free its VRAM before a VLA, and an
 auto-reactivate reloads the detector model and OOMs an 8 GB card (observed live
 2026-06-12). This test pins the scoping so the bug can't silently return.
@@ -70,14 +73,15 @@ def test_autostart_activate_is_scoped_to_configure_not_runtime_deactivate() -> N
 
     ``start_state="configuring"`` is what makes the autostart one-shot: a runtime
     deactivate produces ``start_state="deactivating"``, which must NOT match (else
-    the reasoner can never free the detector's VRAM — the 8 GB OOM, ADR-0050).
+    the reasoner can never free the detector's VRAM — the 8 GB OOM).
     """
     mod = _import_launch_module()
     start_state = _activate_handler_start_state(mod)
     assert start_state == "configuring", (
         "autostart ACTIVATE handler must be scoped to the configure transition "
         f"(start_state='configuring'), got {start_state!r}. A bare goal_state='inactive' "
-        "matcher re-activates a node on a runtime deactivate and breaks ADR-0050 VRAM eviction."
+        "matcher re-activates a node on a runtime deactivate and breaks "
+        "single-resident-skill VRAM eviction."
     )
 
 

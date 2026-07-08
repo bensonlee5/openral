@@ -1,4 +1,4 @@
-"""Unit tests for :data:`openral_core.PerceptionEventMetadata` (ADR-0018 F6).
+"""Unit tests for :data:`openral_core.PerceptionEventMetadata`.
 
 Real Pydantic models — no mocks, no fixtures fabricated with placeholder
 strings (CLAUDE.md §1.11). Each test exercises the actual discriminator

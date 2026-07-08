@@ -1,10 +1,10 @@
-# openral_msgs/CriticScore — generic per-frame critic / reward score sample
-# (ADR-0064). Reward models publish these on /openral/critic/score; the critic
+# openral_msgs/CriticScore — generic per-frame critic / reward score sample.
+# Reward models publish these on /openral/critic/score; the critic
 # producer node routes each sample by critic_id through a CriticWatchdogGroup
 # (openral_reasoner.critic_watchdog) and emits a Tier-C FailureTrigger on
 # /openral/failure/critic when a critic stalls.
 #
-# The topic is shared: the Robometer reward rSkill today (ADR-0057), a future
+# The topic is shared: the Robometer reward rSkill today, a future
 # SARM (self-assessment reward model), a success classifier — all publish here,
 # distinguished by critic_id. Each sample is self-describing so onboarding a new
 # reward model needs no producer-side configuration.

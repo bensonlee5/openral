@@ -1,7 +1,7 @@
 """Shared HF Hub publishing helpers — token resolution, scope check, ignore patterns.
 
 Lifted from :mod:`tools.rskill_publisher` so that both ``openral dataset push``
-(ADR-0019 PR5) and the existing skill publisher share one canonical path
+and the existing skill publisher share one canonical path
 for token discovery, scope verification, and ignore-pattern filtering. Per
 CLAUDE.md §1.13, this de-duplication preempts the next "add another HF
 uploader" PR from copying the rSkill version verbatim.
@@ -97,7 +97,7 @@ def ensure_private(api: HfApi, repo_id: str, *, repo_type: str = "model") -> Non
         api: Authenticated :class:`huggingface_hub.HfApi` client.
         repo_id: The repository to verify (e.g. ``"openral/dataset-foo"``).
         repo_type: ``"model"`` (default — used by rSkills), ``"dataset"``
-            (used by ADR-0019 dataset uploads), or ``"space"``.
+            (used by dataset uploads), or ``"space"``.
 
     Raises:
         ROSConfigError: When the repo is not private or metadata cannot

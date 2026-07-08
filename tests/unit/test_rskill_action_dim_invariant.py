@@ -1,12 +1,10 @@
 """Invariant: an rskill claiming ``joint_position``-only actuators must not
-emit more action dimensions than its target robot has declared joints
-(ADR-0028a).
+emit more action dimensions than its target robot has declared joints.
 
-Pre-ADR-0028a, the only way the runner could discover that a checkpoint's
-action vector exceeded the robot's joint count was at *runtime* — the
-safety supervisor's ``n_dof`` envelope check would fire, the HAL would
-E-stop, and the reasoner would spin in retry loops (see the trace at the
-top of ``docs/adr/0028-rskill-action-contract-slots.md``).
+Before this invariant was enforced at fixture load, the only way the runner
+could discover that a checkpoint's action vector exceeded the robot's joint
+count was at *runtime* — the safety supervisor's ``n_dof`` envelope check
+would fire, the HAL would E-stop, and the reasoner would spin in retry loops.
 
 This test pins the invariant at fixture load. For every
 ``rskills/*/rskill.yaml``:
@@ -26,10 +24,10 @@ gripper joint; the gripper stays put). ``dim > len(joints)`` is the
 failure case — the action vector contains channels that aren't joints
 (RoboCasa pi0.5 / rldx1's [arm_osc(6) + gripper(2) + base(3) + torso(1)]
 layout, GR-1's full-body joints + hand fingers). Those rskills must
-either honestly declare a non-joint ``representation`` or — once
-ADR-0028b lands — carry an ``action_contract.slots`` block describing
-the layout. Until 0028b, they are tracked here as ``xfail`` with a
-pointer to the follow-up.
+either honestly declare a non-joint ``representation`` or — once the
+per-slot action-contract support lands — carry an ``action_contract.slots``
+block describing the layout. Until then, they are tracked here as
+``xfail`` with a pointer to the follow-up.
 """
 
 from __future__ import annotations
@@ -46,11 +44,10 @@ _RSKILLS_ROOT = Path("rskills")
 def _is_pure_joint_position(manifest: RSkillManifest) -> bool:
     """True iff the manifest claims its action vector is straight joint targets.
 
-    Excludes ADR-0028b manifests that declare an
-    ``action_contract.slots`` block — those carry per-slice control
-    modes whose typed contract is enforced by the slot validator at
-    fixture load, not by the dim-vs-joints heuristic this test
-    encodes.
+    Excludes manifests that declare an ``action_contract.slots`` block —
+    those carry per-slice control modes whose typed contract is enforced
+    by the slot validator at fixture load, not by the dim-vs-joints
+    heuristic this test encodes.
     """
     actuators = manifest.actuators_required or []
     if not actuators:
@@ -59,7 +56,7 @@ def _is_pure_joint_position(manifest: RSkillManifest) -> bool:
         return False
     if manifest.action_contract is None:
         return False
-    # ADR-0028b: slot-bearing manifests are exempt — the ActionSlot
+    # Slot-bearing manifests are exempt — the ActionSlot
     # cross-validator already proves coverage + per-mode field
     # requirements; the dim<=joints check would mis-fire on the
     # RoboCasa OSC layout (dim=12 vs panda_mobile 11 joints) even
@@ -99,14 +96,14 @@ def _collect_check_cases() -> list[tuple[str, str, int, int]]:
 # Known mis-declared manifests pending follow-up work. Each pair is a
 # (rskill_name, robot_name) tuple; the value is the human-readable
 # reason. The three RoboCasa OSC manifests previously pinned here
-# resolved when ADR-0028b step 7 added their ``action_contract.slots``
-# blocks — ``_is_pure_joint_position`` now exempts slot-bearing
-# manifests structurally.
+# resolved when the per-slot action-contract support added their
+# ``action_contract.slots`` blocks — ``_is_pure_joint_position`` now
+# exempts slot-bearing manifests structurally.
 _PENDING_SLOT_LAYOUT: dict[tuple[str, str], str] = {
     ("rldx1-ft-gr1-nf4", "gr1"): (
         "29-D action includes hand finger joints not declared in robots/gr1/robot.yaml; "
-        "ADR-0028a out-of-scope (dexterous_hand finger joints). Separate ADR will "
-        "add GR-1's per-finger DoFs to its robot.yaml."
+        "out-of-scope for the action-contract slots design (dexterous_hand finger joints). "
+        "Separate follow-up work will add GR-1's per-finger DoFs to its robot.yaml."
     ),
 }
 
@@ -140,8 +137,7 @@ def test_joint_position_rskill_action_dim_within_robot_joints(
         f"rskill {rskill!r} claims joint_position actuators with action_contract.dim={action_dim}, "
         f"but robot {robot!r} has only {joint_count} joints declared. "
         f"Either the manifest mis-declares the actuator kind (it's emitting non-joint channels — "
-        f"declare action_contract.representation or wait for ADR-0028b's slots), or the robot "
-        f"under-declares its actuators (missing gripper / finger joints in "
-        f"robots/{robot}/robot.yaml). "
-        f"See ADR-0028 for the structural fix."
+        f"declare action_contract.representation or wait for per-slot action-contract support), "
+        f"or the robot under-declares its actuators (missing gripper / finger joints in "
+        f"robots/{robot}/robot.yaml)."
     )

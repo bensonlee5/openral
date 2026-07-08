@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 r"""SO-100 / SO-101 HAL lifecycle node entry point.
 
-Manifest-driven node (ADR-0032 / issue #191 Phase 2): builds its sim or real
+Manifest-driven node (issue #191 Phase 2): builds its sim or real
 HAL via :func:`openral_hal.lifecycle.make_lifecycle_main_from_manifest`, which
 reads the ``robot_yaml`` + ``hal_mode`` ROS parameters and routes through
 :func:`openral_hal.build_hal`. The previous bespoke ``_SO100LifecycleNode``
@@ -16,7 +16,7 @@ reads the ``robot_yaml`` + ``hal_mode`` ROS parameters and routes through
   ``bare_twin_sim=True``).
 * **real** (``hal_mode:=real``) → ``SO100FollowerHAL`` over the Feetech serial
   bus. The serial ``port`` + ``calibrate_on_connect`` come from the manifest's
-  ``hal.parameters.defaults`` (ADR-0029), threaded into the constructor by
+  ``hal.parameters.defaults``, threaded into the constructor by
   ``build_hal`` — so no per-robot ROS parameter is needed.
 
 Usage::

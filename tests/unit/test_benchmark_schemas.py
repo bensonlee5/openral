@@ -1,6 +1,6 @@
-"""Unit tests for ProtocolSpec and the bare-list benchmark suite shape (ADR-0042).
+"""Unit tests for ProtocolSpec and the bare-list benchmark suite shape.
 
-ADR-0042 (June 2026) deleted the ``BenchmarkSpec`` wrapper class. A benchmark
+The ``BenchmarkSpec`` wrapper class was deleted. A benchmark
 suite is now a bare ``list[BenchmarkScene]`` on disk + a ``suite_id`` derived
 from the YAML filename stem. Suite-level invariants moved out of
 ``BenchmarkSpec.model_post_init`` into the free function
@@ -8,7 +8,7 @@ from the YAML filename stem. Suite-level invariants moved out of
 :class:`ROSConfigError` rather than ``pydantic.ValidationError`` so the
 suite id can be embedded in the error message.
 
-``ProtocolSpec`` is retained as a standalone schema for ADR / report tooling
+``ProtocolSpec`` is retained as a standalone schema for design / report tooling
 (it never moved into ``BenchmarkScene``); its own construction / validation
 tests still apply unchanged.
 
@@ -71,7 +71,7 @@ def test_protocol_spec_n_episodes_must_be_positive() -> None:
         ProtocolSpec(n_episodes=0, seeds=[])
 
 
-# ── BenchmarkScene + suite helpers (ADR-0042) ─────────────────────────────────
+# ── BenchmarkScene + suite helpers ─────────────────────────────────────────
 
 
 _LIBERO_META = BenchmarkMetadata(
@@ -111,7 +111,7 @@ def _libero_scenes(n: int = 10, **scene_kwargs: object) -> list[BenchmarkScene]:
     return [_libero_scene(i, **scene_kwargs) for i in range(n)]  # type: ignore[arg-type]
 
 
-# ── BenchmarkMetadata — ADR-0042 display fields ───────────────────────────────
+# ── BenchmarkMetadata — display fields ────────────────────────────────────────
 
 
 def test_benchmark_metadata_display_fields_default_none() -> None:
@@ -216,7 +216,7 @@ def test_raise_on_invalid_suite_allows_mixed_success_key_per_task() -> None:
     raise_on_invalid_suite([a, b], suite_id="libero_spatial")
 
 
-# ── load_benchmark_suite — YAML loader (ADR-0042) ─────────────────────────────
+# ── load_benchmark_suite — YAML loader ────────────────────────────────────────
 
 
 _VALID_YAML = textwrap.dedent(
@@ -273,7 +273,7 @@ def test_load_benchmark_suite_happy_path(tmp_path: Path) -> None:
 
 
 def test_load_benchmark_suite_rejects_legacy_dict_root(tmp_path: Path) -> None:
-    """Pre-ADR-0042 ``{id, tasks, metadata}`` wrapper now errors with a redirect."""
+    """The legacy ``{id, tasks, metadata}`` wrapper now errors with a redirect."""
     legacy = textwrap.dedent(
         """\
         id: tiny
@@ -294,7 +294,7 @@ def test_load_benchmark_suite_rejects_legacy_dict_root(tmp_path: Path) -> None:
     )
     p = tmp_path / "legacy.yaml"
     p.write_text(legacy)
-    with pytest.raises(ROSConfigError, match="ADR-0042"):
+    with pytest.raises(ROSConfigError, match="BenchmarkSpec wrapper"):
         load_benchmark_suite(str(p))
 
 

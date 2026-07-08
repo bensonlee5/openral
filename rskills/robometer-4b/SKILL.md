@@ -1,7 +1,7 @@
 ---
 name: robometer-4b
 description: >-
-  S2 task-progress / reward monitor. Capabilities: monitor on task progress, task success. Robometer-4B (Qwen3-VL-4B robotic reward foundation model, arXiv 2603.02115) as an NF4 reward rSkill. Runs parallel to a VLA: given rollout frames + the task instruction it emits per-frame normalized progress (0-1) and success probability, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. Apache-2.0. ADR-0057. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S2 task-progress / reward monitor. Capabilities: monitor on task progress, task success. Robometer-4B (Qwen3-VL-4B robotic reward foundation model, arXiv 2603.02115) as an NF4 reward rSkill. Runs parallel to a VLA: given rollout frames + the task instruction it emits per-frame normalized progress (0-1) and success probability, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. Apache-2.0. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -16,7 +16,7 @@ metadata:
   sensors_required: [rgb]
   runtime: pytorch
   quantization: int4/pytorch
-  min_vram_gb: {fp32: 18.0, bf16: 9.0, int4: 3.6}
+  min_vram_gb: {fp32: 18.0, bf16: 9.0, int4: 5.5}
   chunk_size: 1
   latency_budget: {per_chunk_ms: 3000.0}
   license_code: Apache-2.0
@@ -35,7 +35,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **task-progress / reward monitor** (`role: s2`, `kind: reward`). Robometer-4B (Qwen3-VL-4B robotic reward foundation model, arXiv 2603.02115) as an NF4 reward rSkill. Runs parallel to a VLA: given rollout frames + the task instruction it emits per-frame normalized progress (0-1) and success probability, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. Apache-2.0. ADR-0057.
+An OpenRAL **task-progress / reward monitor** (`role: s2`, `kind: reward`). Robometer-4B (Qwen3-VL-4B robotic reward foundation model, arXiv 2603.02115) as an NF4 reward rSkill. Runs parallel to a VLA: given rollout frames + the task instruction it emits per-frame normalized progress (0-1) and success probability, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. Apache-2.0.
 
 ## Capabilities
 

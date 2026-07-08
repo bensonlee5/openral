@@ -1,4 +1,4 @@
-"""Unit tests for the ADR-0018 F4 OTel reasoner.tick instrumentation.
+"""Unit tests for the OTel reasoner.tick instrumentation.
 
 Real :class:`ReasonerCore` + real OTel SDK + real
 :class:`InMemorySpanExporter` (the only test double is
@@ -181,11 +181,10 @@ def test_reasoner_span_helper_no_op_without_provider() -> None:
 def test_dashboard_store_picks_up_reasoner_tick_span() -> None:
     """The dashboard store's ``reasoner.tick`` handler populates ``_topics["reasoner"]``.
 
-    ADR-0018 F4 — the Reasoner emits one ``reasoner.tick`` span per
-    orchestrator pass via ``openral_observability.reasoner_span``. The
-    dashboard's headline-family map (added alongside ADR-0025) routes
-    that span name into the per-tick ``_topics["reasoner"]`` slot the
-    operator-facing card reads.
+    The Reasoner emits one ``reasoner.tick`` span per orchestrator pass
+    via ``openral_observability.reasoner_span``. The dashboard's
+    headline-family map routes that span name into the per-tick
+    ``_topics["reasoner"]`` slot the operator-facing card reads.
 
     This test mirrors ``test_slam_bridge.test_dashboard_store_picks_up
     _slam_occupancy_grid_span`` — builds a single OTLP span by hand,

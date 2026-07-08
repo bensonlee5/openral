@@ -259,7 +259,7 @@ class TestSkillInstall:
 
 
 class TestSkillSearch:
-    """Tests for ``openral rskill search`` (ADR-0055 D4).
+    """Tests for ``openral rskill search``.
 
     The HF network boundary is the only thing doubled: a *recorded* set of
     ``OpenRAL/*`` repo ids stands in for ``HfApi.list_models`` and each hit's

@@ -1,18 +1,17 @@
 # benchmarks/
 
-Reproducible benchmark **suites** for `OpenRAL` rSkills (ADR-0009 + ADR-0041 +
-ADR-0042).
+Reproducible benchmark **suites** for `OpenRAL` rSkills.
 
 Each YAML in this directory is a **bare list of `openral_core.BenchmarkScene`s**
-at the YAML root (ADR-0042). A suite **aggregates** N scene rollouts under
+at the YAML root. A suite **aggregates** N scene rollouts under
 uniform protocol invariants; the suite id is the filename stem (e.g.
 `benchmarks/libero_spatial.yaml` → suite id `"libero_spatial"`). The rSkill
 (VLA) is the **only** free axis; supplied at the CLI by
 `openral benchmark run --suite <id> --rskill <name>`.
 
 This is intentionally different from the sibling [`scenes/`](../scenes/), which
-holds the three scene tiers (`DeployScene` / `SimScene` / `BenchmarkScene`,
-ADR-0041) for single-rollout commands (`openral deploy sim`, `openral sim run`,
+holds the three scene tiers (`DeployScene` / `SimScene` / `BenchmarkScene`)
+for single-rollout commands (`openral deploy sim`, `openral sim run`,
 `openral benchmark scene`).
 
 ## Schema
@@ -36,9 +35,9 @@ Per-scene `task.success_key` and `task.max_steps` MAY differ (e.g. ManiSkill3
 shares one suite across `PickCube-v1` and `StackCube-v1` with different step
 budgets).
 
-Pre-ADR-0042 the YAML root was a `{id, tasks, metadata}` wrapper around
+Previously the YAML root was a `{id, tasks, metadata}` wrapper around
 `BenchmarkSpec`; that shape is now rejected with an explicit redirect message
-naming ADR-0042. YAML authors should use anchors (`&scene` / `<<: *scene`) to
+pointing at the current bare-list format. YAML authors should use anchors (`&scene` / `<<: *scene`) to
 keep the per-scene fields DRY — see [`libero_spatial.yaml`](libero_spatial.yaml)
 for the pattern.
 
@@ -73,7 +72,7 @@ auto-filters to the tasks a policy declares, so it stays runnable as task-matche
 MS3 Panda policies land.
 
 The ManiSkill/SimplerEnv SAPIEN rows (`maniskill3_*` and `simpler_env_*`) require
-opt-in extras (ADR-0010). Without `uv sync --group maniskill3` (or `simpler-env`)
+opt-in extras. Without `uv sync --group maniskill3` (or `simpler-env`)
 `openral benchmark run` will raise a typed `ROSConfigError` at lazy import time
 with the install hint. The simpler-env package has no PyPI release; after
 `uv sync --group simpler-env` users must also run:
@@ -82,18 +81,18 @@ with the install hint. The simpler-env package has no PyPI release; after
 uv run pip install "simpler-env @ git+https://github.com/simpler-env/SimplerEnv.git@maniskill3"
 ```
 
-`robotwin.yaml` is the first **dual-arm** suite (RoboTwin 2.0, SAPIEN; ADR-0061). It
+`robotwin.yaml` is the first **dual-arm** suite (RoboTwin 2.0, SAPIEN). It
 runs out-of-process through a py3.10 sidecar (`tools/robotwin_sidecar.py`) because
 RoboTwin's SAPIEN/CuRobo/pytorch3d stack is incompatible with the py3.12 workspace;
 `uv sync --group robotwin --inexact` installs only the openral-side wire (pyzmq +
 msgpack). The heavy lerobot-main + RoboTwin + asset venv is externally provisioned
-(`OPENRAL_ROBOTWIN_AUTO_PROVISION=1` or the manual recipe in ADR-0061). Task-matched
+(`OPENRAL_ROBOTWIN_AUTO_PROVISION=1` or the manual sidecar-provisioning recipe). Task-matched
 rSkill: [`rskills/smolvla-robotwin`](../rskills/smolvla-robotwin) (the official
 `lerobot/smolvla_robotwin` checkpoint). The shown 5-task slice is a representative
 subset of RoboTwin's 50 tasks; the `smolvla-robotwin` checkpoint is multi-task so it
 covers all of them.
 
-The `rlbench.yaml` row (ADR-0062) runs RLBench on **CoppeliaSim/PyRep** — a
+The `rlbench.yaml` row runs RLBench on **CoppeliaSim/PyRep** — a
 proprietary (free-EDU) simulator that is **never vendored** (CLAUDE.md §1.9) and
 the released 3D keyframe policies pin the `MohitShridhar/RLBench@peract` fork.
 Both the scene and the **3D Diffuser Actor** policy (`rskills/3d-diffuser-actor-rlbench`,
@@ -108,12 +107,11 @@ typed `ROSConfigError` with the full provisioning recipe when the sidecar venv /
 1. Pick the published protocol you want to reproduce. Don't invent protocols —
    the value of `openral benchmark report` is apples-to-apples across papers.
 2. Drop a `<id>.yaml` here whose YAML root is a bare list of `BenchmarkScene`
-   mappings (ADR-0042) — use the YAML-anchor pattern from
+   mappings — use the YAML-anchor pattern from
    `libero_spatial.yaml` to keep per-scene fields DRY.
 3. Add a test under `tests/unit/test_benchmark_schemas.py` that loads the
    fixture via `load_benchmark_suite` + `raise_on_invalid_suite` — CLAUDE.md
    §1.11 (real fixtures, no placeholders).
 4. Single-scene paper claim instead of a suite? Drop a `BenchmarkScene` YAML
    under [`scenes/benchmark/`](../scenes/benchmark/) and run it with
-   `openral benchmark scene --config scenes/benchmark/<id>.yaml --rskill <name>`
-   (ADR-0041).
+   `openral benchmark scene --config scenes/benchmark/<id>.yaml --rskill <name>`.

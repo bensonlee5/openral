@@ -203,7 +203,7 @@ def _resolve_so101_mjcf() -> Path:
 
 
 def _resolve_robot_mjcf(description: RobotDescription) -> Path:
-    """Resolve a robot's base MJCF from its manifest ``assets.mjcf`` (ADR-0033/0057).
+    """Resolve a robot's base MJCF from its manifest ``assets.mjcf``.
 
     The same ``assets.mjcf`` source ``build_hal(mode="sim")`` /
     ``MujocoArmHAL.from_description`` consume — so the manifest is the single
@@ -236,7 +236,7 @@ def _resolve_robot_mjcf(description: RobotDescription) -> Path:
 
 
 # MuJoCo (w, x, y, z) look-at quaternion — promoted to the shared gaze-geometry
-# helper in ADR-0044 Phase 1; the "-z" default is the MuJoCo camera convention.
+# helper; the "-z" default is the MuJoCo camera convention.
 _look_at_quat = look_at_quat_wxyz
 
 
@@ -260,7 +260,7 @@ def _reanchor_robot_base(xml: str, pos: tuple[float, float, float], yaw_deg: flo
             'so101_box: cannot find <body name="base" pos=... quat=...> in the robot '
             "MJCF (so_arm101 schema). The base body must declare pos= + quat=; a robot "
             "with a different base-body schema needs the splice anchors parameterised "
-            "(ADR-0033 follow-up).",
+            "(a known follow-up beyond this PoC).",
         )
     return xml
 
@@ -537,7 +537,7 @@ def compose_so101_box_mjcf(
         options: Scene options. ``None`` falls back to all defaults
             (matches :class:`BoxSceneOptions` field defaults).
         robot_description: Robot whose ``assets.mjcf`` provides the base arm
-            MJCF (ADR-0033). ``None`` falls back to the SO-101 MJCF, keeping the
+            MJCF. ``None`` falls back to the SO-101 MJCF, keeping the
             legacy call path byte-for-byte unchanged. The robot must share the
             so_arm101 splice anchors (``<body name="base">`` + ``gripper``).
 
@@ -556,7 +556,7 @@ def compose_so101_box_mjcf(
     """
     opts = options if options is not None else BoxSceneOptions()
 
-    # ADR-0033 — the robot is a flag: resolve its base MJCF from the manifest
+    # The robot is a flag: resolve its base MJCF from the manifest
     # (`assets.mjcf`) when a description is given; default to SO-101 so the
     # legacy call path is byte-for-byte unchanged.
     upstream_path = (

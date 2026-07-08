@@ -20,7 +20,8 @@ stderr and (b) stalled the launch shutdown supervisor's wait-for-children
 past the 30 s ``shutdown_grace`` window, forcing a SIGKILL of the deploy
 graph.
 
-This is a safety-path node (Layer 6 — ADR-0018 F5). The structural contract
+This is a safety-path node (Layer 6 — ROS 2 reasoner + supervisor graph spec
+F5). The structural contract
 here additionally proves that the ``except`` clause is scoped to
 teardown-signal-only exceptions (``KeyboardInterrupt`` /
 ``ExternalShutdownException``) — it does NOT catch ``Exception``,
@@ -30,7 +31,7 @@ safety-path failure cannot be silently swallowed at shutdown entry.
 These nodes are shutdown *entry-points* for the process, not actuation
 control loops, so this ``except`` cannot leave motors energised: by the time
 ``main()`` is exiting the supervisor has already published its estop and
-the C++ safety kernel (ADR-0020) owns the actuation gate independently.
+the C++ safety kernel owns the actuation gate independently.
 """
 
 from __future__ import annotations

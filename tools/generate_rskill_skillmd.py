@@ -14,7 +14,7 @@ and the robot HAL.
 Usage::
 
     python tools/generate_rskill_skillmd.py            # all rskills/<id>/
-    python tools/generate_rskill_skillmd.py pi05-libero-nf4 smolvla-libero
+    python tools/generate_rskill_skillmd.py pi05-libero-int8 smolvla-libero
     python tools/generate_rskill_skillmd.py --check     # fail if any are stale
 
 This is a deterministic projection of the manifest: re-running it overwrites the

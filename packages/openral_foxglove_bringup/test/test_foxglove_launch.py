@@ -101,7 +101,7 @@ def test_bucket1_topics_are_whitelisted(topic: str) -> None:
     ],
 )
 def test_compressed_camera_topics_are_whitelisted(topic: str) -> None:
-    """image_transport compressed sibling topics are exposed (ADR-0059 decision 4)."""
+    """image_transport compressed sibling topics are exposed."""
     assert any(re.fullmatch(pat, topic) for pat in BUCKET1_TOPIC_WHITELIST), (
         f"{topic} is NOT whitelisted — compressed panel would be empty"
     )

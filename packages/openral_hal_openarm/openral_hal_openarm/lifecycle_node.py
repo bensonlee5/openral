@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 r"""OpenArm HAL lifecycle node entry point.
 
-Manifest-driven node (ADR-0032 / issue #191 Phase 3b): builds its HAL via
+Manifest-driven node (issue #191 Phase 3b): builds its HAL via
 :func:`openral_hal.lifecycle.make_lifecycle_main_from_manifest`. The previous
 bespoke ``_OpenArmLifecycleNode`` is gone — its per-robot logic is now generic
 and declarative:
 
 * **Tabletop MJCF scene composition** — declared in the manifest's
   ``scene_defaults.composition`` block; the generic node calls the composer and
-  threads the composed MJCF in as the HAL's ``mjcf_path`` (decision: ADR-0029
-  blocker #3).
+  threads the composed MJCF in as the HAL's ``mjcf_path``.
 * **Cameras** — ``OpenArmMujocoHAL.read_images()`` renders the manifest's RGB
   ``SensorSpec``s (mapping ``sim_camera_name`` → MJCF camera) and
   :class:`~openral_hal.sim_sensor_bridge.SimSensorBridge` publishes them on

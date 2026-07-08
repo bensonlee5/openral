@@ -29,4 +29,4 @@ scene:
 # Deploy goal is supplied by the operator at runtime, e.g.:
 #   openral deploy sim --config scenes/deploy/libero_pnp.yaml \
 #     --initial-task "pick the black bowl from the stove and put it on the cabinet, then put the butter in the basket"
-# The reasoner decomposes that single goal into ordered subtasks via decompose_mission (ADR-0073).
+# The reasoner decomposes that single goal into ordered subtasks via decompose_mission.

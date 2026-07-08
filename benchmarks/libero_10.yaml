@@ -5,7 +5,7 @@
 # raised to 520 to match the upstream lerobot LiberoEnv default for the
 # long suite (src/lerobot/envs/libero.py).
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename
+# Shape: bare list of BenchmarkScenes; suite id = filename
 # stem ("libero_10"). See libero_spatial.yaml for the canonical
 # commentary on the anchor pattern and suite invariants.
 #

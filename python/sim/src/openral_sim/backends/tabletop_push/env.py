@@ -1,4 +1,4 @@
-"""``tabletop_push`` scene rollout — a robot-agnostic tabletop push task (ADR-0033).
+"""``tabletop_push`` scene rollout — a robot-agnostic tabletop push task.
 
 This is the *greenfield* "robot as a flag" scene: registered free-axis (no
 ``fixed_robot``), it composes its task world around whatever compatible arm the
@@ -297,7 +297,7 @@ class _TabletopPushRollout:
         return self._model, self._data
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed MuJoCo sim time in ns (ADR-0048 Phase 1).
+        """Elapsed MuJoCo sim time in ns.
 
         Reads ``MjData.time`` off :meth:`mujoco_handles`. Monotonic within an
         episode; rewinds on ``reset``.
@@ -308,7 +308,7 @@ class _TabletopPushRollout:
     def action_dim(self) -> int:
         """Flat action width the env's ``step`` accepts (robot actuator count).
 
-        ADR-0034 follow-up — ``SimAttachedHAL._probe_env_action_dim`` reads this so a
+        ``SimAttachedHAL._probe_env_action_dim`` reads this so a
         deploy-sim action (``send_action`` / ``idle_step``) is sized to this
         robot-agnostic scene's actuator count rather than the
         robosuite-mobile-manipulator fallback (11). Without it the probe missed this
@@ -427,7 +427,7 @@ class _TabletopPushRollout:
 
 @SCENES.register("tabletop_push")
 def build_tabletop_push_scene(env_cfg: SimEnvironment) -> _TabletopPushRollout:
-    """Build the robot-agnostic ``tabletop_push`` rollout (ADR-0033, free-axis).
+    """Build the robot-agnostic ``tabletop_push`` rollout (free-axis).
 
     The robot is a flag: ``env_cfg.robot_id`` (set from the YAML ``robot_id:`` or
     ``--robot``) resolves a :class:`~openral_core.RobotDescription`, whose

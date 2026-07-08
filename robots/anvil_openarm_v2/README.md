@@ -27,7 +27,7 @@ J6.
 ## Enactic v2 vs Anvil 2.0 — pick the right manifest
 
 Both OpenARM manifests are pure data-driven manifests over the shared
-`MujocoArmHAL` (ADR-0023); neither needs bespoke control code:
+`MujocoArmHAL`; neither needs bespoke control code:
 
 | | [`robots/openarm/`](../openarm/) | `robots/anvil_openarm_v2/` (this) |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ under `$OPENRAL_CACHE_DIR/anvil_openarm_v2/` (plus its
 with the Anvil J1/J6 range patches, `follower_{l,r}_hand_tcp` TCP
 sites, and the CAD bracket meshes applied by that repo's generator
 (validated there against the docs' numeric comparison table).  The
-resolver scheme is `openarm:anvil_v2_bimanual` (ADR-0058).
+resolver scheme is `openarm:anvil_v2_bimanual`.
 
 ## Action layout (16 DoF)
 

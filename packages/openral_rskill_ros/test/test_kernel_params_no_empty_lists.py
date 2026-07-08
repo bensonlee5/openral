@@ -15,7 +15,8 @@ which raises::
 That error fires at launch-time, **before any node logs**, so it
 manifests as an opaque "deploy sim crashed instantly" with no traceback
 visible without ``ros2 launch --debug``. The historical incident:
-``e591374`` (ADR-0040 Phase 1+2) added ``collision_base_dofs`` as an
+``e591374`` (extending geometric collision checking to every control mode)
+added ``collision_base_dofs`` as an
 unconditional ROS param; the list is empty for every fixed-base arm
 (openarm, so101, franka_panda, ur5e, ur10e, sawyer, rizon4, …), which
 broke ``openral deploy sim`` for the majority of in-tree robots until
@@ -210,7 +211,7 @@ def test_mobile_base_arm_kernel_params_have_collision_base_dofs(robot_id: str) -
     so the symmetric "omit-when-empty, include-when-populated" contract is
     pinned end-to-end. panda_mobile declares ``base_joints`` in its
     manifest; the param must reach the kernel so the FK can zero the
-    base dofs (ADR-0040 mobile-base self-collision correctness).
+    base dofs (mobile-base self-collision correctness).
     """
     params = _safety_kernel_params(robot_id)
     assert "collision_base_dofs" in params, (

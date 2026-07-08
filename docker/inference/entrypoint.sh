@@ -7,8 +7,8 @@
 # so the same script survives future Dockerfiles that ship a different
 # ROS distro (Humble on L4T 22.04, none on a minimal variant, etc.) —
 # none of those exist today, but adding the dispatch up-front beats
-# re-implementing the lookup in every per-arch image. ADR-0010
-# amendment "Single-Dockerfile consolidation + CUDA-13/DeepStream-9
+# re-implementing the lookup in every per-arch image. From a later
+# amendment, "Single-Dockerfile consolidation + CUDA-13/DeepStream-9
 # alignment".
 #
 # The local `/workspace/install/setup.bash` overlay is the colcon

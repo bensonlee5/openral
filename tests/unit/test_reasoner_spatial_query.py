@@ -1,10 +1,10 @@
-"""ADR-0039 Phase 2 — read-only spatial-memory query tools in the reasoner.
+"""Phase 2 — read-only spatial-memory query tools in the reasoner.
 
 Covers three pure-Python slices (the ROS ``reasoner_node`` dispatch is Phase 2b):
 - palette rendering gates ``recall_object`` / ``resolve_place`` on
   ``ToolPalette.spatial_memory_available``;
 - the ``ReasonerToolCall`` decoder routes their payloads to the right variant;
-- the ``run_spatial_query`` bridge maps a tool call → ADR-0038 query, runs it
+- the ``run_spatial_query`` bridge maps a tool call → spatial-memory query, runs it
   against a **real** ``SpatialMemory`` (loaded from the home fixture — no mock,
   CLAUDE.md §1.11), and renders an LLM-readable result for the prompt cascade.
 """
@@ -92,7 +92,7 @@ def test_recall_miss_points_llm_at_scene_objects_visibility() -> None:
     assert "WORLD_STATE" in text
 
 
-# ── run_spatial_query_detailed reports match/miss (drives ADR-0043/0056 escalation) ──
+# ── run_spatial_query_detailed reports match/miss (drives locate escalation) ──
 
 
 def test_detailed_reports_found_on_hit() -> None:
@@ -148,7 +148,7 @@ def test_resolve_place_bridge_unknown_is_text_not_exception() -> None:
     assert "not in memory" in text
 
 
-# ── ADR-0044 Phase 4 — occupancy-grid approach refinement in the bridge ──────
+# ── Phase 4 — occupancy-grid approach refinement in the bridge ───────────────
 
 
 def _grid_5x3(occupied: list[tuple[slice, slice]]) -> OccupancyGridIndex:

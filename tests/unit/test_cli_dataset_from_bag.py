@@ -1,4 +1,4 @@
-"""Unit tests for ``openral dataset from-bag`` (ADR-0019 PR4).
+"""Unit tests for ``openral dataset from-bag``.
 
 Per CLAUDE.md §1.11 — real `Rosbag2Sink` writes a real `.mcap` bag,
 then the CLI invokes the real `Rosbag2ToLeRobotConverter` to produce a
@@ -20,10 +20,16 @@ from typer.testing import CliRunner
 lerobot = pytest.importorskip(
     "lerobot",
     reason=(
-        "lerobot>=0.5.1 not installed; install via "
-        "`just sync --all-packages --group metaworld` or "
-        "`uv pip install lerobot>=0.5.1`"
+        "lerobot>=0.6.0 not installed; install via `uv pip install 'openral-dataset[lerobot]'`"
     ),
+)
+pytest.importorskip(
+    "lerobot.datasets",
+    reason=(
+        "lerobot dataset extra not installed; install via "
+        "`uv pip install 'openral-dataset[lerobot]'`"
+    ),
+    exc_type=ImportError,
 )
 
 

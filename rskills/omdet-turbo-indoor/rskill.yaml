@@ -1,5 +1,5 @@
 # rSkill manifest — OmDet-Turbo indoor open-vocabulary detector (kind: detector,
-# ADR-0037 2026-06-12 amendment).
+# added in the 2026-06-12 detector-runner amendment).
 #
 # Packages `omlab/omdet-turbo-swin-tiny-hf` (Apache-2.0, real-time open-vocabulary
 # detector, AutoModelForZeroShotObjectDetection) as an OpenRAL perception producer.
@@ -23,14 +23,14 @@ name: "OpenRAL/rskill-omdet-turbo-indoor"
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
-kind: "detector"  # ADR-0037: perception producer; emits ObjectsMetadata, no Action
+kind: "detector"  # Perception producer; emits ObjectsMetadata, no Action
 
 # ── Compatibility contract ──────────────────────────────────────────────────
 # embodiment-agnostic: a perception rSkill (detector/vlm) needs only an RGB
 # camera, not a specific robot. The rSkill<->robot gate exempts these kinds
-# (loader._EMBODIMENT_AGNOSTIC_KINDS, ADR-0037), so the tag list is empty —
+# (loader._EMBODIMENT_AGNOSTIC_KINDS), so the tag list is empty —
 # it matches any robot/scene.
-embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard (ADR-0072)
+embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard
 
 sensors_required:
   - modality: "rgb"
@@ -63,14 +63,14 @@ latency_budget:
   # GPU; the detector leg is throttled by the node, not run at full frame rate.
   per_chunk_ms: 200.0
 
-# ── Detector contract (ADR-0037) ────────────────────────────────────────────
+# ── Detector contract ────────────────────────────────────────────────────
 # engine: zeroshot_hf selects the in-process Transformers zero-shot backend
 # (OmDetTurboDetector / DetectorTier.ZEROSHOT_HF). `labels` is the FIXED
 # vocabulary detected every frame — curated indoor / household / manipulation
 # objects, a superset of the indoor-relevant COCO classes.
 detector:
   engine: "zeroshot_hf"
-  # ADR-0051: always-on background producer. Streams ObjectsMetadata into
+  # Always-on background producer. Streams ObjectsMetadata into
   # WorldState.detected_objects every frame; the reasoner reads it passively and
   # never prompts it. NOT the on-demand locate_in_view locator (that is
   # locateanything-3b-nf4, mode: on_demand).
@@ -369,15 +369,15 @@ description: >
   manipulation classes). An unprompted background producer: publishes
   ObjectsMetadata to /openral/perception/objects every frame without reasoner
   prompting, giving the world model far more classes than the 80 COCO
-  categories. Apache-2.0 weights from omlab/omdet-turbo-swin-tiny-hf. See
-  ADR-0037 (2026-06-12 amendment) for the zeroshot_hf detector engine.
+  categories. Apache-2.0 weights from omlab/omdet-turbo-swin-tiny-hf. This is
+  the zeroshot_hf detector engine.
 
-# ADR-0022 — action vocabulary for the reasoner LLM tool palette.
+# Action vocabulary for the reasoner LLM tool palette.
 # DETECT signals that this skill is a perception producer.
 actions:
   - "detect"
 
-# Representative coverage keywords surfaced to the reasoner (ADR-0051) so it can
+# Representative coverage keywords surfaced to the reasoner so it can
 # route between "already tracked in world state" and the on-demand locator. The
 # full 266-class vocabulary is in `detector.labels`; these are the category
 # summary the palette shows the LLM.

@@ -1,4 +1,4 @@
-# ADR-0064 (Phase 2) — default parameter set for NVIDIA Isaac ROS nvblox
+# Default parameter set for NVIDIA Isaac ROS nvblox
 # under OpenRAL's `/openral/nvblox` namespace.
 #
 # nvblox fuses a DEPTH image + camera_info + POSE (from cuVSLAM's map→odom
@@ -19,7 +19,7 @@
 # falls back to upstream nvblox defaults. Mapper/ESDF knobs are
 # version-sensitive — confirm against the installed Isaac ROS release.
 # nvblox is a precompiled NVIDIA binary OpenRAL does not bundle
-# (ADR-0064 license guard).
+# (NVIDIA license guard).
 
 /**:
   ros__parameters:

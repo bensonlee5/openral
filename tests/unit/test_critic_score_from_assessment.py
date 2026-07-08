@@ -1,4 +1,4 @@
-"""Unit tests for the reward-assessment → CriticScore mapping (ADR-0064).
+"""Unit tests for the reward-assessment → CriticScore mapping.
 
 ``critic_score_from_assessment`` is the pure seam that lets the Robometer
 ``reward_monitor`` publish a generic ``openral_msgs/CriticScore`` for the Tier-C

@@ -151,7 +151,7 @@ class InferenceRunnerBase(ABC):
         """
         return False
 
-    # ── ADR-0019 PR3 — explicit episode boundary API ────────────────────────
+    # ── Explicit episode boundary API ────────────────────────────────────────
     #
     # Sim derives episodes from the env's terminated / truncated flags;
     # hardware has no such signal. The episode boundary on a real robot
@@ -216,7 +216,7 @@ class InferenceRunnerBase(ABC):
         **not** enforce cadence — call :meth:`run` for that.
         """
         idx = self._tick_idx
-        # ADR-0018 F9 — LTTng entry/exit around the whole tick. No-op
+        # LTTng entry/exit around the whole tick. No-op
         # when OPENRAL_ROS2_TRACING is unset; on, the begin/end pair
         # frames a ~30 Hz interval that babeltrace2 can correlate
         # against kernel scheduler events.

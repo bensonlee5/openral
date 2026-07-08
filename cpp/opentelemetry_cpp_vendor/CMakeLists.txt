@@ -5,7 +5,7 @@ project(opentelemetry_cpp_vendor)
 #
 # Ubuntu 24.04 (Noble) does not ship opentelemetry-cpp in the default
 # apt repos, and we need at least the trace API + OTLP HTTP exporter
-# to close ADR-0020 §9 (PR-F). Following the conventional ROS 2 pattern
+# for the C++ safety kernel's OTel trace emission. Following the conventional ROS 2 pattern
 # (cf. nlohmann_json_vendor, fastcdr_vendor), this package fetches and
 # builds opentelemetry-cpp at colcon build time, then re-exports its
 # CMake config to dependent packages.
@@ -18,8 +18,8 @@ find_package(ament_cmake REQUIRED)
 
 include(ExternalProject)
 
-# Pinned release; bump deliberately. Match the latest stable as of the
-# ADR-0020 PR-F landing (v1.16.x line — first OTLP HTTP series the
+# Pinned release; bump deliberately. Match the latest stable as of this
+# package's initial landing (v1.16.x line — first OTLP HTTP series the
 # CMake config exports without protobuf-compile contortions on GCC 13).
 set(OTEL_CPP_VERSION "1.16.1")
 set(OTEL_CPP_GIT_TAG "v${OTEL_CPP_VERSION}")

@@ -1,4 +1,4 @@
-# ADR-0064 — Nav2 costmap profile for the VISUAL SLAM backend (cuVSLAM + nvblox),
+# Nav2 costmap profile for the VISUAL SLAM backend (cuVSLAM + nvblox),
 # DERIVED from nav2_panda_mobile.yaml. The ONLY differences vs the base (lidar)
 # profile: the global+local costmaps consume the backend-agnostic `/map`
 # OccupancyGrid via `static_layer` (instead of ray-casting `/scan`), with

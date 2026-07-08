@@ -1,4 +1,4 @@
-"""ADR-0018 F10 — ``openral prompt`` CLI adapter.
+"""``openral prompt`` CLI adapter.
 
 Publishes a one-shot ``openral_msgs/PromptStamped`` onto
 ``/openral/prompt_in/cli`` and exits. The ``prompt_router_node``

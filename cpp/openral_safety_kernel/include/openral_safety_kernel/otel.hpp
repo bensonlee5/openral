@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 PR-F — OTel tracing surface for the C++ safety kernel.
+// OTel tracing surface for the C++ safety kernel.
 //
 // Closes the gap called out at
 // python/observability/.../tracing.py:107-111 ("the C++ safety kernel

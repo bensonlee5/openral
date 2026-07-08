@@ -1,6 +1,6 @@
 """Unit tests for openarm_robosuite's ``_resolve_base_translation`` helper.
 
-ADR-0002 Amendment 3. ``env_cfg.base_pose`` is the only knob — there
+``env_cfg.base_pose`` is the only knob — there
 is no legacy ``backend_options`` fallback and no hand-tuned default.
 
 CLAUDE.md §1.11: no mocks. Real :class:`SimEnvironment` instances, the

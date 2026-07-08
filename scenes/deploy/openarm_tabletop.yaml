@@ -22,7 +22,7 @@ scene:
     render_height: 480
     max_steps: 500
 
-# ADR-0002 Amendment 3 — mandatory mounting pose for the
+# Mandatory mounting pose for the
 # openarm_tabletop_pnp scene. Lift bases above the table top + shift
 # forward into the workspace so the 0.6 m arm reach can sweep the
 # picking targets.
@@ -31,7 +31,7 @@ base_pose:
   quat_xyzw: [0.0, 0.0, 0.0, 1.0]
   frame_id: world
 
-# ADR-0066 — the SCENE owns its environment. This composes the OpenArm tabletop
+# Scene-owns-composition convention — the SCENE owns its environment. This composes the OpenArm tabletop
 # MJCF (arm + table + 3 cubes + drawer + overview camera) and `openral deploy
 # sim` threads it to the manifest-driven HAL node, which builds a bare twin off
 # the result. Previously this lived in the robot manifest's
