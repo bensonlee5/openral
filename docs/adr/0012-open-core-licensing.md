@@ -1,10 +1,13 @@
 # ADR-0012: Licensing — uniform Apache-2.0, no commercial tier
 
-- Status: Accepted
+- Status: Superseded by [ADR-0083](0083-openral-pro-commercial-tier.md) (2026-07-08) — see the amendment below; only the "no commercial tier, ever" commitment is superseded, the "public repo is uniformly Apache-2.0" decision is retained
 - Date: 2026-05-24
 - Amended: 2026-06-16 (superseded the two-tier open-core model with uniform Apache-2.0; see History below)
+- Amended: 2026-07-08 (superseded by ADR-0083 — see amendment below)
 - Related: CLAUDE.md §1.9 (license lineage), §3 (layer discipline),
-  §4 (docs / ADR discipline), [ADR-0004](0004-monorepo-over-polyrepo.md)
+  §4 (docs / ADR discipline), [ADR-0004](0004-monorepo-over-polyrepo.md),
+  [ADR-0083](0083-openral-pro-commercial-tier.md) (supersedes the
+  commercial-tier commitment)
 
 ## Context
 
@@ -118,3 +121,17 @@ alternatives have a paper trail (CLAUDE.md §4).
 5. `grep -rniE 'polyform|source-available|two-tier|BSL tier'` over the
    tree returns no live OpenRAL-licensing claims (third-party weight /
    graph-DB dependency mentions are unrelated).
+
+## Amendment — 2026-07-08 (superseded by ADR-0083)
+
+[ADR-0083](0083-openral-pro-commercial-tier.md) supersedes this ADR's "no
+Tier 2, no source-available tier, and no BSL tier" commitment — OpenRAL
+Pro, a private monorepo (`OpenRAL/openral-pro`), now carries commercial
+capability (the TensorRT/NVMM runtime fast path, WAM implementations,
+fleet/cloud dispatch, premium rSkills), while every package that exists in
+*this* repo today stays exactly as this ADR decided: Apache-2.0, with no
+in-tree license split. The Decision, Consequences, and History sections
+above are preserved unedited per ADR-0001's append-only discipline; read
+ADR-0083 for the current commercial-tier posture. This amendment is itself
+the dated record of the reversal — the reasoning (project sustainability)
+and the precise boundary are in ADR-0083, not restated here.

@@ -186,3 +186,4 @@ nav:
     - ADR-0075 Grounded task decomposition: adr/0075-grounded-decomposition-contract.md
     - ADR-0076 Detection identity & camera-space enumeration: adr/0076-detection-identity-and-camera-space-enumeration.md
     - ADR-0077 VLA↔reward pairing & VRAM fit: adr/0077-vla-reward-pairing-and-vram-fit.md
+    - ADR-0083 OpenRAL Pro commercial tier: adr/0083-openral-pro-commercial-tier.md

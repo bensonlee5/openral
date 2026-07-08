@@ -31,7 +31,8 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted | — |
 | [0003](0003-pydantic-over-dataclasses.md) | Pydantic v2 over `@dataclass` for all schemas/contracts | Accepted | — |
 | [0004](0004-monorepo-over-polyrepo.md) | Single monorepo over poly-repo for the open-core | Accepted | — |
-| [0012](0012-open-core-licensing.md) | Licensing — uniform Apache-2.0, no commercial tier | Accepted | — |
+| [0012](0012-open-core-licensing.md) | Licensing — uniform Apache-2.0, no commercial tier | Superseded (commercial-tier commitment only; public-repo licensing decision retained) | superseded by 0083 |
+| [0083](0083-openral-pro-commercial-tier.md) | OpenRAL Pro — private commercial tier, supersedes 0012's "no commercial tier, ever" | Accepted | supersedes 0012; precedent 0004; relocates 0011/0082 implementations; touches 0018 dispatcher surface |
 | [0016](0016-multi-platform-support.md) | Multi-platform support — x86 (CUDA + CPU) and L4T (Jetson) | Accepted | refs 0010 amendment |
 | [0021](0021-curl-installer-cli-rename-and-pypi-release.md) | Curl-bash installer, CLI rename, multi-package PyPI scaffold | Accepted | — |
 
