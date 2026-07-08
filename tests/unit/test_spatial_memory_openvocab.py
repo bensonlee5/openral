@@ -19,7 +19,7 @@ _FIXTURE = Path("tests/unit/fixtures/home_scene_graph.json")
 
 @pytest.fixture(scope="module")
 def clip_embedder() -> OpenClipEmbedder:
-    pytest.importorskip("open_clip", reason="install the clip group: uv sync --group clip")
+    pytest.importorskip("open_clip", reason="install the clip group: just sync --group clip")
     try:
         return OpenClipEmbedder()
     except ROSConfigError as exc:  # pragma: no cover - network/weights unavailable

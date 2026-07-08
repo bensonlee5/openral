@@ -49,7 +49,7 @@ pytestmark = [
     pytest.mark.sim,
     pytest.mark.skipif(
         bool(_WIRE_MISSING),
-        reason="robotwin wire needs " + ", ".join(_WIRE_MISSING) + " (uv sync --group robotwin)",
+        reason="robotwin wire needs " + ", ".join(_WIRE_MISSING) + " (just sync --group robotwin)",
     ),
     pytest.mark.skipif(
         not _sidecar_python_available(),

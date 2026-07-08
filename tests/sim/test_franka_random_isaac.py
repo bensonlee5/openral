@@ -48,7 +48,7 @@ pytestmark = [
     pytest.mark.sim,
     pytest.mark.skipif(
         bool(_WIRE_MISSING),
-        reason="isaac_sim wire needs " + ", ".join(_WIRE_MISSING) + " (uv sync --group isaacsim)",
+        reason="isaac_sim wire needs " + ", ".join(_WIRE_MISSING) + " (just sync --group isaacsim)",
     ),
     pytest.mark.skipif(
         not _sidecar_python_available(),

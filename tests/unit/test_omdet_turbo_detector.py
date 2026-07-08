@@ -289,7 +289,7 @@ def _omdet_runtime_present() -> bool:
 @pytest.mark.skipif(
     not (_gpu_present() and _omdet_runtime_present()),
     reason="needs a local GPU + the `omdet` group (torch/transformers/timm) to "
-    "load omlab/omdet-turbo-swin-tiny-hf; run `uv sync --group omdet` "
+    "load omlab/omdet-turbo-swin-tiny-hf; run `just sync --group omdet` "
     "(the legitimate CI skip path, CLAUDE.md §12).",
 )
 def test_e2e_detects_indoor_objects_on_coco_sample() -> None:
