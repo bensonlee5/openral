@@ -228,7 +228,7 @@ def test_depth_cloud_unknown_camera_raises() -> None:
         )
 
 
-# ── synthesize_depth_image (ADR-0064 — dense raster for nvblox) ──────────────
+# ── synthesize_depth_image (ADR-0085 — dense raster for nvblox) ──────────────
 
 
 def test_depth_image_dense_fronto_parallel_wall() -> None:

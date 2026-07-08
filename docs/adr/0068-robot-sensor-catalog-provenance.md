@@ -5,7 +5,7 @@
 - **ADR number:** `0068`. The integer is not load-bearing; cross-refs use
   filenames.
 - **Related:**
-  - ADR-0065 - `SensorSpec.sim_placement` for generic sim camera rigging.
+  - ADR-0086 - `SensorSpec.sim_placement` for generic sim camera rigging.
   - `docs/reference/sensors_landscape.md` - sensor catalog and factory roadmap.
 
 ## Context

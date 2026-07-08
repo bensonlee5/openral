@@ -1,4 +1,4 @@
-"""Generic sim camera rig (ADR-0065).
+"""Generic sim camera rig (ADR-0086).
 
 Splice a robot's manifest-declared RGB cameras into a bare-arm MJCF that ships
 no ``<camera>`` elements, so a ``deploy sim`` :class:`~openral_hal._mujoco_arm.MujocoArmHAL`
@@ -81,7 +81,7 @@ def _ensure_staging(xml: str) -> str:
 
     - a **visual-only** ground plane (no collisions) when the MJCF has no
       ``type="plane"`` geom — universal, parameterless deploy staging, not task
-      props (CLAUDE.md / ADR-0065 keep scene props in scene files);
+      props (CLAUDE.md / ADR-0086 keep scene props in scene files);
     - a moderate ambient ``<visual><headlight>`` when no ``<visual>`` block
       exists, lifting shadows without washing out materials.
 

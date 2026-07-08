@@ -1,4 +1,4 @@
-# ADR-0064 — Dashboard guarded write-controls
+# ADR-0084 — Dashboard guarded write-controls
 
 - **Status:** Proposed — pending safety-WG review
 - **Date:** 2026-06-21
@@ -131,7 +131,7 @@ at WARNING level with the following mandatory fields:
 - `event`: `"dashboard_write_attempt"`
 - `operation`: `"skill_execute"` or `"param_set"`
 - `outcome`: `"sent"` | `"accepted"` | `"rejected"` | `"denied_denylist"` | `"denied_flag_off"`
-- `adr`: `"ADR-0064"`
+- `adr`: `"ADR-0084"`
 - `operator_ip`: loopback address (always `127.0.0.1` given the localhost-only
   surface)
 - operation-specific fields (skill ID or param name + node, `goal_id` on

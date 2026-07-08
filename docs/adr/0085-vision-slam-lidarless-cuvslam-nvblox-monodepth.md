@@ -1,4 +1,4 @@
-# ADR-0064 — Vision-based SLAM & mapping for lidar-less robots (cuVSLAM + nvblox + monocular metric depth)
+# ADR-0085 — Vision-based SLAM & mapping for lidar-less robots (cuVSLAM + nvblox + monocular metric depth)
 
 - **Status:** Accepted — 2026-06-22. Phase 1 (cuVSLAM bring-up + `has_vision_slam` gate) and Phase 2 (nvblox bring-up + the DA3 monocular metric-depth sidecar/provider) implemented in-tree and **validated live end-to-end on an 8 GB Ada (RTX 4070 Laptop)** against the NVIDIA Isaac ROS stack (`ros-jazzy-isaac-ros-visual-slam` + `ros-jazzy-isaac-ros-nvblox` 4.4.0 + Jetson-x86_64 VPI/nvsci, installed via `just install-isaac-ros`):
   - **cuVSLAM trajectory:** `cuvslam.launch.py` ran cuVSLAM 15.0.0 on the Isaac ROS quickstart stereo bag and produced a real VO trajectory (17 poses, **1.285 m** net / 1.320 m path).

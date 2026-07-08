@@ -1326,7 +1326,14 @@
   let JAEGER_URL = "";
   fetch("/api/config")
     .then((r) => r.ok ? r.json() : {})
-    .then((cfg) => { JAEGER_URL = (cfg && cfg.jaeger_ui_url) ? String(cfg.jaeger_ui_url).replace(/\/$/, "") : ""; })
+    .then((cfg) => {
+      JAEGER_URL = (cfg && cfg.jaeger_ui_url) ? String(cfg.jaeger_ui_url).replace(/\/$/, "") : "";
+      // voice_prompt_enabled (see vad_assets.py): false when the offline VAD
+      // model/wasm assets failed to download on dashboard start. Disable the
+      // mic proactively instead of letting the operator discover it via a
+      // failed script load after clicking.
+      if (cfg && cfg.voice_prompt_enabled === false) disableVoicePrompt();
+    })
     .catch(() => { JAEGER_URL = ""; });
 
   function renderTrace(trace) {
@@ -1583,6 +1590,16 @@
   const SILENCE_MS = 1100;    // finalize after this much silence following speech
   let speechSeen = false;
   let lastVoiceAt = 0;
+
+  // Called when /api/config reports voice_prompt_enabled: false — the VAD
+  // model/wasm assets (vad_assets.py) failed to download on dashboard start,
+  // most likely an offline host. Disable the control up front rather than
+  // let the operator hit a "mic unavailable" error only after clicking.
+  function disableVoicePrompt() {
+    if (!promptMic) return;
+    promptMic.disabled = true;
+    promptMic.title = "Voice prompt unavailable (offline VAD assets failed to download)";
+  }
 
   function setMicState(state) {  // "idle" | "listening" | "working"
     if (!promptMic) return;

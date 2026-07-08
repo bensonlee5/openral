@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0064 (Phase 2) — stand-alone launch for NVIDIA Isaac ROS nvblox.
+"""ADR-0085 (Phase 2) — stand-alone launch for NVIDIA Isaac ROS nvblox.
 
 nvblox turns cuVSLAM's pose (`map→odom` TF) plus a depth image into the 2D
 obstacle map a **lidar-less** robot needs for Nav2 — the occupancy half of
@@ -16,7 +16,7 @@ monocular metric-depth provider (DA3-Small by default — measured 0.27 GB /
 
 Like cuVSLAM, nvblox's node is a **composable node** (`nvblox::NvbloxNode`),
 run inside a `ComposableNodeContainer`. The nvblox engine is a precompiled
-NVIDIA binary OpenRAL does not bundle (ADR-0064 license guard); the operator
+NVIDIA binary OpenRAL does not bundle (ADR-0085 license guard); the operator
 installs `nvblox_ros` on the target GPU host.
 """
 
@@ -108,7 +108,7 @@ def generate_launch_description() -> LaunchDescription:
                 "geometry; real footprint/collision measurements can raise it."
             ),
         ),
-        # ADR-0064 — publish nvblox's 2D occupancy grid on the SAME topic
+        # ADR-0085 — publish nvblox's 2D occupancy grid on the SAME topic
         # slam_toolbox uses (`/map`) so the visual backend exposes one
         # backend-agnostic `nav_msgs/OccupancyGrid` interface. Nav2's
         # static_layer, the dashboard slam_bridge, and the reasoner's

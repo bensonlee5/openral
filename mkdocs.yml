@@ -172,9 +172,9 @@ nav:
     - ADR-0062 RLBench benchmark backend + 3D Diffuser Actor: adr/0062-rlbench-benchmark-backend.md
     - ADR-0063 OpenVLA / OpenVLA-OFT policy family: adr/0063-openvla-oft-policy-family.md
     - ADR-0064 Critic score topic & Tier-C producer: adr/0064-critic-score-topic-and-tier-c-producer.md
-    - ADR-0064 Dashboard guarded write-controls: adr/0064-dashboard-write-controls.md
-    - ADR-0064 Vision SLAM for lidar-less robots: adr/0064-vision-slam-lidarless-cuvslam-nvblox-monodepth.md
-    - ADR-0065 Generic sim camera rig: adr/0065-generic-sim-camera-rig.md
+    - ADR-0084 Dashboard guarded write-controls: adr/0084-dashboard-write-controls.md
+    - ADR-0085 Vision SLAM for lidar-less robots: adr/0085-vision-slam-lidarless-cuvslam-nvblox-monodepth.md
+    - ADR-0086 Generic sim camera rig: adr/0086-generic-sim-camera-rig.md
     - ADR-0066 DeployScene owns its composition: adr/0066-deploy-scene-owns-composition.md
     - ADR-0068 Robot sensor catalog provenance: adr/0068-robot-sensor-catalog-provenance.md
     - ADR-0069 Compute deployment targets: adr/0069-compute-deployment-targets.md

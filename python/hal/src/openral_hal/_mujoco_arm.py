@@ -255,7 +255,7 @@ class MujocoArmHAL(HALBase):
                 "just sync --all-packages --group sim"
             ) from exc
 
-        # ADR-0065 — generic camera rig: splice the manifest's declared RGB
+        # ADR-0086 — generic camera rig: splice the manifest's declared RGB
         # cameras into the MJCF when they are absent (a bare-arm twin ships
         # none), so deploy sim renders them without a per-robot scene composer.
         # Idempotent: a scene-attached / already-composed MJCF that already has

@@ -45,7 +45,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def _params_path_for_backend(backend: str) -> str:
-    """ADR-0064 — pick the Nav2 base params for the SLAM backend.
+    """ADR-0085 — pick the Nav2 base params for the SLAM backend.
 
     ``visual`` (cuVSLAM + nvblox) uses ``nav2_visual.yaml`` — global+local
     costmaps consume the backend-agnostic ``/map`` via ``static_layer``.
@@ -81,7 +81,7 @@ def generate_launch_description() -> LaunchDescription:
             "slam_backend",
             default_value="lidar",
             description=(
-                "ADR-0064 — which SLAM backend feeds the costmap: `visual` "
+                "ADR-0085 — which SLAM backend feeds the costmap: `visual` "
                 "(cuVSLAM+nvblox; costmaps consume `/map` via static_layer) or "
                 "`lidar`/`none` (costmaps ray-cast `/scan`). Selects the base "
                 "params file when `params_file` is empty."
@@ -153,7 +153,7 @@ def _nav2_include_with_robot_overrides(context: object) -> list[IncludeLaunchDes
     params_file = LaunchConfiguration("params_file").perform(context)  # type: ignore[attr-defined]
     robot_yaml = LaunchConfiguration("robot_yaml").perform(context)  # type: ignore[attr-defined]
     slam_backend = LaunchConfiguration("slam_backend").perform(context)  # type: ignore[attr-defined]
-    # ADR-0064 — an empty params_file selects the base config by SLAM backend
+    # ADR-0085 — an empty params_file selects the base config by SLAM backend
     # (visual → nav2_visual.yaml consuming `/map`; lidar → the /scan base).
     if not params_file:
         params_file = _params_path_for_backend(slam_backend)

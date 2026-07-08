@@ -1,6 +1,6 @@
 """Boot the DA3 metric-depth inference server in an isolated sidecar venv.
 
-ADR-0064 — `depth-anything/DA3-SMALL` ships as the `depth-anything-3` package
+ADR-0085 — `depth-anything/DA3-SMALL` ships as the `depth-anything-3` package
 (not transformers-native), so we run it out-of-process in its own Python 3.12
 venv and talk to it over ZMQ REQ/REP + msgpack from the
 `openral_perception_ros` depth-provider node — the same pattern as

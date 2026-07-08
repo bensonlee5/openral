@@ -27,7 +27,7 @@
     them. (The decisive evidence: all six playbooks were injected into the system
     prompt in the failed run, and the reasoner still neither decomposed nor
     advanced — see Context.)
-  - [ADR-0064 (vision SLAM)](0064-vision-slam-lidarless-cuvslam-nvblox-monodepth.md)
+  - [ADR-0085 (vision SLAM)](0085-vision-slam-lidarless-cuvslam-nvblox-monodepth.md)
     — cuVSLAM + nvblox + Depth-Anything-3 metric depth: the map frame, robot pose,
     and 3D object/occupancy geometry that ground a subtask's target and its
     navigation feasibility (powering the `find-object` / `stage-for-manipulation`
@@ -202,7 +202,7 @@ Both write to the one queue, so the verdict is never lost.
 Before `record_attempt` on a manipulation task, the reasoner may run the
 `preflight-reach` playbook (ADR-0072), which is only *useful* with the new
 backends: **cuMotion** (ADR-0065) answers "is this target reachable + collision
-free from here?" and **vision SLAM / a detector** (ADR-0064) answers "where is the
+free from here?" and **vision SLAM / a detector** (ADR-0085) answers "where is the
 target in the map?". If the target is unreachable, the lifecycle stages the robot
 (a `stage-for-manipulation` step) or `abandon_active`s the task **without burning a
 60 s VLA attempt** — turning the honest-handoff decision from a reward-timeout into

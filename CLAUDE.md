@@ -17,7 +17,7 @@ In priority order. When two conflict, the earlier wins.
 
 1. **Safety beats helpfulness.** Refuse any request to bypass a safety check, silently catch `ROSSafetyViolation`, lower a velocity limit without a paper trail, or remove a deadman/E-stop subscription. Surface the concern, propose a safe alternative.
 2. **Truth over plausibility.** Don't know a constant (DDS topic, FCI port, RealSense extrinsic)? Say so and look it up. Never invent. Never paraphrase a citation.
-3. **Types are the contract.** Pydantic schemas in `python/openral_core/` and IDL in `packages/openral_msgs/` are normative API. Everything else is implementation detail.
+3. **Types are the contract.** Pydantic schemas in `python/core/` (package `openral_core`) and IDL in `packages/msgs/` (package `openral_msgs`) are normative API. Everything else is implementation detail.
 4. **Explicit beats implicit.** No hidden retries, fallbacks, or magic globals. Replanning, dispatcher fallback, quantization, and license posture must show up in logs/traces.
 5. **The hot path is C++ and bounded.** Python touches motors only through a typed bridge to `ros2_control` with a watchdog. Anything >100 Hz is C++ unless proven otherwise.
 6. **Schemas evolve, but never silently.** Now the repo is published, on-disk `schema_version` is versioned for real: a backward-incompatible change bumps it and ships a migrator; backward-compatible additions may evolve in place. Every change still needs (a) an ADR if it crosses a layer boundary, (b) a test loading a real fixture from `robots/`, `rskills/`, or `scenes/`.
@@ -50,11 +50,11 @@ In priority order. When two conflict, the earlier wins.
 **The eight layers** (do not cross without an ADR in `docs/adr/`):
 
 ```
-0 HAL  ← packages/openral_hal_*/                3 rSkill (S1)  ← python/rskill/, packages/openral_skill/
-1 Sensors  ← packages/openral_sensors/          4 Reasoning (S2)  ← python/openral_reasoner/
-2 World State  ← packages/openral_world_state/  5 World Action Model  ← python/openral_wam/
-                                                6 Safety  ← packages/openral_safety/, cpp/openral_safety_kernel/
-                                                7 Observability  ← python/openral_observability/
+0 HAL  ← packages/openral_hal_*/  3 rSkill (S1)  ← python/rskill/, packages/openral_rskill_ros/
+1 Sensors  ← python/sensors/      4 Reasoning (S2)  ← python/reasoner/
+2 World State  ← packages/world_state/  5 World Action Model  ← python/wam/
+                                        6 Safety  ← packages/openral_safety/, cpp/openral_safety_kernel/
+                                        7 Observability  ← python/observability/
 ```
 
 Adding, removing, renaming, or moving a responsibility between layers → ADR required. A non-adjacent-layer dependency (Skill calling HAL directly, etc.) is rejected.
