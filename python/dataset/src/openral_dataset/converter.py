@@ -220,7 +220,7 @@ class Rosbag2ToLeRobotConverter:
         for ep_buf in episodes:
             rec.episode_start(task_string=ep_buf.task_string)
             for tick in ep_buf.ticks:
-                cls._replay_tick(rec, tick, robot, images_by_step)
+                cls._replay_tick(rec, tick, robot, images_by_step, camera_override)
                 n_frames += 1
             success = ep_buf.ticks[-1].get("_episode_success", False) if ep_buf.ticks else False
             rec.episode_end(success=bool(success))
@@ -375,6 +375,7 @@ class Rosbag2ToLeRobotConverter:
         tick: dict[str, object],
         robot: RobotDescription,
         images_by_step: dict[tuple[int, int], dict[str, Any]],
+        camera_shape: tuple[int, int] | None = None,
     ) -> None:
         """Drive `RolloutRecorder.record_frame` from a Tick payload.
 
@@ -425,12 +426,16 @@ class Rosbag2ToLeRobotConverter:
             if stripped in recorded_images:
                 images[stripped] = recorded_images[stripped]
             else:
-                # Legacy bag without inline pixels — zero frame at the
-                # declared intrinsic resolution keeps the contract valid.
-                images[stripped] = np.zeros(
-                    (int(sensor.intrinsics.height), int(sensor.intrinsics.width), channels),
-                    dtype=np.uint8,
-                )
+                # Camera declared but absent from this bag (e.g. a 2-camera
+                # LIBERO deploy under a 3-camera manifest) — emit a zero frame.
+                # It MUST match the sink's declared feature shape: the
+                # bag-derived override when one exists, else the robot's native
+                # intrinsics (legacy metadata-only bags, override is None).
+                if camera_shape is not None:
+                    height, width = camera_shape
+                else:
+                    height, width = int(sensor.intrinsics.height), int(sensor.intrinsics.width)
+                images[stripped] = np.zeros((height, width, channels), dtype=np.uint8)
 
         # JSON decode produces `object`-typed values for dict[str, object]
         # entries; cast to concrete numerics for mypy strict-mode.
