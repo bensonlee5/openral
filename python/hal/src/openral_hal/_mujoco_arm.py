@@ -839,7 +839,7 @@ class MujocoArmHAL(HALBase):
             raise ROSConfigError(
                 f"RobotDescription '{description.name}' has no `sim` block; "
                 "cannot construct a MujocoArmHAL from it. Add a `sim:` section "
-                "to the manifest (see docs/adr/0023-data-driven-mujoco-hal.md)."
+                "to the manifest (see ADR-0023)."
             )
         sim = description.sim
         joint_names = [j.name for j in description.joints]

@@ -65,7 +65,7 @@ All entries are published under `OpenRAL/rskill-*` on HuggingFace Hub and exerci
 
 ## Perception rSkills (`kind: detector`)
 
-Object-detection rSkills emit `ObjectsMetadata` (2-D detections lifted to 3-D in the deploy graph) instead of an `Action`. See [ADR-0035](../adr/0035-perception-spatial-memory-object-lift.md) and [ADR-0037](../adr/0037-gstreamer-perception-bus-object-detection.md).
+Object-detection rSkills emit `ObjectsMetadata` (2-D detections lifted to 3-D in the deploy graph) instead of an `Action`. See ADR-0035 and ADR-0037.
 
 | rSkill | Backbone | Notes |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 Scene YAMLs under [`scenes/`](https://github.com/OpenRAL/openral/tree/master/scenes)
 follow the three-tier hierarchy introduced by
-[ADR-0041](../adr/0041-scene-three-tier-hierarchy.md): `DeployScene ⊆ SimScene
+ADR-0041: `DeployScene ⊆ SimScene
 ⊆ BenchmarkScene`. Each tier has its own directory, its own loader-strictness
 gate, and its own CLI consumer. The conceptual overview, decision matrix,
 authoring guide, and per-backend `scene.id` catalogue all live in the in-tree
@@ -72,7 +72,7 @@ Consumed by `openral sim run`.
 | [`robocasa_panda_mobile_kitchen.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/robocasa_panda_mobile_kitchen.yaml) | `panda_mobile` *(scene-fixed)* | `robocasa/NavigateKitchen` | `robocasa/NavigateKitchen/0` | Mobile-base kitchen navigation; `deploy sim` Nav2 graph compatible |
 | [`robocasa_pnp.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/robocasa_pnp.yaml) | `panda_mobile` *(scene-fixed)* | `robocasa/PickPlaceCounterToCabinet` | `robocasa/PickPlaceCounterToCabinet/0` | RoboCasa kitchen pnp smoke |
 | [`so101_tube_insertion.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/so101_tube_insertion.yaml) | `so101_follower` *(scene-fixed)* | `so101_box` | `so101_box/tube_insertion` | Box-arena tube-insertion smoke; geometry/sensors/spawn ranges configurable via `BoxSceneOptions` |
-| [`tabletop_cube_push.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/tabletop_cube_push.yaml) | `so101_follower` *(free-axis default; pass `--robot` to override)* | `tabletop_push` | `tabletop_push/push_to_goal` | Robot-agnostic cube push-to-goal ([ADR-0033](../adr/0033-robot-parameterized-native-scenes.md)) |
+| [`tabletop_cube_push.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/tabletop_cube_push.yaml) | `so101_follower` *(free-axis default; pass `--robot` to override)* | `tabletop_push` | `tabletop_push/push_to_goal` | Robot-agnostic cube push-to-goal (ADR-0033) |
 | [`widowx_carrot_on_plate.yaml`](https://github.com/OpenRAL/openral/blob/master/scenes/sim/widowx_carrot_on_plate.yaml) | `widowx` *(scene-fixed)* | `simpler_env` | `simpler_env/widowx_carrot_on_plate` | SimScene sibling of the SimplerEnv WidowX carrot benchmark; used by the OpenVLA-OFT issue #55 reproduction path |
 
 ## BenchmarkScene catalogue (`scenes/benchmark/`)
@@ -154,9 +154,9 @@ metrics. `just sim-eval` runs the full benchmark suites end-to-end.
 - [Tutorial — Create a sim environment](../tutorials/sim/create-a-sim-environment.md)
   — long-form YAML authoring guide (new scene adapter, new robot manifest,
   custom policy).
-- [ADR-0002](../adr/0002-eval-and-sim-environments.md) — original
+- ADR-0002 — original
   scene/eval design.
-- [ADR-0041](../adr/0041-scene-three-tier-hierarchy.md) — three-tier
+- ADR-0041 — three-tier
   hierarchy (`DeployScene ⊆ SimScene ⊆ BenchmarkScene`) + loader strictness.
-- [ADR-0009](../adr/0009-separate-sim-and-benchmarking.md) — separation
+- ADR-0009 — separation
   of `sim run` (debug) and `benchmark *` (paper-comparable eval).

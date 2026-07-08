@@ -122,7 +122,7 @@ _Tier-C critic progress-stall / success watchdog — default decision core for t
 _World Action Model Protocol (CLAUDE.md §6.3). This package ships the Protocol/contract
 surface only (`WorldModel`, `Rollout`, `NullWorldModel`); concrete generative WAM adapters
 (Cosmos Predict, UnifoLM-WMA-0, IRASim) ship as separate downstream packages in the private
-OpenRAL Pro monorepo per [ADR-0083](../adr/0083-openral-pro-commercial-tier.md)._
+OpenRAL Pro monorepo per ADR-0083._
 
 - `class WorldModel(Protocol)` — Generative simulator used by the planning layer for the three integration patterns (gating / failure anticipation / replanning). Attribute: `max_horizon`. Method: `rollout(world_state, action_chunk, horizon) -> Rollout` — predict `horizon` steps of future state; raises `ROSConfigError` (horizon exceeds max) / `ROSInferenceTimeout` (budget exceeded). (L31)
 

@@ -125,9 +125,9 @@ stage has since moved to `openral-pro` (ADR-0083) anyway.
 ## The DeepStream / TensorRT variant moved to OpenRAL Pro
 
 DeepStream is **proprietary, EULA-restricted, and NOT open source**.
-[ADR-0010 Amendment 2026-05-12](../../docs/adr/0010-inference-runner.md)
+ADR-0010 Amendment 2026-05-12
 (refined 2026-05-14) rejected bundling DeepStream into the default
-image, and [ADR-0083](../../docs/adr/0083-openral-pro-commercial-tier.md)
+image, and ADR-0083
 (2026-07-08) moved the opt-in variant — plus the TensorRT engine
 runtime it depends on — into the private `openral-pro` repo rather than
 keeping it here as a build flag. If you need `nvvideoconvert` / NVMM

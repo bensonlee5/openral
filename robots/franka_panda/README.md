@@ -35,7 +35,7 @@ image flip; RoboCasa's variants; etc.) live in the matching scene
 adapter under
 [`python/eval/src/openral_sim/adapters/`](../../python/eval/src/openral_sim/adapters/),
 not here. See
-[ADR-0007](../../docs/adr/0007-robot-sim-split.md) for the rationale —
+ADR-0007 for the rationale —
 the previous `robots/libero_franka/` manifest conflated the two and
 has been retired.
 
@@ -54,5 +54,5 @@ has been retired.
 
 - [`python/hal/README.md`](../../python/hal/README.md) — HAL Protocol + per-robot adapters.
 - [`packages/openral_hal_franka/README.md`](../../packages/openral_hal_franka/README.md) — ROS 2 lifecycle node.
-- [`docs/adr/0007-robot-sim-split.md`](../../docs/adr/0007-robot-sim-split.md) — design decision behind this manifest.
+- ADR-0007 — design decision behind this manifest.
 - `FRANKA_PANDA_DESCRIPTION` constant: [`python/hal/src/openral_hal/franka_panda.py:168`](../../python/hal/src/openral_hal/franka_panda.py).

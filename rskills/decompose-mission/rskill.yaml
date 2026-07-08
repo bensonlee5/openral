@@ -53,9 +53,11 @@ scenes:
   - "indoor"
   - "household"
 
-# Provenance citation (a playbook has no weights / upstream model repo, so the
-# authoring ADR is the citation — `paper_url`, mirroring the ROS-wrapped skills).
-paper_url: "https://github.com/OpenRAL/openral/blob/master/docs/adr/0072-reasoner-playbooks-and-self-maintained-memory.md"
+# Provenance citation (a playbook has no weights / upstream model repo, so a
+# citation is still required for publish-readiness — CLAUDE.md §6.4). The
+# authoring ADR (ADR-0072) is private (OpenRAL/management); this points at
+# the public stub that explains where it lives.
+paper_url: "https://github.com/OpenRAL/openral/blob/master/docs/decisions.md"
 
 # The playbook decision-procedure contract (ADR-0072).
 playbook:

@@ -15,5 +15,4 @@ action shape, camera resolution) live in the matching scene adapters
 under `python/sim/src/openral_sim/adapters/`.
 
 Used by VLA papers: RT-1, RT-2, Octo, OpenVLA, π0 (SimplerEnv eval
-slice). See `docs/adr/0010-maniskill3-simpler-env-backends.md` for
-the integration rationale.
+slice). See ADR-0014 for the integration rationale.

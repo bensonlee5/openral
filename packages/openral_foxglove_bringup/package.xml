@@ -14,7 +14,7 @@
     config/openral_layout.json, an opt-in compressed-image republish path, a
     Bucket-2 converter node, and an MCAP recorder.
 
-    ADR-0059 (docs/adr/0059-foxglove-live-scene-visualization.md) governs this
+    ADR-0059 governs this
     component as the live-scene half of a hybrid with the OTel dashboard
     (ADR-0017, kept for traces/metrics). Any path that re-enables
     clientPublish/services (e.g. an E-stop button) remains out of scope and

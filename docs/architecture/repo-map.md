@@ -48,7 +48,7 @@ openral/                      ← THIS monorepo
 ├─ deployments/                   ← retired; deploy configs live in scenes/deploy (ADR-0078) ✓
 ├─ robots/                        ← canonical RobotDescription manifests ✓
 ├─ tests/{unit,integration,sim,hil}/  ← all four trees ✓
-├─ docs/                          ← mkdocs-material; ADRs in docs/adr/ ✓
+├─ docs/                          ← mkdocs-material; ADR log lives in the private OpenRAL/management repo ✓
 ├─ tools/                         ← schema_export.py, skill_publisher.py ✓
 ├─ scripts/                       ← bootstrap_*.sh, install.sh ✓
 ├─ Justfile                       ← canonical task runner ✓

@@ -1,7 +1,7 @@
 # rSkill manifest — Nav2 NavigateToPose (kind: ros_action, result-only)
 #
 # Wraps the upstream `nav2_msgs/action/NavigateToPose` action server as
-# an OpenRAL rSkill. See `docs/adr/0024-ros-wrapped-rskills.md`.
+# an OpenRAL rSkill. See ADR-0024.
 #
 # RESULT-ONLY MODE
 # ----------------

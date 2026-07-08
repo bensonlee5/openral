@@ -16,5 +16,4 @@ when a real-HW HAL lands the manifest will declare `hal.real` (today both
 `hal.sim` and `hal.real` are null — scene-only).
 
 Used by VLA papers: Octo, OpenVLA, π0 (Bridge fragment via SimplerEnv).
-See `docs/adr/0010-maniskill3-simpler-env-backends.md` for the
-integration rationale.
+See ADR-0014 for the integration rationale.

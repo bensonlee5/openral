@@ -16,7 +16,7 @@ executor. Dispatch is direct typed tool calls (ADR-0018 §9).
 
 ## ADRs
 
-- [ADR-0018 — ROS 2 reasoner supervisor (F4: typed tool-call dispatch)](../../docs/adr/0018-ros2-reasoner-supervisor.md)
+- ADR-0018 — ROS 2 reasoner supervisor (F4: typed tool-call dispatch)
 - ADR-0071/0072/0073 — symbolic S2 reasoner: authored playbooks,
   self-maintained memory, success-gated task queue.
 - ADR-0074/0075/0076 — VLM-adjudicated completion, grounding-before-

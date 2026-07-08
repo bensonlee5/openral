@@ -4,7 +4,7 @@
 # with parallel grippers (14-DoF action space), one top-down RGB camera.
 # gym-aloha's MuJoCo scene mirrors the real robot one-to-one, so the
 # same manifest covers both — no robot/sim conflation here (see
-# docs/adr/0007-robot-sim-split.md). Used by tests/sim/test_aloha_bimanual_act_aloha*.py.
+# ADR-0007). Used by tests/sim/test_aloha_bimanual_act_aloha*.py.
 #
 # Joint kinematic detail is approximate — gym-aloha does not expose the
 # URDF through its gym API. Sufficient for capability matching and

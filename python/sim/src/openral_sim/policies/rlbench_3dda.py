@@ -75,7 +75,7 @@ def _resolve_file(env_name: str, default: Path, what: str) -> Path:
     if not p.exists():
         raise ROSConfigError(
             f"3D Diffuser Actor {what} not found at {p}. Set {env_name}. "
-            "See docs/adr/0062-rlbench-benchmark-backend.md for the provisioning recipe."
+            "See ADR-0062 (OpenRAL/management) for the provisioning recipe."
         )
     return p
 

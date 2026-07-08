@@ -113,7 +113,7 @@ supervision).
 
 ```bash
 # One-time: provision CoppeliaSim 4.1.0 + PyRep + RLBench@peract + the checkpoint
-# in the py3.10 sidecar venv (see docs/adr/0062-rlbench-benchmark-backend.md).
+# in the py3.10 sidecar venv (see ADR-0062).
 openral benchmark scene \
   --config scenes/benchmark/rlbench_open_drawer.yaml \
   --rskill rskills/3d-diffuser-actor-rlbench
@@ -164,4 +164,4 @@ uses `license: mit` for the consumer-visible weight/runtime posture.
 - `scenes/benchmark/rlbench_meat_off_grill.yaml`
 - `scenes/benchmark/rlbench_close_jar.yaml`
 - `benchmarks/rlbench.yaml`
-- `docs/adr/0062-rlbench-benchmark-backend.md`
+- ADR-0062 (private, OpenRAL/management)

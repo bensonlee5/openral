@@ -117,7 +117,7 @@ can evict it before a co-resident VLA.
 
 ## Related
 
-- [ADR-0035](../../docs/adr/0035-perception-spatial-memory-object-lift.md) —
+- ADR-0035 —
   perception → spatial-memory object lift; the deploy-sim integration this
   node serves.
 - `packages/world_state/` — the consumer; subscribes

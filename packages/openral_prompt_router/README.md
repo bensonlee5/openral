@@ -54,6 +54,6 @@ openral prompt "pick the red cube"
 
 ## See also
 
-- [ADR-0018](../../docs/adr/0018-ros2-reasoner-supervisor.md) §3.F10.
+- ADR-0018 §3.F10.
 - [`packages/openral_reasoner_ros`](../openral_reasoner_ros/) — F4 consumer.
 - [`openral_cli.prompt`](../../python/cli/src/openral_cli/prompt.py) — `openral prompt` CLI entry point.

@@ -6,7 +6,7 @@ or hardware) becomes a row in a LeRobotDataset v3.0 (`codebase_version="3.0"`,
 per-row `next.success` flag and the per-dataset `meta/info.json["metadata"]
 ["dataset_success_rate"]` let downstream consumers filter.
 
-See [`docs/adr/0019-rosbag2-lerobot-dataset-bridge.md`](../../docs/adr/0019-rosbag2-lerobot-dataset-bridge.md)
+See ADR-0019
 for the architectural rationale (top-level package vs nested submodule, v3.0
 vs v2.1, persist-all vs discard, license posture, PR sequencing).
 

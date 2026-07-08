@@ -164,7 +164,7 @@ openral deploy run \
 
 The `OPENRAL_SMOLVLA_TRT=1` split ONNX/TensorRT fast path (and the GStreamer
 NVMM zero-copy camera leg it pairs with) is an **OpenRAL Pro plugin**
-([ADR-0083](../../adr/0083-openral-pro-commercial-tier.md)) — it ships in the
+(ADR-0083) — it ships in the
 private `openral-pro-trt` package, not this repo. With `openral-pro-trt`
 installed, `OPENRAL_SMOLVLA_TRT=1` before `openral deploy run` attaches the
 same way it always did (the env var is read by the pro-side hook, looked up
@@ -222,4 +222,4 @@ mode).
 - [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md) — DeployScene / SimScene / BenchmarkScene tiers.
 - [`openral dashboard` quickstart](../../quickstart/dashboard.md).
 - `openral detect` — auto-generate `robot.yaml` by probing USB devices and sensors.
-- [ADR-0031 / ADR-0032](https://github.com/OpenRAL/openral/blob/master/docs/adr/) — the deploy graph design.
+- ADR-0031 / ADR-0032 — the deploy graph design.

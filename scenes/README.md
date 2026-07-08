@@ -1,6 +1,6 @@
 # Scene YAMLs (`scenes/`)
 
-This directory holds the three scene tiers from [ADR-0041](../docs/adr/0041-scene-three-tier-hierarchy.md).
+This directory holds the three scene tiers from ADR-0041.
 Each tier is a Pydantic schema in `openral_core`; the directory layout matches
 the schema, the CLI matches the directory, and every YAML is loaded through a
 strict per-tier loader (`load_scene_strict(..., expect=<Tier>)`) that rejects
@@ -195,7 +195,7 @@ base_pose:
 
 Setting `base_pose:` on a fixed-robot scene is a `ROSConfigError` — those
 scenes ship their own MJCF and the field has no physical meaning there. See
-[ADR-0002 Amendment 3](../docs/adr/0002-eval-and-sim-environments.md#2026-05-22-base_pose-for-free-axis-robot-mounting)
+ADR-0002 Amendment 3
 for the rationale.
 
 ## rSkill compatibility check
@@ -208,8 +208,8 @@ and `sensors_required` intersect the robot's capabilities and sensor catalogue
 (missing manifest / unregistered robot) or `ROSCapabilityMismatch`
 (incompatible) — there is no warn-and-proceed path.
 
-See [ADR-0002](../docs/adr/0002-eval-and-sim-environments.md) for the original
-design and [ADR-0041](../docs/adr/0041-scene-three-tier-hierarchy.md) for the
+See ADR-0002 for the original
+design and ADR-0041 for the
 three-tier split that owns the loader strictness.
 
 ## Live MuJoCo viewer

@@ -56,7 +56,7 @@ Columns:
 > [`robots/franka_panda/`](https://github.com/OpenRAL/openral/tree/master/robots/franka_panda). The
 > sim-imposed observation/action contract (8-D EEF state, 7-D
 > delta-EEF action, 180° image flip) lives in the LIBERO scene
-> adapter ([ADR-0007](../adr/0007-robot-sim-split.md)).
+> adapter (ADR-0007).
 
 
 | VLA (HF ID) | Sim env | Robot tag | State dim | Cameras | Norm stats in ckpt | rSkill | License | Notes |
@@ -85,7 +85,7 @@ Columns:
 > [`robots/sawyer/`](https://github.com/OpenRAL/openral/tree/master/robots/sawyer). The MetaWorld benchmark
 > simulates a Rethink Sawyer; some upstream checkpoints carry a
 > `franka_panda` tag, but the actual robot is Sawyer
-> ([ADR-0007](../adr/0007-robot-sim-split.md)).
+> (ADR-0007).
 
 
 | VLA (HF ID) | Sim env | Robot tag | State dim | Cameras | Norm stats in ckpt | rSkill | License | Notes |

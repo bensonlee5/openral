@@ -12,7 +12,7 @@
 # gym_pusht/PushT-v0 actually exposes; the (state_dim=2, action_dim=2,
 # 96x96 RGB) IO contract lives in
 # openral_sim.adapters.pusht (the matching scene adapter), not
-# here. See docs/adr/0007-robot-sim-split.md.
+# here. See ADR-0007.
 
 name: "pusht_2d"
 embodiment_kind: "manipulator"

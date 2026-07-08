@@ -21,9 +21,9 @@ NVMM executors) are an OpenRAL Pro plugin (ADR-0083) — not part of this
 subpackage. :mod:`reader`'s NVMM buffer latch degrades to a logged bus
 error when that plugin is absent (see ``_handle_nvmm_buffer``).
 
-See ``docs/adr/0010-inference-runner.md`` (Amendment 2026-05-12,
+See ADR-0010 (Amendment 2026-05-12,
 "Backend evaluation: lean GStreamer vs Holoscan vs DeepStream") and
-``docs/adr/0011-nvmm-handoff.md`` for the design.
+ADR-0011 for the design.
 """
 
 from __future__ import annotations
