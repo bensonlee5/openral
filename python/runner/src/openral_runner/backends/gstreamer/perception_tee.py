@@ -12,11 +12,11 @@ per-kind topic ``/openral/perception/<kind>``.
 The contract is intentionally narrow:
 
 * Three legs (policy / observability / event) share the same upstream
-  GStreamer pipeline and the same
-  :func:`openral_runner.backends.gstreamer.cuda_context.get_shared_cuda_context`
-  singleton (ADR-0011 §"Shared CUDA context"). The event leg lifts
-  frames to system memory before the appsink — Python detectors consume
-  numpy arrays, never NVMM handles.
+  GStreamer pipeline and, on hosts with the OpenRAL Pro NVMM plugin
+  installed, the same shared CUDA context singleton (``cuda_context``,
+  ADR-0011 §"Shared CUDA context" — moved to openral-pro, ADR-0083). The
+  event leg lifts frames to system memory before the appsink — Python
+  detectors consume numpy arrays, never NVMM handles.
 * Per-kind topics, per ADR-0018 §3 / capability review §3 (F6). The
   topology is symmetric with :mod:`openral_observability.failure_bus`'s
   ``/openral/failure/<source>`` layout.

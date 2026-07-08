@@ -37,7 +37,7 @@
 | [01-hal.md](methods/01-hal.md) | Layer 1 — HAL Protocol + every robot adapter (real, MuJoCo, sim-attached, lifecycle, transports) |
 | [02-sensors.md](methods/02-sensors.md) | Layer 2 — sensor catalog, `SensorSpec`/`SensorBundle` factories, ROS publisher, reader protocol |
 | [03-world-state.md](methods/03-world-state.md) | Layer 3 — state adapter registry, world-state aggregator, spatial memory, geometry/grid, object lift |
-| [04-rskill.md](methods/04-rskill.md) | Layer 4 — rSkill ABC, runtimes (PyTorch/ONNX/TensorRT), loader, executor, VLA adapters |
+| [04-rskill.md](methods/04-rskill.md) | Layer 4 — rSkill ABC, runtimes (PyTorch/ONNX; TensorRT via the private OpenRAL Pro plugin, ADR-0083), loader, executor, VLA adapters |
 | [05-inference-runner.md](methods/05-inference-runner.md) | Inference Runner (ADR-0010) — clocks, runner loop, sensor readers, dataset recording |
 | [06-reasoning-wam-safety-observability.md](methods/06-reasoning-wam-safety-observability.md) | CLAUDE.md layers 4–7 — Reasoner core/tool-use, WAM, safety supervisor, observability |
 | [07-eval-sim.md](methods/07-eval-sim.md) | Eval (sim) — scene/robot registries, SimRunner, scene + policy adapters, benchmark suites |

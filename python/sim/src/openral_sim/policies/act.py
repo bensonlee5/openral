@@ -251,10 +251,10 @@ def _maybe_build_act_nvmm(
         return None
     try:
         import tensorrt  # noqa: F401  # reason: probe for the device path
-        from openral_rskill.act_trt import ensure_act_onnx
-        from openral_rskill.runtime_tensorrt import TensorRTRuntime
-        from openral_rskill.smolvla_trt import _device_index
-        from openral_runner.backends.gstreamer.act_nvmm import ActNvmmExecutor
+        from openral_pro_trt.act_nvmm import ActNvmmExecutor
+        from openral_pro_trt.act_trt import ensure_act_onnx
+        from openral_pro_trt.runtime_tensorrt import TensorRTRuntime
+        from openral_pro_trt.smolvla_trt import _device_index
     except ImportError:
         _log.info("act_nvmm.unavailable", reason="tensorrt/deps absent — host path")
         return None

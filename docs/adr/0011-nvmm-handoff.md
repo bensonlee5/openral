@@ -141,3 +141,16 @@ context manager derive from work originally authored by Adrian Llopart
 (adrianllopart@gmail.com) — see the module docstrings for explicit
 re-licensing. Struct layout follows NVIDIA's publicly distributed
 `nvbufsurface.h` (L4T Multimedia API, JetPack-bundled).
+
+## Amendment — 2026-07-08 (ADR-0083: NVMM consumers move to OpenRAL Pro)
+
+The open contract this ADR defines — NVMM caps negotiation in `pipeline.py`,
+the `SensorFrame.handle` carry mode, and `reader.py`'s buffer latch — stays in
+the public repo unchanged. The *consumers* of that contract (the
+`nvbufsurface.py` ctypes binding, `cuda_context.py`, and every TRT-on-devptr
+executor built on them) now ship in the private `openral-pro-trt` package
+(ADR-0083), importable as `openral_pro_trt.*`. With the plugin absent,
+`reader.py` surfaces a typed bus error ("NVMM caps negotiated but the NVMM
+runtime backend is unavailable") instead of latching handles — explicit, no
+silent fallback (CLAUDE.md §1.4). Third parties can still consume NVMM frames
+from the open pipeline with their own downstream elements.

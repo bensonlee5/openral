@@ -542,7 +542,7 @@ class GStreamerSensorReader:
         # negotiated but the runtime backend is unavailable" (§1.4, no
         # silent fallback: this is a bus error, not a quiet skip).
         try:
-            from openral_runner.backends.gstreamer.nvbufsurface import (  # noqa: PLC0415
+            from openral_pro_trt.nvbufsurface import (  # noqa: PLC0415
                 NvBufSurfaceColorFormat,
                 NvBufSurfaceLibraryError,
                 StableSurfaceMirror,

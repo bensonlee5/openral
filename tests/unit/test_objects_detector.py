@@ -372,15 +372,47 @@ class TestTierSelection:
                 tier=DetectorTier.NVINFER,
             )
 
-    def test_make_detector_nvmm_aggregator_dispatches_to_nvmm(self, tmp_path: pathlib.Path) -> None:
-        """NVMM_AGGREGATOR dispatches to NvmmObjectsDetector, not the tier guard.
+    def test_make_detector_nvmm_aggregator_names_pro_trt_when_absent(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """NVMM_AGGREGATOR with no openral-pro-trt installed names the package.
 
-        Point at a non-existent onnx so ``NvmmObjectsDetector.__init__``'s own
-        ``p.exists()`` guard fires first — host-independent (runs before any
-        TRT/GPU work) and positively proves dispatch reached the NVMM detector.
+        ADR-0083: the zero-copy NVMM aggregator moved to the private
+        openral-pro-trt package, resolved via the ``openral.detector_tiers``
+        entry-point group. This repo checkout genuinely has no such entry
+        point registered, so this is a real (not monkeypatched) miss.
         """
         missing = tmp_path / "does_not_exist.onnx"
-        with pytest.raises(ROSConfigError, match="NvmmObjectsDetector"):
+        with pytest.raises(ROSConfigError, match="openral-pro-trt"):
+            make_objects_detector(
+                missing, labels=["a"], model_id="m", tier=DetectorTier.NVMM_AGGREGATOR
+            )
+
+    def test_make_detector_nvmm_aggregator_dispatches_via_entry_point(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A registered ``openral.detector_tiers`` entry point is constructed
+        with the same args ``ObjectsDetector`` would get — proves the
+        discovery + dispatch path for real (a real ``EntryPoint`` resolving a
+        real, importable class), independent of whether openral-pro-trt
+        itself is installed on this host.
+        """
+        from importlib.metadata import EntryPoint
+
+        ep = EntryPoint(
+            name=DetectorTier.NVMM_AGGREGATOR.value,
+            value="openral_runner.backends.gstreamer.objects_detector:ObjectsDetector",
+            group="openral.detector_tiers",
+        )
+        monkeypatch.setattr(
+            "openral_runner.backends.gstreamer.objects_detector.entry_points",
+            lambda group: (ep,) if group == "openral.detector_tiers" else (),
+        )
+        missing = tmp_path / "does_not_exist.onnx"
+        # ObjectsDetector.__init__ raises its own "not found" ROSConfigError —
+        # positively proves the entry point was loaded and called with the
+        # forwarded onnx_path/labels/model_id, not the tier-miss guard.
+        with pytest.raises(ROSConfigError, match="not found"):
             make_objects_detector(
                 missing, labels=["a"], model_id="m", tier=DetectorTier.NVMM_AGGREGATOR
             )

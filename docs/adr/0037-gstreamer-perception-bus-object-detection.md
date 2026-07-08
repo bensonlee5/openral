@@ -362,3 +362,14 @@ contract:
 Explicit `--object-detector-manifest` / `--object-detector-onnx` overrides are unchanged. No schema
 change; on-disk `schema_version` stays `"0.1"`. Arbitrary-object grounding (e.g. `baguette`) still
 needs the on-demand open-vocab locator (`locate_in_view`, ADR-0043/0051) — a separate work item.
+
+## Amendment — 2026-07-08 (ADR-0083: NVMM_AGGREGATOR tier moves to OpenRAL Pro)
+
+The `TensorRTRuntime` backend (PR #223) and the clean-room zero-copy NVMM tier
+(`TrtNvmmExecutor`, `NvmmObjectsDetector`) now ship in the private
+`openral-pro-trt` package (ADR-0083). `DetectorTier.NVMM_AGGREGATOR` remains in
+the open enum; `make_objects_detector` resolves its factory via the
+`openral.detector_tiers` entry-point group and raises a typed `ROSConfigError`
+naming `openral-pro-trt` when the plugin is not installed. The CPU_ONNX,
+VLM_SIDECAR, and ZEROSHOT_HF tiers, the perception bus, `TeeManager`, and the
+manifest dispatch seam (`detector_factory.py`) are unaffected and stay open.

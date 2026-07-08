@@ -28,18 +28,11 @@ opencv = [
 gstreamer = [
     "PyGObject>=3.42",
 ]
-# NVMM zero-copy path on Jetson / Spark / Thor. Adds PyCUDA for the
-# shared CUDA context that the NvBufSurface handle is published into
-# (reader.py / cuda_context.py). ADR-0010 PR I/3 + ADR-0011. Pulled by
-# `docker/inference/Dockerfile.l4t` by default; on x86 it lets the same
-# image carry the codepath inert.
-# NOTE: the detector NVMM tier (trt_nvmm.py / nvmm_detector.py) does NOT use
-# pycuda — it uses cuda-python (the `tensorrt` group) + nvrtc, so it deploys in
-# the lean ds-on runtime image that has no nvcc / g++ / CUDA dev headers.
-gstreamer-nvmm = [
-    "PyGObject>=3.42",
-    "pycuda>=2024.1",
-]
+# The NVMM zero-copy path (PyCUDA-backed shared CUDA context, the
+# NvBufSurface ctypes wrapper, the TensorRT NVMM executors) is an
+# OpenRAL Pro plugin (ADR-0083) — it is no longer declared here. The
+# open-core ``reader.py`` NVMM buffer latch degrades to a logged bus
+# error when that plugin is absent.
 
 [build-system]
 requires = ["hatchling"]

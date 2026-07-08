@@ -52,7 +52,6 @@ def test_detector_mode_defaults_to_continuous() -> None:
 def test_intree_detectors_declare_expected_modes() -> None:
     expected = {
         "rtdetr-coco-r18": DetectorMode.CONTINUOUS,
-        "rtdetr-v2-r50vd": DetectorMode.CONTINUOUS,
         "omdet-turbo-indoor": DetectorMode.CONTINUOUS,
         "omdet-turbo-locator": DetectorMode.ON_DEMAND,
         "locateanything-3b-nf4": DetectorMode.ON_DEMAND,
@@ -210,7 +209,7 @@ def test_node_wiring_matches_intree_detector_manifests() -> None:
     # node wiring (continuous bank publishes; locators serve locate_in_view).
     from openral_runner.backends.gstreamer.detector_factory import detector_node_wiring
 
-    publishes = {"rtdetr-coco-r18", "rtdetr-v2-r50vd", "omdet-turbo-indoor"}
+    publishes = {"rtdetr-coco-r18", "omdet-turbo-indoor"}
     serves = {"omdet-turbo-locator", "locateanything-3b-nf4"}
     for rid in publishes | serves:
         m = _load(rid)

@@ -156,34 +156,11 @@ docker-build-x86:
     docker buildx build -f docker/inference/Dockerfile.x86 \
         -t openral:x86-latest .
 
-# Opt-in DeepStream variant (ADR-0010 amendment "Single-Dockerfile
-# consolidation"). DeepStream is proprietary + EULA-restricted; this
-# target refuses to run unless the user has downloaded the SDK tarball
-# locally (signalling EULA acceptance). The tarball lives at
-# `docker/inference/deepstream/deepstream_sdk_v9.0.0_x86_64.tbz2`
-# (gitignored) and is loaded via a BuildKit named context so it stays
-# OUT of the default build context for non-DS builds.
-# The resulting image is NEVER pushed to GHCR — it's for local /
-# private-registry use only. Read `docker/inference/README.md` first.
-docker-build-x86-deepstream:
-    @test -f docker/inference/deepstream/deepstream_sdk_v9.0.0_x86_64.tbz2 || ( \
-        echo ""; \
-        echo "ERROR: deepstream_sdk_v9.0.0_x86_64.tbz2 not found in docker/inference/deepstream/."; \
-        echo ""; \
-        echo "Before building this image you must:"; \
-        echo "  1. Read docker/inference/README.md (EULA implications)."; \
-        echo "  2. Read the NVIDIA DeepStream EULA at"; \
-        echo "     https://developer.download.nvidia.com/assets/Deepstream/LicenseAgreement-NGC.pdf"; \
-        echo "  3. Download the SDK from https://developer.nvidia.com/deepstream-getting-started"; \
-        echo "     (~1.5 GB; requires NGC account)."; \
-        echo "  4. Move the tarball into docker/inference/deepstream/."; \
-        echo ""; \
-        exit 1 \
-    )
-    docker buildx build -f docker/inference/Dockerfile.x86 \
-        --build-arg WITH_DEEPSTREAM_STAGE=on \
-        --build-context ds=docker/inference/deepstream/ \
-        -t openral:x86-deepstream-latest .
+# The DeepStream + TensorRT variant (`openral:x86-deepstream-latest`) is
+# now built from openral-pro's `docker/Dockerfile.pro`, which FROMs the
+# image `docker-build-x86` produces (ADR-0083). It is proprietary +
+# EULA-restricted and never pushed to GHCR — see that repo, not this
+# Justfile, for the build target.
 
 # Live ROS-tee round-trip inside the consolidated x86 image (which
 # always carries ROS 2 Jazzy after the consolidation): starts the

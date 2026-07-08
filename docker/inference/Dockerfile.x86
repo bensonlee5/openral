@@ -14,43 +14,26 @@
 #     `openral_runner`'s ROS-tee branch (ADR-0010 PR I/4) is now
 #     part of the default deployment.
 #
-# DeepStream stays optional (EULA-gated) via the `WITH_DEEPSTREAM_STAGE`
-# build arg. Default `=off` → no DeepStream bytes in the image. When
-# `=on`, the user must supply the SDK tarball via a separate BuildKit
-# build context — see §"DeepStream" below.
+# DeepStream + the TensorRT/NVMM zero-copy fast path are an OpenRAL Pro
+# plugin (ADR-0083), not part of this image. `openral-pro` ships its own
+# `docker/Dockerfile.pro`, which `FROM`s the image this file builds and
+# layers the DeepStream SDK + `--group tensorrt` on top — see that repo
+# for the EULA-gated build (the DeepStream SDK EULA §2.c forbids
+# public-registry push, so that variant is never pushed to GHCR either).
 #
 # ── Bases ────────────────────────────────────────────────────────────
 #
-# The base is **CUDA 13** so the DeepStream 9 plugin ABI lands on the
-# same userspace CUDA stack as everything else (PR #93's side-by-side
-# CUDA-12.6 + CUDA-13 install via `cuda-cudart-13-0` is gone). torch
-# 2.10's cu126 wheels still work because they bundle their own
-# `libcudart.so.12` and the NVIDIA driver is forward-compatible
-# (CUDA-13-capable driver runs CUDA-12 apps).
+# The base is **CUDA 13** so a DeepStream 9 plugin ABI (built on top of
+# this image, in openral-pro) lands on the same userspace CUDA stack as
+# everything else (PR #93's side-by-side CUDA-12.6 + CUDA-13 install via
+# `cuda-cudart-13-0` is gone). torch 2.10's cu126 wheels still work
+# because they bundle their own `libcudart.so.12` and the NVIDIA driver
+# is forward-compatible (CUDA-13-capable driver runs CUDA-12 apps).
 #
 # ── Build ────────────────────────────────────────────────────────────
 #
-# Default (no DeepStream):
 #   docker buildx build -f docker/inference/Dockerfile.x86 \
 #       -t openral:x86-latest .
-#
-# DeepStream variant (EULA-gated):
-#   1. Read + accept the EULA at
-#      https://developer.download.nvidia.com/assets/Deepstream/LicenseAgreement-NGC.pdf
-#   2. Download `deepstream_sdk_v9.0.0_x86_64.tbz2` (~1.5 GB) from
-#      https://developer.nvidia.com/deepstream-getting-started
-#   3. Place it at `docker/inference/deepstream/deepstream_sdk_v9.0.0_x86_64.tbz2`
-#      (gitignored).
-#   4. Build:
-#      docker buildx build -f docker/inference/Dockerfile.x86 \
-#          --build-arg WITH_DEEPSTREAM_STAGE=on \
-#          --build-context ds=docker/inference/deepstream/ \
-#          -t openral:x86-deepstream-latest .
-#
-# See `docker/inference/README.md` for the full EULA breakdown (§2.c
-# forbids public-registry push, §4.g forbids benchmark publication,
-# §4.h forbids life-critical use). The DeepStream variant is therefore
-# never pushed to GHCR by `docker-build.yml`.
 #
 # ── Run ──────────────────────────────────────────────────────────────
 #
@@ -70,15 +53,6 @@
 # along with the local `/workspace/install/setup.bash` colcon overlay
 # that carries openral_msgs + every openral_* lifecycle node + the
 # C++ safety_kernel binary baked in by the builder stage.
-
-# ── Build-time args ──────────────────────────────────────────────────
-#
-# Declared at the top, BEFORE the first FROM, so they survive across
-# stages. `WITH_DEEPSTREAM_STAGE` is a string (`on` / `off`) rather
-# than a boolean (`1` / `0`) because BuildKit's `FROM stage-${ARG}`
-# expands literally — no truthiness. The Justfile presents the
-# natural flag externally.
-ARG WITH_DEEPSTREAM_STAGE=off
 
 # ── Stage 1: builder ─────────────────────────────────────────────────
 
@@ -229,17 +203,19 @@ COPY python/ python/
 # the venv in the runtime stage so both gi and rclpy share the same
 # glib link.
 # Groups needed for a real VLA deploy with the reward monitor:
-#   tensorrt  — torch + TensorRT runtime (SmolVLA TRT engines, ADR-0080/0082).
 #   sim       — the lerobot / transformers / accelerate / bitsandbytes stack the
 #               VLA policy adapters import at load time (needed on REAL hardware
 #               too; the VLA runtime deps happen to live in this group).
 #   robometer — the node-side ZMQ + msgpack client the reward_monitor_node uses
 #               to talk to the out-of-process Robometer sidecar (ADR-0057).
+# The TensorRT engine runtime (`--group tensorrt`, SmolVLA/ACT TRT engines)
+# is an OpenRAL Pro plugin (ADR-0083) layered on top of this image by
+# openral-pro's own `Dockerfile.pro` — not installed here.
 # feetech-servo-sdk is the Feetech motor driver the so100/so101 REAL HAL needs
 # (`scservo_sdk`); it is not in the lock, so it goes in as a post-sync pip add.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --all-packages \
-        --group tensorrt --group sim --group robometer \
+        --group sim --group robometer \
     && uv pip install --python /workspace/.venv/bin/python feetech-servo-sdk
 
 # Copy the colcon-buildable trees AFTER the venv resolve so a
@@ -468,67 +444,14 @@ ENV PATH=/workspace/.venv/bin:$PATH \
     # Default ROS_DOMAIN_ID=0; override at run-time with -e ROS_DOMAIN_ID=N.
     ROS_DOMAIN_ID=0
 
-# ── DeepStream stage selector ────────────────────────────────────────
-#
-# `WITH_DEEPSTREAM_STAGE=off` (default) lands on `ds-off`, a no-op
-# stage. `WITH_DEEPSTREAM_STAGE=on` lands on `ds-on`, which adds the
-# DeepStream SDK + GST_PLUGIN_PATH so `gst-inspect-1.0 nvvideoconvert`
-# resolves inside the image. Flipping this flag does NOT invalidate
-# the ROS apt layer or the gi splice — those live in `runtime-base`
-# whose hash is independent of the DS flag.
-
-FROM runtime-base AS ds-off
-# no-op — DeepStream is not bundled.
-
-FROM runtime-base AS ds-on
-
-ARG DEBIAN_FRONTEND=noninteractive
-
-# DeepStream installer runtime deps (no `build-essential` — DeepStream
-# ships prebuilt .so files). `bzip2` is required to extract the .tbz2
-# tarball with `tar -xvf`; missing it produces an opaque "Cannot exec:
-# No such file or directory" error.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        bzip2 \
-        libyaml-cpp0.8 \
-        libssl3 \
-        libjansson4 \
-        libuuid1 \
-        gstreamer1.0-plugins-base-apps \
-    && rm -rf /var/lib/apt/lists/*
-
-# NO `cuda-cudart-13-0` / `libnpp-13-0` apt install — the base image
-# already ships CUDA 13 runtime + NPP. This is the single biggest
-# payoff of the CUDA-13 base bump (vs PR #93's side-by-side hack on
-# top of the CUDA-12.6 base).
-
-# COPY-from-build-context pattern mirrors NVIDIA's official
-# deepstream_dockers repo (https://github.com/NVIDIA-AI-IOT/deepstream_dockers).
-# The `ds` named context is supplied by the caller via
-# `docker buildx build --build-context ds=docker/inference/deepstream/`
-# and only required when WITH_DEEPSTREAM_STAGE=on. Keeps the 1.5 GB
-# tarball OUT of the default build context for non-DS builds (no
-# transfer to the daemon at all).
-COPY --from=ds deepstream_sdk_v9.0.0_x86_64.tbz2 /tmp/deepstream.tbz2
-
-RUN tar -xvf /tmp/deepstream.tbz2 -C / \
-    && /opt/nvidia/deepstream/deepstream/install.sh \
-    && ldconfig \
-    && rm /tmp/deepstream.tbz2 \
-    # Drop samples to shrink the image — keep only libs + gst-plugins.
-    && rm -rf /opt/nvidia/deepstream/deepstream-*/samples
-
-ENV LD_LIBRARY_PATH=/workspace/.venv/lib/python3.12/site-packages/tensorrt_libs:/workspace/.venv/lib/python3.12/site-packages/nvidia/cuda_nvrtc/lib:/workspace/.venv/lib/python3.12/site-packages/nvidia/cuda_runtime/lib:/workspace/install/lib:/opt/nvidia/deepstream/deepstream/lib:${LD_LIBRARY_PATH} \
-    GST_PLUGIN_PATH=/opt/nvidia/deepstream/deepstream/lib/gst-plugins
-
 # ── Final stage ──────────────────────────────────────────────────────
 #
-# Picks `ds-off` or `ds-on` based on the build arg. The final image
-# carries everything the chosen stage installed plus the
-# `runtime-base` foundation (CUDA 13 runtime + GStreamer + ROS Jazzy
-# + workspace venv + gi splice + entrypoint).
+# The final image is `runtime-base` as-is (CUDA 13 runtime + GStreamer +
+# ROS Jazzy + workspace venv + gi splice + entrypoint) — no DeepStream SDK,
+# no TensorRT group. openral-pro's `Dockerfile.pro` FROMs this image and
+# layers both on top (ADR-0083).
 
-FROM ds-${WITH_DEEPSTREAM_STAGE} AS final
+FROM runtime-base AS final
 
 WORKDIR /workspace
 

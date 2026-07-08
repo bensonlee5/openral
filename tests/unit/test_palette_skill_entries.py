@@ -46,8 +46,8 @@ def test_palette_carries_per_skill_metadata_for_aloha() -> None:
 def test_palette_excludes_detector_kind_skills() -> None:
     """``kind: detector`` rSkills are perception producers, never in the ExecuteSkill palette.
 
-    The in-tree RT-DETR detectors (``rtdetr-coco-r18`` / ``rtdetr-v2-r50vd``)
-    carry ``role: s1`` and broad embodiment tags, so they pass the role +
+    The in-tree RT-DETR detector (``rtdetr-coco-r18``) carries ``role: s1``
+    and broad embodiment tags, so it passes the role +
     embodiment filters — but they are activated as the perception ROS node /
     GStreamer tee (ADR-0035/0037), not dispatched via ExecuteSkill. They must
     not appear in any robot's palette regardless of embodiment match.

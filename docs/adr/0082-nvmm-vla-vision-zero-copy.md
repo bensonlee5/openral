@@ -181,3 +181,16 @@ What shipped differs from the original sketch in two informed ways:
   the CPU vision leg is retired from the deploy default.
 - No safety-WG gate: layer-1/3 data-plane change; the safety kernel contract is
   untouched.
+
+## Amendment — 2026-07-08 (ADR-0083: implementation moves to OpenRAL Pro)
+
+Every implementation module this ADR chartered — `nvmm_vision_encoder.py`,
+`act_nvmm.py`, the `resize_pad_pm1` kernel in `trt_nvmm.py`,
+`StableSurfaceMirror` in `nvbufsurface.py`, and the SmolVLA/ACT TRT attach
+seams (`smolvla_trt.py`, `smolvla_export.py`, `act_trt.py`) — now ships in the
+private `openral-pro-trt` package (ADR-0083), importable as `openral_pro_trt.*`
+and wired in via the `openral.policy_attach_hooks` / `openral.runtime_backends`
+entry-point groups. The `OPENRAL_SMOLVLA_TRT` / `OPENRAL_ACT_TRT` env opt-ins
+are read by the Pro-side hooks; open-only installs log the absent hook and keep
+the torch host path. The phase gates, measured parities, and design rationale
+recorded here remain the authoritative history of that surface.

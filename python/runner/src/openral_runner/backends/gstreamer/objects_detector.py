@@ -21,10 +21,11 @@ dispatches the resolved tier:
 
 * :attr:`DetectorTier.CPU_ONNX` → :class:`ObjectsDetector` (ONNXRuntime,
   system-memory BGR frames).
-* :attr:`DetectorTier.NVMM_AGGREGATOR` →
-  :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
-  (clean-room zero-copy NVMM path, lazily imported so this module loads without
-  pycuda / tensorrt).
+* :attr:`DetectorTier.NVMM_AGGREGATOR` → resolved via the
+  ``openral.detector_tiers`` entry-point group (ADR-0083): the clean-room
+  zero-copy NVMM path ships in the private ``openral-pro-trt`` package, not
+  here. A miss raises a typed :exc:`~openral_core.exceptions.ROSConfigError`
+  naming it.
 * :attr:`DetectorTier.NVINFER` is the spike-gated DeepStream follow-up
   (ADR-0037 PR5b PR D) and raises a clear
   :exc:`~openral_core.exceptions.ROSConfigError`.
@@ -41,13 +42,11 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import Enum
+from importlib.metadata import entry_points
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, cast
 
 import structlog
-
-if TYPE_CHECKING:
-    from openral_runner.backends.gstreamer.nvmm_detector import NvmmObjectsDetector
 from openral_core import ObjectDetection2D, ObjectsMetadata
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
 
@@ -67,6 +66,12 @@ __all__ = [
 ]
 
 log = structlog.get_logger(__name__)
+
+# ADR-0083 extraction seam: a detector tier that is not built in-tree (today,
+# only NVMM_AGGREGATOR) registers its factory under this entry-point group,
+# keyed by the tier's ``.value``. Mirrors
+# ``openral_rskill.backend_registry.resolve_runtime_backend``.
+_DETECTOR_TIERS_GROUP = "openral.detector_tiers"
 
 
 # ── Tier enum ──────────────────────────────────────────────────────────────────
@@ -557,8 +562,8 @@ def make_objects_detector(
     labels: list[str],
     model_id: str,
     tier: DetectorTier | None = None,
-    **kwargs: Any,  # noqa: ANN401  # reason: forwarded to ObjectsDetector / NvmmObjectsDetector constructor
-) -> ObjectsDetector | NvmmObjectsDetector:
+    **kwargs: Any,  # noqa: ANN401  # reason: forwarded to ObjectsDetector / the entry-point-resolved NVMM detector constructor
+) -> ObjectsDetector | object:
     """Create an object detector for the resolved or requested tier.
 
     Args:
@@ -570,17 +575,21 @@ def make_objects_detector(
             ``DetectorTier.CPU_ONNX`` to force the CPU path regardless of
             platform.
         **kwargs: Extra keyword arguments forwarded to :class:`ObjectsDetector`
-            (``input_size``, ``score_threshold``, ``device``) or
-            :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
-            (``input_size``, ``score_threshold``, ``device_index``,
-            ``quantization``).
+            (``input_size``, ``score_threshold``, ``device``) or to the
+            NVMM_AGGREGATOR tier's constructor (``input_size``,
+            ``score_threshold``, ``device_index``, ``quantization``).
 
     Returns:
-        An :class:`ObjectsDetector` for :attr:`DetectorTier.CPU_ONNX`, or a
-        :class:`~openral_runner.backends.gstreamer.nvmm_detector.NvmmObjectsDetector`
-        for :attr:`DetectorTier.NVMM_AGGREGATOR`.
+        An :class:`ObjectsDetector` for :attr:`DetectorTier.CPU_ONNX`. For
+        :attr:`DetectorTier.NVMM_AGGREGATOR`, whatever class the
+        ``openral.detector_tiers`` entry point constructs — this module
+        cannot name that type statically since it lives in a package this
+        one does not depend on (ADR-0083).
 
     Raises:
+        ROSConfigError: For :attr:`DetectorTier.NVMM_AGGREGATOR` when no
+            ``openral.detector_tiers`` entry point named ``"nvmm_aggregator"``
+            is installed — names ``openral-pro-trt`` (ADR-0083).
         ROSConfigError: For :attr:`DetectorTier.NVINFER` — the DeepStream
             ``nvinfer`` tier is spike-gated (ADR-0037 PR5b PR D); pass
             ``tier=DetectorTier.NVMM_AGGREGATOR`` for the clean-room zero-copy
@@ -597,19 +606,20 @@ def make_objects_detector(
     if tier is DetectorTier.CPU_ONNX:
         return ObjectsDetector(onnx_path, labels=labels, model_id=model_id, **kwargs)
     if tier is DetectorTier.NVMM_AGGREGATOR:
-        try:
-            from openral_runner.backends.gstreamer.nvmm_detector import (  # noqa: PLC0415
-                NvmmObjectsDetector,
-            )
-        except ModuleNotFoundError as exc:
-            raise ROSConfigError(
-                "ObjectsDetector: the 'nvmm_aggregator' detector tier requires "
-                "openral-pro-trt (ADR-0083) — the zero-copy NVMM aggregator ships "
-                "in the private OpenRAL Pro package, not the public repo. Pass "
-                "tier=DetectorTier.CPU_ONNX for the open ONNXRuntime path."
-            ) from exc
-
-        return NvmmObjectsDetector(onnx_path, labels=labels, model_id=model_id, **kwargs)
+        for ep in entry_points(group=_DETECTOR_TIERS_GROUP):
+            if ep.name == tier.value:
+                detector_cls = ep.load()
+                log.debug("detector_tier.resolved", tier=tier.value, entry_point=ep.value)
+                built = detector_cls(onnx_path, labels=labels, model_id=model_id, **kwargs)
+                return cast(object, built)
+        raise ROSConfigError(
+            "ObjectsDetector: the 'nvmm_aggregator' detector tier requires "
+            "openral-pro-trt (ADR-0083) — the zero-copy NVMM aggregator ships "
+            "in the private OpenRAL Pro package, not the public repo, and "
+            f"registers itself via the {_DETECTOR_TIERS_GROUP!r} entry-point "
+            "group. Pass tier=DetectorTier.CPU_ONNX for the open ONNXRuntime "
+            "path."
+        )
     if tier is DetectorTier.NVINFER:
         raise ROSConfigError(
             "ObjectsDetector: the 'nvinfer' tier is the spike-gated follow-up "

@@ -234,7 +234,8 @@ contributor should look at before adding similar code.
   prototyping a torch.cuda-based Skill that consumes a CPU
   `SensorFrame.data: bytes` and needs to be explicit about device
   placement (raises on missing CUDA rather than silently falling back).
-- **Runtime backends** — `NullRuntime`, `PyTorchRuntime`, `ONNXRuntime`, `TensorRTRuntime`
+- **Runtime backends** — `NullRuntime`, `PyTorchRuntime`, `ONNXRuntime` (plus
+  `TensorRTRuntime` in the private `openral-pro-trt` package, ADR-0083)
   all implement the `Runtime` Protocol surface
   (`load/infer/quantize/warmup/unload`). Same situation as Skill.
 - **`backends/so100_robosuite/`** — `_So100Lift` extends

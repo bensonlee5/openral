@@ -8,15 +8,18 @@ pulling in PyGObject:
 * :mod:`reader` (commit #2) — the actual :class:`SensorReader` impl.
   Imports ``gi.repository.Gst`` at module load and therefore requires
   the ``gstreamer`` optional-extra (``pip install openral-runner[gstreamer]``).
-* :mod:`nvbufsurface` (commit #3) — ctypes wrapper around
-  ``libnvbufsurface.so`` for NVMM→CUDA zero-copy on Jetson / Spark.
-* :mod:`cuda_context` (commit #3) — shared PyCUDA context singleton.
 * :mod:`ros_tee` (commit #4) — optional ``rclpy.Image`` publisher fed
   from a second appsink.
 * :mod:`perception_tee` (ADR-0018 F6) — optional ``PromptStamped``
   publisher fed from a third appsink. Runs per-frame event detectors
   (motion, scene change, …) and publishes on
   ``/openral/perception/<kind>``.
+
+The NVMM→CUDA zero-copy consumers (``nvbufsurface`` ctypes wrapper
+around ``libnvbufsurface.so``, the shared PyCUDA context, the TensorRT
+NVMM executors) are an OpenRAL Pro plugin (ADR-0083) — not part of this
+subpackage. :mod:`reader`'s NVMM buffer latch degrades to a logged bus
+error when that plugin is absent (see ``_handle_nvmm_buffer``).
 
 See ``docs/adr/0010-inference-runner.md`` (Amendment 2026-05-12,
 "Backend evaluation: lean GStreamer vs Holoscan vs DeepStream") and
