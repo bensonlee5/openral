@@ -1,4 +1,4 @@
-"""WorldStateAggregator.update_detected_objects (ADR-0035)."""
+"""WorldStateAggregator.update_detected_objects."""
 
 from __future__ import annotations
 

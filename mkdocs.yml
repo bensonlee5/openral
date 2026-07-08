@@ -96,8 +96,7 @@ nav:
     - Reasoner (S2): reference/reasoner.md
     - Reasoner design & decisions: reference/reasoner-design.md
     - Sim environments: reference/sim-environments.md
-    - Safety hazard log: reference/hazard-log.md
-    - Design decisions (ADRs): decisions.md
+    - Design decisions: decisions.md
   - Contributing:
     - Development: contributing/development.md
     - Toolchain cheatsheet: contributing/toolchain.md

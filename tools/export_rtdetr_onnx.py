@@ -3,7 +3,7 @@
 Single image input, /255 preprocessing, two 3-D outputs: pre-sigmoid logits
 (1,N,80) + cxcywh-normalised boxes (1,N,4). HF RTDetrForObjectDetection.forward
 returns logits + pred_boxes (cxcywh); RTDetrImageProcessor rescales /255 with
-do_normalize=False — matching the repo decode (ADR-0037).
+do_normalize=False — matching the repo decode.
 
 Usage (isolated ephemeral env — does NOT mutate the project venv; do not
 `uv sync` the onnx-export group, which prunes pydantic/structlog from the dev

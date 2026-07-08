@@ -1,4 +1,4 @@
-"""End-to-end tests for :class:`openral_dataset.Rosbag2Sink` (ADR-0019 PR3).
+"""End-to-end tests for :class:`openral_dataset.Rosbag2Sink`.
 
 Per CLAUDE.md §1.11 — uses a real :class:`mcap.writer.Writer` against a
 ``tmp_path`` and re-reads with a real :func:`mcap.reader.make_reader`. No

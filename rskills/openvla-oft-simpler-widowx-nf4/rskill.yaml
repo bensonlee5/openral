@@ -6,8 +6,8 @@
 # PutOnPlateInScene25 task with a WidowX 250 S. Its honest evaluation home is
 # the SimplerEnv WidowX put-on-plate tasks OpenRAL already wires (same
 # embodiment / EE-delta control / bridge_orig normalization) — NOT the Panda
-# PickCube scenes (ADR-0060 would correctly block that pairing; see ADR-0063
-# for the WidowX-vs-Panda rationale).
+# PickCube scenes (the task-data gate would correctly block that pairing; see
+# the OpenVLA / OpenVLA-OFT policy family notes for the WidowX-vs-Panda rationale).
 #
 # IO contract (from the checkpoint's config.json + RLinf eval, 2026-06-19):
 #   input:  one 224x224 RGB (the SimplerEnv 3rd-view, surfaced as camera1);
@@ -16,7 +16,7 @@
 #   output: 256-bin discrete action tokens -> [-1,1] -> de-normalized with the
 #           embedded unnorm_key=bridge_orig (BOUNDS_Q99): 6 EE deltas rescaled,
 #           gripper (mask False) passthrough. Action chunk 8 x 7-D.
-# The in-tree `openvla` adapter (ADR-0063) loads this via transformers
+# The in-tree `openvla` adapter loads this via transformers
 # AutoModelForVision2Seq + trust_remote_code (gated by
 # OPENRAL_ALLOW_REMOTE_CODE=1), NF4 for the 8 GB host.
 
@@ -27,7 +27,7 @@ version: "0.1.0"
 license: "mit"
 role: "s1"
 kind: "vla"  # learnable Vision-Language-Action policy
-# ADR-0060: declare only the SimplerEnv WidowX task locally verified with
+# Task-data gate: declare only the SimplerEnv WidowX task locally verified with
 # success > 0. The sibling Bridge tasks remain plausible checkpoint targets, but
 # they are not declared until reproduced locally.
 evaluated_tasks:
@@ -78,7 +78,7 @@ state_contract:
   layout: "simpler_widowx"
   dim: 8
 action_contract:
-  # ADR-0019 / ADR-0028a: 6 cartesian EE deltas + 1 binary gripper (NOT 7 joint
+  # 6 cartesian EE deltas + 1 binary gripper (NOT 7 joint
   # positions) — matches the de-normalized predict_action output.
   dim: 7
   representation: "delta_ee_6d_plus_gripper"
@@ -113,7 +113,7 @@ description: >
   in-process via transformers custom-code (trust_remote_code), NF4 for 8 GB
   hosts. MIT license.
 
-# ADR-0022 — action vocabulary for the reasoner LLM tool palette.
+# Action vocabulary for the reasoner LLM tool palette.
 actions:
   - "pick"
   - "place"

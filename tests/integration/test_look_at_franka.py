@@ -1,4 +1,4 @@
-"""ADR-0044 Phase 3 end-to-end — :class:`LookAtRskill` against live MoveIt.
+"""Phase 3 end-to-end — :class:`LookAtRskill` against live MoveIt.
 
 Reuses the ``moveit_resources_panda_moveit_config`` demo harness from
 :mod:`test_moveit_joints_franka` (real ``move_group`` + fake hardware +

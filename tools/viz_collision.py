@@ -4,7 +4,7 @@
 Overlays the exact box/capsule geometry the C++ safety kernel checks (lowered by
 ``collision_params_from_description``) onto the robot's MJCF meshes, at any joint
 pose. Semi-transparent so you can see the primitive fit — this is how you eyeball
-whether the SO-101 ``base`` OBB (ADR-0081 / issue #84) hugs the housing and
+whether the SO-101 ``base`` OBB (box/OBB collision primitive, issue #84) hugs the housing and
 clears the folded distal links, without a `deploy run`.
 
 This is a standalone inspection tool, NOT a pytest test (tests stay headless for

@@ -1,7 +1,7 @@
 ---
 name: verify-outcome
 description: >-
-  S2 decision-procedure playbook (weightless). Capabilities: plan on task outcome. S2 closed-loop decision procedure (Inner Monologue): after a skill or subtask completes, check whether it ACTUALLY succeeded using scene/reward queries before the reasoner proceeds. Composes query_scene, query_task_progress, locate_in_view, memory_write and emit_prompt. ADR-0072. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S2 decision-procedure playbook (weightless). Capabilities: plan on task outcome. S2 closed-loop decision procedure (Inner Monologue): after a skill or subtask completes, check whether it ACTUALLY succeeded using scene/reward queries before the reasoner proceeds. Composes query_scene, query_task_progress, locate_in_view, memory_write and emit_prompt. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -30,7 +30,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **decision-procedure playbook (weightless)** (`role: s2`, `kind: playbook`). S2 closed-loop decision procedure (Inner Monologue): after a skill or subtask completes, check whether it ACTUALLY succeeded using scene/reward queries before the reasoner proceeds. Composes query_scene, query_task_progress, locate_in_view, memory_write and emit_prompt. ADR-0072.
+An OpenRAL **decision-procedure playbook (weightless)** (`role: s2`, `kind: playbook`). S2 closed-loop decision procedure (Inner Monologue): after a skill or subtask completes, check whether it ACTUALLY succeeded using scene/reward queries before the reasoner proceeds. Composes query_scene, query_task_progress, locate_in_view, memory_write and emit_prompt.
 
 ## Capabilities
 

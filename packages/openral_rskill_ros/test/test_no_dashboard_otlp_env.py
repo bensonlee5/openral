@@ -21,7 +21,7 @@ after ``shutdown-grace`` elapsed) on launches that were otherwise
 perfectly healthy. The guard at ``sim_e2e.launch.py:433-454`` is what
 this test pins.
 
-``OTEL_RESOURCE_ATTRIBUTES`` (ADR-0017 run id / mode / git sha) stays
+``OTEL_RESOURCE_ATTRIBUTES`` (dashboard run id / mode / git sha) stays
 forwarded under both modes — it is cheap, harmless when no exporter is
 wired, and useful if the operator points the parent shell at an
 external OTLP collector.
@@ -198,7 +198,7 @@ def test_no_dashboard_omits_otlp_endpoint_from_every_node() -> None:
 def test_no_dashboard_keeps_otel_resource_attributes() -> None:
     """``--no-dashboard`` → ``OTEL_RESOURCE_ATTRIBUTES`` still forwarded.
 
-    Resource attributes (ADR-0017 run id / mode / git sha) are cheap,
+    Resource attributes (dashboard run id / mode / git sha) are cheap,
     harmless when no exporter is wired, and useful if the operator
     points the parent shell at an external OTLP collector. Skipping the
     endpoint is the bug fix; skipping the resource attrs would be

@@ -26,15 +26,14 @@ inference: false
 > collision-free joint-space motion planning through the same
 > `ExecuteRskill` path used by VLA skills. No model weights — the manifest
 > is the entire artefact. Renamed from `openral/rskill-moveit-plan-arm`
-> under ADR-0054.
+> as part of the `rskill-moveit-*` rename.
 
-This package uses `kind: ros_action` (see
-ADR-0024) — a discriminator
+This package uses `kind: ros_action` — a discriminator
 on `RSkillManifest.kind` that selects the
 [`ROSActionRskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py)
 engine at resolve time, with `ros_integration.goal_builder: joint` selecting
 the [`JointGoalRskill`](../../python/rskill/src/openral_rskill/joint_goal_rskill.py)
-goal-lowering adapter (ADR-0054). The adapter constructs an
+goal-lowering adapter. The adapter constructs an
 `rclpy.action.ActionClient` on the host `RskillRunnerNode`, sends one goal
 built from `ros_integration.default_goal_json`, awaits the result, and replays
 the returned `trajectory_msgs/JointTrajectory` one waypoint per `step()` call
@@ -109,7 +108,7 @@ Packing the full trajectory as one chunk with `horizon=N` would let
 waypoints 1..N actuate unchecked — unacceptable for a planner whose
 job is to thread between joint-limit walls.
 
-### GPU-accelerated planning (cuMotion, ADR-0065)
+### GPU-accelerated planning (cuMotion)
 
 On a host that clears the cuMotion GPU floor (`RobotCapabilities.supports_cumotion()`
 — Ampere+, CUDA ≥ 13, ~8 GB VRAM), the runner sets
@@ -227,14 +226,13 @@ ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill 
 The rSkill package itself (this manifest + README) is **Apache-2.0**.
 The wrapped MoveIt code (`moveit_msgs` IDL, `moveit2` planners) is
 **BSD-3-Clause** and lives outside this repository — installed via
-`ros-${ROS_DISTRO}-moveit`. Per
-ADR-0012 both postures
+`ros-${ROS_DISTRO}-moveit`. Both postures
 are commercial-use-permissive.
 
 ## See also
 
-- ADR-0054 — MoveIt goal-builder library + rskill-moveit-* rename
-- ADR-0024 — ROS-wrapped rSkills
+- MoveIt goal-builder library + rskill-moveit-* rename
+- ROS-wrapped rSkills
 - [`openral_rskill.ros_action_rskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py) — engine source
 - [`openral_rskill.joint_goal_rskill`](../../python/rskill/src/openral_rskill/joint_goal_rskill.py) — goal-lowering adapter
 - [`rskills/rskill-moveit-eef-pose/`](../rskill-moveit-eef-pose/) — sibling Cartesian end-effector pose wrapper

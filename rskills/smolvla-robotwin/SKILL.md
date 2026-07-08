@@ -1,7 +1,7 @@
 ---
 name: smolvla-robotwin
 description: >-
-  S1 Vision-Language-Action policy. Capabilities: generalist, pick, place, transfer on block, pot, cup, hammer. SmolVLA (0.45 B, lerobot/smolvla_base) finetuned on the RoboTwin 2.0 unified dataset (50 dual-arm tasks, aloha-agilex embodiment, SAPIEN). Multi-task: action chunks of length 50 across three RGB views (head + per-wrist) driving a 14-DoF dual-arm joint command. Runs on the RoboTwin scene backend through the out-of-process SAPIEN sidecar (ADR-0061). Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S1 Vision-Language-Action policy. Capabilities: generalist, pick, place, transfer on block, pot, cup, hammer. SmolVLA (0.45 B, lerobot/smolvla_base) finetuned on the RoboTwin 2.0 unified dataset (50 dual-arm tasks, aloha-agilex embodiment, SAPIEN). Multi-task: action chunks of length 50 across three RGB views (head + per-wrist) driving a 14-DoF dual-arm joint command. Runs on the RoboTwin scene backend through the out-of-process SAPIEN sidecar. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -40,7 +40,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **Vision-Language-Action policy** (`role: s1`, `kind: vla`). SmolVLA (0.45 B, lerobot/smolvla_base) finetuned on the RoboTwin 2.0 unified dataset (50 dual-arm tasks, aloha-agilex embodiment, SAPIEN). Multi-task: action chunks of length 50 across three RGB views (head + per-wrist) driving a 14-DoF dual-arm joint command. Runs on the RoboTwin scene backend through the out-of-process SAPIEN sidecar (ADR-0061).
+An OpenRAL **Vision-Language-Action policy** (`role: s1`, `kind: vla`). SmolVLA (0.45 B, lerobot/smolvla_base) finetuned on the RoboTwin 2.0 unified dataset (50 dual-arm tasks, aloha-agilex embodiment, SAPIEN). Multi-task: action chunks of length 50 across three RGB views (head + per-wrist) driving a 14-DoF dual-arm joint command. Runs on the RoboTwin scene backend through the out-of-process SAPIEN sidecar.
 
 ## Capabilities
 

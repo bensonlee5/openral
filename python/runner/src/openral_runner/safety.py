@@ -128,7 +128,7 @@ class NullSafetyClient:
                 envelope_max_ee_speed_m_s=self.envelope.max_ee_speed_m_s,
                 envelope_max_force_n=self.envelope.max_force_n,
             ),
-            # ADR-0018 F9 — LTTng entry/exit around the safety boundary.
+            # LTTng entry/exit around the safety boundary.
             # Cheap when off; on, lets babeltrace2 measure validate()
             # against kernel scheduler events.
             lttng_tracepoint(

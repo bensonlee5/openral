@@ -1,4 +1,4 @@
-"""Robometer reward scorer (ADR-0057), loaded in ``reward_monitor_node``.
+"""Robometer reward scorer, loaded in ``reward_monitor_node``.
 
 Native LeRobot backend (lerobot >= 0.6.0). The reward model is
 ``lerobot.rewards.robometer.RobometerRewardModel`` — a vanilla

@@ -32,7 +32,7 @@ name: "OpenRAL/rskill-rldx1-ft-gr1-nf4"
 version: "0.1.0"
 license: "rlwrld_non_commercial"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "rldx"
@@ -107,7 +107,7 @@ description: >
   gripper_qpos). Shares the out-of-process rldx sidecar runtime with the
   LIBERO finetune. Non-commercial license.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -118,7 +118,7 @@ objects: []
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 # Left slot-less: the 29-D GR1 whole-body action = 3 waist + 7+7 arms + 6+6
 # Fourier-hand finger DoF, driven directly by the RoboCasa robosuite BASIC
@@ -126,11 +126,11 @@ scenes:
 # routes through the deploy-sim `_dispatch_slots` OSC path, and the 12 hand
 # DoF are EE-owned (not enumerated as joints; see robots/gr1/robot.yaml). A
 # typed slot layout would have to use DEX_HAND_JOINT, which the deploy-sim
-# runner does not dispatch — so the contract stays a bare dim. ADR-0071
-# records the resulting 29-vs-17 DOF-accounting gap in KNOWN_SIM_GAPS.
+# runner does not dispatch — so the contract stays a bare dim. The resulting
+# 29-vs-17 DOF-accounting gap is recorded in KNOWN_SIM_GAPS.
 action_contract:
   dim: 29
-  # ADR-0071 — GR1 whole-body action is absolute joint positions (waist + arms +
+  # GR1 whole-body action is absolute joint positions (waist + arms +
   # the EE-owned Fourier-hand finger DoF); declared explicitly even though the
   # bare dim already drives the legacy whole-vector JOINT_POSITION path.
   representation: "joint_positions"

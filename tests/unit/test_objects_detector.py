@@ -1,4 +1,4 @@
-"""Unit tests for the CPU-tier object detector (ADR-0037 PR5).
+"""Unit tests for the CPU-tier object detector.
 
 All tests run real ONNXRuntime against a real deterministic ONNX fixture built
 with ``onnx.helper`` — no mocks, no stubs, per CLAUDE.md §1.11.
@@ -377,7 +377,7 @@ class TestTierSelection:
     ) -> None:
         """NVMM_AGGREGATOR with no openral-pro-trt installed names the package.
 
-        ADR-0083: the zero-copy NVMM aggregator moved to the private
+        The zero-copy NVMM aggregator lives in the private
         openral-pro-trt package, resolved via the ``openral.detector_tiers``
         entry-point group. This repo checkout genuinely has no such entry
         point registered, so this is a real (not monkeypatched) miss.

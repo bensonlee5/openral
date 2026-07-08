@@ -1,17 +1,17 @@
 r"""Live reasoner + prompt-router round-trip — runs inside the x86-ros Docker image.
 
-Exercises the ADR-0018 F4 + F10 end-to-end without pytest / conftest /
-torch in the loop:
+Exercises the reasoner's LLM tool dispatch plus the prompt-router's
+prompt fan-in end-to-end without pytest / conftest / torch in the loop:
 
-1. Build a real :class:`PromptRouterNode` (F10) + a real
-   :class:`ReasonerNode` (F4) in-process. The reasoner gets a
+1. Build a real :class:`PromptRouterNode` (prompt fan-in) + a real
+   :class:`ReasonerNode` (LLM tool dispatch) in-process. The reasoner gets a
    :class:`FakeToolUseClient` (the only permitted LLM-side test double
    per CLAUDE.md §1.11) seeded with a single ``EmitPromptTool`` that
    the LLM would have picked.
 2. Spin both lifecycle nodes via a real ``rclpy``
    :class:`SingleThreadedExecutor`.
 3. Publish one ``openral_msgs/PromptStamped`` on
-   ``/openral/prompt_in/cli`` — the CLI input topic the F10 router
+   ``/openral/prompt_in/cli`` — the CLI input topic the prompt router
    listens on.
 4. Subscribe to ``/openral/prompt`` and assert the full chain:
 
@@ -24,7 +24,7 @@ torch in the loop:
    * the dispatched ``PromptStamped`` lands on ``/openral/prompt``
      with ``header.frame_id == "openral_reasoner"`` and
      ``metadata_json`` containing a W3C ``traceparent`` stamped from
-     the active ``reasoner.tick`` span (ADR-0018 §6).
+     the active ``reasoner.tick`` span (the tracing contract).
 
 Exits 0 on success, non-zero with an error message otherwise. Uses
 ``os._exit(rc)`` to skip Python's teardown so the
@@ -109,7 +109,7 @@ def _install_otel_provider() -> None:
     ``current_traceparent()`` returns ``None`` and the reasoner_node
     can't stamp ``traceparent`` on outbound EmitPromptTool messages.
 
-    The production deploys that care about ADR-0018 §6 set
+    The production deploys that care about the tracing contract set
     ``OTEL_EXPORTER_OTLP_ENDPOINT`` so the SDK provider IS installed;
     this smoke models that path with an explicit provider install (no
     exporter needed — we only need the active span machinery so the
@@ -231,7 +231,7 @@ def run() -> int:
     if "traceparent" not in metadata:
         print(
             "[smoke] FAIL — reasoner reply missing 'traceparent' in metadata_json "
-            f"(metadata={metadata}). ADR-0018 §6 contract violated.",
+            f"(metadata={metadata}). Tracing contract violated.",
             file=sys.stderr,
         )
         return 3

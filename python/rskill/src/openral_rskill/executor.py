@@ -4,7 +4,7 @@ This module provides :class:`ChunkedExecutor`, a generic background-thread
 pre-fetcher that wraps any lerobot-style policy's ``select_action`` /
 ``config.n_action_steps`` interface. The same executor is reused by every
 chunked VLA family (SmolVLA, π0 / π0.5, ACT, Diffusion Policy, OpenVLA-OFT, …)
-— prior to ADR-0010 the class lived inside ``openral_rskill.smolvla`` and
+— the class previously lived inside ``openral_rskill.smolvla`` and
 was effectively SmolVLA-private.
 
 Architecture

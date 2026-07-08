@@ -129,7 +129,7 @@ def test_token_bucket_unlimited_when_rate_is_none() -> None:
 
 
 def test_default_rate_limit_policy_matches_adr_0018() -> None:
-    """ADR-0018 F3: WARN/INFO rate-limited; FAIL/ABORT unlimited."""
+    """WARN/INFO rate-limited; FAIL/ABORT unlimited."""
     assert DEFAULT_RATE_LIMIT_HZ[SEVERITY_INFO] == 10.0
     assert DEFAULT_RATE_LIMIT_HZ[SEVERITY_WARN] == 10.0
     assert DEFAULT_RATE_LIMIT_HZ[SEVERITY_ABORT] is None
@@ -151,5 +151,5 @@ def test_topic_for_namespaces_every_source() -> None:
 
 
 def test_suppressed_summary_kind_constant() -> None:
-    """ADR-0018 reserves uint8 254 for the summary kind."""
+    """Reserves uint8 254 for the summary kind."""
     assert KIND_SUPPRESSED_SUMMARY == 254

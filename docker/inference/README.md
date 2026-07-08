@@ -1,22 +1,22 @@
 # Inference deploy image
 
-OpenRAL ships **one** deploy image. ADR-0010 amendment
-"Single-Dockerfile consolidation + CUDA-13/DeepStream-9 alignment"
+OpenRAL ships **one** deploy image. A later consolidation decision,
+"Single-Dockerfile consolidation + CUDA-13/DeepStream-9 alignment,"
 replaced the four-Dockerfile matrix that PR #93 introduced
 (`Dockerfile.x86`, `Dockerfile.x86-ros`, `Dockerfile.x86-deepstream`,
-`Dockerfile.l4t`) with a single source of truth. ADR-0083 later moved the
-DeepStream + TensorRT variant out of this repo entirely — it is now an
-OpenRAL Pro plugin (`openral-pro`'s `docker/Dockerfile.pro`, which `FROM`s
-the image built here).
+`Dockerfile.l4t`) with a single source of truth. The OpenRAL Pro split
+later moved the DeepStream + TensorRT variant out of this repo entirely
+— it is now an OpenRAL Pro plugin (`openral-pro`'s `docker/Dockerfile.pro`,
+which `FROM`s the image built here).
 
 | Image | Built by | Pushed to GHCR? | License | When to use |
 |---|---|---|---|---|
 | `openral:x86-latest` | `just docker-build-x86` | ✅ Yes (`docker-build.yml`) | Apache-2.0 + NVIDIA CUDA runtime EULA | x86 with NVIDIA dGPU, host driver ≥ 580. The default deploy target. Carries CUDA 13, ROS 2 Jazzy, GStreamer 1.24. |
-| `openral:x86-deepstream-latest` | openral-pro's `Dockerfile.pro` | ❌ **No** | Apache-2.0 **+ NVIDIA DeepStream EULA** | OpenRAL Pro only (ADR-0083). Adds `nvvideoconvert`, NVMM caps on x86, `nvinfer`, `nvstreammux`, the TensorRT engine runtime. Local / private-registry only — see `openral-pro` for the build flow and the EULA breakdown. |
+| `openral:x86-deepstream-latest` | openral-pro's `Dockerfile.pro` | ❌ **No** | Apache-2.0 **+ NVIDIA DeepStream EULA** | OpenRAL Pro only. Adds `nvvideoconvert`, NVMM caps on x86, `nvinfer`, `nvstreammux`, the TensorRT engine runtime. Local / private-registry only — see `openral-pro` for the build flow and the EULA breakdown. |
 
 The L4T / Tegra / Jetson Orin variant, the CPU-only variant, and the
-no-ROS variant from PR #93 are deliberately out of scope here. See the
-ADR amendment for the trade-off rationale.
+no-ROS variant from PR #93 are deliberately out of scope here. See
+[`docs/decisions.md`](../../docs/decisions.md) for the trade-off rationale.
 
 ## Host driver requirements
 
@@ -57,12 +57,12 @@ mismatch up front.
   `feetech-servo-sdk`. The `sim` group carries the lerobot /
   transformers / accelerate / bitsandbytes stack the VLA policy
   adapters import at load time (needed on real hardware too);
-  `robometer` adds the reward monitor's ZMQ + msgpack sidecar client
-  (ADR-0057); `feetech-servo-sdk` is the Feetech motor driver the
+  `robometer` adds the reward monitor's ZMQ + msgpack sidecar client;
+  `feetech-servo-sdk` is the Feetech motor driver the
   so100 / so101 real HAL needs. `uv sync` runs **without
   `--extra gstreamer`** — see the gi-splice note above. The `tensorrt`
   group (SmolVLA/ACT TRT engines) is **not** installed here — it is an
-  OpenRAL Pro plugin (ADR-0083), layered on by that repo's
+  OpenRAL Pro plugin, layered on by that repo's
   `Dockerfile.pro`.
 - **colcon `install/` overlay** at `/workspace/install/` (baked by the
   builder stage). Carries every ROS / C++ package the deploy graph
@@ -76,18 +76,18 @@ mismatch up front.
     binary lands at
     `/workspace/install/openral_safety_kernel/bin/safety_kernel`
   - `openral_hal_so100`, `openral_hal_openarm` — HAL lifecycle nodes
-  - `openral_world_state` — ADR-0018 F8 30 Hz snapshot node
-  - `openral_reasoner_ros` — ADR-0018 F4 LLM tool dispatch
-  - `openral_prompt_router` — ADR-0018 F10 prompt fan-in
-  - `openral_safety`, `openral_safety_watchdog` — ADR-0018 F5 + deadman
-  - `openral_human_estop` — ADR-0018 F5 forwarder
+  - `openral_world_state` — 30 Hz world-state snapshot node
+  - `openral_reasoner_ros` — LLM tool dispatch
+  - `openral_prompt_router` — prompt fan-in
+  - `openral_safety`, `openral_safety_watchdog` — safety envelope + deadman watchdog
+  - `openral_human_estop` — human e-stop forwarder
   - `openral_foxglove_bringup` — read-only allowlists imported by
     `openral_rskill_ros` launch files
-  - `openral_rskill_ros` — ADR-0018 F1 `ExecuteSkill` action server
-  - `openral_octomap_bridge` — ADR-0030 octree → world-voxels bridge
-  - `openral_perception_ros` — ADR-0035/0047/0057 detector +
-    scene-VLM + reward-monitor nodes (the reward monitor drives the
-    dashboard's rSkill-card reward bar)
+  - `openral_rskill_ros` — `ExecuteSkill` action server
+  - `openral_octomap_bridge` — octree → world-voxels bridge
+  - `openral_perception_ros` — detector + scene-VLM + reward-monitor
+    nodes (the reward monitor drives the dashboard's rSkill-card reward
+    bar)
 
   The non-ROS trees the launch resolves from its `_REPO_ROOT`
   (`/workspace/install`) — `tools/` (autostart driver +
@@ -113,24 +113,23 @@ mismatch up front.
 - ENV: `ROS_DISTRO=jazzy`, `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`,
   `ROS_DOMAIN_ID=0`, `PATH=/workspace/.venv/bin:$PATH`,
   `PYTHONUNBUFFERED=1`, `GST_DEBUG=2`.
-- Default `ENTRYPOINT`: `openral deploy run` (post-ADR-0021 — the CLI
+- Default `ENTRYPOINT`: `openral deploy run` (the CLI
   ships as `openral`, no `ral` alias).
 
 There is **no separate CUDA-13 side-load step**. PR #93's
 `Dockerfile.x86-deepstream` installed `cuda-cudart-13-0` + `libnpp-13-0`
 alongside the CUDA-12.6 base to make DeepStream 9 work; that hack is
 gone now that the base itself is CUDA 13 — and the whole DeepStream
-stage has since moved to `openral-pro` (ADR-0083) anyway.
+stage has since moved to `openral-pro` anyway.
 
 ## The DeepStream / TensorRT variant moved to OpenRAL Pro
 
 DeepStream is **proprietary, EULA-restricted, and NOT open source**.
-ADR-0010 Amendment 2026-05-12
-(refined 2026-05-14) rejected bundling DeepStream into the default
-image, and ADR-0083
-(2026-07-08) moved the opt-in variant — plus the TensorRT engine
-runtime it depends on — into the private `openral-pro` repo rather than
-keeping it here as a build flag. If you need `nvvideoconvert` / NVMM
+A 2026-05-12 decision (refined 2026-05-14) rejected bundling DeepStream
+into the default image, and a later 2026-07-08 decision moved the
+opt-in variant — plus the TensorRT engine runtime it depends on — into
+the private `openral-pro` repo rather than keeping it here as a build
+flag. If you need `nvvideoconvert` / NVMM
 caps / `nvinfer` / the TensorRT-accelerated SmolVLA/ACT engines, see
 `openral-pro`'s `docker/Dockerfile.pro` and its README for the build
 flow and the full EULA clause-by-clause breakdown. The open-core image
@@ -151,7 +150,7 @@ EULA implicitly.
 
 ## Image sizes
 
-Measured 2026-05-14 on the consolidation worktree (pre-ADR-0083 split):
+Measured 2026-05-14 on the consolidation worktree (pre-OpenRAL-Pro split):
 
 | Image | Size |
 |---|---|

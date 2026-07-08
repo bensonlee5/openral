@@ -1,5 +1,5 @@
 """Unit tests for :func:`openral_hal.build_hal` — the single sim/real HAL
-construction seam (ADR-0031).
+construction seam.
 
 The resolver is what makes ``deploy sim`` deterministically build a
 **simulation** HAL and ``deploy run`` a **real** HAL, with the choice driven

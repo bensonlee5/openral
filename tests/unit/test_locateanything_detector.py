@@ -117,7 +117,7 @@ def test_locateanything_manifest_validates() -> None:
     assert m.detector is not None
     assert "person" in m.detector.labels
     # max_side caps the sidecar's grounding frame so LA-3B co-fits a reward model
-    # on an 8 GB GPU (ADR-0057 co-residency); the manifest pins 512.
+    # on an 8 GB GPU (co-residency); the manifest pins 512.
     assert m.detector.max_side == 512
 
 
@@ -153,7 +153,7 @@ def test_build_manifest_detector_dispatches_pytorch_to_sidecar() -> None:
 
 
 def test_locate_in_view_tool_schema_round_trips() -> None:
-    """LocateInViewTool parses via the ReasonerToolCall discriminated union (ADR-0043)."""
+    """LocateInViewTool parses via the ReasonerToolCall discriminated union."""
     from openral_core import LocateInViewTool, ReasonerToolCall
     from pydantic import TypeAdapter
 
@@ -172,7 +172,7 @@ def test_locate_in_view_tool_schema_round_trips() -> None:
 
 
 def test_locate_in_view_palette_gated_on_detector_available() -> None:
-    """The LLM sees locate_in_view only when a detector is available (ADR-0043)."""
+    """The LLM sees locate_in_view only when a detector is available."""
     from openral_reasoner.palette import ToolPalette
     from openral_reasoner.tool_use import _tool_palette_to_anthropic_tools
 

@@ -1,4 +1,4 @@
-"""ADR-0022 — :func:`_tool_palette_to_anthropic_tools` emits one tool per skill.
+""":func:`_tool_palette_to_anthropic_tools` emits one tool per skill.
 
 Drives the real :class:`RSkillManifest` loader against the in-tree
 ``rskills/*/rskill.yaml`` files, builds a real palette, then asserts
@@ -162,7 +162,7 @@ def test_empty_palette_omits_execute_skill_entirely() -> None:
     palette = ToolPalette()
     tools = _tool_palette_to_anthropic_tools(palette)
     names = {t["name"] for t in tools}
-    # The always-present scaffold: three plumbing tools plus the ADR-0073 (#123)
+    # The always-present scaffold: three plumbing tools plus the (#123)
     # decompose_mission ledger editor (a core S2 capability, no resident-resource dep).
     assert names == {
         "reload_gst_pipeline",
@@ -215,7 +215,7 @@ def test_decode_unknown_per_skill_tool_raises() -> None:
         )
 
 
-# ── ADR-0026 — goal_params_schema surfaced to LLM tool palette ────────────────
+# ── goal_params_schema surfaced to LLM tool palette ───────────────────────────
 
 
 def _palette_with_schema_for_skill(skill_id: str, schema: dict) -> ToolPalette:
@@ -234,7 +234,7 @@ def _palette_with_schema_for_skill(skill_id: str, schema: dict) -> ToolPalette:
 
 
 def test_anthropic_tool_input_schema_substitutes_per_skill_goal_params() -> None:
-    """ADR-0026 — when the entry declares ``goal_params_schema``, the per-skill
+    """When the entry declares ``goal_params_schema``, the per-skill
     tool's ``goal_params_json`` property is replaced with the structured schema.
     """
     nav_schema = {
@@ -290,7 +290,7 @@ def test_anthropic_tool_keeps_string_schema_when_no_goal_params_schema_declared(
 
 
 def test_decode_serialises_structured_goal_params_back_to_string() -> None:
-    """ADR-0026 — when the LLM emits ``goal_params_json`` as a dict (provider's
+    """When the LLM emits ``goal_params_json`` as a dict (provider's
     parsed structured output), the decoder JSON-stringifies it back to the
     Pydantic ``str`` field before constructing ``ExecuteRskillTool``.
     """

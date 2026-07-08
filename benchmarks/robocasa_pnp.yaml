@@ -8,9 +8,9 @@
 # python/sim/src/openral_sim/backends/robocasa.py) and sweeps it across
 # multiple seeds.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename
+# Shape: bare list of BenchmarkScenes; suite id = filename
 # stem ("robocasa_pnp"). Only the VLA (rSkill) varies across runs.
-# Consumed by `openral benchmark run` (PR D of ADR-0009); writes a
+# Consumed by `openral benchmark run`; writes a
 # RSkillEvalResult JSON to rskills/<vla>/eval/robocasa_pnp.json with
 # reproduced_locally=true AND updates `benchmarks.robocasa_pnp` in the
 # matching rskill.yaml with the headline avg_success_rate. Suite-level

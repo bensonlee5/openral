@@ -1,4 +1,4 @@
-"""ADR-0018 F3 — publisher helper for the namespaced FailureTrigger bus.
+"""Publisher helper for the namespaced FailureTrigger bus.
 
 The OpenRAL graph publishes typed :class:`openral_msgs.msg.FailureTrigger`
 events on six layer-namespaced topics::
@@ -10,8 +10,8 @@ events on six layer-namespaced topics::
     /openral/failure/wam
     /openral/failure/critic
 
-(The ``rskill`` suffix replaced the original ``skill`` on 2026-05-25 —
-ADR-0018 amendment §5 — for consistency with the carried ``rskill_id``
+(The ``rskill`` suffix replaced the original ``skill`` on 2026-05-25,
+for consistency with the carried ``rskill_id``
 field on :class:`openral_msgs.msg.FailureTrigger`.)
 
 One source layer per topic, one topic per source layer; the reasoner
@@ -86,7 +86,7 @@ __all__ = [
 ]
 
 
-# ─── IDL-mirror constants (ADR-0018 §2) ────────────────────────────────────────
+# ─── IDL-mirror constants ───────────────────────────────────────────────────────
 #
 # These mirror ``openral_msgs/msg/FailureTrigger`` so callers can write
 # typed event publications without depending on the generated IDL —
@@ -144,7 +144,7 @@ def topic_for(source: FailureSource) -> str:
 
 # ─── Rate-limit defaults ───────────────────────────────────────────────────────
 #
-# Per ADR-0018 / capability review F3: token-bucket rate limit per
+# Token-bucket rate limit per
 # (kind, severity); WARN defaults to 10/s, ABORT is never limited.
 # INFO defaults to 10/s as well (log spam guard). FAIL is unlimited
 # because FAIL events are rare and must always reach the reasoner.
@@ -285,7 +285,7 @@ class FailureBusPublisher:
     def create_publisher(self) -> None:
         """Open the ROS 2 publisher with the bus QoS profile.
 
-        QoS per ADR-0018 §1: ``RELIABLE+VOLATILE+KEEP_LAST=50`` (deep
+        QoS: ``RELIABLE+VOLATILE+KEEP_LAST=50`` (deep
         history so a slow consumer doesn't drop events).
         """
         from openral_msgs.msg import (  # type: ignore[import-not-found,unused-ignore]  # reason: rclpy-generated module

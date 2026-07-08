@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — gtest unit coverage for SafetyKernelLifecycleNode.
+// gtest unit coverage for SafetyKernelLifecycleNode.
 // Exercises lifecycle transitions, fault-latch behaviour, and the
 // /openral/estop_reset cooldown semantics WITHOUT requiring a running
 // ROS graph — we just drive the lifecycle callbacks directly.
@@ -85,7 +85,7 @@ TEST_F(LifecycleKernelTest, FullLifecycleSuccess) {
 }
 
 TEST_F(LifecycleKernelTest, ConfiguresFromRosParametersWhenNDofSet) {
-  // ADR-0020 PR-K — parameter-based envelope path. The Python launch
+  // Parameter-based envelope path. The Python launch
   // unpacks robot.yaml and forwards each field as a ROS parameter; this
   // test confirms the kernel loads from those params and reaches ACTIVE.
   rclcpp::NodeOptions opts;
@@ -116,7 +116,7 @@ TEST_F(LifecycleKernelTest, ConfiguresFromRosParametersWhenNDofSet) {
 }
 
 TEST_F(LifecycleKernelTest, SelfCollisionModelLoadsAndConfigures) {
-  // ADR-0030 — a well-formed collision model loads and the node reaches
+  // A well-formed collision model loads and the node reaches
   // configured with self-collision active.
   rclcpp::NodeOptions opts;
   opts.parameter_overrides({
@@ -263,7 +263,7 @@ TEST_F(LifecycleKernelTest, ResetServiceRespectsCooldown) {
   EXPECT_FALSE(node->fault_latched());
 }
 
-// ADR-0030 — the ViolationKind enum must stay 1:1 with the IDL KIND_*
+// The ViolationKind enum must stay 1:1 with the IDL KIND_*
 // constants so the lifecycle node can publish a FailureTrigger without
 // translation (validator.hpp documents this contract). kCollision is added
 // for the geometric-safety check; the value must equal KIND_COLLISION even
@@ -281,7 +281,7 @@ TEST(ViolationKindMapping, EnumValuesMatchFailureTriggerConstants) {
 
 namespace {
 
-// ADR-0040 — a 2-link self-collision model whose only pair is allowed (so the
+// A 2-link self-collision model whose only pair is allowed (so the
 // geometry is always clear), with the joint-name map + velocity seed params
 // plumbed. Lets the velocity-mode tests exercise the new seed gate + routing
 // without depending on a specific colliding configuration (geometric detection
@@ -307,7 +307,7 @@ std::vector<rclcpp::Parameter> velocity_capable_params() {
       {"collision_capsule_origin_xyzrpy", std::vector<double>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
       {"collision_allowed_pairs", std::vector<std::int64_t>{0, 1}},
       {"collision_link_names", std::vector<std::string>{"link0", "link1"}},
-      // ADR-0040 plumbing
+      // Geometric-check plumbing for non-position control modes
       {"collision_joint_names", std::vector<std::string>{"j0", "j1"}},
       {"collision_seed_dt_s", 0.05},
       {"collision_state_deadline_ms", 500.0},
@@ -316,9 +316,9 @@ std::vector<rclcpp::Parameter> velocity_capable_params() {
 
 }  // namespace
 
-// ADR-0040 — a JOINT_VELOCITY chunk arriving with the geometric check enabled
+// A JOINT_VELOCITY chunk arriving with the geometric check enabled
 // but NO measured joint-state seed must be dropped fail-closed, never silently
-// passed (pre-ADR-0040 it bypassed the geometric block entirely). This is the
+// passed (previously this bypassed the geometric block entirely). This is the
 // core safety property: a missing state feed cannot disable collision checking.
 TEST_F(LifecycleKernelTest, VelocityChunkFailsClosedWithoutMeasuredSeed) {
   rclcpp::NodeOptions opts;
@@ -361,7 +361,7 @@ TEST_F(LifecycleKernelTest, VelocityChunkFailsClosedWithoutMeasuredSeed) {
       << "a seed-less velocity chunk must not reach /openral/safe_action";
 }
 
-// ADR-0040 — once a fresh, complete measured seed is available, a clear velocity
+// Once a fresh, complete measured seed is available, a clear velocity
 // chunk passes geometry and is forwarded to /openral/safe_action (the model's
 // only link pair is allowed, so the configuration is always collision-free).
 TEST_F(LifecycleKernelTest, VelocityChunkPassesWithFreshSeedWhenClear) {
@@ -418,7 +418,7 @@ TEST_F(LifecycleKernelTest, VelocityChunkPassesWithFreshSeedWhenClear) {
   EXPECT_FALSE(node->fault_latched());
 }
 
-// ADR-0040 Phase 3 — a CARTESIAN_DELTA chunk (the arm mode for LIBERO/SIMPLER/
+// Phase 3 — a CARTESIAN_DELTA chunk (the arm mode for LIBERO/SIMPLER/
 // DROID + the robocasa arm) carries a 6-D EE delta, NOT joint configs. It must
 // be routed through the REACTIVE measured-config check (not skipped for n_dof !=
 // robot dof, and not silently passed). Here the geometry is clear, so it passes;
@@ -476,7 +476,7 @@ TEST_F(LifecycleKernelTest, CartesianDeltaChunkReactiveCheckPassesWhenClear) {
   EXPECT_FALSE(node->fault_latched());
 }
 
-// ADR-0040 Phase 2 — DETERMINISTIC proof that a velocity chunk's REACTIVE check
+// Phase 2 — DETERMINISTIC proof that a velocity chunk's REACTIVE check
 // catches a collision (not just passes clear ones). The 2-link model's capsules
 // overlap at the measured configuration and the pair is NOT in the allowed set,
 // so reconstructing the config from the seed and running the (well-tested)
@@ -551,7 +551,7 @@ TEST_F(LifecycleKernelTest, VelocityChunkReactiveCheckCatchesCollision) {
       << node->chunks_dropped() << " chunks_passed=" << node->chunks_passed();
 }
 
-// ADR-0040 — DETERMINISTIC proof of the mobile-base world (voxel) path: the
+// DETERMINISTIC proof of the mobile-base world (voxel) path: the
 // panda_mobile "arm hits the table" scenario. The model is a planar base
 // (prismatic-x, dof 0) carrying a one-link arm (revolute-z, dof 1) whose capsule
 // sits 0.3 m ahead of base_link. The measured seed places the BASE at x=5 m in
@@ -670,7 +670,7 @@ TEST_F(LifecycleKernelTest, MobileBaseArmCaughtAgainstVoxelWall) {
       << node->chunks_dropped() << " chunks_passed=" << node->chunks_passed();
 }
 
-// ADR-0040 Phase 3 — DETERMINISTIC proof of PREDICTIVE Cartesian look-ahead: a
+// Phase 3 — DETERMINISTIC proof of PREDICTIVE Cartesian look-ahead: a
 // CARTESIAN_DELTA chunk whose MEASURED start config is clear (so the reactive
 // check passes) but whose proposed EE deltas drive the arm into an obstacle must
 // be rejected + estopped via the Jacobian reconstruction. This is exactly the
@@ -709,7 +709,7 @@ TEST_F(LifecycleKernelTest, CartesianDeltaPredictiveCatchesChunkDrivingEeIntoWal
       {"collision_link_names", std::vector<std::string>{"l0", "l1", "ee"}},
       {"collision_joint_names", std::vector<std::string>{"j0", "j1"}},
       {"collision_state_deadline_ms", 2000.0},
-      // ADR-0040 Phase 3 — predictive Cartesian: EE is link index 2.
+      // Phase 3 — predictive Cartesian: EE is link index 2.
       {"collision_ee_link_index", std::int64_t{2}},
       {"collision_predict_lambda", 0.02},
       {"collision_predict_margin_growth_m", 0.02},
@@ -809,7 +809,7 @@ TEST_F(LifecycleKernelTest, CartesianDeltaPredictiveCatchesChunkDrivingEeIntoWal
       << "the colliding Cartesian chunk must never reach /openral/safe_action";
 }
 
-// ADR-0040 Phase 3 — the predictive Cartesian look-ahead must NOT reject a chunk
+// Phase 3 — the predictive Cartesian look-ahead must NOT reject a chunk
 // whose whole predicted trajectory stays clear (no false positive from the
 // margin inflation). Same arm + EE-link as above, but the wall is far (y>=1.9)
 // and the +y chunk only reaches ~y=1.5, so every predicted step is clear and the

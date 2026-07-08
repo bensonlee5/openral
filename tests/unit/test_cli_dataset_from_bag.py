@@ -1,4 +1,4 @@
-"""Unit tests for ``openral dataset from-bag`` (ADR-0019 PR4).
+"""Unit tests for ``openral dataset from-bag``.
 
 Per CLAUDE.md §1.11 — real `Rosbag2Sink` writes a real `.mcap` bag,
 then the CLI invokes the real `Rosbag2ToLeRobotConverter` to produce a

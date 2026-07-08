@@ -35,9 +35,9 @@ name: "h1"
 embodiment_kind: "humanoid"
 base_frame: "pelvis"
 
-# ADR-0027 — robot_state_publisher wiring. URDF root link is ``pelvis``,
+# robot_state_publisher wiring. URDF root link is ``pelvis``,
 # matching base_frame; no static transform needed.
-# ADR-0058 — unified asset block (URDF / MJCF). The URDF is a vendored,
+# Unified asset block (URDF / MJCF). The URDF is a vendored,
 # joint-name-patched copy of rd:h1_description: upstream suffixes every joint
 # with '_joint' (torso_joint); we strip the suffix so robot_state_publisher's
 # /tf joint names match the HAL/menagerie names (torso, left_knee, ...). Only
@@ -319,7 +319,7 @@ safety:
 # `make_real_description` and flip the sdk_kind (hal is shared); that's
 # tracked under the M2 milestone (CLAUDE.md §6.2).
 sdk_kind: "open"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # Sim-only → real: null until the M2 C++ S0 cerebellum (CLAUDE.md §6.2).
 hal:
   sim: "openral_hal.h1:H1MujocoHAL"
@@ -330,7 +330,7 @@ hal:
 # bipedal — qpos starts at 7 (free joint), qvel at 6.  H1MujocoHAL adds
 # a per-step torque hook for the menagerie ``motor`` actuators on top of
 # what ``MujocoArmHAL`` provides; the data block here is otherwise
-# default. See ADR-0023.
+# default.
 sim:
   floating_base: true
 

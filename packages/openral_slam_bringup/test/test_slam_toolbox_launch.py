@@ -1,4 +1,4 @@
-"""ADR-0025 — hermetic checks on ``slam_toolbox.launch.py``.
+"""Hermetic checks on ``slam_toolbox.launch.py``.
 
 These do NOT spawn a real ROS 2 graph (that's the integration tier).
 They assert that the launch file's structural pieces remain intact so
@@ -91,7 +91,7 @@ def test_launch_description_shape() -> None:
     service responds with ``success=false``, producing a spurious
     ``Failed to make transition 'TRANSITION_CONFIGURE'`` ERROR from
     ``launch_ros.utilities.lifecycle_event_manager``). Reasoner-driven
-    lifecycle dodges it — see ADR-0025.
+    lifecycle dodges it.
     """
     mod = _import_launch_module()
     from launch.actions import EmitEvent
@@ -107,5 +107,5 @@ def test_launch_description_shape() -> None:
     assert len(emit_events) == 0, (
         f"expected zero EmitEvents (Reasoner-managed bring-up); got "
         f"{len(emit_events)}. Any EmitEvent here trips slam_toolbox's "
-        "Jazzy lifecycle race — ADR-0025 forbids launch-side auto-configure."
+        "Jazzy lifecycle race — launch-side auto-configure is forbidden."
     )

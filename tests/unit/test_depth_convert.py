@@ -1,4 +1,4 @@
-"""ADR-0085 — metric-depth ndarray <-> sensor_msgs/Image (32FC1) conversion.
+"""Metric-depth ndarray <-> sensor_msgs/Image (32FC1) conversion.
 
 openral_perception_ros is a colcon-built ROS package; like the other ROS-package
 unit tests, skip cleanly when the workspace overlay / sensor_msgs isn't sourced.

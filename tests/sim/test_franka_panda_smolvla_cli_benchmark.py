@@ -101,7 +101,7 @@ def _make_tiny_libero_suite(tmp_path: Path) -> Path:
     path (``_resolve_benchmark_suite`` reading from ``--suite <path>``,
     ``load_benchmark_suite``, ``run_benchmark``) in a few seconds.
 
-    ADR-0042 (June 2026): a benchmark suite is a bare ``list[BenchmarkScene]``
+    As of June 2026, a benchmark suite is a bare ``list[BenchmarkScene]``
     YAML; ``suite_id`` is derived from the filename stem. We write to
     ``libero_spatial.yaml`` (not ``_tiny``) so the stem matches a valid
     :data:`openral_core.BenchmarkName` literal — the test uses
@@ -159,7 +159,7 @@ def test_bh_benchmark_run_libero_smolvla_end_to_end(tmp_path: Path) -> None:
             str(_LOCAL_MANIFEST.parent),
             "--out",
             str(out_path),
-            # ADR-0042: ``suite_id`` is the YAML filename stem
+            # ``suite_id`` is the YAML filename stem
             # (``libero_spatial`` here), which IS a valid BenchmarkName.
             # We still suppress manifest writeback so the in-tree
             # ``rskills/smolvla-libero/rskill.yaml`` is never mutated by a

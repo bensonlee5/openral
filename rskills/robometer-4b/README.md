@@ -25,7 +25,7 @@ inference: false
 # rskill-robometer-4b-nf4
 
 > **OpenRAL rSkill** — Robometer-4B (Qwen3-VL-4B robotic **reward foundation
-> model**) packaged as an NF4 bitsandbytes `reward` rSkill (ADR-0057). Given a
+> model**) packaged as an NF4 bitsandbytes `reward` rSkill. Given a
 > rollout's RGB frames plus the task instruction, it emits **per-frame
 > normalized progress (0–1)** and **per-frame success probability**, queried on
 > demand by the Reasoner. **No actuators. Advisory-only.** Apache-2.0.
@@ -50,7 +50,8 @@ bowl is grasped and placed:
 > **[`media/progress.mp4`](media/progress.mp4)** (20 frames, downloadable).
 >
 > Runs the lerobot 0.6.0 in-tree `RobometerRewardModel` (plain `transformers`,
-> no `robometer` git package, no `transformers==4.57.1` pin) — ADR-0057 (amended).
+> no `robometer` git package, no `transformers==4.57.1` pin) — a lighter
+> native-integration path than the original vendored-loader recipe (amended).
 
 ## Quick Start
 
@@ -134,7 +135,7 @@ raw, unnormalized regression values instead. Default sampling is 3 fps.
 
 ### Validated live
 
-End-to-end on an **NVIDIA RTX 4070 Laptop (8 GB)** (ADR-0057 Phases 0/2/3):
+End-to-end on an **NVIDIA RTX 4070 Laptop (8 GB)**:
 
 - **NF4 quantization**: 236 `Linear` modules → `Linear4bit`; **8.91 GB bf16 →
   3.33 GB resident**, **3.56 GB peak** including an 8-frame forward — **4.44 GB
@@ -187,7 +188,7 @@ The model emits no action chunks and has no proprioception contract.
 | `weights_uri` | `hf://OpenRAL/rskill-robometer-4b-nf4` (pre-quantized NF4, meta-loadable; built from the SHA-pinned upstream `source_repo`) |
 | `min_vram_gb.bf16` | 9.0 GB |
 | `min_vram_gb.int4` | 3.6 GB |
-| `reward.frame_window_s` / `target_fps` | 40.0 s / 3.0 fps (ADR-0074 amendment — scores the whole attempt start→now, not an 8 s trailing slice) |
+| `reward.frame_window_s` / `target_fps` | 40.0 s / 3.0 fps (a later reward-window amendment — scores the whole attempt start→now, not an 8 s trailing slice) |
 | `reward.progress_range` / `success_threshold` | `[0,1]` / 0.5 |
 | `latency_budget.per_chunk_ms` | 3000 ms |
 | `actions` | `monitor` |

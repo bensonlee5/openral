@@ -1,4 +1,4 @@
-"""ros2_tracing (LTTng) opt-in for OpenRAL — ADR-0018 F9.
+"""ros2_tracing (LTTng) opt-in for OpenRAL.
 
 LTTng provides kernel-correlated, microsecond-resolution profiling that
 OTel cannot — it captures scheduling decisions, syscalls, and DMA

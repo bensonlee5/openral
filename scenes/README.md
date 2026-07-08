@@ -1,6 +1,6 @@
 # Scene YAMLs (`scenes/`)
 
-This directory holds the three scene tiers from ADR-0041.
+This directory holds the three scene tiers.
 Each tier is a Pydantic schema in `openral_core`; the directory layout matches
 the schema, the CLI matches the directory, and every YAML is loaded through a
 strict per-tier loader (`load_scene_strict(..., expect=<Tier>)`) that rejects
@@ -20,7 +20,7 @@ DeployScene  ⊆  SimScene  ⊆  BenchmarkScene
 Sibling resources:
 
 - [`benchmarks/`](../benchmarks/) — suite-style benchmark YAMLs (bare
-  `list[BenchmarkScene]` at the YAML root, ADR-0042) that aggregate multiple
+  `list[BenchmarkScene]` at the YAML root) that aggregate multiple
   `BenchmarkScene`s under uniform invariants.
   Consumed by `openral benchmark run --suite <id> --rskill <name>`.
 - [`deployments/`](../deployments/) — retired; real deploys use
@@ -33,7 +33,7 @@ Sibling resources:
 | "Boot the full stack so the reasoner can pick its own rSkill"             | `DeployScene`     | Env-only; no task; no eval.                        |
 | "Run one rollout with a specific rSkill" / "save a debug video"           | `SimScene`        | Single CLI invocation; sized for ad-hoc / smoke.   |
 | "Reproduce a paper number for this rSkill" (one scene)                    | `BenchmarkScene`  | Writes a citable `RSkillEvalResult` JSON.          |
-| "Reproduce a paper number for this rSkill" (suite of N scenes)            | `list[BenchmarkScene]` | Lives in [`benchmarks/`](../benchmarks/) (ADR-0042). |
+| "Reproduce a paper number for this rSkill" (suite of N scenes)            | `list[BenchmarkScene]` | Lives in [`benchmarks/`](../benchmarks/). |
 
 A scene can have a sibling YAML at multiple tiers — e.g. `scenes/benchmark/libero_spatial.yaml`
 (paper protocol) and `scenes/sim/libero_spatial.yaml` (ad-hoc smoke). The sim-tier
@@ -195,8 +195,7 @@ base_pose:
 
 Setting `base_pose:` on a fixed-robot scene is a `ROSConfigError` — those
 scenes ship their own MJCF and the field has no physical meaning there. See
-ADR-0002 Amendment 3
-for the rationale.
+the mandatory-mounting-pose design note for the rationale.
 
 ## rSkill compatibility check
 
@@ -208,9 +207,8 @@ and `sensors_required` intersect the robot's capabilities and sensor catalogue
 (missing manifest / unregistered robot) or `ROSCapabilityMismatch`
 (incompatible) — there is no warn-and-proceed path.
 
-See ADR-0002 for the original
-design and ADR-0041 for the
-three-tier split that owns the loader strictness.
+See the original scene-schema design and the later
+three-tier-split design that owns the loader strictness for further detail.
 
 ## Live MuJoCo viewer
 

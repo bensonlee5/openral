@@ -47,7 +47,7 @@ sensors_required:
     min_width: 224
     min_height: 224
 
-# Output side (ADR-0013). The loader auto-fills n_dof + vla_action_key from
+# Output side. The loader auto-fills n_dof + vla_action_key from
 # robots/so101_follower/robot.yaml. Absolute joint-position targets.
 actuators_required:
   - kind: "joint_position"
@@ -72,14 +72,14 @@ weights_uri: "hf://gabrycina/so101-passing-pen-policy"
 # README "ONNX / TensorRT".
 policy_extras:
   act_onnx_uri: "hf://OpenRAL/rskill-act-so101-pen/model.onnx"
-  # ADR-0082 device-resident path: image/state normalize + action unnormalize
+  # Device-resident path: image/state normalize + action unnormalize
   # baked in, image inputs are /255 RGB (the on-GPU nvrtc kernel output). Used
   # when the DeepStream NVMM sensor leg delivers frames as GPU handles.
   act_device_onnx_uri: "hf://OpenRAL/rskill-act-so101-pen/model_device.onnx"
 
-# ── ADR-0077 — reward / progress monitor co-resident with this VLA ──────────
+# ── Reward / progress monitor co-resident with this VLA ─────────────────────
 # A VLA emits no success signal of its own, so it runs paired with a reward
-# monitor (ADR-0074). Robometer (NF4, 3.6 GB) is the default; ACT (fp32,
+# monitor. Robometer (NF4, 3.6 GB) is the default; ACT (fp32,
 # ~0.2 GB) + 3.6 GB fits an 8 GB card with room to spare.
 min_vram_gb:
   fp32: 0.5
@@ -126,7 +126,7 @@ description: >
   faster, ONNX/TensorRT-friendly sibling of rskill-smolvla-so101-pen; the
   whole model exports to a single ONNX graph (OPENRAL_ACT_TRT=1).
 
-# ADR-0022 — action vocabulary for the reasoner LLM tool palette.
+# Action vocabulary for the reasoner LLM tool palette.
 actions:
   - "pick"
   - "place"
@@ -137,10 +137,10 @@ objects:
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract.
+# Per-checkpoint action contract.
 action_contract:
   dim: 6
-  # ADR-0071 — SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
+  # SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
   representation: "joint_positions"
   # EXPLICIT joint units — this checkpoint's normalizer stats span ±100
   # (verified: observation.state.max≈99.3, .min≈-99.3), i.e. DEGREES. The runner

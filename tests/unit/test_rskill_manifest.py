@@ -5,8 +5,8 @@ on-disk descriptor distributed via HuggingFace Hub. Distinct from the
 in-process ``Skill`` ABC (tested in ``test_skill.py``).
 
 ``schema_version`` stays at ``"0.1"`` deliberately: the schema has not
-been published, so ADR-0013 extended the surface in place rather than
-bumping. ADR-0013 added two symmetric guards on top of the initial
+been published, so the surface was extended in place rather than
+bumping. That extension added two symmetric guards on top of the initial
 shape:
 
 - ``actuators_required`` mirrors ``sensors_required`` on the output side
@@ -51,7 +51,7 @@ from pydantic import ValidationError
 def _minimal_manifest_dict() -> dict[str, object]:
     """Return a minimal valid manifest dict for tests.
 
-    ADR-0013 extended the surface with actuators_required +
+    The schema surface was extended with actuators_required +
     embodiment_extra; the rSkill self-containment audit added
     ``control_mode_semantics`` (required per actuator, Gap 2) and a
     ``processors`` block (required for modern lerobot families, Gap 1+3).
@@ -563,7 +563,7 @@ class TestRSkillManifestYAML:
         assert m1 == m2
 
 
-# ── actuators_required (ADR-0013) ────────────────────────────────────────────────────
+# ── actuators_required ────────────────────────────────────────────────────────────────
 
 
 class TestActuatorsRequired:
@@ -637,7 +637,7 @@ class TestActuatorsRequired:
             RSkillManifest.model_validate(d)
 
 
-# ── "custom" embodiment escape hatch (ADR-0013) ───────────────────────────
+# ── "custom" embodiment escape hatch ──────────────────────────────────────
 
 
 class TestCustomEmbodimentHatch:
@@ -837,7 +837,7 @@ class TestJointUnitsDeclared:
         assert m.action_contract.joint_units is JointUnits.DEGREES
 
 
-# ── Optional rSkill envelope (ADR-0018 §5 / ADR-0020) ────────────────────────
+# ── Optional rSkill envelope ──────────────────────────────────────────────────
 
 
 class TestRSkillEnvelope:
@@ -845,7 +845,7 @@ class TestRSkillEnvelope:
 
     Pre-existing manifests without ``envelope`` continue to parse — the field
     is optional and defaults to ``None``. When set, the C++ safety kernel
-    (cpp/openral_safety_kernel/, ADR-0020) enforces the intersection of the
+    (cpp/openral_safety_kernel/) enforces the intersection of the
     skill envelope and the robot ceiling; the intersection algebra and the
     loosening-rejection live in :mod:`openral_safety.envelope_loader`, not
     here on the schema.
@@ -909,7 +909,7 @@ class TestRSkillEnvelope:
         assert m.envelope.max_force_n == 5.0
 
 
-# ── vlm kind (ADR-0047) ──────────────────────────────────────────────────────
+# ── vlm kind ──────────────────────────────────────────────────────────────────
 
 
 def _vlm_manifest_dict() -> dict[str, object]:

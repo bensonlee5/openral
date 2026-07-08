@@ -1,7 +1,8 @@
 """Joint-convention guard: a HAL's published joints must obey its own kinematic limits.
 
 The safety kernel's collision FK is built from each robot's ``robot.yaml`` joint
-chain (axes + ``position_limits``, ADR-0030). If a HAL ever published a joint
+chain (axes + ``position_limits``, from the collision-lowering tool). If a HAL ever
+published a joint
 value in a DIFFERENT sign/axis convention than that model, the kernel would
 forward-kinematics a configuration the real robot is not in — a mirror-image arm
 — which both false-positives self-collision E-stops AND can MISS real collisions.

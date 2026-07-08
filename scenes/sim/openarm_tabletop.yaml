@@ -28,7 +28,7 @@ scene:
     max_steps: 500
     # action_layout / joint_units default to left_first / radians — correct
     # for this checkpoint, so we leave them implicit.
-    # ADR-0066 — the overview-camera pose lives on the SCENE (was the robot
+    # Scene-owns-composition convention — the overview-camera pose lives on the SCENE (was the robot
     # manifest's `scene_defaults.top_camera`, removed so robot.yaml describes
     # only the robot). The mddoai dataset POV: between the bases, facing the
     # tabletop. The openarm_robosuite env feeds these to the composer.
@@ -42,7 +42,7 @@ task:
   instruction: "pick the red cube and place it in the drawer"
   max_steps: 500
 
-# ADR-0002 Amendment 3 — mandatory mounting pose for the
+# Mandatory mounting pose for the
 # openarm_tabletop_pnp scene. Lift bases above the table top + shift
 # forward into the workspace so the 0.6 m arm reach can sweep the
 # picking targets (mirrors the openral deploy sim HAL params for openarm).

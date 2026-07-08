@@ -1,7 +1,7 @@
 ---
 name: topreward-qwen3vl-4b-nf4
 description: >-
-  S2 task-progress / reward monitor. Capabilities: monitor on task progress, task success. TOPReward (arXiv 2602.19313) as an NF4 reward rSkill on lerobot 0.6.0. A ZERO-SHOT reward: asks an off-the-shelf Qwen3-VL-4B VLM how likely the task instruction is given the rollout video, reading log P("True") as the signal. Per-frame progress (0-1) comes from lerobot's prefix sweep. Runs parallel to a VLA, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. ADR-0057. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S2 task-progress / reward monitor. Capabilities: monitor on task progress, task success. TOPReward (arXiv 2602.19313) as an NF4 reward rSkill on lerobot 0.6.0. A ZERO-SHOT reward: asks an off-the-shelf Qwen3-VL-4B VLM how likely the task instruction is given the rollout video, reading log P("True") as the signal. Per-frame progress (0-1) comes from lerobot's prefix sweep. Runs parallel to a VLA, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -36,7 +36,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **task-progress / reward monitor** (`role: s2`, `kind: reward`). TOPReward (arXiv 2602.19313) as an NF4 reward rSkill on lerobot 0.6.0. A ZERO-SHOT reward: asks an off-the-shelf Qwen3-VL-4B VLM how likely the task instruction is given the rollout video, reading log P("True") as the signal. Per-frame progress (0-1) comes from lerobot's prefix sweep. Runs parallel to a VLA, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic. ADR-0057.
+An OpenRAL **task-progress / reward monitor** (`role: s2`, `kind: reward`). TOPReward (arXiv 2602.19313) as an NF4 reward rSkill on lerobot 0.6.0. A ZERO-SHOT reward: asks an off-the-shelf Qwen3-VL-4B VLM how likely the task instruction is given the rollout video, reading log P("True") as the signal. Per-frame progress (0-1) comes from lerobot's prefix sweep. Runs parallel to a VLA, queried on demand by the Reasoner. Advisory-only — never gates motors. Embodiment-agnostic.
 
 ## Capabilities
 

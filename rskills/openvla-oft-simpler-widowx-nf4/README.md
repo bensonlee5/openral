@@ -37,9 +37,9 @@ declared in `evaluated_tasks` until locally reproduced.
 
 **Why WidowX and not Panda/PickCube:** this checkpoint is a *bridge* policy. The
 ManiSkill3 Panda `PickCube-v1` scenes are a different embodiment and task; the
-ADR-0060 task-data gate correctly refuses that pairing (it would produce a
-plausible-but-unsolvable rollout). See ADR-0063
-for the full rationale.
+task-data gate correctly refuses that pairing (it would produce a
+plausible-but-unsolvable rollout). See the OpenVLA / OpenVLA-OFT policy family
+notes below for the full rationale.
 
 ## How it works
 
@@ -130,10 +130,10 @@ MIT (upstream `RLinf/RLinf-OpenVLAOFT-PPO-ManiSkill3-25ood`). The OpenRAL
 packaging is Apache-2.0. The checkpoint is a `trust_remote_code` custom-code
 model; loading executes repo-shipped Python and requires
 `OPENRAL_ALLOW_REMOTE_CODE=1` (provenance: rSkill signature verification is not
-yet implemented — ADR-0006).
+yet implemented).
 
 ## See also
 
-- ADR-0063 — OpenVLA / OpenVLA-OFT policy family
-- ADR-0060 — benchmark task-data compatibility gate
+- OpenVLA / OpenVLA-OFT policy family
+- benchmark task-data compatibility gate
 - [`rldx1-ft-simpler-widowx-nf4`](../rldx1-ft-simpler-widowx-nf4) — the sibling WidowX bridge rSkill.

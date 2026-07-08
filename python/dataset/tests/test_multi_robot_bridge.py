@@ -1,4 +1,4 @@
-"""Multi-robot recorder + bag + converter round-trip (ADR-0019).
+"""Multi-robot recorder + bag + converter round-trip.
 
 Proves the bridge is robot-agnostic by driving the full
 ``RolloutRecorder → Rosbag2Sink → Rosbag2ToLeRobotConverter →
@@ -50,7 +50,7 @@ def _zero_frame_for(
 ) -> tuple[np.ndarray, dict[str, np.ndarray], np.ndarray]:
     """Build (state, images, action) of the shapes a given robot expects.
 
-    ADR-0019: per-camera shape is taken from SensorSpec.intrinsics
+    Per-camera shape is taken from SensorSpec.intrinsics
     (the declared resolution), not a hardcoded test size.
     """
     state = np.zeros(robot.observation_spec.state_shape, dtype=np.float32)

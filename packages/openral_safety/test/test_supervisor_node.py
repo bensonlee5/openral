@@ -1,4 +1,5 @@
-"""Integration tests for ``openral_safety`` SafetyPassthroughNode (ADR-0018 F5).
+"""Integration tests for ``openral_safety`` SafetyPassthroughNode (ROS 2
+reasoner + supervisor graph spec F5).
 
 Drives every managed-lifecycle transition on the real Day-1 pass-through
 node and exercises the topic contract: a valid ActionChunk republishes to

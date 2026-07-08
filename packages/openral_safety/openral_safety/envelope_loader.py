@@ -1,18 +1,18 @@
 """Envelope loader — Python helper that bridges Pydantic to the C++ kernel.
 
-The C++ safety kernel (``cpp/openral_safety_kernel/``, ADR-0020) needs a
+The C++ safety kernel (``cpp/openral_safety_kernel/``) needs a
 robot ceiling + (optional) skill envelope intersection at ``configure()``
 time. Re-implementing Pydantic validation in C++ would duplicate the
 source-of-truth schema (CLAUDE.md §1.3) and create drift; instead, this
 Python helper reads the Pydantic manifests once, validates the
 intersection, and converts the result to a ROS-parameter dict that the
-kernel reads via :func:`load_envelope_from_ros_parameters` (ADR-0020
-PR-K, 2026-05-24).
+kernel reads via :func:`load_envelope_from_ros_parameters`
+(added 2026-05-24).
 
-The legacy flat-YAML envelope-file path the kernel used pre-PR-K is
-gone — there is exactly one transport: ROS parameters.
+The legacy flat-YAML envelope-file path the kernel used before this
+transport is gone — there is exactly one transport: ROS parameters.
 
-ADR-0018 §5 contract enforced here:
+The safety envelope contract enforced here:
 
 * The robot manifest declares the **ceiling**.
 * Each rSkill manifest may declare a **tighter envelope**.
@@ -204,7 +204,7 @@ def _check_scalar_not_loosened(
         raise ROSConfigError(
             f"{label} envelope {field}={skill_value!r} loosens robot ceiling "
             f"{field}={robot_value!r}; {label} envelope must be tighter "
-            "or equal to the robot ceiling (ADR-0018 §5)."
+            "or equal to the robot ceiling."
         )
 
 
@@ -242,7 +242,7 @@ def _validate_envelope_tightens(
     ):
         raise ROSConfigError(
             f"{label} envelope clears deadman_required while the robot ceiling "
-            "requires it; loosening rejected (ADR-0018 §5)."
+            "requires it; loosening rejected."
         )
 
 
@@ -317,7 +317,7 @@ def compute_intersection(
     Raises:
         ROSConfigError: When ``skill.envelope`` loosens the robot ceiling on
             any field. The loader refuses to honor a looser envelope
-            (CLAUDE.md §1.1, §1.4; ADR-0018 §5).
+            (CLAUDE.md §1.1, §1.4).
     """
     robot_env: SafetyEnvelope = robot.safety
     merged_env = merge_deploy_envelope(robot_env, deploy)
@@ -400,8 +400,8 @@ def kernel_params_from_envelope(envelope: EnvelopeIntersection) -> dict[str, obj
     """Translate :class:`EnvelopeIntersection` → safety_kernel ROS parameters.
 
     The C++ safety kernel (``cpp/openral_safety_kernel/``) reads its
-    envelope exclusively from per-field ROS parameters (ADR-0020 PR-K,
-    2026-05-24). This function is the canonical Python → ROS-params
+    envelope exclusively from per-field ROS parameters (added 2026-05-24).
+    This function is the canonical Python → ROS-params
     converter — used by ``openral deploy sim``'s ``sim_e2e.launch.py`` to
     feed the kernel from ``robots/<id>/robot.yaml``, by ``kernel_only``
     launches, and by every C++ / Python kernel test fixture.
@@ -507,7 +507,7 @@ def _capsules_by_link(
         if geom.link_name in capsule_of:
             msg = (
                 f"link {geom.link_name!r} has >1 collision primitive; "
-                "split it into separate links (unsupported in ADR-0030 phase 2)"
+                "split it into separate links (unsupported in this lowering phase)"
             )
             raise ROSConfigError(msg)
         capsule_of[geom.link_name] = geom
@@ -521,7 +521,7 @@ def collision_params_from_description(  # noqa: PLR0912, PLR0915
 
     Lowers :attr:`RobotDescription.collision_geometry` +
     :attr:`~RobotDescription.allowed_collision_pairs` + the kinematic chain
-    (``joints`` with their ADR-0030 ``origin_xyz`` / ``origin_rpy`` / ``axis_xyz``)
+    (``joints`` with their ``origin_xyz`` / ``origin_rpy`` / ``axis_xyz``)
     into the flat parallel arrays the C++ kernel's ``load_collision_model``
     reads. ``joints`` stays the normative kinematic source; this never parses
     URDF/MJCF — the offline lowering tool populates the joint origins + capsules
@@ -536,7 +536,7 @@ def collision_params_from_description(  # noqa: PLR0912, PLR0915
     Args:
         robot: The robot manifest. No collision geometry → returns
             ``{"self_collision_enabled": False}`` (the kernel runs the scalar
-            envelope check only, exactly as before ADR-0030).
+            envelope check only, exactly as before this lowering was added).
         margin_m: Clearance margin in metres; a pair closer than this fires
             (default ``0.0`` = collide on touch).
 
@@ -552,7 +552,7 @@ def collision_params_from_description(  # noqa: PLR0912, PLR0915
     if not robot.collision_geometry:
         return {"self_collision_enabled": False}
 
-    # ADR-0081 — an explicit margin_m arg overrides; otherwise use the manifest's
+    # An explicit margin_m arg overrides; otherwise use the manifest's
     # safety.self_collision_margin_m (default 0.0 = collide on touch).
     if margin_m is None:
         margin_m = float(getattr(robot.safety, "self_collision_margin_m", 0.0) or 0.0)
@@ -584,8 +584,8 @@ def collision_params_from_description(  # noqa: PLR0912, PLR0915
             axis.extend([float(v) for v in j.axis_xyz])
 
     # Each link's primitive is routed by shape: capsules/spheres to the capsule
-    # arrays (sphere = zero-length capsule), boxes to the OBB arrays (ADR-0081 /
-    # issue #84). Both are flat per-primitive lists tagged with the link index.
+    # arrays (sphere = zero-length capsule), boxes to the OBB arrays
+    # (issue #84). Both are flat per-primitive lists tagged with the link index.
     capsule_link: list[int] = []
     capsule_radius: list[float] = []
     capsule_half_length: list[float] = []
@@ -690,7 +690,7 @@ def merge_extra_allowed_pairs(
 
 
 def ee_link_index_from_collision_params(params: Mapping[str, object]) -> int:
-    """Pick the predictive-Cartesian end-effector link (ADR-0040 Phase 3).
+    """Pick the predictive-Cartesian end-effector link.
 
     The C++ kernel reconstructs where a ``CARTESIAN_DELTA`` chunk's EE deltas
     drive the arm using the geometric Jacobian of one *control* link. For a

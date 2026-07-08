@@ -8,47 +8,47 @@ The canonical visual map is [`repo-state-map.html`](repo-state-map.html). This p
 openral/                      ← THIS monorepo
 ├─ python/                        ← uv workspace; pure-Python libs
 │  ├─ core/         (openral_core)        ← Pydantic v2 schemas (normative) ✓
-│  ├─ cli/          (openral_cli)         ← `openral` entry point (bare → REPL, with args → one-shot; ADR-0021) ✓
-│  ├─ detect/       (openral_detect)      ← `openral detect` auto-provisioning → robot.yaml (ADR-0008) ✓
+│  ├─ cli/          (openral_cli)         ← `openral` entry point (bare → REPL, with args → one-shot) ✓
+│  ├─ detect/       (openral_detect)      ← `openral detect` auto-provisioning → robot.yaml ✓
 │  ├─ hal/          (openral_hal)         ← `HAL` Protocol + manifest-driven `MujocoArmHAL` adapters (SO-100/101, Franka, UR5e/10e, ALOHA, OpenArm, Rizon4, H1, G1, panda_mobile) ✓
 │  ├─ sensors/      (openral_sensors)     ← Sensor catalog + vendor adapters ✓
 │  ├─ world_state/  (openral_world_state) ← `WorldStateAggregator` (30 Hz snapshot, staleness latching, detected-objects fold-in) ✓
-│  ├─ rskill/       (openral_rskill)      ← `rSkillBase` ABC, `rSkill` loader, runtime adapters (PyTorch/ONNX; TensorRT is an OpenRAL Pro plugin, ADR-0083), VLA + detector adapters ✓
-│  ├─ state_adapter/ (openral_state_adapter) ← rSkill state-contract bindings (ADR-0027) ✓
-│  ├─ sim/          (openral_sim)         ← `SimRunner` + `openral sim run` / `openral benchmark run` registry; LIBERO/MetaWorld/RoboCasa/ManiSkill3/SimplerEnv/gym-aloha/gym-pusht/IsaacSim (ADR-0045 sidecar) adapters ✓
-│  ├─ runner/       (openral_runner)      ← `InferenceRunner` Protocol + `DeployRunner` + `GStreamerSensorReader` + `NullSafetyClient`; ADR-0010 ✓
-│  ├─ reasoner/     (openral_reasoner)    ← S2 LLM reasoner/supervisor core — `ReasonerCore`, `ReasonerToolCall` palette, bounded replanning ladder (ADR-0018) ✓
-│  ├─ dataset/      (openral_dataset)     ← rosbag2 ↔ LeRobotDataset v3 bridge (ADR-0019) ✓
+│  ├─ rskill/       (openral_rskill)      ← `rSkillBase` ABC, `rSkill` loader, runtime adapters (PyTorch/ONNX; TensorRT is an OpenRAL Pro plugin), VLA + detector adapters ✓
+│  ├─ state_adapter/ (openral_state_adapter) ← rSkill state-contract bindings ✓
+│  ├─ sim/          (openral_sim)         ← `SimRunner` + `openral sim run` / `openral benchmark run` registry; LIBERO/MetaWorld/RoboCasa/ManiSkill3/SimplerEnv/gym-aloha/gym-pusht/IsaacSim (sidecar) adapters ✓
+│  ├─ runner/       (openral_runner)      ← `InferenceRunner` Protocol + `DeployRunner` + `GStreamerSensorReader` + `NullSafetyClient` ✓
+│  ├─ reasoner/     (openral_reasoner)    ← S2 LLM reasoner/supervisor core — `ReasonerCore`, `ReasonerToolCall` palette, bounded replanning ladder ✓
+│  ├─ dataset/      (openral_dataset)     ← rosbag2 ↔ LeRobotDataset v3 bridge ✓
 │  ├─ wam/          (openral_wam)         ← World Action Model layer (mental-simulation gating) — scaffold ◐
 │  └─ observability/ (openral_observability) ← OTel SDK + OTLP exporter, span helpers, structlog↔OTel bridge ✓
 │  Planned: dispatcher (edge/cloud/split)
 ├─ packages/                      ← ROS 2 packages (colcon build)
-│  ├─ msgs/         (openral_msgs)        ← IDL (.msg, .action) — normative; WorldStateStamped carries detected_objects (ADR-0035) ✓
+│  ├─ msgs/         (openral_msgs)        ← IDL (.msg, .action) — normative; WorldStateStamped carries detected_objects ✓
 │  ├─ world_state/  (openral_world_state_ros) ← lifecycle node wrapping the aggregator ✓
 │  ├─ openral_hal_so100/      ← SO-100 / SO-101 lifecycle node ✓
 │  ├─ openral_hal_franka/     ← Franka lifecycle node ✓
 │  ├─ openral_hal_ur5e/  · openral_hal_ur10e/  ← UR5e / UR10e lifecycle nodes ✓
 │  ├─ openral_hal_aloha/  · openral_hal_openarm/  ← bimanual lifecycle nodes ✓
-│  ├─ openral_hal_rizon4/  · openral_hal_g1/  · openral_hal_h1/  · openral_hal_panda_mobile/  ← per-robot lifecycle nodes (ADR-0029 unified base) ✓
-│  ├─ openral_hal_scene_attached/ ← scene-attached sim HAL node (`deploy sim`, ADR-0034) ✓
-│  ├─ openral_reasoner_ros/   ← ADR-0018 F4 reasoner_node (LLM ReasonerToolCall dispatch) ✓
-│  ├─ openral_prompt_router/  ← ADR-0018 F10 prompt fan-in lifecycle node ✓
-│  ├─ openral_rskill_ros/      ← ADR-0018 F1 rskill_runner_node + ExecuteSkill action server ✓
-│  ├─ openral_safety/         ← ADR-0018 F5 safety_node (geometric collision checking, ADR-0030) ✓
+│  ├─ openral_hal_rizon4/  · openral_hal_g1/  · openral_hal_h1/  · openral_hal_panda_mobile/  ← per-robot lifecycle nodes (unified base) ✓
+│  ├─ openral_hal_scene_attached/ ← scene-attached sim HAL node (`deploy sim`) ✓
+│  ├─ openral_reasoner_ros/   ← reasoner_node (LLM ReasonerToolCall dispatch) ✓
+│  ├─ openral_prompt_router/  ← prompt fan-in lifecycle node ✓
+│  ├─ openral_rskill_ros/      ← rskill_runner_node + ExecuteSkill action server ✓
+│  ├─ openral_safety/         ← safety_node (geometric collision checking) ✓
 │  ├─ openral_safety_watchdog/ · openral_human_estop/ ← deadman watchdog + human E-stop forwarders ✓
-│  ├─ openral_perception_ros/ ← RosImageObjectDetectorNode (Image → ObjectsMetadata → 2D→3D lift, ADR-0035) ✓
-│  ├─ openral_octomap_bridge/ ← OctoMap → safety-kernel OccupancyVoxels lowering (ADR-0030) ✓
-│  ├─ openral_nav2_bringup/ · openral_slam_bringup/ ← reasoner-managed Nav2 / slam_toolbox services (ADR-0025) ✓
-│  └─ openral_foxglove_bringup/ ← read-only Foxglove live-scene bridge + Bucket-2 converter + MCAP (ADR-0059) ✓
+│  ├─ openral_perception_ros/ ← RosImageObjectDetectorNode (Image → ObjectsMetadata → 2D→3D lift) ✓
+│  ├─ openral_octomap_bridge/ ← OctoMap → safety-kernel OccupancyVoxels lowering ✓
+│  ├─ openral_nav2_bringup/ · openral_slam_bringup/ ← reasoner-managed Nav2 / slam_toolbox services ✓
+│  └─ openral_foxglove_bringup/ ← read-only Foxglove live-scene bridge + Bucket-2 converter + MCAP ✓
 │  Planned: core_ros, sensors_ros, dispatcher_ros, launch
-├─ cpp/                           ← openral_safety_kernel — C++ deny-by-default kernel (ADR-0020; implemented + tested, certification pending) ✓
+├─ cpp/                           ← openral_safety_kernel — C++ deny-by-default kernel (implemented + tested, certification pending) ✓
 ├─ rskills/                       ← rSkill packages (manifest + weights + eval/) — VLA + detector kinds ✓
-├─ scenes/                        ← SimEnvironment YAMLs (`sim run`) + native scenes (ADR-0002/0033) ✓
+├─ scenes/                        ← SimEnvironment YAMLs (`sim run`) + native scenes ✓
 ├─ benchmarks/                    ← benchmark suite definitions ✓
-├─ deployments/                   ← retired; deploy configs live in scenes/deploy (ADR-0078) ✓
+├─ deployments/                   ← retired; deploy configs live in scenes/deploy ✓
 ├─ robots/                        ← canonical RobotDescription manifests ✓
 ├─ tests/{unit,integration,sim,hil}/  ← all four trees ✓
-├─ docs/                          ← mkdocs-material; ADR log lives in the private OpenRAL/management repo ✓
+├─ docs/                          ← mkdocs-material; decision log lives in the private OpenRAL/management repo ✓
 ├─ tools/                         ← schema_export.py, skill_publisher.py ✓
 ├─ scripts/                       ← bootstrap_*.sh, install.sh ✓
 ├─ Justfile                       ← canonical task runner ✓

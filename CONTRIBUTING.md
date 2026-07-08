@@ -33,7 +33,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat(skill): add SmolVLA adapter
 fix(safety): clamp ee_speed before publish
-docs(adr): ADR-0002 Pydantic over dataclasses
+docs: record the Pydantic-over-dataclasses decision
 chore: bump uv.lock
 ```
 

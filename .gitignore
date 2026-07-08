@@ -1,4 +1,4 @@
-# Unsloth writes a compiled-kernel cache into CWD when the robometer sidecar runs (ADR-0057)
+# Unsloth writes a compiled-kernel cache into CWD when the robometer sidecar runs 
 unsloth_compiled_cache/
 
 # Python
@@ -85,8 +85,7 @@ outputs/
 .libero/
 
 # NVIDIA DeepStream SDK tarball — must be downloaded locally by the user
-# after accepting the NVIDIA EULA. Never committed (ADR-0010 Amendment
-# 2026-05-14 / docker/inference/README.md). The tarball is loaded into
+# after accepting the NVIDIA EULA. Never committed . The tarball is loaded into
 # the build via `docker buildx build --build-context ds=docker/inference/deepstream/`
 # rather than the default build context, so it never inflates non-DS
 # builds.
@@ -105,7 +104,7 @@ python/observability/src/openral_observability/dashboard/static/vendor/vad/siler
 python/observability/src/openral_observability/dashboard/static/vendor/vad/silero_vad_legacy.onnx
 
 # rSkill ONNX weights — binary artefacts reproduced locally via tools/export_rtdetr_onnx.py
-# (ADR-0037); provenance (sha256 + export command) recorded in rskills/*/README.md.
+# ; provenance (sha256 + export command) recorded in rskills/*/README.md.
 # model.onnx.data is the external-data companion produced by the torch 2.9 new exporter
 # (weights split out from the graph file when the model exceeds 2 GB threshold).
 rskills/rtdetr-coco-r18/model.onnx

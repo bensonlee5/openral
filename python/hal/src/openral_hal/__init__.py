@@ -50,7 +50,7 @@ Public surface:
 
 All ``*_REAL_DESCRIPTION`` constants are derived from their sim siblings via
 ``openral_hal._real_description.make_real_description``; they share the same
-``hal`` entrypoints (``hal.sim`` / ``hal.real``, ADR-0031) and differ only in
+``hal`` entrypoints (``hal.sim`` / ``hal.real``) and differ only in
 ``sdk_kind``.
 """
 

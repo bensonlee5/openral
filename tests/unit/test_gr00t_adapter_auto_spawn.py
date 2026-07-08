@@ -1,4 +1,4 @@
-"""Unit tests for the NVIDIA GR00T-N1.7 rSkill contract (ADR-0046, amended).
+"""Unit tests for the NVIDIA GR00T-N1.7 rSkill contract (in-process backend).
 
 GR00T-N1.7 now loads **in-process** via lerobot 0.6.0's native ``GrootPolicy``
 (``openral_sim.policies.gr00t``), NF4-quantized like pi05 — there is no longer a

@@ -12,7 +12,7 @@ Public surface
 - ``rSkill``: HF Hub rSkill loader (manifest + weights + license guard).
 - ``InstalledRSkillEntry``: Local registry entry schema.
 - ``resolve_runtime_backend``: Name -> ``Runtime`` class, built-in or via the
-  ``openral.runtime_backends`` entry-point group (ADR-0083 extraction seam).
+  ``openral.runtime_backends`` entry-point group (the OpenRAL Pro extraction seam).
 - ``maybe_attach_pro_hooks``: Generic OpenRAL Pro policy-attach-hook lookup
   via the ``openral.policy_attach_hooks`` entry-point group.
 
@@ -24,7 +24,7 @@ Import them explicitly when their dependencies are installed:
     from openral_rskill.runtime_pytorch import PyTorchRuntime
     from openral_rskill.runtime_onnx import ONNXRuntime
 
-A TensorRT ``Runtime`` is not shipped in this package (ADR-0083 — the
+A TensorRT ``Runtime`` is not shipped in this package (the
 TensorRT/NVMM fast path is a private OpenRAL Pro plugin); resolve it via
 ``resolve_runtime_backend("tensorrt")`` when ``openral-pro-trt`` is installed.
 """

@@ -23,8 +23,9 @@ confirmed by the project lead.
 Because OpenRAL drives physical actuators, the **Safety Working Group**
 (`@openral/safety`) has mandatory review authority over everything under
 `packages/openral_safety/` and `cpp/openral_safety_kernel/`. A safety-WG
-reviewer, a hazard-log update, and tests proving the change is *at least as
-conservative* are required for any safety-touching change (see CLAUDE.md §3).
+reviewer, an update to the safety hazard log (private `OpenRAL/management`
+repo), and tests proving the change is *at least as conservative* are
+required for any safety-touching change (see CLAUDE.md §3).
 Safety reviewers can block a change on safety grounds regardless of other
 approvals. For hazard reports or coordinated safety disclosure, email security@openral.dev
 with "[safety]" in the subject line.
@@ -50,7 +51,7 @@ contribute — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licensing & contributions
 
-OpenRAL is licensed entirely under Apache-2.0 (ADR-0012) — there is no
+OpenRAL is licensed entirely under Apache-2.0 — there is no
 source-available or copy-left tier in this repo; see
 [`docs/decisions.md`](docs/decisions.md) for the licensing/commercial-tier
 boundary. Contributions are accepted under the Developer

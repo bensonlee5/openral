@@ -10,7 +10,7 @@
 # ── Identity ───────────────────────────────────────────────────────────────
 schema_version: "0.1"
 name: "OpenRAL/rskill-smolvla-vlabench"
-evaluated_tasks: ["vlabench"]  # ADR-0060 family gate: covers "vlabench/<task>" ids.
+evaluated_tasks: ["vlabench"]  # Family gate: covers "vlabench/<task>" ids.
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
@@ -67,7 +67,7 @@ image_preprocessing:
 state_contract:
   # VLABench proprio is 7-D (pos[3] + euler[3] + gripper[1]); the checkpoint's
   # normalizer stats + vlabench_unified dataset are 7-D. No `layout` — that
-  # selects a deploy-time state adapter (ADR-0027); for sim the vlabench backend
+  # selects a deploy-time state adapter; for sim the vlabench backend
   # emits the 7-D state directly.
   dim: 7
 

@@ -1,4 +1,4 @@
-# ADR-0047 — ask a scene VLM (e.g. Qwen3.5-4B NF4, kind: "vlm") an open-ended
+# Ask a scene VLM (e.g. Qwen3.5-4B NF4, kind: "vlm") an open-ended
 # question about the CURRENT camera view, on demand.
 #
 # Called by the reasoner's read-only `query_scene` tool dispatch

@@ -217,7 +217,7 @@ class Rizon4MujocoHAL(MujocoArmHAL):
     ) -> None:
         """Initialise the Rizon 4 HAL; no MuJoCo state is created until ``connect()``.
 
-        All wiring lives in :data:`RIZON4_DESCRIPTION.sim` (ADR-0023).
+        All wiring lives in :data:`RIZON4_DESCRIPTION.sim`.
         """
         self._init_from_description(
             RIZON4_DESCRIPTION,

@@ -1,4 +1,4 @@
-"""Pure starting-pose dispatch decision + MoveIt goal shaping (ADR-0053).
+"""Pure starting-pose dispatch decision + MoveIt goal shaping.
 
 Before the first inference tick of an ``ExecuteSkill`` goal, the runner can move
 the HAL to the rSkill's in-distribution ``starting_pose`` two ways:
@@ -10,7 +10,7 @@ the HAL to the rSkill's in-distribution ``starting_pose`` two ways:
   (the kernel checks every step). A failure is **fatal** — the runner aborts the
   goal rather than start the policy from an unreachable / colliding state.
 * **reset** — the legacy ``ResetToPose`` snap (instantaneous ``qpos`` teleport),
-  **best-effort** — a failure only warns (pre-ADR-0053 behaviour, kept for HALs
+  **best-effort** — a failure only warns (legacy behaviour, kept for HALs
   without a MoveIt config).
 
 This module holds only the *decision* and *pure goal-shaping* (no ROS) so it is
@@ -83,7 +83,7 @@ def resolve_starting_pose_action(
 def joint_names_from_goal_json(default_goal_json: str) -> list[str]:
     """Extract the planning-group joint names from a MoveGroup ``default_goal_json``.
 
-    Reads the ADR-0054 ``joint`` block's ``joint_names`` — the joint order the
+    Reads the ``joint`` block's ``joint_names`` — the joint order the
     ``rskill-moveit-joints`` (``goal_builder: "joint"``) approach manifest
     declares for its MoveIt planning group. Used to length-check a robot's flat
     ``starting_pose`` before building the retarget override
@@ -120,7 +120,7 @@ def joint_names_from_goal_json(default_goal_json: str) -> list[str]:
 def moveit_joint_goal_override(joint_names: Sequence[str], positions: Sequence[float]) -> str:
     """Build the ``goal_params_json`` that retargets the joint goal at ``positions``.
 
-    Produces the ADR-0026 deep-merge override that replaces the approach
+    Produces the deep-merge override that replaces the approach
     manifest's ``joint.positions`` with ``starting_pose`` — i.e. plan to the next
     skill's pose instead of the manifest's home default. ``joint_names`` (from
     :func:`joint_names_from_goal_json`) is used only to length-check ``positions``;

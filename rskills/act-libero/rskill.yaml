@@ -9,7 +9,7 @@ name: "OpenRAL/rskill-act-libero"
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "act"
@@ -58,7 +58,7 @@ image_preprocessing:
     camera1: "image"
     camera2: "image2"
 state_contract:
-  # ADR-0027 — LIBERO checkpoints train on 8-D TASK-SPACE proprio
+  # LIBERO checkpoints train on 8-D TASK-SPACE proprio
   # (eef_pos ‖ eef_axisangle ‖ gripper). `openral sim run` supplies it directly;
   # `openral deploy sim` assembles it from live TF + JointState via the
   # `libero_eef8d` state-adapter. Without the layout the runner falls back to raw
@@ -90,7 +90,7 @@ description: >
   + 8-D state + 7-D action; plain chunked replay. State layout matches
   openral_sim's LIBERO backend.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -107,9 +107,9 @@ scenes:
   - "tabletop"
   - "kitchen"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 action_contract:
   dim: 7
-  # ADR-0036 — LIBERO action space is 6-D OSC end-effector delta + gripper.
+  # LIBERO action space is 6-D OSC end-effector delta + gripper.
   representation: "delta_ee_6d_plus_gripper"

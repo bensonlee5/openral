@@ -1,4 +1,4 @@
-"""NVIDIA Isaac GR00T N1.7 policy adapter — in-process lerobot backend (ADR-0046).
+"""NVIDIA Isaac GR00T N1.7 policy adapter — in-process lerobot backend.
 
 Historically GR00T ran out-of-process in a Python-3.10 ZMQ sidecar (flash-attn +
 Isaac-GR00T pin 3.10). lerobot 0.6.0 ships a native, in-process ``GrootPolicy``

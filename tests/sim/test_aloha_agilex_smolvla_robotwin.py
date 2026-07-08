@@ -1,4 +1,4 @@
-"""Sim test: real RoboTwin 2.0 dual-arm SAPIEN env via the out-of-process sidecar (ADR-0061).
+"""Sim test: real RoboTwin 2.0 dual-arm SAPIEN env via the out-of-process sidecar.
 
 Exercises ``openral_sim.backends.robotwin`` end-to-end: the openral (py3.12) process
 auto-spawns the RoboTwin sidecar venv, which builds LeRobot's native
@@ -17,12 +17,12 @@ What is asserted
 Skip policy
 -----------
 RoboTwin's SAPIEN + lerobot-main + asset stack is an externally-provisioned sidecar
-venv (multi-GB, CUDA-pinned, Linux-only; CLAUDE.md §1.9 / ADR-0061). The test skips
+venv (multi-GB, CUDA-pinned, Linux-only; CLAUDE.md §1.9). The test skips
 unless BOTH pyzmq/msgpack are importable on the openral venv AND the sidecar
 interpreter is resolvable via ``OPENRAL_ROBOTWIN_SIDECAR_PYTHON`` (or the cache
 default exists). Hosts without the provisioned venv skip — the legitimate skip path
 (§1.12); the SAPIEN engine itself is independently verified on the reference host
-(ADR-0061 §Live verification).
+(see the RoboTwin benchmark epic's "Live verification" notes).
 """
 
 from __future__ import annotations

@@ -1,6 +1,7 @@
 """lower_robot: SRDF precedence, sampling fallback, scoping, geometry/acm flags.
 
-The top-level entry that ties geometry + ACM together (ADR-0030). The panda
+The top-level entry that ties geometry + ACM together (part of the geometric
+safety collision-checking system). The panda
 oracle: lowering panda_mobile against the Franka SRDF must reproduce the SRDF arm
 disables exactly — including the link1↔link4 "Never" pair whose absence
 false-E-stopped a live pi05 episode. Real manifests + real SRDF, no mocks (§1.11).

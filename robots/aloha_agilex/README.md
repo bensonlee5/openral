@@ -10,8 +10,8 @@ dataset and the public RoboTwin checkpoints (e.g.
 ## Sim-only manifest
 
 Unlike most robots in `robots/`, this manifest ships **no on-disk URDF/MJCF**. The actual
-robot lives inside the **SAPIEN** environment owned by the RoboTwin sidecar
-(ADR-0061), so the openral side
+robot lives inside the **SAPIEN** environment owned by the RoboTwin sidecar,
+so the openral side
 never instantiates it. The manifest exists only so the eval layer can:
 
 - resolve the **14-D joint-position action/state contract**, and
@@ -24,5 +24,5 @@ Joint kinematics are therefore **approximate** (sufficient for capability matchi
 ## Driving it
 
 Used by `scenes/benchmark/robotwin_*.yaml` and `benchmarks/robotwin.yaml` through the
-`robotwin` scene backend. See the [benchmarks README](../../benchmarks/README.md) and ADR-0061
+`robotwin` scene backend. See the [benchmarks README](../../benchmarks/README.md)
 for the sidecar provisioning recipe.

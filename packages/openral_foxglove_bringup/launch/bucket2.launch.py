@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch file for the Bucket-2 converter node (ADR-0059 Phase 3).
+"""Launch file for the Bucket-2 converter node.
 
 Spawns ``bucket2_markers`` — a read-only converter that re-publishes
 ``openral_msgs/WorldCollision`` and ``openral_msgs/OccupancyVoxels``
@@ -33,7 +33,7 @@ def generate_launch_description() -> LaunchDescription:
             "use_sim_time",
             default_value="false",
             description=(
-                "Set true when a /clock is published (deploy-sim, ADR-0048) "
+                "Set true when a /clock is published (deploy-sim) "
                 "so marker/cloud timestamps align with sim time."
             ),
         ),

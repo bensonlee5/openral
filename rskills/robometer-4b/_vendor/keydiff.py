@@ -1,4 +1,4 @@
-"""Diagnose meta-skeleton ↔ checkpoint key divergence (ADR-0057 load fix)."""
+"""Diagnose meta-skeleton ↔ checkpoint key divergence (Robometer NF4 load fix)."""
 
 from __future__ import annotations
 

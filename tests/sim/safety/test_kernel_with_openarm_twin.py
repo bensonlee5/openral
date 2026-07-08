@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — closed-loop Enactic OpenArm v2 twin + C++ safety kernel.
+"""PR-H — closed-loop Enactic OpenArm v2 twin + C++ safety kernel.
 
 OpenArm v2 is a 16-DoF bimanual humanoid arm (7 arm + 1 gripper per
 side). This exercises the kernel on the largest single-robot envelope
@@ -54,7 +54,7 @@ def test_openarm_v2_twin_closed_loop_through_kernel() -> None:
     try:
         state0 = hal.read_state()
         assert len(state0.position) == n_dof
-        with tempfile.TemporaryDirectory():  # ADR-0020 PR-K: no temp envelope file needed
+        with tempfile.TemporaryDirectory():  # PR-K: no temp envelope file needed
             node_name = f"safety_kernel_openarm_{uuid.uuid4().hex[:8]}"
             domain_id = isolated_domain_id()
             proc = start_kernel(OPENARM_DESCRIPTION, node_name, domain_id)
@@ -198,7 +198,7 @@ def test_openarm_envelope_violation_latches_kernel_and_protects_hal() -> None:
         state0 = hal.read_state()
         joint0_initial = state0.position[0]
 
-        with tempfile.TemporaryDirectory():  # ADR-0020 PR-K: no temp envelope file needed
+        with tempfile.TemporaryDirectory():  # PR-K: no temp envelope file needed
             node_name = f"safety_kernel_openarm_v_{uuid.uuid4().hex[:8]}"
             domain_id = isolated_domain_id()
             proc = start_kernel(OPENARM_DESCRIPTION, node_name, domain_id)

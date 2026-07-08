@@ -1,7 +1,7 @@
 # rSkill manifest — Nav2 NavigateToPose (kind: ros_action, result-only)
 #
 # Wraps the upstream `nav2_msgs/action/NavigateToPose` action server as
-# an OpenRAL rSkill. See ADR-0024.
+# an OpenRAL rSkill.
 #
 # RESULT-ONLY MODE
 # ----------------
@@ -11,13 +11,13 @@
 # chunk is emitted to `/openral/candidate_action`. Nav2's own behaviour
 # tree publishes `cmd_vel` directly to the base controller, BYPASSING
 # the OpenRAL safety supervisor for those velocity commands. Collision
-# avoidance relies entirely on Nav2's costmap. The Out-of-scope section
-# of ADR-0024 tracks the follow-up that brings velocity-stream safety
-# under the supervisor's check (no in-tree HAL exposes `body_twist` in
+# avoidance relies entirely on Nav2's costmap. Bringing velocity-stream
+# safety under the supervisor's check is an explicit out-of-scope
+# follow-up for the ROS-wrapped rSkills design (no in-tree HAL exposes `body_twist` in
 # `supported_control_modes` today, so this is also blocked on a
 # mobile-base HAL landing — issue tracked separately).
 #
-# ADR-0026 — per-dispatch structured parameters. The LLM tool palette
+# Per-dispatch structured parameters. The LLM tool palette
 # surfaces this schema to the provider; the reasoner attaches the
 # generated payload as ``goal_params_json`` on the ExecuteSkill goal;
 # the wrapped-action adapter deep-merges it over the
@@ -61,7 +61,7 @@ chunk_size: 1
 latency_budget:
   per_chunk_ms: 60000.0
 
-# ADR-0022 — surfaced to the Reasoner LLM tool palette.
+# Surfaced to the Reasoner LLM tool palette.
 description: >
   Navigate the mobile base to a target pose via Nav2's NavigateToPose.
   Supports BOTH absolute and relative goals via pose.header.frame_id:
@@ -111,7 +111,7 @@ ros_integration:
     - "ros-${ROS_DISTRO}-nav2-bringup"
     - "ros-${ROS_DISTRO}-nav2-msgs"
 
-# ADR-0026 — per-skill JSON Schema surfaced to the Reasoner LLM tool
+# Per-skill JSON Schema surfaced to the Reasoner LLM tool
 # palette. The LLM produces a JSON object matching this schema; the
 # adapter deep-merges over ``default_goal_json`` at configure-time.
 #

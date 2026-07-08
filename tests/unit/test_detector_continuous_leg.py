@@ -6,10 +6,11 @@ its per-frame outcome silently: a ``detect()`` exception was logged at DEBUG
 On ``/openral/perception/objects`` that makes a *crashing* detector (e.g. a CUDA
 OOM under VLA co-residency on an 8 GB card) indistinguishable from one watching a
 quiet scene — both leave the topic empty, because the real detector publishes
-nothing when it sees nothing (the ADR-0035 contract the world-state eviction
-relies on). :func:`classify_continuous_tick` is the pure decision that maps each
-tick's outcome to the log level that surfaces it, so the leg is observable
-without changing what lands on the bus. Validated here with no LifecycleNode or
+nothing when it sees nothing (the empty-topic-means-quiet-scene contract the
+world-state eviction relies on). :func:`classify_continuous_tick` is the pure
+decision that maps each tick's outcome to the log level that surfaces it, so
+the leg is observable without changing what lands on the bus. Validated here
+with no LifecycleNode or
 executor — the node applies its own throttling and does the publish.
 
 ``openral_perception_ros`` is a colcon-built ROS package (ament_cmake); like the

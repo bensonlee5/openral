@@ -27,8 +27,8 @@ perception path is ONNX-file-based, and `openral deploy sim` uses
 binary is listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 — the clone stays small; the file is regenerated locally on demand. The
 heavier `rtdetr-v2-r50vd` variant (`runtime: tensorrt`) moved to the private
-`openral-pro` repo (ADR-0083) — the TensorRT engine runtime it depends on
-is an OpenRAL Pro plugin.
+`openral-pro` repo — the commercial-tier split that hosts the TensorRT engine
+runtime it depends on as an OpenRAL Pro plugin.
 
 ## Catalog
 

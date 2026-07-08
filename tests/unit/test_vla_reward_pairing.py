@@ -1,7 +1,7 @@
-"""Tests for the VLA↔reward pairing + GPU VRAM fit check (ADR-0077).
+"""Tests for the VLA↔reward pairing + GPU VRAM fit check.
 
 A VLA emits no success signal of its own, so it runs with a reward model resident
-alongside it (ADR-0074). ADR-0077 records that pairing on the VLA manifest
+alongside it. This records that pairing on the VLA manifest
 (`reward_rskill_name`) and refuses to launch a pair that does not fit GPU VRAM.
 
 Fixture-backed (CLAUDE.md §1.11): real `rskills/smolvla-libero` (the VLA) +
@@ -35,7 +35,7 @@ def _reward() -> RSkillManifest:
 
 
 def test_smolvla_manifest_declares_its_reward_pairing_and_size() -> None:
-    """ADR-0077 — the VLA manifest names its reward model and declares bf16 VRAM."""
+    """The VLA manifest names its reward model and declares bf16 VRAM."""
     vla = _vla()
     assert vla.kind == "vla"
     assert vla.reward_rskill_name == "OpenRAL/rskill-robometer-4b-nf4"
@@ -87,7 +87,7 @@ def test_undeclared_vram_cannot_be_verified_raises_config_error() -> None:
 
 def test_reward_rskill_name_forbidden_on_non_vla_kind() -> None:
     """`reward_rskill_name` is a reference FROM a VLA; a reward-kind manifest that
-    sets it is rejected (ADR-0077 validator guard)."""
+    sets it is rejected (validator guard)."""
     reward_dict = _reward().model_dump(mode="json")
     reward_dict["reward_rskill_name"] = "OpenRAL/rskill-something"
     with pytest.raises(ValidationError) as exc:

@@ -18,7 +18,7 @@ This module also hosts the two helpers every kernel-twin test needs:
   ``-p key:=value`` argv list the kernel reads on ``on_configure`` from
   a real :class:`~openral_core.RobotDescription` (via
   :func:`openral_safety.envelope_loader.compute_intersection` +
-  :func:`kernel_params_from_envelope`). ADR-0020 PR-K — the kernel has
+  :func:`kernel_params_from_envelope`). PR-K — the kernel has
   no envelope-file path anymore; everything flows through ROS
   parameters.
 """
@@ -103,7 +103,7 @@ def kernel_param_args(robot_description: RobotDescription) -> list[str]:
 
     Mirrors what ``sim_e2e.launch.py`` does in-process: synthesise the
     envelope from the robot manifest, then emit each canonical field as
-    a ROS parameter (ADR-0020 PR-K). Callers extend the list with their
+    a ROS parameter (PR-K). Callers extend the list with their
     own scalars (e.g. ``estop_reset_cooldown_s``).
 
     Args:

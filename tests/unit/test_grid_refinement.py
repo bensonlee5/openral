@@ -1,10 +1,11 @@
-"""ADR-0044 Phase 2 — occupancy-grid queries + approach-pose refinement.
+"""Occupancy-grid queries + approach-pose refinement.
 
 Scenario grids encode the spatial situations the refinement exists for — an
 ideal standoff inside a kitchen counter, a wall breaking line-of-sight, a
 viewpoint walled into a dead end — at a realistic slam resolution (0.1 m).
-(Precedent: the ADR-0030 Phase 6 kernel nav-goal sim test also drives a
-synthetic grid; a slam-captured fixture upgrade rides with ADR-0044 Phase 4.)
+(Precedent: the kernel nav-goal sim test also drives a
+synthetic grid; a slam-captured fixture upgrade rides with a later phase of
+this look-at/approach work.)
 """
 
 from __future__ import annotations

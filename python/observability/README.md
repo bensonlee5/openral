@@ -12,7 +12,7 @@ eight-layer model in the project docs.
 - **License:** Apache-2.0
 
 > All OpenRAL workspace packages move in lockstep at `0.1.x` until the first
-> public release (ADR-0021).
+> public release.
 
 ## Voice prompt (local speech-to-text)
 
@@ -103,7 +103,7 @@ before; discovery is additive, never load-bearing.
 ## Write-controls (`OPENRAL_DASHBOARD_WRITE_CONTROLS`)
 
 > **Default: OFF.** These endpoints are pending safety-WG review and a
-> hazard-log update (ADR-0084). Do not enable in production until the safety WG
+> hazard-log update. Do not enable in production until the safety WG
 > has signed off.
 
 Two guarded write endpoints are available when the flag is set:
@@ -132,7 +132,7 @@ flag is on. The flag is also surfaced in `GET /api/config`:
 {"jaeger_ui_url": "...", "write_controls_enabled": true}
 ```
 
-**Safety posture (ADR-0084):**
+**Safety posture:**
 
 - Both endpoints return `403` when the flag is off (default).
 - `POST /api/param/set` also refuses any param name that matches a substring in

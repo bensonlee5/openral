@@ -1,4 +1,4 @@
-"""ADR-0024 — :class:`ROSActionRskill` adapter behaviour.
+""":class:`ROSActionRskill` adapter behaviour.
 
 The hot-path tests use the adapter's existing fallback-setter and
 dotted-accessor implementations against synthetic message-shaped
@@ -65,7 +65,7 @@ def test_joint_permutation_reorders() -> None:
 
 
 def test_joint_permutation_subset_marks_unmoved_slots() -> None:
-    """ADR-0024 — MoveIt's panda_arm group (7 joints) is a STRICT subset of
+    """MoveIt's panda_arm group (7 joints) is a STRICT subset of
     franka_panda's RobotDescription (7 arm + 1 gripper). Slots not in the
     source come back as unmoved indices, with perm[i] == -1.
     """
@@ -368,7 +368,7 @@ def _make_skill_with_fake_action(
 
 
 def test_result_only_mode_raises_on_action_aborted() -> None:
-    """ADR-0024 — Nav2 ABORTED must surface as a runtime failure.
+    """Nav2 ABORTED must surface as a runtime failure.
 
     Before this check, ``_send_action_goal_and_await_result`` returned
     ``wrapper.result`` regardless of ``wrapper.status``. A Nav2 goal
@@ -423,7 +423,7 @@ def test_result_only_mode_returns_result_on_action_succeeded() -> None:
     assert isinstance(result, _NavResult)
 
 
-# ── ADR-0026 — _merge_nested + goal_params_json merge ───────────────────────
+# ── _merge_nested + goal_params_json merge ──────────────────────────────────
 
 
 def test_merge_nested_leaves_replace() -> None:
@@ -473,7 +473,7 @@ def test_merge_nested_dict_replaces_scalar_in_base() -> None:
 
 
 def test_rosaction_rskill_constructor_accepts_goal_params_json() -> None:
-    """ADR-0026 — adapter accepts the new kwarg + stores it on self."""
+    """Adapter accepts the new kwarg + stores it on self."""
     skill = ROSActionRskill(
         manifest=_result_only_manifest(),
         ros_node=None,

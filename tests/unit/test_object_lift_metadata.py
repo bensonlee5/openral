@@ -1,4 +1,4 @@
-"""ObjectsMetadata frame-dimension fields (ADR-0035)."""
+"""ObjectsMetadata frame-dimension fields."""
 
 from __future__ import annotations
 

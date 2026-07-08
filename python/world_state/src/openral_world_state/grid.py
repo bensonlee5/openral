@@ -1,7 +1,7 @@
-"""Occupancy-grid queries + approach-pose refinement (ADR-0044 Phase 2).
+"""Occupancy-grid queries + approach-pose refinement.
 
 Pure planning-layer geometry over a ``nav_msgs/OccupancyGrid`` snapshot —
-deliberately **not** a safety surface. The ADR-0030 Phase 6 kernel gate
+deliberately **not** a safety surface. The kernel gate
 (``/openral/check_nav_goal``, on its own branch) answers "is this goal safe?"
 as enforcement; this module answers "which nearby pose is free *and* sees the
 object?" as a proposal. A refined pose still crosses every downstream check.
@@ -199,7 +199,7 @@ def refine_approach_pose(
     0.5x / 2.0x the ideal standoff), and still sees the target — and re-aims
     the yaw from there via :func:`compute_approach_viewpoint`. Returns ``None``
     when nothing qualifies inside ``max_radius_m``: the caller reports "no
-    reachable viewpoint" rather than fabricating one (ADR-0038 posture).
+    reachable viewpoint" rather than fabricating one.
 
     Args:
         grid: Decoded occupancy snapshot.

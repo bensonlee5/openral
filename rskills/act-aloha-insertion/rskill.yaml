@@ -20,7 +20,7 @@ name: "OpenRAL/rskill-act-aloha-insertion"
 version: "0.1.0"
 license: "mit"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "act"
@@ -35,7 +35,7 @@ sensors_required:
     min_width: 640
     min_height: 480
 
-# Output side (ADR-0013). For the canonical aloha bimanual embodiment the
+# Output side. For the canonical aloha bimanual embodiment the
 # loader auto-fills n_dof (14) + vla_action_key from
 # robots/aloha_bimanual/robot.yaml.
 actuators_required:
@@ -77,12 +77,12 @@ description: >
   in the original paper; the 0.20 success rate reflects that. See the
   norm-stats note above re: the legacy safetensors-resident buffers.
 
-# Task-data gate (ADR-0060): trained + validated on the ALOHA sim
+# Task-data gate: trained + validated on the ALOHA sim
 # insertion task, so the benchmark runner accepts the aloha_insertion
 # scene and refuses task-mismatched scenes with ROSCapabilityMismatch.
 evaluated_tasks: ["aloha_insertion"]
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -95,11 +95,11 @@ objects:
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 action_contract:
   dim: 14
-  # ADR-0071 — ACT on ALOHA emits absolute joint positions (2×(6 arm + 1 gripper)).
+  # ACT on ALOHA emits absolute joint positions (2×(6 arm + 1 gripper)).
   representation: "joint_positions"
   # EXPLICIT joint units — the ALOHA sim (gym-aloha, MuJoCo qpos) records in
   # RADIANS (verified: observation.state normalizer mean∈[-0.22, 0.74],
@@ -108,6 +108,6 @@ action_contract:
   # stats-magnitude heuristic.
   joint_units: "radians"
 
-# ADR-0019 — per-checkpoint state contract.
+# Per-checkpoint state contract.
 state_contract:
   dim: 14

@@ -46,7 +46,7 @@ pkg = rSkill.from_yaml("rskills/smolvla-so101-pick-place-pen/rskill.yaml")
 uv run openral rskill install OpenRAL/rskill-smolvla-so101-pick-place-pen
 uv run openral deploy run --config scenes/deploy/so101_bench.yaml
 
-# Zero-copy NVMM TensorRT vision leg inside the GStreamer pipeline (ADR-0082):
+# Zero-copy NVMM TensorRT vision leg inside the GStreamer pipeline:
 OPENRAL_SMOLVLA_TRT=1 uv run openral deploy run \
     --config scenes/deploy/so101_bench.yaml
 ```
@@ -157,5 +157,5 @@ required for this deploy path (or disable NVMM per-camera in the scene).
 
 ## License
 
-**Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0 (ADR-0012);
+**Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0;
 the upstream checkpoint and dataset are Apache-2.0 as published by the author.

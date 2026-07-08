@@ -1,6 +1,6 @@
 """_probe_nvmm_available — L4T libnvbufsurface.so detection.
 
-ADR-0013 PR 2/3. The probe surfaces whether the NVMM zero-copy
+The probe surfaces whether the NVMM zero-copy
 sensor-ingest path is available on the host so
 ``rSkill.check_capabilities`` can refuse skills that require it on a
 host that cannot provide it.

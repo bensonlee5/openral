@@ -10,8 +10,8 @@ dependencies = [
     "openral-runner", # reason: InferenceRunnerBase for SimRunner
     "openral-rskill",  # reason: rSkill loader
     "openral-observability",  # reason: configure_observability / shutdown_observability bracketing
-    "openral-dataset",        # reason: ADR-0019 RolloutRecorder + LeRobotDatasetSink for --dataset-out
-    "openral-world-state",    # reason: ADR-0044 shared look-at gaze geometry for scene-camera placement
+    "openral-dataset",        # reason: RolloutRecorder + LeRobotDatasetSink for --dataset-out
+    "openral-world-state",    # reason: shared look-at gaze geometry for scene-camera placement
     "structlog>=24.1",    # reason: structured logging per CLAUDE.md §5.1
     "PyYAML>=6.0",        # reason: SimEnvironment YAML config loader
     "typer>=0.12",        # reason: CLI framework — exposes eval_app for mounting into ral

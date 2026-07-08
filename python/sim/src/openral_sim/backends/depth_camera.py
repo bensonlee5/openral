@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Simulated depth camera → point cloud, via MuJoCo CPU ray-casting.
 
-ADR-0030 — the 3-D analogue of
+The 3-D analogue of
 :func:`openral_sim.backends.robocasa.synthesize_laser_scan_2d`. Casts one
 ``mj_multiRay`` ray per (strided) pixel through a pinhole model anchored on
 a named MJCF camera, and returns the hit points in the camera *optical*
@@ -12,7 +12,7 @@ Like the 2-D lidar synth this uses MuJoCo's analytic ray-caster, **not** a
 GL renderer — so it needs no display / EGL context and runs deterministically
 in CI. It is robot-agnostic: any camera declared in any robot's MJCF works,
 which is what lets the deploy-sim HAL feed an ``octomap_server`` (and thus the
-ADR-0030 world-collision kernel check) from any robot, not just panda_mobile.
+world-collision kernel check) from any robot, not just panda_mobile.
 
 The returned cloud is the dense, bounded input perception lowers into an
 OctoMap; the kernel never sees it directly ("perception proposes, the kernel
@@ -253,7 +253,7 @@ def synthesize_depth_image(
 
     The image counterpart of :func:`synthesize_depth_pointcloud`, sharing the
     same pinhole ray-cast (:func:`_cast_depth_rays`) but keeping **every** pixel
-    — a dense raster nvblox's projective depth integrator (ADR-0085) consumes
+    — a dense raster nvblox's projective depth integrator consumes
     directly (it rejects the sparse, hit-only cloud, whose unorganised layout
     matches no camera/lidar intrinsic model). Each pixel holds the *perpendicular
     optical-Z* depth in metres (``range · ẑ`` — the ROS depth-image convention,

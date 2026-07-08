@@ -1,4 +1,4 @@
-"""ADR-0071 Phase 2 — the warn-only TaskSpace shadow gate.
+"""Phase 2 — the warn-only TaskSpace shadow gate.
 
 Exercises ``openral_reasoner.palette.task_space_disagreement`` (the pure helper
 the reasoner deploy palette and ``rskill_publisher`` both call) against real

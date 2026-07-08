@@ -252,7 +252,7 @@ _action_st = st.builds(
     stamp_ns=_ns,
 )
 
-# ─── Collision geometry (ADR-0030) ──────────────────────────────────────────────
+# ─── Collision geometry ──────────────────────────────────────────────────────────
 
 _radius = st.floats(allow_nan=False, allow_infinity=False, min_value=1e-3, max_value=1.0)
 _capsule_shape_st = st.builds(
@@ -593,7 +593,7 @@ _semver = st.builds(
 # V1/V2: closed Literal sets — sample directly from get_args. Exclude
 # "custom" from the embodiment-tag fuzz: it triggers the
 # embodiment_extra cross-validator + per-actuator n_dof / vla_action_key
-# requirement (ADR-0013), which has its own coverage in
+# requirement, which has its own coverage in
 # test_rskill_manifest.py. Fuzzing it here would degenerate into a
 # filter against the cross-validator.
 _NON_CUSTOM_EMBODIMENT_TAGS = [t for t in get_args(EmbodimentTag) if t != "custom"]
@@ -850,7 +850,7 @@ def test_fuzz_sim_environment(instance: SimEnvironment) -> None:
     assert instance.task.scene_id == instance.scene.id
 
 
-# ─── Inference runner schemas (ADR-0010) ─────────────────────────────────────
+# ─── Inference runner schemas ─────────────────────────────────────────────────
 #
 # SensorFrame has a mutual-exclusion invariant on (data | topic | handle), so
 # the strategy below splits across the three valid carry-modes.
@@ -1004,7 +1004,7 @@ def test_fuzz_run_result(instance: RunResult) -> None:
     _round_trip_and_validate(RunResult, instance)
 
 
-# ─── Spatial memory — scene graph (ADR-0038) ─────────────────────────────────────
+# ─── Spatial memory — scene graph ─────────────────────────────────────────────────
 
 
 @st.composite
@@ -1174,7 +1174,7 @@ def test_fuzz_resolve_place_result(instance: ResolvePlaceResult) -> None:
     _round_trip_and_validate(ResolvePlaceResult, instance)
 
 
-# ─── Reasoner read-only query tools (ADR-0039) ───────────────────────────────────
+# ─── Reasoner read-only query tools ───────────────────────────────────────────────
 
 _recall_object_tool_st = st.builds(
     RecallObjectTool,

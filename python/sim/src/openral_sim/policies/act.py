@@ -102,7 +102,7 @@ class _ACTAdapter:
     _image_std: dict[str, Any] = field(default_factory=dict)
     _action_mean: Any = None  # tensor (1, A)
     _action_std: Any = None
-    # ADR-0082: device-resident inference. When the co-located NVMM sensor leg
+    # Device-resident inference. When the co-located NVMM sensor leg
     # delivers frames as GPU handles (obs["image_handles"]), the observation
     # carries no host pixels — this executor runs the ACT "device" engine
     # (image/state normalize + action unnormalize baked in) straight on the
@@ -137,7 +137,7 @@ class _ACTAdapter:
     def _device_step(
         self, observation: Observation, handles: dict[str, Any]
     ) -> NDArray[np.float32]:
-        """Zero-copy step: NVMM handles → ``ActNvmmExecutor`` → raw action (ADR-0082).
+        """Zero-copy step: NVMM handles → ``ActNvmmExecutor`` → raw action.
 
         ``handles`` is keyed by VLA slot (``camera1`` / ``camera2``); the manifest
         ``image_preprocessing.aliases`` rename those to the checkpoint views, so
@@ -228,7 +228,7 @@ _log = structlog.get_logger(__name__)
 def _maybe_build_act_nvmm(
     policy: Any, repo_id: str, device: str, manifest: Any
 ) -> Any:  # reason: lerobot policy + ActNvmmExecutor are untyped
-    """Build the ADR-0082 device-resident NVMM executor, or ``None`` (host path).
+    """Build the device-resident NVMM executor, or ``None`` (host path).
 
     Gated on ``OPENRAL_ACT_TRT=1`` + a resolvable device ONNX
     (``OPENRAL_ACT_DEVICE_ONNX`` env or manifest
@@ -326,13 +326,13 @@ def _build_act(env_cfg: Any) -> _ACTAdapter:
     _apply_temporal_ensemble(policy, spec.extra)
 
     # Inference backend (OPENRAL_ACT_TRT=1), in precedence order:
-    #  1. ADR-0082 device-resident NVMM path — when the DeepStream sensor leg
+    #  1. Device-resident NVMM path — when the DeepStream sensor leg
     #     delivers GPU handles, ``ActNvmmExecutor`` runs the "device" engine on the
     #     device pointers (no host vision copy). Used per-step when handles arrive.
     #  2. host TensorRT — swaps ``predict_action_chunk`` for the ONNX/TRT runner.
     #  3. torch.compile of the eager forward.
     # The TRT hook itself ships in the private openral-pro-trt package
-    # (ADR-0083) and is looked up by name — a host without it falls straight
+    # and is looked up by name — a host without it falls straight
     # through to torch.compile below (logged, not silently skipped).
     nvmm_executor = _maybe_build_act_nvmm(policy, repo_id, device, manifest)
     if nvmm_executor is None:

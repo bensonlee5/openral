@@ -1,8 +1,8 @@
-"""Persistent object-centric scene-graph spatial memory (ADR-0038 Phase 2).
+"""Persistent object-centric scene-graph spatial memory.
 
 :class:`SpatialMemory` accumulates the momentary
 ``WorldState.detected_objects`` into a durable, queryable scene graph and
-answers the ADR-0038 read-only query contracts:
+answers the following read-only query contracts:
 
 - :meth:`SpatialMemory.recall_object` — recall a remembered object by label/text,
   with optional proximity/recency filters, returning the object's ``map``-frame
@@ -16,7 +16,7 @@ answers the ADR-0038 read-only query contracts:
 
 This is **advisory** Layer-2 world-model state consumed by the S2 Reasoner; it
 is never a safety input (CLAUDE.md §1.1) — the safety kernel gates only on the
-live, bounded ADR-0030 geometric world. Object poses are anchored in the
+live, bounded geometric world. Object poses are anchored in the
 durable ``map`` frame (TF resolution happens upstream); the memory never stores
 a raw transform.
 
@@ -24,7 +24,7 @@ Persistence is the :class:`~openral_core.SceneGraph` JSON contract
 (:meth:`SpatialMemory.save` / :meth:`SpatialMemory.load`). The graph is small
 (hundreds-to-thousands of nodes for one robot), so traversal is a plain typed
 BFS — no graph-engine dependency. Open-vocabulary embedding retrieval and a
-``sqlite-vec`` store (ADR-0038 §5, Phase 4) layer on top of this without
+``sqlite-vec`` store layer on top of this without
 changing the contract.
 
 Example:
@@ -102,7 +102,7 @@ def compute_approach_viewpoint(
     camera_frame_id: str = DEFAULT_CAMERA_FRAME,
     approach_from: Pose6D | None = None,
 ) -> ApproachViewpoint:
-    """Compute a standoff pose whose camera faces ``target`` (ADR-0038 §6).
+    """Compute a standoff pose whose camera faces ``target``.
 
     The viewpoint is placed ``standoff_m`` away from the target in the
     horizontal (x, y) plane and yawed to look at it. When ``approach_from`` is
@@ -139,7 +139,7 @@ def compute_approach_viewpoint(
 
 
 class SpatialMemory:
-    """Accumulating, queryable scene-graph spatial memory (ADR-0038 Phase 2).
+    """Accumulating, queryable scene-graph spatial memory.
 
     Args:
         assoc_distance_m: Radius for label-based instance association when a
@@ -161,7 +161,7 @@ class SpatialMemory:
     ) -> None:
         """Initialize an empty memory.
 
-        ``embedder`` (ADR-0038 §5, optional) enables open-vocabulary matching:
+        ``embedder`` (optional) enables open-vocabulary matching:
         object labels are embedded on creation and free-text queries match by
         CLIP cosine similarity (>= ``min_text_similarity``) in addition to
         label substring. Without it, matching is label + pose + recency only.
@@ -200,7 +200,7 @@ class SpatialMemory:
     def ingest_detected_objects(
         self, objects: Sequence[DetectedObject], *, now_ns: int
     ) -> list[str]:
-        """Fold a snapshot's detected objects into the graph (ADR-0038 §2).
+        """Fold a snapshot's detected objects into the graph.
 
         Instance association: a detection is matched to an existing ``object``
         node by ``track_id`` when present, else by identical label within
@@ -250,7 +250,7 @@ class SpatialMemory:
     def _associate(self, obj: DetectedObject) -> str | None:
         """Return the id of the existing object node this detection updates, or None.
 
-        The upstream ``track_id`` (ADR-0035 ``ObjectMemory``) is only a
+        The upstream ``track_id`` (from ``ObjectMemory``) is only a
         *within-session* hint: it is a per-session monotonic counter that resets
         whenever the world-state node restarts, so this durable memory must not
         treat it as a stable identity. We use it as a fast path **only when the
@@ -275,7 +275,7 @@ class SpatialMemory:
 
     def _new_node_id(self, obj: DetectedObject) -> str:
         # Use the upstream track_id as the node key only when it's free. A
-        # recycled id (world-state restart, ADR-0035 per-session counter) that
+        # recycled id (world-state restart, per-session counter) that
         # already names a different object must NOT clobber it — fall back to a
         # fresh auto-id (CLAUDE.md §1.4). See `_associate` for the matching rule.
         if obj.track_id is not None:
@@ -289,7 +289,7 @@ class SpatialMemory:
     # ── Queries ─────────────────────────────────────────────────────────────────
 
     def recall_object(self, query: RecallObjectQuery, *, now_ns: int) -> RecallObjectResult:
-        """Recall remembered objects matching ``query`` (ADR-0038 §6).
+        """Recall remembered objects matching ``query``.
 
         Matches ``object`` nodes by exact (case-insensitive) or substring label
         against ``query.label`` / ``query.text``, applies the optional recency
@@ -342,7 +342,7 @@ class SpatialMemory:
     def resolve_place(
         self, query: ResolvePlaceQuery, *, from_node_id: str | None = None
     ) -> ResolvePlaceResult:
-        """Resolve a place/room/agent reference to a goal pose + path (ADR-0038 §6).
+        """Resolve a place/room/agent reference to a goal pose + path.
 
         Raises:
             ROSObjectNotInMemory: When the reference matches no node (the caller

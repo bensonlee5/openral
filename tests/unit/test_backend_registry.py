@@ -1,4 +1,4 @@
-"""Unit tests for the ADR-0083 runtime-backend / policy-attach-hook registry.
+"""Unit tests for the runtime-backend / policy-attach-hook registry.
 
 Coverage
 --------

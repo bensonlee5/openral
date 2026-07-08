@@ -1,4 +1,4 @@
-"""Unit tests for :func:`openral_reasoner.build_tool_palette` (ADR-0018 F4).
+"""Unit tests for :func:`openral_reasoner.build_tool_palette`.
 
 Loads **real** ``rskill.yaml`` manifests from ``rskills/`` (CLAUDE.md
 §1.11 — real components, no mocks) and asserts the palette filter

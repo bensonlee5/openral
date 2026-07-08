@@ -22,7 +22,7 @@ base_model:
 # rskill-omdet-turbo-locator
 
 > **OpenRAL rSkill** — OmDet-Turbo (Swin-tiny) packaged as an Apache-2.0,
-> **on-demand** open-vocabulary locator (`mode: on_demand`, ADR-0051). The
+> **on-demand** open-vocabulary locator (`mode: on_demand`). The
 > reasoner invokes it via the read-only `locate_in_view` tool — "is object X in
 > view right now?" — when it needs a specific object the continuous detector
 > bank does not cover. A lightweight, real-time, in-process alternative to the
@@ -160,5 +160,5 @@ locator is fully commercial-safe (CLAUDE.md §1.9).
   background sibling (same weights, `mode: continuous`, fixed 266-class vocab).
 - [`rskills/locateanything-3b-nf4/`](../locateanything-3b-nf4/) — higher-quality
   3B open-vocab locator (NVIDIA non-commercial; `VLM_SIDECAR` tier).
-- ADR-0051 — continuous vs on-demand detector mode.
+- continuous vs on-demand detector mode.
 - [CLAUDE.md §6.4](../../CLAUDE.md) — rSkill packaging contract.

@@ -4,7 +4,7 @@
   <name>openral_safety_kernel</name>
   <version>0.1.0</version>
   <description>
-    ADR-0020 — C++ safety kernel. Separate process owning the chunk-rate
+    C++ safety kernel. Separate process owning the chunk-rate
     safety boundary on the OpenRAL ROS 2 graph. Replaces F5's Python
     pass-through (packages/openral_safety/SafetyPassthroughNode) behind
     the same topic contract (CLAUDE.md §1.5: "Python proposes, C++
@@ -37,7 +37,7 @@
   <depend>diagnostic_msgs</depend>
   <depend>openral_msgs</depend>
   <depend>nlohmann-json-dev</depend>
-  <!-- ADR-0020 PR-F — opentelemetry-cpp for safety.check span emission.
+  <!-- opentelemetry-cpp for safety.check span emission.
        Provided by the in-tree vendor package (cpp/opentelemetry_cpp_vendor)
        since Noble has no apt opentelemetry-cpp. -->
   <depend>opentelemetry_cpp_vendor</depend>

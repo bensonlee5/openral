@@ -1,5 +1,5 @@
 # python/hal/src/openral_hal/sim_sensor_bridge.py
-"""Shared sim-sensor + viewer bridge for scene-attached HAL lifecycle nodes (ADR-0034).
+"""Shared sim-sensor + viewer bridge for scene-attached HAL lifecycle nodes.
 
 Republishes whatever a ``SimAttachedHAL`` exposes — RGB camera frames
 (``read_images``) on ``/openral/cameras/<n>/image`` and an optional live
@@ -118,7 +118,7 @@ def _frame_for_camera(images: dict[str, Any], obs_key: str, name: str) -> Any:
 
 
 def _optical_frame_rgb_cameras(sensors: Any) -> list[Any]:
-    """RGB camera specs that own a dedicated ``*_optical_frame`` (ADR-0052).
+    """RGB camera specs that own a dedicated ``*_optical_frame``.
 
     These are the cameras :meth:`SimSensorBridge._publish_camera_optical_tfs`
     broadcasts a live ``base_frame -> <camera>_optical_frame`` TF for, so the
@@ -187,7 +187,7 @@ class SimSensorBridge:
         within ~2 s once a skill stops. A truly idle scene (no action ever,
         ``last_action_ns == 0``) idle-steps immediately.
 
-        ``on_step`` (ADR-0049): an optional zero-arg callback invoked after each
+        ``on_step``: an optional zero-arg callback invoked after each
         successful ``idle_step`` — the node uses it to refresh the proprio
         snapshot so odom / joint_state stay fresh while the scene idles. It runs
         in this bridge's (default / "sim") callback group, so reading the
@@ -217,7 +217,7 @@ class SimSensorBridge:
         self._image_missing_warned: set[str] = set()
         self._image_timer: Any = None
         self._camera_tf_timer: Any = None
-        # ADR-0034 (2026-06-04 idle-stepper amendment) — sim-only free-running
+        # (2026-06-04 idle-stepper amendment) — sim-only free-running
         # stepper timer. Created in setup ONLY when the HAL exposes ``idle_step``
         # AND has live MuJoCo handles (both sim gates); never against a real HAL.
         self._idle_timer: Any = None
@@ -225,11 +225,11 @@ class SimSensorBridge:
         self._viewer_timer: Any = None
         self._scan_pub: Any = None
         self._scan_timer: Any = None
-        # ADR-0030 — depth-camera → PointCloud2 publishers, one per depth SensorSpec.
+        # Depth-camera → PointCloud2 publishers, one per depth SensorSpec.
         # Feeds octomap_server → safety kernel world-collision voxel check.
         # Gated on live MuJoCo handles; _depth_disabled prevents repeated warnings.
         self._depth_pubs: dict[str, Any] = {}
-        # ADR-0085 — per depth camera, a dense 32FC1 depth image + CameraInfo
+        # Per depth camera, a dense 32FC1 depth image + CameraInfo
         # alongside the PointCloud2, so nvblox's projective depth integrator
         # (which rejects the sparse hit-only cloud) can build a `/map`.
         self._depth_image_pubs: dict[str, Any] = {}
@@ -242,14 +242,14 @@ class SimSensorBridge:
         # base-mounted camera doesn't voxelise the arm into its own world map.
         self._depth_self_bodies: frozenset[int] = frozenset()
         self._tf_broadcaster: Any = None
-        # Static world->base_frame TF (ADR-0027 — gives a fixed-base sim arm the
+        # Static world->base_frame TF (gives a fixed-base sim arm the
         # world root its TF tree otherwise lacks, so task-space state layouts
         # like ``libero_eef8d`` can read the WORLD-frame EE pose the policy was
         # trained on). Published once from the base body's MuJoCo world pose;
         # skipped for mobile bases (they publish odom->base).
         self._static_tf_broadcaster: Any = None
         self._world_base_published: bool = False
-        # ADR-0035 cross-frame lift — RGB cameras whose optical-frame TF failed
+        # Cross-frame lift — RGB cameras whose optical-frame TF failed
         # to resolve (no MJCF camera); warned once, then skipped.
         self._camera_tf_disabled: set[str] = set()
         # OPENRAL_DASHBOARD_FLIP_180 — flip ONLY the dashboard thumbnail 180° so
@@ -363,7 +363,7 @@ class SimSensorBridge:
         self._image_timer = self._node.create_timer(
             1.0 / max(self._camera_rate_hz, 1.0), self._publish_images
         )
-        # ADR-0035 cross-frame lift — broadcast base_frame -> <camera>_optical_frame
+        # Cross-frame lift — broadcast base_frame -> <camera>_optical_frame
         # for every RGB camera that owns a dedicated optical frame, from live
         # MuJoCo poses, so the world-state object-lift can project the world
         # voxel map into any detection camera (generic over robots/camera names).
@@ -468,7 +468,7 @@ class SimSensorBridge:
     def _publish_camera_optical_tfs(self) -> None:
         """Broadcast ``base_frame -> <camera>_optical_frame`` for every RGB camera.
 
-        ADR-0035 cross-frame object-lift: the world-state lifter projects the
+        Cross-frame object-lift: the world-state lifter projects the
         world voxel map (built from the robot's body-mounted depth sensor) into
         each detection camera using that camera's extrinsics. This publishes
         those extrinsics live from MuJoCo poses — generic over any robot and any
@@ -490,7 +490,7 @@ class SimSensorBridge:
         if self._depth_base_body is None:
             return
 
-        # ADR-0027 — publish the world root for a fixed-base sim arm (once).
+        # Publish the world root for a fixed-base sim arm (once).
         self._publish_world_base_tf(model, data)
 
         from geometry_msgs.msg import TransformStamped
@@ -586,10 +586,10 @@ class SimSensorBridge:
         self._node.get_logger().info(
             f"published static world->{base_frame_id} at "
             f"[{float(pos[0]):.3f}, {float(pos[1]):.3f}, {float(pos[2]):.3f}] "
-            "(fixed-base sim world root, ADR-0027)"
+            "(fixed-base sim world root)"
         )
 
-    # -- Sim-only free-running idle stepper (ADR-0034 amendment) --
+    # -- Sim-only free-running idle stepper --
     def _setup_idle_stepper(self) -> None:
         """Create the sim-only idle-step timer, gated on a callable ``idle_step``.
 
@@ -600,7 +600,7 @@ class SimSensorBridge:
         vector is a HOLD in sim but "drive to 0 rad" — violent — on a real
         absolute-position arm).
 
-        No MuJoCo-handle gate (dropped in the ADR-0034 amendment): idle-stepping
+        No MuJoCo-handle gate (dropped in a later revision): idle-stepping
         is valid for any wrapped SimRollout, so a non-MuJoCo backend (Isaac Sim
         sidecar, ManiSkill3) keeps its cameras live when idle too. ``idle_step``
         itself returns ``False`` for a non-sim HAL, and the
@@ -615,7 +615,7 @@ class SimSensorBridge:
         """
         if not callable(getattr(self._hal, "idle_step", None)):
             return
-        # ADR-0048 Phase 2 — drive the idle stepper on WALL time, never the
+        # Drive the idle stepper on WALL time, never the
         # node's clock. Under ``use_sim_time`` (simulation clock authority) a node-clock
         # timer fires off ``/clock`` — but the idle step is what ADVANCES
         # ``/clock`` (it steps the sim), so a sim-time timer here deadlocks: no
@@ -673,7 +673,7 @@ class SimSensorBridge:
                 self._idle_timer.cancel()
                 self._idle_timer = None
             return
-        # ADR-0049 — the env advanced; refresh the proprio snapshot so the
+        # The env advanced; refresh the proprio snapshot so the
         # control group's odom/joint_state publishers stay fresh while idle.
         if self._on_step is not None:
             self._on_step()
@@ -722,7 +722,7 @@ class SimSensorBridge:
         """Construct + publish a /scan message (live MJCF ray-cast or synthetic no-hit).
 
         Lifted from ``openral_hal_panda_mobile.lifecycle_node._publish_scan`` /
-        ``_compute_scan_ranges`` (ADR-0034 Phase 2). Uses the same
+        ``_compute_scan_ranges``. Uses the same
         :func:`openral_sim.backends.robocasa.synthesize_laser_scan_2d` call
         and identical no-hit fallback so nav-stack behaviour is bit-identical
         to the panda_mobile node.
@@ -768,7 +768,7 @@ class SimSensorBridge:
         handle = getattr(self._hal, "mujoco_handles", lambda: None)()
         if handle is None:
             # Non-MuJoCo backend: use the ranges the HAL surfaces (Isaac lidar
-            # ray-cast, ADR-0045), else an honest no-hit fan.
+            # ray-cast), else an honest no-hit fan.
             read = getattr(self._hal, "read_scan", None)
             if callable(read):
                 scan = read()
@@ -785,7 +785,7 @@ class SimSensorBridge:
 
         # Pull MJCF joint names from the HAL's description so the
         # sim-side helper doesn't depend on hardcoded robosuite /
-        # robocasa naming conventions. ADR-0025.
+        # robocasa naming conventions.
         base_names: tuple[str, str, str] | None = None
         description = getattr(self._hal, "description", None)
         if description is not None:
@@ -800,7 +800,7 @@ class SimSensorBridge:
         )
         return [float(r) for r in ranges]
 
-    # -- Depth PointCloud2 (ADR-0030 / ADR-0034 Phase 2) --
+    # -- Depth PointCloud2 --
     def _setup_depth(self) -> None:
         """Create a PointCloud2 publisher + timer per depth SensorSpec.
 
@@ -814,11 +814,11 @@ class SimSensorBridge:
         no timer, no TF broadcaster. This lets arm-only robots use the bridge
         without advertising any depth topics.
 
-        Lifted from ``openral_hal_panda_mobile.lifecycle_node._setup_depth_publishers``
-        (ADR-0034 Phase 2). QoS matches panda_mobile's BEST_EFFORT depth QoS.
+        Lifted from ``openral_hal_panda_mobile.lifecycle_node._setup_depth_publishers``.
+        QoS matches panda_mobile's BEST_EFFORT depth QoS.
         """
         # Publish if the HAL ray-casts depth (MuJoCo) OR surfaces ready clouds in
-        # obs (non-MuJoCo, e.g. the Isaac scene — ADR-0045). Otherwise no topics.
+        # obs (non-MuJoCo, e.g. the Isaac scene). Otherwise no topics.
         has_mujoco = getattr(self._hal, "mujoco_handles", lambda: None)() is not None
         has_obs_depth = callable(getattr(self._hal, "read_depth_clouds", None))
         if not (has_mujoco or has_obs_depth):
@@ -857,7 +857,7 @@ class SimSensorBridge:
             self._depth_pubs[spec.name] = self._node.create_publisher(
                 PointCloud2, f"{base}/points", depth_qos
             )
-            # ADR-0085 — dense depth image + CameraInfo for nvblox's depth integrator.
+            # Dense depth image + CameraInfo for nvblox's depth integrator.
             self._depth_image_pubs[spec.name] = self._node.create_publisher(
                 Image, f"{base}/depth/image", depth_qos
             )
@@ -933,9 +933,9 @@ class SimSensorBridge:
         return None
 
     def _publish_depth_clouds(self) -> None:
-        """Ray-cast + publish a PointCloud2 (+ ADR-0085 depth image) per camera, and its TF.
+        """Ray-cast + publish a PointCloud2 (+ depth image) per camera, and its TF.
 
-        ADR-0030 — the deploy-sim source for octomap_server. Each depth
+        The deploy-sim source for octomap_server. Each depth
         ``SensorSpec`` is synthesised with
         :func:`openral_sim.backends.depth_camera.synthesize_depth_pointcloud`
         (camera-optical frame), packed into ``sensor_msgs/PointCloud2``,
@@ -944,8 +944,8 @@ class SimSensorBridge:
         whose MJCF name doesn't resolve is disabled after one warning
         (sim sensor, not a safety path).
 
-        Lifted from ``openral_hal_panda_mobile.lifecycle_node._publish_depth_clouds``
-        (ADR-0034 Phase 2). Logic is faithfully preserved — the ray-cast, the
+        Lifted from ``openral_hal_panda_mobile.lifecycle_node._publish_depth_clouds``.
+        Logic is faithfully preserved — the ray-cast, the
         self-body exclusion, the point filtering, and the TF broadcast are
         unchanged so octomap_server sees bit-identical clouds.
         """
@@ -1008,7 +1008,7 @@ class SimSensorBridge:
                 )
                 cloud = pointcloud2_from_points_xyz(points, frame_id=spec.frame_id, stamp=stamp)
                 pub.publish(cloud)
-                # ADR-0085 — dense 32FC1 depth image + CameraInfo for nvblox.
+                # Dense 32FC1 depth image + CameraInfo for nvblox.
                 # Same pinhole ray-cast, but every pixel (0.0 = no return); the
                 # CameraInfo intrinsics scale by 1/stride to match the raster.
                 depth_grid = synthesize_depth_image(
@@ -1062,7 +1062,7 @@ class SimSensorBridge:
                 )
 
     def _publish_depth_clouds_from_obs(self) -> None:
-        """Publish the HAL's ready ``base_link`` clouds as ``PointCloud2`` (ADR-0045).
+        """Publish the HAL's ready ``base_link`` clouds as ``PointCloud2``.
 
         Non-MuJoCo path: the backend (Isaac scene) already deprojected each depth
         camera to a ``(N, 3)`` cloud in ``base_link`` (Isaac owns the camera

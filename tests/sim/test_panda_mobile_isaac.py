@@ -1,6 +1,6 @@
 """Sim test: panda_mobile (arm + kinematic holonomic base) in Isaac Sim.
 
-ADR-0045 amendment (M3). The robot-agnostic manifest scene that brings up
+Deploy-sim HAL generalization amendment (M3). The robot-agnostic manifest scene that brings up
 franka_panda (``test_franka_urdf_isaac``) brings up **panda_mobile** by swapping
 ``robot_id`` — same Panda arm URDF, plus a kinematically-synthesized 3-DOF
 holonomic base (the base exists nowhere as an Isaac-importable asset). Driven at

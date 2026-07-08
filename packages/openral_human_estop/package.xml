@@ -4,7 +4,7 @@
   <name>openral_human_estop</name>
   <version>0.1.0</version>
   <description>
-    ADR-0018 §5 bullet 2 — human-driven estop forwarders. Subscribes to
+    ROS 2 reasoner + supervisor graph spec §5 bullet 2 — human-driven estop forwarders. Subscribes to
     /openral/human_estop and republishes onto /openral/estop with a
     structured FailureTrigger(KIND_HUMAN). The actual UI / Slack / voice
     adapters publish onto /openral/human_estop and this node bridges to

@@ -9,7 +9,7 @@
     "reproduced_locally": false,
     "reproduction_planned": "Pending \u2014 requires checkpoint inspection for camera/state spec before running lerobot-eval.",
     "reproduction_cli": {
-      "description": "Re-run this benchmark inside the OpenRAL repo. ADR-0009 PR D: openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
+      "description": "Re-run this benchmark inside the OpenRAL repo. openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
       "command": "openral benchmark run --suite libero_spatial --rskill xvla-libero",
       "status": "in-tree (libero_spatial); xvla on LIBERO is paper-quoted until a contributor runs the full suite locally",
       "notes": [

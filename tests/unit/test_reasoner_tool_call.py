@@ -1,4 +1,4 @@
-"""Unit tests for :data:`openral_core.ReasonerToolCall` (ADR-0018 F4).
+"""Unit tests for :data:`openral_core.ReasonerToolCall`.
 
 Real Pydantic — no mocks. Tests cover the round-trip through the
 discriminated union, the rejection of unknown discriminators, and the
@@ -132,7 +132,7 @@ def test_execute_skill_rejects_negative_deadline() -> None:
 
 
 def test_decompose_mission_round_trip_populate_and_subdivide() -> None:
-    """DecomposeMissionTool decodes via the union in both modes (#123; ADR-0075)."""
+    """DecomposeMissionTool decodes via the union in both modes (#123)."""
     populate = ADAPTER.validate_json(
         '{"tool": "decompose_mission", "subtasks": ['
         '{"object_ref": "milk", "text": "pick up the milk and bag it"}, '
@@ -161,7 +161,7 @@ def test_decompose_mission_requires_at_least_one_subtask() -> None:
 
 
 def test_grounded_subtask_rejects_collective_and_ungrounded() -> None:
-    """ADR-0075: object_ref/text may not be collective, and text must name object_ref."""
+    """object_ref/text may not be collective, and text must name object_ref."""
     ok = GroundedSubtask(object_ref="alphabet soup", text="pick up the alphabet soup")
     assert ok.render() == "pick up the alphabet soup"
     # collective object_ref — the headline "first batch of objects" failure mode

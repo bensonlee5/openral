@@ -8,7 +8,7 @@ have to honour ``activate / tick / run / deactivate``; everything else
 (rate-limited loop, OTel parent span, latency budget enforcement) lives
 in :class:`openral_runner.base.InferenceRunnerBase`.
 
-See ADR-0010 (OpenRAL/management) for the full design.
+See the OpenRAL architecture docs for the full design.
 """
 
 from __future__ import annotations

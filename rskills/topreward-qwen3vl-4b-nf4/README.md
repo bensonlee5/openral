@@ -72,7 +72,7 @@ Runs **parallel** to a VLA policy and scores the rollout so the Reasoner can
 tell whether a skill is making progress or is done — without any hand-written
 success detector. Given the rollout's RGB frames plus the task instruction it
 produces a **per-frame normalized progress signal in [0, 1]**, queried on demand
-by the Reasoner (ADR-0057). It never actuates and never gates motors; its output
+by the Reasoner. It never actuates and never gates motors; its output
 is advisory input to the replanning ladder.
 
 | Field | Value |
@@ -148,7 +148,7 @@ Run on **RTX 4070 Laptop (8 GB)** against real LIBERO `libero_object` episode 0
 
 Embodiment-agnostic (`embodiment_tags: ["any"]`). A reward monitor scores any
 rollout video + task instruction, so it is exempt from the rSkill↔robot
-embodiment gate (ADR-0072). Validated on a Franka Panda LIBERO scene; nothing
+embodiment gate. Validated on a Franka Panda LIBERO scene; nothing
 about the model is Franka-specific.
 
 ## Sensors and Observation Contract
@@ -176,7 +176,7 @@ See [`rskill.yaml`](rskill.yaml) for the full manifest.
 
 ## License
 
-rSkill **packaging** is **Apache-2.0** (ADR-0012 — all OpenRAL code is uniformly
+rSkill **packaging** is **Apache-2.0** (all OpenRAL code is uniformly
 Apache-2.0). The TOPReward **method** is MIT. The wrapped
 **Qwen3-VL-4B-Instruct weights are also Apache-2.0** (`Qwen/Qwen3-VL-4B-Instruct`,
 `license: apache-2.0`), so an NF4-quantized copy is freely redistributable — the

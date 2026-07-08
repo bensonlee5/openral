@@ -555,7 +555,7 @@ class _Gr00tFamilySidecarAdapter:
 
     Drives both ``rldx`` (RLWRLD RLDX-1, a GR00T-N1.5 finetune) and ``gr00t``
     (NVIDIA Isaac GR00T) — they share the upstream ``PolicyServer`` wire, so
-    the ``family`` field selects the boot helper + env namespace (ADR-0046).
+    the ``family`` field selects the boot helper + env namespace.
     Lives in this module for history (RLDX-1 landed first); ``_RLDXSidecarAdapter``
     is a back-compat alias defined below.
 
@@ -593,7 +593,7 @@ class _Gr00tFamilySidecarAdapter:
     # (``tools/<family>_sidecar.py``) and the env-var namespace
     # (``OPENRAL_<FAMILY>_*``) used in spawn/locate/error paths. Defaults
     # to ``"rldx"`` so existing RLDX behavior is unchanged; the GR00T
-    # adapter (ADR-0046) reuses this class with ``family="gr00t"`` because
+    # adapter reuses this class with ``family="gr00t"`` because
     # RLDX-1 is itself a GR00T-N1.5 finetune sharing the wire contract.
     family: str = "rldx"
     # LIBERO video-history offsets (frames sampled relative to the current
@@ -611,7 +611,7 @@ class _Gr00tFamilySidecarAdapter:
     # Per-camera rolling frame history (len=_RLDX_VIDEO_HISTORY). On reset
     # we clear; on the first frame after reset we pad by repeating the
     # current frame so the model sees a static 4-frame stack instead of
-    # garbage from a previous episode. Per ADR-0070 the canonical scene
+    # garbage from a previous episode. The canonical scene
     # camera names (e.g. ``front`` / ``wrist``) live on ``_camera_keys``;
     # the keys below are INTERNAL buffer aliases that the obs assembler
     # uses to refer to "first camera" / "second camera" / "third camera"
@@ -678,8 +678,8 @@ class _Gr00tFamilySidecarAdapter:
         # mid-rollout. The launcher's own ``_ensure_source`` /
         # ``_install_deps`` short-circuit when the cache is warm, so
         # this is additive rather than duplicative. Only the rldx sidecar
-        # registers a pre-stage step; GR00T-N1.7 now loads in-process (ADR-0046
-        # amended), so there is no gr00t sidecar to pre-stage.
+        # registers a pre-stage step; GR00T-N1.7 now loads in-process,
+        # so there is no gr00t sidecar to pre-stage.
         if self.family == "rldx":
             ensure_backend_deps("rldx_sidecar_setup")
         # No server up — fork the boot helper and wait for it to bind.
@@ -1771,7 +1771,7 @@ def _env_bool(name: str, default: bool) -> bool:
 
 
 # Back-compat alias: the adapter was named for RLDX-1 (which landed first) before
-# it was generalized to the GR00T family (ADR-0046). Existing imports + the
+# it was generalized to the GR00T family. Existing imports + the
 # rldx-specific tests keep using this name.
 _RLDXSidecarAdapter = _Gr00tFamilySidecarAdapter
 
@@ -1861,7 +1861,7 @@ def _build_rldx(env_cfg: Any) -> _Gr00tFamilySidecarAdapter:
     if isinstance(cam_keys_raw, (list, tuple)) and len(cam_keys_raw) == _RLDX_CAMERA_PAIR_LEN:
         camera_keys = (str(cam_keys_raw[0]), str(cam_keys_raw[1]))
     else:
-        # Per ADR-0070: fall back to the scene's canonical camera names
+        # Fall back to the scene's canonical camera names
         # (e.g. ``("front", "wrist")`` on franka_panda) when the rskill
         # manifest does not pin ``vla.extra.camera_keys`` explicitly. The
         # ordinal ``("camera1", "camera2")`` legacy default is retained

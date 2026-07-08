@@ -177,7 +177,7 @@ class TestHALLifecycleContract:
         from openral_core import ROSConfigError
 
         # A single joint target when every in-scope robot drives >1 joint — a width
-        # mismatch that ``_validate_action_dims`` must reject (ADR-0023 contract).
+        # mismatch that ``_validate_action_dims`` must reject (manifest-driven HAL contract).
         bad_action = Action(
             control_mode=ControlMode.JOINT_POSITION,
             joint_targets=[[0.0]],

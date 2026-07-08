@@ -1,4 +1,4 @@
-"""Remaining cartesian rSkills declare an explicit OSC action contract (ADR-0036).
+"""Remaining cartesian rSkills declare an explicit OSC action contract.
 
 These checkpoints all emit a 7-D action that is a 6-D OSC end-effector delta
 plus a 1-D gripper command

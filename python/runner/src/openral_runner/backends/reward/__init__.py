@@ -1,4 +1,4 @@
-"""Reward / progress-monitor runtime backend (``kind: "reward"``, ADR-0057).
+"""Reward / progress-monitor runtime backend (``kind: "reward"``).
 
 A reward rSkill (Robometer-4B) runs in parallel with a VLA policy and scores the
 rollout: per-frame normalized progress + per-frame success probability. This

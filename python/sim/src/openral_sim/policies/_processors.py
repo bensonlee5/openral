@@ -7,7 +7,7 @@ each previously called ``huggingface_hub.snapshot_download`` to fetch the
 needed by lerobot's ``make_pre_post_processors`` /
 ``PolicyProcessorPipeline.from_pretrained``. The SmolVLA and modern-ACT
 adapters already migrated to the per-file URI contract declared on
-``RSkillManifest.processors`` (ADR-0013); this helper extends the same
+``RSkillManifest.processors``; this helper extends the same
 pattern to the remaining three adapters.
 
 The function deliberately accepts the sim-layer ``VLASpec`` (and a raw
@@ -42,7 +42,7 @@ def resolve_processor_dir(spec: VLASpec | Any, repo_id: str) -> str:
        (``preprocessor_uri`` / ``postprocessor_uri``).
     2. Otherwise fall back to ``snapshot_download(repo_id)``. This path
        is what explicit-scheme URIs (e.g. ``hf://lerobot/diffusion_pusht``,
-       which predates ADR-0013) still rely on.
+       which predates the per-file processor contract) still rely on.
 
     Args:
         spec: A sim-layer ``VLASpec`` (or duck-typed equivalent with a

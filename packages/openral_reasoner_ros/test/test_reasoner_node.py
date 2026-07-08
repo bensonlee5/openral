@@ -1,4 +1,4 @@
-"""colcon-test for openral_reasoner_ros (ADR-0018 F4).
+"""colcon-test for openral_reasoner_ros.
 
 This file is a thin shim consumed by ``ament_add_pytest_test`` so
 ``colcon test --packages-select openral_reasoner_ros`` passes a real

@@ -15,13 +15,13 @@ doctor              Diagnose the host environment (Python, OS, ROS 2, GPU, USB).
 detect              Probe hardware and write a full RobotDescription robot.yaml.
 connect             Open a HAL connection to a robot and verify it responds.
 calibrate camera    Calibrate a camera sensor using ros2 camera_calibration.
-install             Install opt-in dependency groups (sim, ros, libero, …) — see ADR-0021.
-rskill search       Find installable rSkills on the OpenRAL HF Hub org (ADR-0055).
+install             Install opt-in dependency groups (sim, ros, libero, …).
+rskill search       Find installable rSkills on the OpenRAL HF Hub org.
 rskill install      Download an rSkill from the HF Hub and register it locally.
 rskill list         List all locally installed rSkills.
 rskill check        Report which installed rSkills will run on the current host.
 rskill new          Scaffold a new local rSkill from rskills/template/.
-collision lower     Lower a robot's URDF/SRDF into its self-collision model (ADR-0030).
+collision lower     Lower a robot's URDF/SRDF into its self-collision model.
 collision check     Fail if a manifest drifts from its lowered collision model.
 check               Cross-validate every robot/skill/scene manifest in one pass.
 
@@ -373,7 +373,7 @@ _RUN_MODE_BY_SUBCOMMAND: dict[str, str] = {
 }
 
 # Hardware deployments at >=100 Hz over 24 h would emit millions of tick spans
-# per day at ALWAYS_ON. ADR-0010 (2026-05-17 amendment) calls for a
+# per day at ALWAYS_ON. The 2026-05-17 sampling-policy amendment calls for a
 # 10% ratio sampler on hardware mode and ALWAYS_ON for sim / benchmark
 # / one-shot subcommands (doctor / detect / skill install / …) where the
 # total volume is bounded by a single invocation.
@@ -391,7 +391,7 @@ def _root(ctx: typer.Context) -> None:
     if typed on the shell. Subcommand invocations behave exactly as before:
     a single ``cli.command`` root span wraps the call and the sampler is
     chosen by ``openral.run.mode`` (hardware → 10% ratio, others → always-on)
-    per ADR-0010's 2026-05-17 amendment. ``OPENRAL_OTEL_SAMPLE_RATIO``
+    per the 2026-05-17 sampling-policy amendment. ``OPENRAL_OTEL_SAMPLE_RATIO``
     overrides for ad-hoc debugging.
     """
     if ctx.invoked_subcommand is None:
@@ -538,7 +538,7 @@ def _check_compute_spec(result: GpuProbeResult) -> list[CheckResult]:
     by :func:`_check_gpu` so no second probe is issued.  The assembled
     ``ComputeSpec`` mirrors exactly what ``openral detect`` would write into
     ``RobotDescription.compute_edge`` / ``compute_local`` — doctor and detect
-    stay in sync (ADR-0069).
+    stay in sync.
 
     Tier labelling:
     - Jetson SoC detected → rows prefixed ``ComputeSpec (edge)``
@@ -1093,7 +1093,7 @@ def _write_deploy_scene_scaffold(
     from openral_core import DeployScene, HalParameters, SceneSpec
 
     robot_id = str(description.name)
-    # Seed the scene's HAL binding (ADR-0078) from the robot manifest's own
+    # Seed the scene's HAL binding from the robot manifest's own
     # hal.parameters.defaults (e.g. serial port) + lerobot calibration
     # placeholders, so the scaffolded scene is a self-contained `deploy run`
     # target (no `--hal` needed once the operator fills the real port + commits
@@ -1368,7 +1368,7 @@ rskill_app = typer.Typer(
 )
 app.add_typer(rskill_app, name="rskill")
 
-#: Canonical HF Hub org for first-party rSkills (ADR-0055). Used to suggest a
+#: Canonical HF Hub org for first-party rSkills. Used to suggest a
 #: repair when ``rskill install`` is handed an org-less id, and as the ``author``
 #: filter for ``rskill search``.
 _DEFAULT_RSKILL_ORG: Final[str] = "OpenRAL"
@@ -1583,7 +1583,7 @@ def rskill_search(
     limit: int = typer.Option(50, "--limit", help="Max OpenRAL repos to inspect."),
     json: bool = typer.Option(False, "--json", help="Output machine-readable JSON."),
 ) -> None:
-    """Search the OpenRAL HF Hub org for installable rSkills (ADR-0055 D4).
+    """Search the OpenRAL HF Hub org for installable rSkills.
 
     Lists every ``OpenRAL/*`` repo whose ``rskill.yaml`` manifest validates and
     matches the optional facet filters, so the printed ids are paste-able into
@@ -2407,8 +2407,8 @@ def benchmark_run(
         ...,
         "--suite",
         help=(
-            "Benchmark suite to evaluate — a bare ``list[BenchmarkScene]`` YAML "
-            "(ADR-0042). Either a built-in id (resolved to "
+            "Benchmark suite to evaluate — a bare ``list[BenchmarkScene]`` YAML. "
+            "Either a built-in id (resolved to "
             "`benchmarks/<id>.yaml`) or a direct YAML path."
         ),
     ),
@@ -2507,9 +2507,9 @@ def benchmark_run(
     delegating each rollout to ``openral_sim.SimRunner`` so the
     rSkill compatibility check, OTel spans, and latency-budget reporting
     are identical to ``openral sim run``. Each :class:`BenchmarkScene`
-    carries its own scene + task + robot (ADR-0041 / Task 10); ADR-0042
-    deleted the ``BenchmarkSpec`` wrapper class so the suite is a bare
-    list of scenes whose id is the YAML filename stem.
+    carries its own scene + task + robot; the ``BenchmarkSpec`` wrapper
+    class was removed so the suite is a bare list of scenes whose id is
+    the YAML filename stem.
 
     Example:
         >>> # openral benchmark run --suite libero_spatial \\
@@ -2621,7 +2621,7 @@ def _resolve_benchmark_suite(
 ) -> tuple[list[BenchmarkScene], str]:
     """Map a ``--suite`` argument to a validated ``(scenes, suite_id)`` tuple.
 
-    ADR-0042: a benchmark suite is a bare ``list[BenchmarkScene]`` YAML;
+    A benchmark suite is a bare ``list[BenchmarkScene]`` YAML;
     the suite id is the filename stem. Accepts either a built-in id
     (resolved to ``benchmarks/<id>.yaml``) or a direct path. Bare ids
     that don't resolve raise ``typer.BadParameter`` listing the catalogue
@@ -3136,19 +3136,19 @@ def _summarize_results(results: dict[str, object]) -> str:
 # `tests/unit/test_cli_eval.py::test_bh_cli_import_is_light` guards this.
 app.add_typer(sim_app, name="sim")
 
-# ADR-0021 — `openral install <group>` post-install escape hatch for the
+# `openral install <group>` — post-install escape hatch for the
 # Tier-0 curl-bash installer (`scripts/install.sh`). The base install puts
 # `openral` on $PATH with the CLI's own thin runtime; sim physics, LIBERO,
 # MetaWorld, RoboCasa, and the sudo+apt ROS 2 bootstrap layer in on demand.
 app.add_typer(install_app, name="install")
 
-# ADR-0019 PR5: `openral dataset push` (publish a LeRobotDataset v3 to the HF Hub).
+# `openral dataset push` — publish a LeRobotDataset v3 to the HF Hub.
 # Importing `dataset` at module top is cheap; the `push` command itself lazy-
 # imports huggingface_hub only when actually publishing so `openral --help` stays
 # sub-second.
 app.add_typer(dataset_app, name="dataset")
 
-# ADR-0030: `openral collision lower|check` — offline URDF/SRDF → manifest
+# `openral collision lower|check` — offline URDF/SRDF → manifest
 # self-collision model. The `lower_robot` import is deferred inside the commands
 # (it pulls yourdfpy/trimesh) so `openral --help` stays fast.
 app.add_typer(collision_app, name="collision")
@@ -3159,13 +3159,13 @@ app.add_typer(collision_app, name="collision")
 # JSON-Schema emission lives in `tools/schema_export.py` (CI-gated), not here.
 app.command("check")(check_command)
 
-# ADR-0058: `openral robot vendor-urdf <id>` — expand an upstream xacro to a
+# `openral robot vendor-urdf <id>` — expand an upstream xacro to a
 # flat, committed URDF so end users need no xacro tooling at runtime. The
 # `vendor_urdf` import is deferred inside the command (it pulls robot_descriptions/
 # xacrodoc/yourdfpy) so `openral --help` stays fast.
 robot_app = typer.Typer(
     name="robot",
-    help="Robot description assets — vendor a flat URDF from an upstream xacro (ADR-0058).",
+    help="Robot description assets — vendor a flat URDF from an upstream xacro.",
     no_args_is_help=True,
 )
 app.add_typer(robot_app, name="robot")
@@ -3209,7 +3209,7 @@ def robot_vendor_urdf(
         ),
     ),
 ) -> None:
-    """Expand an upstream description to a flat, committed URDF (ADR-0058)."""
+    """Expand an upstream description to a flat, committed URDF."""
     from openral_cli.robot import vendor_urdf
 
     rename_pairs: list[tuple[str, str]] | None = None
@@ -3226,14 +3226,14 @@ def robot_vendor_urdf(
     typer.echo(f"Wrote {written}")
 
 
-# ADR-0018 F10: `openral prompt "do X"` publishes a one-shot PromptStamped
+# `openral prompt "do X"` publishes a one-shot PromptStamped
 # onto /openral/prompt_in/cli; the prompt_router_node fans it out to
-# /openral/prompt for the F4 reasoner. rclpy import is deferred inside
+# /openral/prompt for the reasoner. rclpy import is deferred inside
 # the command body so `openral --help` stays sub-second.
 app.command(
     name="prompt",
     help=(
-        "Publish a one-shot operator prompt to the prompt-router (ADR-0018 F10). "
+        "Publish a one-shot operator prompt to the prompt-router. "
         "Requires a sourced ROS 2 install."
     ),
 )(prompt_command)
@@ -3382,11 +3382,11 @@ def deploy_run(
         None,
         "--enable-reward-monitor/--no-enable-reward-monitor",
         help=(
-            "ADR-0057/0077 — bring up the Robometer reward monitor parallel to the "
+            "Bring up the Robometer reward monitor parallel to the "
             "VLA (same leg `deploy sim` exposes): it scores the robot's first RGB "
             "camera topic and serves /openral/perception/query_task_progress. The "
-            "manifest is auto-paired from the VLA palette's reward_rskill_name "
-            "(ADR-0077 §4); override with --reward-monitor-manifest. Unset = the "
+            "manifest is auto-paired from the VLA palette's reward_rskill_name; "
+            "override with --reward-monitor-manifest. Unset = the "
             "scene's runtime.enable_reward_monitor, else off."
         ),
     ),
@@ -3394,7 +3394,7 @@ def deploy_run(
         None,
         "--reward-monitor-manifest",
         help=(
-            "ADR-0057 — path to a kind:reward rSkill manifest. Empty auto-pairs "
+            "Path to a kind:reward rSkill manifest. Empty auto-pairs "
             "from the VLA palette, falling back to rskills/robometer-4b. Ignored "
             "unless --enable-reward-monitor."
         ),
@@ -3405,7 +3405,7 @@ def deploy_run(
         help="Print the resolved real-mode launch argv and exit without shelling out.",
     ),
 ) -> None:
-    """Run an rSkill on REAL hardware via the production ROS graph (ADR-0032).
+    """Run an rSkill on REAL hardware via the production ROS graph.
 
     Unlike `openral deploy sim`, this drives the **real** hardware HAL: it
     resolves the robot from `--config` (a DeployScene) and shells the SAME
@@ -3605,7 +3605,7 @@ def deploy_validate(
     console.print(f"[green]✓ ready for `deploy run` ({len(warns)} warning(s)).[/green]")
 
 
-# ── openral replay — bag↔OTel correlator (ADR-0018 F7) ──────────────────────────
+# ── openral replay — bag↔OTel correlator ──────────────────────────
 
 
 def _resolve_frame_trace_id(frame_spec: str, dataset_root: Path) -> str:
@@ -3649,8 +3649,8 @@ def _resolve_frame_trace_id(frame_spec: str, dataset_root: Path) -> str:
 @app.command(
     "replay",
     help=(
-        "Join a rosbag2/.mcap file with OTel spans from the live dashboard "
-        "(ADR-0018 F7). Prints a chronological JSON timeline keyed by trace_id; "
+        "Join a rosbag2/.mcap file with OTel spans from the live dashboard. "
+        "Prints a chronological JSON timeline keyed by trace_id; "
         "writes to `--out` when given. `--dashboard` may be omitted for a "
         "bag-only timeline."
     ),
@@ -3720,13 +3720,13 @@ def replay(
     print(_json.dumps(result.to_json(), indent=2, sort_keys=False))
 
 
-# ── openral record — wrap `ros2 bag record` with profile presets (ADR-0018 F7) ──
+# ── openral record — wrap `ros2 bag record` with profile presets ──
 
 
 @app.command(
     "record",
     help=(
-        "Spawn `ros2 bag record` for the ADR-0018 graph with a slim/full profile. "
+        "Spawn `ros2 bag record` for the OpenRAL ROS graph with a slim/full profile. "
         "Requires a sourced ROS 2 install. Use `--dry-run` to print the argv "
         "instead of executing."
     ),
@@ -3764,7 +3764,7 @@ def record(
         help="Print the composed argv instead of executing.",
     ),
 ) -> None:
-    """Wrap `ros2 bag record` with ADR-0018 F7's slim/full topic presets."""
+    """Wrap `ros2 bag record` with slim/full topic presets."""
     from openral_observability.replay.cli import run_record
 
     if profile not in {"slim", "full"}:
@@ -3790,11 +3790,11 @@ def record(
         raise typer.Exit(code=completed.returncode)
 
 
-# ── openral profile session — LTTng opt-in profiling (ADR-0018 F9) ──────────────
+# ── openral profile session — LTTng opt-in profiling ──────────────
 
 profile_app = typer.Typer(
     name="profile",
-    help="Microsecond-accurate profiling via ros2_tracing / LTTng (ADR-0018 F9).",
+    help="Microsecond-accurate profiling via ros2_tracing / LTTng.",
     no_args_is_help=True,
 )
 app.add_typer(profile_app, name="profile")

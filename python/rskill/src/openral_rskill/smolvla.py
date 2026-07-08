@@ -234,11 +234,11 @@ class SmolVLAAdapter(rSkillBase):
             n_params=sum(p.numel() for p in self._policy.parameters()),
         )
 
-        # Opt-in TensorRT runtime (ADR-0037 follow-up): swap sample_actions for
+        # Opt-in TensorRT runtime: swap sample_actions for
         # the split-ONNX TRT engines via the shared env-gated seam (identical
         # knob to the openral_sim deploy path). Loud, no silent fallback (§1.4).
         # The TRT hook itself ships in the private openral-pro-trt package
-        # (ADR-0083) and is looked up by name — a host without it stays on
+        # and is looked up by name — a host without it stays on
         # the eager PyTorch path (logged, not silently skipped).
         if maybe_attach_pro_hooks(
             "smolvla",

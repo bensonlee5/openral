@@ -1,7 +1,7 @@
 ---
 name: omdet-turbo-locator
 description: >-
-  S1 object detector. Capabilities: detect on open-vocabulary queried object. OmDet-Turbo (Swin-tiny) on-demand open-vocabulary locator. The reasoner prompts it via the read-only locate_in_view tool to find a specific object in the current frame — a lightweight, real-time, Apache-2.0 in-process alternative to the 3B LocateAnything VLM for simple "find X" queries. Wraps omlab/omdet-turbo-swin-tiny-hf. See ADR-0051 for the continuous-vs-on_demand detector mode split. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S1 object detector. Capabilities: detect on open-vocabulary queried object. OmDet-Turbo (Swin-tiny) on-demand open-vocabulary locator. The reasoner prompts it via the read-only locate_in_view tool to find a specific object in the current frame — a lightweight, real-time, Apache-2.0 in-process alternative to the 3B LocateAnything VLM for simple "find X" queries. Wraps omlab/omdet-turbo-swin-tiny-hf. This is the on-demand half of the continuous-vs-on_demand detector mode split. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -36,7 +36,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **object detector** (`role: s1`, `kind: detector`). OmDet-Turbo (Swin-tiny) on-demand open-vocabulary locator. The reasoner prompts it via the read-only locate_in_view tool to find a specific object in the current frame — a lightweight, real-time, Apache-2.0 in-process alternative to the 3B LocateAnything VLM for simple "find X" queries. Wraps omlab/omdet-turbo-swin-tiny-hf. See ADR-0051 for the continuous-vs-on_demand detector mode split.
+An OpenRAL **object detector** (`role: s1`, `kind: detector`). OmDet-Turbo (Swin-tiny) on-demand open-vocabulary locator. The reasoner prompts it via the read-only locate_in_view tool to find a specific object in the current frame — a lightweight, real-time, Apache-2.0 in-process alternative to the 3B LocateAnything VLM for simple "find X" queries. Wraps omlab/omdet-turbo-swin-tiny-hf. This is the on-demand half of the continuous-vs-on_demand detector mode split.
 
 ## Capabilities
 

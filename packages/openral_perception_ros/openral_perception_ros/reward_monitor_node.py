@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reward-monitor query service node (ADR-0057).
+"""Reward-monitor query service node.
 
 Subscribes the co-active VLA's camera ``sensor_msgs/Image`` stream(s), buffers
 recent frames in a rolling time window, and serves
@@ -36,7 +36,7 @@ Parameters:
         small (default 2.0 s ≈ 6 frames) so the reward forward fits beside a VLA on
         an 8 GB card; the full 40 s buffer would OOM. Raise on a bigger GPU.
     enable_critic_score (bool): additionally publish a generic
-        ``openral_msgs/CriticScore`` per heartbeat (ADR-0064) to feed the Tier-C
+        ``openral_msgs/CriticScore`` per heartbeat to feed the Tier-C
         critic producer. Default False. Gates ONLY the publish — the scoring +
         dashboard bar run regardless.
     critic_score_topic (str): topic for the CriticScore stream. Default
@@ -101,7 +101,7 @@ def main(args: Any = None) -> None:
             self.declare_parameter("image_topic", "/openral/cameras/agentview_left/image")
             self.declare_parameter("manifest_path", "")
             self.declare_parameter("task", "")
-            # ADR-0064 — opt-in: also publish a generic openral_msgs/CriticScore per
+            # Opt-in: also publish a generic openral_msgs/CriticScore per
             # window so the Tier-C critic producer (critic_producer_node) can fire a
             # /openral/failure/critic on a progress stall. Off by default — the node
             # stays query-only unless asked.
@@ -198,7 +198,7 @@ def main(args: Any = None) -> None:
             self._score_window_s = gp("score_window_s").get_parameter_value().double_value
             score_period = gp("score_period_s").get_parameter_value().double_value
 
-            # ADR-0064 — optional CriticScore PUBLISHER leg (Tier-C producer feed).
+            # Optional CriticScore PUBLISHER leg (Tier-C producer feed).
             # `enable_critic_score` gates ONLY this publish; the scoring itself runs
             # on the heartbeat timer below regardless, so the dashboard reward bar
             # never depends on the critic being wired.
@@ -299,7 +299,7 @@ def main(args: Any = None) -> None:
             return _cb
 
         def _emit_score_span(self, a: dict[str, Any], task: str) -> None:
-            """Trace one assessment as a ``reward.score`` span (ADR-0057).
+            """Trace one assessment as a ``reward.score`` span.
 
             The dashboard's rSkill card renders the latest score as a live
             progress/success bar and the ``reward.camera`` attribute as the
@@ -326,7 +326,7 @@ def main(args: Any = None) -> None:
                 pass
 
         def _on_query_task_progress(self, request: Any, response: Any) -> Any:
-            """Service (ADR-0057): assess task progress/success over a window."""
+            """Service: assess task progress/success over a window."""
             task = request.task.strip() or self._default_task
             window_s = request.window_s if request.window_s > 0.0 else 1e9
             buf = self._buffers[self._primary_id]
@@ -385,7 +385,7 @@ def main(args: Any = None) -> None:
             """Timer: score a bounded recent window → reward.score span (+ optional CriticScore).
 
             Drives the dashboard rSkill card's live reward bar via the span it emits;
-            the ADR-0064 CriticScore publish is an optional add-on when the Tier-C
+            the CriticScore publish is an optional add-on when the Tier-C
             producer leg is wired. Best-effort and advisory — skips quietly when gated
             off / no task / stale-or-empty buffer, and never crashes the timer on an
             assess error.
@@ -407,7 +407,7 @@ def main(args: Any = None) -> None:
                 self.get_logger().debug(f"reward score_tick assess failed: {exc}")
                 return
             self._emit_score_span(a, task)  # dashboard reward bar — ALWAYS
-            # ADR-0064 Tier-C CriticScore — only when the publisher leg is enabled.
+            # Tier-C CriticScore — only when the publisher leg is enabled.
             if self._critic_pub is not None:
                 from openral_observability.propagation import current_traceparent
 

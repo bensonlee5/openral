@@ -1,7 +1,7 @@
 """Unit tests for :class:`openral_runner.ROSPublishingHAL`.
 
-The adapter is the single change to the in-process hot path mandated by
-ADR-0018 §F1 — it replaces a motor-driving HAL with a publisher of
+The adapter is the single change to the in-process hot path — it
+replaces a motor-driving HAL with a publisher of
 ``openral_msgs/ActionChunk`` on ``/openral/candidate_action`` while
 keeping the existing `DeployRunner._tick_impl` contract intact.
 
@@ -275,10 +275,10 @@ def test_read_state_caches_joint_states() -> None:
 def test_send_action_rejects_unsupported_control_mode() -> None:
     """cartesian_pose / foot_placement / dex_hand_joint are still out of the F1 wire.
 
-    ADR-0028c/0028d wired cartesian_delta / cartesian_twist / body_twist /
-    gripper / composite_mode onto the typed ActionChunk, so those are now
-    accepted; only cartesian_pose, foot_placement and dex_hand_joint remain
-    unserialised. Assert one of the still-unsupported modes is rejected.
+    cartesian_delta / cartesian_twist / body_twist / gripper / composite_mode
+    are wired onto the typed ActionChunk, so those are now accepted; only
+    cartesian_pose, foot_placement and dex_hand_joint remain unserialised.
+    Assert one of the still-unsupported modes is rejected.
     """
     import rclpy
     from rclpy.lifecycle import LifecycleNode

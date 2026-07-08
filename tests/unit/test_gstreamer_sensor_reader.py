@@ -331,7 +331,7 @@ def test_holoscan_backend_value_is_reserved_but_unimplemented() -> None:
     """``SensorReaderBackend.HOLOSCAN`` parses but builds no reader today.
 
     The enum value exists so a future PR can register the backend
-    additively (ADR-0010 Amendment 2026-05-12, ADR-0011). Configs that
+    additively. Configs that
     select it today fall through the factory registry and surface a
     typed ROSConfigError listing the registered backends.
     """
@@ -349,7 +349,7 @@ Gst.init(None)
 
 
 def test_factory_spec_passes_jpeg_through() -> None:
-    """backend_params.jpeg reaches PipelineSpec (MJPG cameras, ADR-0082)."""
+    """backend_params.jpeg reaches PipelineSpec (MJPG cameras)."""
     from openral_runner.factory import _gstreamer_spec_from_params
 
     cfg = SensorReaderConfig.model_validate(

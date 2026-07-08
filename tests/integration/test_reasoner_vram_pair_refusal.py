@@ -1,7 +1,7 @@
-"""Live ROS integration test for the ADR-0077 VLA+reward VRAM pair refusal.
+"""Live ROS integration test for the VLA+reward VRAM pair refusal.
 
 A VLA emits no success signal of its own, so it must run with its reward model
-resident alongside it (ADR-0074). When the pair does not fit GPU VRAM, the
+resident alongside it. When the pair does not fit GPU VRAM, the
 reasoner must refuse the ``execute_rskill`` dispatch *before* the goal is sent —
 publishing a ``FailureTrigger`` (so the reasoner sees it and bounds retries →
 handoff) instead of OOMing mid-run or running the policy blind.
@@ -12,7 +12,7 @@ NEVER called and a ``vram_insufficient`` ``FailureTrigger`` is published. The on
 doubles are ``FakeToolUseClient`` at the LLM boundary (CLAUDE.md §1.11) and the
 three guard inputs set directly on the node (``__init__`` reads the reward /
 gpu-total params at construction, before a test can set them — the param→attr
-plumbing is covered live by the ADR-0077 ARMED log).
+plumbing is covered live by the VRAM-pair-refusal ARMED log).
 
 Gated on ``OPENRAL_TEST_ROS_LIVE=1`` like the rest of the live reasoner suite::
 
@@ -85,7 +85,7 @@ def test_execute_rskill_refused_when_vla_reward_pair_exceeds_vram() -> None:
     failures: list[Any] = []  # captured FailureTrigger messages
 
     # Capture the OTLP span path the live dashboard consumes: the refusal must
-    # also emit an ``openral.event.skill_failure`` span event (ADR-0074/0077) so
+    # also emit an ``openral.event.skill_failure`` span event so
     # the dashboard's "skill failures" counter tallies it and shows the state.
     span_exporter = InMemorySpanExporter()
     provider = TracerProvider()
@@ -118,7 +118,7 @@ def test_execute_rskill_refused_when_vla_reward_pair_exceeds_vram() -> None:
         reasoner.trigger_configure()
         reasoner.trigger_activate()
 
-        # ADR-0077 guard inputs (see module docstring — __init__ already read the
+        # VRAM-pair-refusal guard inputs (see module docstring — __init__ already read the
         # params, so set the attributes the guard reads directly):
         reasoner._reward_manifest = reward_manifest
         reasoner._gpu_total_vram_gb = 4.0  # < 4.8 GB pair → must refuse
@@ -206,7 +206,7 @@ def test_execute_rskill_refused_when_vla_reward_pair_exceeds_vram() -> None:
         rclpy.shutdown()
 
     assert failures, (
-        "no FailureTrigger published; the ADR-0077 pair check did not refuse the "
+        "no FailureTrigger published; the VRAM pair check did not refuse the "
         "over-budget VLA dispatch."
     )
     vram_failures = [m for m in failures if "vram_insufficient" in m.evidence_json]
@@ -231,7 +231,7 @@ def test_execute_rskill_refused_when_vla_reward_pair_exceeds_vram() -> None:
     ]
     assert skill_failure_events, (
         "no openral.event.skill_failure span event emitted; the dashboard's skill-"
-        "failures counter would never see the ADR-0077 refusal."
+        "failures counter would never see the VRAM pair refusal."
     )
     assert any(
         ev.attributes is not None

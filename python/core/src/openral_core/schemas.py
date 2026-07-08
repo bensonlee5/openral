@@ -103,7 +103,7 @@ JointRole: TypeAlias = Literal[
     "wheel",
     "unknown",
 ]
-"""Structural classification of a :class:`JointSpec` (ADR-0028a).
+"""Structural classification of a :class:`JointSpec`.
 
 Carries the joint's *purpose* in the embodiment's morphology — what
 the runner, safety kernel, and dataset bridge need to identify a
@@ -112,7 +112,7 @@ channel without relying on name-substring heuristics (e.g.
 which silently misclassifies any joint with ``"gripper"`` in the name).
 
 ``"unknown"`` is the default so legacy manifests load unchanged; the
-fleet annotates incrementally as ADR-0028 sub-PRs land.
+fleet annotates incrementally as this rolls out.
 """
 
 
@@ -211,7 +211,7 @@ class ControlMode(str, Enum):
     GRIPPER_BINARY = "gripper_binary"
     GRIPPER_POSITION = "gripper_position"
     DEX_HAND_JOINT = "dex_hand_joint"  # multi-DoF fingers
-    # ADR-0028d — sim-only robosuite-composite multiplexer flag (e.g.
+    # Sim-only robosuite-composite multiplexer flag (e.g.
     # ``HybridMobileBase.set_goal`` reads ``action[-1]`` to switch the
     # arm controller between "achieved" (frozen) and "desired"
     # (responds to delta) modes). 1-D value in ``[-1, +1]``. Real-HW
@@ -375,7 +375,7 @@ def scale_intrinsics_to(base: IntrinsicsPinhole, width: int, height: int) -> Int
 
 
 class CameraSimPlacement(BaseModel):
-    """Where an RGB sensor's camera sits in the sim MJCF (ADR-0086).
+    """Where an RGB sensor's camera sits in the sim MJCF.
 
     Lets the generic HAL camera rig (``openral_hal._camera_rig``) splice a
     manifest camera into a bare-arm MJCF that ships no ``<camera>`` elements, so
@@ -468,7 +468,7 @@ class SensorSpec(BaseModel):
     # name matches ``name``" (the common case). E.g. openarm's ``base`` sensor
     # renders the MJCF ``top`` camera.
     sim_camera_name: str | None = None
-    # ADR-0086 — where this camera sits in the sim MJCF. When set, the generic
+    # Where this camera sits in the sim MJCF. When set, the generic
     # HAL camera rig (``openral_hal._camera_rig``) splices the camera into a
     # bare-arm MJCF that ships no ``<camera>`` elements, so a ``deploy sim`` twin
     # renders the robot's declared cameras without a per-robot scene composer.
@@ -563,24 +563,24 @@ class JointSpec(BaseModel):
             manipulator we ship; only mobile bases and humanoids
             whose MJCF auto-prefixes joints (robosuite's
             ``mobilebase0_…`` namespace, GR-1's ``robot0_…``) need
-            it. See ADR-0025.
-        role: Structural classification (ADR-0028a). The downstream
+            it.
+        role: Structural classification. The downstream
             runner / safety / dataset-bridge code identifies grippers
             and base DoFs by this tag instead of substring-matching the
             joint name (which silently misclassifies any joint
             containing ``"gripper"``, e.g. ``"gripper_pose"``). Default
             ``"unknown"`` keeps legacy manifests loadable; the fleet
-            annotates incrementally per ADR-0028a.
+            annotates incrementally as this rolls out.
         origin_xyz: Fixed translation (metres) of this joint's frame in
             its ``parent_link`` frame — the URDF ``<joint><origin xyz>``.
             With :attr:`origin_rpy` and :attr:`axis_xyz` it gives the
-            kernel everything it needs for forward kinematics (ADR-0030).
+            kernel everything it needs for forward kinematics.
             Default ``(0, 0, 0)``; populated by the offline lowering tool
             (from MJCF/URDF) only for robots that enable self-collision
             checking — legacy manifests are unaffected.
         origin_rpy: Fixed orientation (roll, pitch, yaw, radians) of this
             joint's frame in its ``parent_link`` frame — the URDF
-            ``<joint><origin rpy>``. Default ``(0, 0, 0)``. ADR-0030.
+            ``<joint><origin rpy>``. Default ``(0, 0, 0)``.
     """
 
     name: str
@@ -616,8 +616,8 @@ class EndEffectorSpec(BaseModel):
         max_payload_kg: Maximum payload in kg.
         workspace_radius_m: Reach radius in meters.
         tactile_sensors: List of tactile SensorSpec names attached to this EE.
-        actuated: Whether the end-effector is driven by an actuator
-            (ADR-0028a). False for passive tools (inert flanges,
+        actuated: Whether the end-effector is driven by an actuator.
+            False for passive tools (inert flanges,
             magnetic plates without electromagnet, kinematic-only
             mounts). When False, the safety kernel rejects any
             chunk addressed at this EE — the chunk routes to a
@@ -641,7 +641,7 @@ class EndEffectorSpec(BaseModel):
 
 LocomotionKind: TypeAlias = Literal["bipedal", "quadruped", "wheeled", "tracked", "none"]
 
-# cuMotion (Isaac ROS) GPU floor for the ADR-0065 MoveIt planner gate. cuRobo
+# cuMotion (Isaac ROS) GPU floor for the MoveIt planner gate. cuRobo
 # needs an Ampere-or-newer GPU, CUDA toolkit >= 13, and a nominal 8 GB card.
 # Nominal-8 GB GPUs report ~7.99 GiB (the probe divides MiB by 1024), so the
 # VRAM floor sits just below 8.0 GiB rather than at it — otherwise a real 8 GB
@@ -667,14 +667,14 @@ def _cuda_major(version: str) -> int | None:
 class ComputeSpec(BaseModel):
     """Compute profile for one deployment tier — runtime inference and GPU capabilities.
 
-    Used for all three deployment tiers (ADR-0069):
+    Used for all three deployment tiers:
 
     * **Edge** — on-robot SoC (Jetson AGX Orin, NVIDIA Thor).
     * **Local** — laptop / workstation tethered to the robot or running the simulation.
     * **Cloud** — remote GPU node reachable via SSH or HTTP.
 
     Attached to :class:`RobotDescription` as ``compute_edge``, ``compute_local``,
-    and ``compute_cloud`` (ADR-0069).  Consumed by ``rSkill.check_runtime`` and
+    and ``compute_cloud``.  Consumed by ``rSkill.check_runtime`` and
     ``rSkill.check_quantization_dtype`` to match ``RSkillManifest.runtime`` /
     ``quantization.dtype`` against what the hardware can actually execute.
 
@@ -699,7 +699,7 @@ class ComputeSpec(BaseModel):
         nvmm_available: Whether ``libnvbufsurface.so`` is present on this node
             (Tegra L4T multimedia stack).  ``True`` enables the NVMM zero-copy
             sensor-ingest path; probed on all tiers and returns ``False``
-            gracefully when the library is absent (ADR-0013).
+            gracefully when the library is absent.
         endpoint: Remote access address for cloud / SSH nodes.
             Format: ``ssh://user@host[:port]`` or ``https://host:port``.
             ``None`` for edge and local nodes.
@@ -732,7 +732,7 @@ class ComputeSpec(BaseModel):
     network_latency_ms: float | None = None
 
     def supports_cumotion(self) -> bool:
-        """Whether this compute spec meets the cuMotion (Isaac ROS) GPU floor (ADR-0065).
+        """Whether this compute spec meets the cuMotion (Isaac ROS) GPU floor.
 
         cuMotion's CUDA motion planner requires an Ampere-or-newer GPU (compute
         capability >= 8.0), CUDA toolkit >= 13.0, and a nominal 8 GB card. The
@@ -772,10 +772,10 @@ class RobotCapabilities(BaseModel):
         has_force_control: Whether force/impedance control is supported.
         has_vision: Whether camera(s) are present.
         has_lidar: Whether LiDAR is present. Gates the 2D-lidar
-            ``slam_toolbox`` backend (ADR-0025).
+            ``slam_toolbox`` backend.
         has_vision_slam: Whether the robot should run camera-based visual
             SLAM (cuVSLAM + nvblox) for localization/mapping, for robots
-            that lack a lidar. Gates the visual SLAM backend (ADR-0085).
+            that lack a lidar. Gates the visual SLAM backend.
             Independent of ``has_lidar``; when both are set the lidar
             backend wins (it does not require an AI depth model).
         has_audio: Whether audio I/O is present.
@@ -813,7 +813,7 @@ class SafetyEnvelope(BaseModel):
         workspace_box_max_xyz: Upper corner of allowed workspace (m).
         no_go_zones: List of polygon definitions (dicts with 'vertices').
         max_ee_speed_m_s: Maximum end-effector linear speed in m/s.
-            Also used by ADR-0028b's per-mode supervisor as the
+            Also used by the per-control-mode supervisor as the
             CARTESIAN_TWIST linear bound.
         max_ee_accel_m_s2: Maximum end-effector acceleration in m/s².
         max_joint_speed_factor: Fraction of joint velocity_limit allowed.
@@ -825,26 +825,31 @@ class SafetyEnvelope(BaseModel):
         contact_force_threshold_n: Force threshold for contact detection.
         cycle_time_violation_threshold_ms: Control cycle time violation threshold.
         human_in_loop_required: rSkill names requiring human supervision.
-        max_cartesian_step_m: ADR-0028b — per-step magnitude bound on
+        max_cartesian_step_m: Per-control-mode supervisor bound —
+            per-step magnitude bound on
             CARTESIAN_DELTA's xyz triplet (Euclidean). ``None`` means
             "no per-mode check declared, skip"; today's behaviour
             preserved. Robots that host OSC-trained checkpoints
             (panda_mobile, future Franka + π0.7) declare this so the
             supervisor rejects out-of-distribution arm deltas before
             they reach the controller.
-        max_cartesian_step_rad: ADR-0028b — per-step magnitude bound on
+        max_cartesian_step_rad: Per-control-mode supervisor bound —
+            per-step magnitude bound on
             CARTESIAN_DELTA's axis-angle triplet (Euclidean). ``None``
             skips the check.
-        max_ee_angular_speed_rad_s: ADR-0028b — angular component bound
+        max_ee_angular_speed_rad_s: Per-control-mode supervisor bound —
+            angular component bound
             for CARTESIAN_TWIST (the linear bound reuses
             :attr:`max_ee_speed_m_s`). ``None`` skips the check.
-        max_base_linear_speed_m_s: ADR-0028b — BODY_TWIST linear bound
+        max_base_linear_speed_m_s: Per-control-mode supervisor bound —
+            BODY_TWIST linear bound
             (Euclidean over vx,vy,vz). ``None`` skips the check;
             mobile manipulators / wheeled bases declare it.
-        max_base_angular_speed_rad_s: ADR-0028b — BODY_TWIST angular
+        max_base_angular_speed_rad_s: Per-control-mode supervisor bound —
+            BODY_TWIST angular
             bound (Euclidean over wx,wy,wz; for planar bases only
             wz is non-zero). ``None`` skips the check.
-        self_collision_margin_m: ADR-0081 — clearance margin (m) for the
+        self_collision_margin_m: Clearance margin (m) for the
             kernel's self/world/voxel geometric checks; a pair closer than
             this fires. Default ``0.0`` (collide on touch). A small
             **negative** value tolerates the grazing contact inherent to a
@@ -870,7 +875,7 @@ class SafetyEnvelope(BaseModel):
     contact_force_threshold_n: float = 30.0
     cycle_time_violation_threshold_ms: float = 5.0
     human_in_loop_required: list[str] = Field(default_factory=list)
-    # ADR-0028b — per-control-mode bounds for the supervisor dispatch.
+    # Per-control-mode bounds for the supervisor dispatch.
     # All default to None so legacy behaviour is preserved: a robot
     # that doesn't declare these gets its chunks passed through the
     # per-mode check (cartesian / twist / gripper / etc.) verbatim, the
@@ -880,7 +885,7 @@ class SafetyEnvelope(BaseModel):
     max_ee_angular_speed_rad_s: float | None = None
     max_base_linear_speed_m_s: float | None = None
     max_base_angular_speed_rad_s: float | None = None
-    self_collision_margin_m: float = 0.0  # ADR-0081; negative tolerates grazing
+    self_collision_margin_m: float = 0.0  # negative tolerates grazing
 
 
 # ─── VLA observation / action specs ────────────────────────────────────────────
@@ -905,7 +910,7 @@ class ActionRepresentation(str, Enum):
     DELTA_EE_6D = "delta_ee_6d"
     # 3-D end-effector translation delta (dx, dy, dz) + 1 gripper scalar = 4-D.
     # The MetaWorld mocap controller and similar planar-reach envs drive only EE
-    # translation, not orientation (ADR-0071 Phase 4). Distinct from the 6-D
+    # translation, not orientation. Distinct from the 6-D
     # variants so the derived cartesian segment is 3 wide, not 6.
     DELTA_EE_3D_PLUS_GRIPPER = "delta_ee_3d_plus_gripper"
     CARTESIAN_POSE = "cartesian_pose"
@@ -945,7 +950,7 @@ class RSkillAction(str, Enum):
       ``TRANSFER``, ``GRASP``, ``RELEASE``.
     - Articulated / contact-rich: ``OPEN``, ``CLOSE``, ``PUSH``, ``PULL``,
       ``SLIDE``, ``INSERT``, ``POUR``, ``WIPE``, ``ROTATE``.
-    - Motion: ``REACH``; ``LOOK`` (aim a camera at a point, ADR-0044).
+    - Motion: ``REACH``; ``LOOK`` (aim a camera at a point).
     - Mobile (for mobile-manipulator embodiments): ``NAVIGATE``.
     - Social / expressive: ``WAVE``, ``SHAKE``.
     - Generalist marker: ``GENERALIST`` for foundation / multi-task
@@ -953,8 +958,8 @@ class RSkillAction(str, Enum):
       surfaces a generalist skill for goals that don't match a specific
       verb.
     - Perception / reasoning (non-actuating S2 kinds): ``DETECT`` (detector),
-      ``QUERY`` (scene VLM, ADR-0047), ``MONITOR`` (reward monitor, ADR-0057),
-      ``PLAN`` (playbook decision procedure, ADR-0072). These verbs are
+      ``QUERY`` (scene VLM), ``MONITOR`` (reward monitor),
+      ``PLAN`` (playbook decision procedure). These verbs are
       registry/discovery metadata only — their skills are reached via
       read-only reasoner tools or system-prompt injection, never an
       ``ExecuteSkill`` dispatch.
@@ -1108,7 +1113,7 @@ class SimGripperDescription(BaseModel):
     mirror_actuator_index: int | None = None
 
 
-# ADR-0058 — the single description-asset ref grammar. The schema validator
+# The single description-asset ref grammar. The schema validator
 # below only checks the ref *string* shape (cheap, no I/O); the resolver in
 # ``openral_core.assets`` does the file resolution. Both must accept the same
 # schemes, so keep these in lock-step with ``openral_core.assets``.
@@ -1128,7 +1133,7 @@ def _validate_ref(v: str) -> str:
 class UrdfAsset(BaseModel):
     """A URDF asset reference plus its ``robot_state_publisher`` wiring.
 
-    ADR-0027 / ADR-0058. The ``ref`` is resolved by
+    The ``ref`` is resolved by
     :func:`openral_core.assets.resolve_asset`; ``root_frame`` and
     ``base_to_root_xyz_rpy`` carry the static transform that bridges a URDF
     whose root link differs from the robot's ``base_frame`` (e.g. Franka's
@@ -1165,8 +1170,8 @@ class UrdfAsset(BaseModel):
 class AssetRefs(BaseModel):
     """The unified description-asset block on :class:`RobotDescription`.
 
-    ADR-0058 §4. Replaces the scattered ``urdf_path`` / ``mjcf_uri`` /
-    ``srdf_path`` (+ ADR-0027 URDF-root fields) with one block whose refs
+    Replaces the scattered ``urdf_path`` / ``mjcf_uri`` /
+    ``srdf_path`` (+ the earlier URDF-root fields) with one block whose refs
     share the :func:`openral_core.assets.resolve_asset` grammar.
 
     Attributes:
@@ -1196,8 +1201,8 @@ class AssetRefs(BaseModel):
 class SimDescription(BaseModel):
     """MuJoCo wiring for a single-arm robot, consumed by ``MujocoArmHAL``.
 
-    The MJCF itself is named by :attr:`RobotDescription.assets.mjcf`
-    (ADR-0058); this block carries only the joint↔qpos/qvel/actuator
+    The MJCF itself is named by :attr:`RobotDescription.assets.mjcf`;
+    this block carries only the joint↔qpos/qvel/actuator
     plumbing. All fields are optional with defaults derived from
     :attr:`RobotDescription.joints`.  The default mapping is "1:1 in joint
     order, offset by 7 (qpos) / 6 (qvel) if ``floating_base`` is True" —
@@ -1283,7 +1288,7 @@ class TopCameraDefaults(BaseModel):
 
 
 class SceneComposition(BaseModel):
-    """Declarative MJCF scene composition for a manifest-driven HAL (ADR-0029).
+    """Declarative MJCF scene composition for a manifest-driven HAL.
 
     Lets a robot whose sim HAL needs a *composed* MJCF (a bare arm spliced onto
     a tabletop + props) declare the composer in its manifest instead of a
@@ -1349,7 +1354,7 @@ class SceneDefaults(BaseModel):
     composition: SceneComposition | None = None
 
 
-# ─── Collision geometry (ADR-0030) ─────────────────────────────────────────────
+# ─── Collision geometry ─────────────────────────────────────────────
 
 
 class SphereShape(BaseModel):
@@ -1378,7 +1383,7 @@ class CapsuleShape(BaseModel):
     and oriented by the owning frame (:attr:`LinkCollisionGeometry.origin_xyz_rpy`
     for a link, :attr:`WorldCollisionPrimitive.pose` for an obstacle).
     Capsules bound most robot links tightly, so the safety check stays
-    conservative (ADR-0030 §2).
+    conservative.
 
     Attributes:
         shape: Discriminator (always ``"capsule"``).
@@ -1412,7 +1417,7 @@ class BoxShape(BaseModel):
     poses where the flat faces are what actually face a neighbour. That bulge
     is what makes the manifest capsule model false-E-stop the SO-101 at its
     home pose (base↔lower_arm / base↔wrist reported penetrating while the true
-    mesh clearance is +0.16 m / +0.24 m). See ADR-0081 and issue #84.
+    mesh clearance is +0.16 m / +0.24 m). See issue #84.
 
     Attributes:
         shape: Discriminator (always ``"box"``).
@@ -1431,7 +1436,7 @@ class BoxShape(BaseModel):
 
 
 CollisionShape: TypeAlias = CapsuleShape | SphereShape | BoxShape
-"""Discriminated union of convex collision primitives (ADR-0030).
+"""Discriminated union of convex collision primitives.
 
 The discriminator field is ``shape``. Used by
 :class:`LinkCollisionGeometry` (robot links) and
@@ -1443,7 +1448,7 @@ concern.
 
 
 class LinkCollisionGeometry(BaseModel):
-    """One convex collision volume rigidly attached to a robot link (ADR-0030).
+    """One convex collision volume rigidly attached to a robot link.
 
     The lowered, kernel-facing form of a link's collision geometry. Authored
     by hand, or emitted by the offline lowering tool from a robot's MJCF or
@@ -1483,14 +1488,14 @@ class LinkCollisionGeometry(BaseModel):
 
 
 class HalParameters(BaseModel):
-    """Per-robot HAL construction defaults declared in the manifest (ADR-0029).
+    """Per-robot HAL construction defaults declared in the manifest.
 
     Carries the transport / constructor keyword arguments a robot's HAL needs
     — the SO-100's serial ``port`` + ``baud``, a ros2_control arm's
     ``robot_ip`` / ``fci_ip`` — so the manifest is the single source of those
     defaults instead of a per-robot lifecycle-node subclass. This is the
     schema seam that lets the unified, ``robot.yaml``-driven
-    ``ManifestHALLifecycleNode`` (ADR-0032) serve a parameterised HAL without
+    ``ManifestHALLifecycleNode`` serve a parameterised HAL without
     a bespoke ``_create_hal``.
 
     :func:`openral_hal.build_hal` merges :attr:`defaults` **underneath** any
@@ -1522,12 +1527,12 @@ class HalEntrypoints(BaseModel):
     HAL *type* lives in the manifest (never in environment config or runtime
     params). Each value is a ``"module:Attr"`` import string resolved by
     :func:`openral_hal.build_hal`, or ``None`` when the robot has no HAL of
-    that kind (sim-only / real-only / scene-only). ADR-0031.
+    that kind (sim-only / real-only / scene-only).
 
     Attributes:
         sim: Import string for the simulation HAL. When ``None`` **and**
             :attr:`RobotDescription.sim` is populated, the resolver derives
-            ``MujocoArmHAL.from_description`` (ADR-0023) — so every plain arm
+            ``MujocoArmHAL.from_description`` — so every plain arm
             leaves this null. Set it explicitly only for a non-generic sim
             HAL (e.g. ``"openral_hal.panda_mobile:PandaMobileHAL"``, which has
             no ``sim:`` block to derive from).
@@ -1537,7 +1542,7 @@ class HalEntrypoints(BaseModel):
             ``mode="real"`` is requested on a robot whose ``real`` is ``None``.
         parameters: Per-robot HAL construction defaults (serial ``port``,
             ``robot_ip``, …) merged into the constructor by
-            :func:`openral_hal.build_hal`. ADR-0029. Empty by default.
+            :func:`openral_hal.build_hal`. Empty by default.
 
     Example:
         >>> HalEntrypoints(real="openral_hal.ur_real:UR5eRealHAL").sim is None
@@ -1557,10 +1562,10 @@ class RobotDescription(BaseModel):
     Attributes:
         name: Robot name, e.g. "so100_follower".
         embodiment_kind: Top-level kinematic class.
-        assets: Unified URDF / MJCF / SRDF reference block (ADR-0058).
+        assets: Unified URDF / MJCF / SRDF reference block.
             Refs share the :func:`openral_core.assets.resolve_asset`
             grammar; the URDF's ``robot_state_publisher`` wiring lives on
-            :attr:`AssetRefs.urdf` (ADR-0027). Empty by default.
+            :attr:`AssetRefs.urdf`. Empty by default.
         base_frame: Base link tf2 frame name.
         odom_frame: Odometry tf2 frame name.
         map_frame: Map tf2 frame name.
@@ -1576,7 +1581,7 @@ class RobotDescription(BaseModel):
         sdk_kind: Whether the SDK is open or closed.
         hal: Simulation + real-hardware HAL import strings. ``deploy sim``
             constructs ``hal.sim`` (or derives ``MujocoArmHAL`` from
-            :attr:`sim`); ``deploy run`` constructs ``hal.real``. ADR-0031.
+            :attr:`sim`); ``deploy run`` constructs ``hal.real``.
         observation_spec: VLA observation configuration.
         action_spec: VLA action configuration.
         sim: Optional MuJoCo wiring consumed by
@@ -1599,28 +1604,26 @@ class RobotDescription(BaseModel):
             helpers in :mod:`openral_sim.backends.robocasa` and the
             ROS HAL lifecycle nodes to resolve MJCF joint names without
             hardcoding robot-specific conventions. ``None`` for
-            fixed-base manipulators. ADR-0025.
+            fixed-base manipulators.
         collision_geometry: Per-link convex collision primitives
             (capsules / spheres) the safety kernel uses for self- and
-            world-collision checking. Empty by default. ADR-0030.
+            world-collision checking. Empty by default.
         allowed_collision_pairs: Link-name pairs excluded from
             self-collision (adjacent links touch by design); the
             allowed-collision matrix. On real robots this is sourced from
             the SRDF ``disable_collisions`` block (named by
-            :attr:`AssetRefs.srdf`). ADR-0030.
+            :attr:`AssetRefs.srdf`).
         compute_edge: Compute spec for the on-robot accelerator (e.g. Jetson
             AGX Orin SoC).  Populated by ``openral detect`` when a Jetson /
             embedded SoC is found.  Falls back to ``compute_local`` when
-            ``None`` (tethered robot, SoC not yet probed).  ADR-0069.
+            ``None`` (tethered robot, SoC not yet probed).
         compute_local: Compute spec for the workstation / laptop directly
             attached to the robot.  Populated by ``openral detect`` for
             discrete NVIDIA GPUs, Apple Silicon, or CPU-only hosts.
-            ADR-0069.
         compute_cloud: Optional remote compute endpoint (SSH or HTTPS).
             Set manually or via ``openral detect --target cloud``.
-            ADR-0069.
         schema_version: On-disk schema version for migration tooling.
-            ``"0.2"`` introduces the three-slot compute layout (ADR-0069).
+            ``"0.2"`` introduces the three-slot compute layout.
             Existing manifests without this field load with the default.
 
     Example:
@@ -1666,9 +1669,9 @@ class RobotDescription(BaseModel):
     sim: SimDescription | None = None
     scene_defaults: SceneDefaults | None = None
     base_joints: list[str] | None = None
-    # ADR-0027 robot_state_publisher wiring now lives on ``assets.urdf``
+    # robot_state_publisher wiring now lives on ``assets.urdf``
     # (``root_frame`` + ``base_to_root_xyz_rpy``) — see ``UrdfAsset``.
-    # ADR-0025 / Nav2 — generic mobile-base properties so a per-robot
+    # Nav2 — generic mobile-base properties so a per-robot
     # Nav2 param file need not be hand-vendored. ``footprint_radius``
     # feeds Nav2's ``robot_radius`` (collision envelope, metres) and
     # ``base_kinematics`` selects the MPPI ``motion_model`` ("omni" /
@@ -1677,7 +1680,7 @@ class RobotDescription(BaseModel):
     # Both ``None`` on fixed-base arms (no Nav2).
     footprint_radius: float | None = Field(default=None, gt=0.0)
     base_kinematics: Literal["differential", "holonomic", "omni", "ackermann"] | None = None
-    # ADR-0030 — geometric safety. ``collision_geometry`` is the lowered,
+    # Geometric safety. ``collision_geometry`` is the lowered,
     # kernel-facing set of per-link convex primitives; ``allowed_collision_pairs``
     # is the self-collision exclusion matrix (adjacent links touch by design).
     # Both are authored by hand or emitted by the offline lowering tool from
@@ -1688,19 +1691,19 @@ class RobotDescription(BaseModel):
     # URDF/SRDF contribute geometry + ACM only (no dual source of truth).
     collision_geometry: list[LinkCollisionGeometry] = Field(default_factory=list)
     allowed_collision_pairs: list[tuple[str, str]] = Field(default_factory=list)
-    # ADR-0025 / dashboard overlay — optional base footprint as a list of
+    # Dashboard overlay — optional base footprint as a list of
     # base-frame ``(x, y)`` vertices in metres (CCW by convention). Used to
     # draw the robot's true outline on the SLAM occupancy grid; ``None``
     # falls back to the ``footprint_radius`` circle. Independent of
     # ``footprint_radius`` (a robot may declare either, both, or neither).
     footprint_polygon: list[tuple[float, float]] | None = Field(default=None)
-    # ADR-0069 — three compute tiers replacing the single ``compute`` slot.
+    # Three compute tiers replacing the single ``compute`` slot.
     # Edge: on-robot SoC (Jetson). Local: workstation / tethered laptop.
     # Cloud: SSH or HTTPS remote endpoint (set manually or via detect).
     compute_edge: ComputeSpec | None = None
     compute_local: ComputeSpec | None = None
     compute_cloud: ComputeSpec | None = None
-    # schema_version "0.2" introduces the three-slot compute layout (ADR-0069).
+    # schema_version "0.2" introduces the three-slot compute layout.
     # Old manifests without this field load with the default below.
     schema_version: Literal["0.2"] = "0.2"
 
@@ -1723,7 +1726,7 @@ class RobotDescription(BaseModel):
     def _validate_base_joints_against_joints(self) -> RobotDescription:
         """Ensure ``base_joints`` is well-formed: ≥3 entries, all real joint names.
 
-        ADR-0025 — `extract_base_sim_joint_names` specialises to the
+        `extract_base_sim_joint_names` specialises to the
         planar-base case (3 entries: forward / side / yaw). A robot
         manifest declaring `base_joints: [base_x]` would silently
         miss the helper's gate and fall back to module defaults.
@@ -1750,7 +1753,7 @@ class RobotDescription(BaseModel):
     def lidar_sensor(self) -> SensorSpec | None:
         """The first declared 2-D LiDAR / scan sensor, or ``None``.
 
-        ADR-0025 — the panda_mobile HAL synthesises a ``sensor_msgs/
+        The panda_mobile HAL synthesises a ``sensor_msgs/
         LaserScan`` from MuJoCo ray-casts; its beam count
         (:attr:`SensorSpec.n_channels`), range
         (:attr:`SensorSpec.range_min_m` / :attr:`SensorSpec.range_max_m`)
@@ -1766,7 +1769,7 @@ class RobotDescription(BaseModel):
     def nav2_param_overrides(self) -> dict[str, str]:
         """Nav2 param substitutions derived from this robot's base props.
 
-        ADR-0025 — lets the Nav2 bringup stay generic: instead of
+        Lets the Nav2 bringup stay generic: instead of
         hand-vendoring a per-robot ``nav2_<robot>.yaml``, the launch
         rewrites a shared base param file with these key→value
         substitutions. Maps :attr:`footprint_radius` → ``robot_radius``
@@ -1835,7 +1838,7 @@ class RobotDescription(BaseModel):
     def validate_for_e2e_pipeline(self) -> None:
         """Assert this manifest carries every field the e2e ROS graph needs.
 
-        The C++ safety kernel (``cpp/openral_safety_kernel``, ADR-0020)
+        The C++ safety kernel (``cpp/openral_safety_kernel``)
         reads per-joint ``position_limits`` / ``velocity_limit`` /
         ``effort_limit`` + the global ``safety:`` block. Per-joint
         limit fields are *optional* on :class:`JointSpec` for sim-only
@@ -1882,7 +1885,7 @@ def extract_base_sim_joint_names(
 ) -> tuple[str, str, str] | None:
     """Return ``(forward, side, yaw)`` MJCF joint names from any mobile-base description.
 
-    ADR-0025 — generic, robot-agnostic helper. Consumes the
+    Generic, robot-agnostic helper. Consumes the
     :attr:`RobotDescription.base_joints` declaration + each referenced
     :class:`JointSpec`'s :attr:`~JointSpec.sim_joint_name` override.
     Works for any robot whose ``robot.yaml`` declares both fields:
@@ -2022,7 +2025,7 @@ class DetectedObject(BaseModel):
 
 
 class WorldCollisionPrimitive(BaseModel):
-    """A placed convex obstacle volume in the world (ADR-0030).
+    """A placed convex obstacle volume in the world.
 
     The world-frame analogue of :class:`LinkCollisionGeometry`: a convex
     primitive plus the pose that places it. Populated by perception / SLAM and
@@ -2046,7 +2049,7 @@ class WorldCollisionPrimitive(BaseModel):
 
 
 class OccupancyGridRef(BaseModel):
-    """Reference to a 2D occupancy grid for mobile-base world-collision (ADR-0030).
+    """Reference to a 2D occupancy grid for mobile-base world-collision.
 
     Mirrors the ``nav_msgs/OccupancyGrid`` metadata that
     :mod:`openral_runner.slam_bridge` already decodes. The kernel consumes a
@@ -2081,7 +2084,7 @@ class FrameEncoding(str, Enum):
     ``CUDA_RGBA`` and ``RAW`` mark frames whose payload is an opaque handle
     (NVMM pointer, DMA-BUF fd) — the ``data`` field is empty and the consumer
     must read via ``handle``. ``CUDA_NV12`` is the Tegra NVMM default;
-    ``CUDA_RGBA`` is the x86 DeepStream NVMM layout (ADR-0082).
+    ``CUDA_RGBA`` is the x86 DeepStream NVMM layout.
     """
 
     BGR8 = "bgr8"
@@ -2211,10 +2214,10 @@ class WorldState(BaseModel):
         diagnostics: Per-component diagnostic status.
         collision_primitives: Bounded set of placed convex obstacle volumes
             the kernel checks robot links against (world-collision). Empty
-            until a perception / SLAM source populates it. ADR-0030.
+            until a perception / SLAM source populates it.
         occupancy_grid: Optional 2D occupancy grid reference for mobile-base
             footprint checks. ``None`` until populated; an absent or stale
-            grid is treated as unavailable (fail-closed). ADR-0030.
+            grid is treated as unavailable (fail-closed).
     """
 
     stamp_ns: int
@@ -2230,16 +2233,16 @@ class WorldState(BaseModel):
     detected_objects: list[DetectedObject] = Field(default_factory=list)
     battery_pct: float | None = None
     diagnostics: dict[str, Literal["ok", "warn", "error", "stale"]] = Field(default_factory=dict)
-    # ADR-0030 — bounded world surface for kernel world-collision checking.
+    # Bounded world surface for kernel world-collision checking.
     collision_primitives: list[WorldCollisionPrimitive] = Field(default_factory=list)
     occupancy_grid: OccupancyGridRef | None = None
 
 
-# ─── Spatial memory — persistent scene graph (ADR-0038) ──────────────────────────
+# ─── Spatial memory — persistent scene graph ──────────────────────────
 
 
 class SpatialNodeKind(str, Enum):
-    """Kind of node in the persistent scene-graph spatial memory (ADR-0038).
+    """Kind of node in the persistent scene-graph spatial memory.
 
     ``OBJECT`` is the foundation (an accumulated :class:`DetectedObject`);
     ``PLACE`` is a standable navigation waypoint; ``ROOM`` is a semantic area
@@ -2255,7 +2258,7 @@ class SpatialNodeKind(str, Enum):
 
 
 class SpatialRelationKind(str, Enum):
-    """Kind of directed edge between scene-graph nodes (ADR-0038).
+    """Kind of directed edge between scene-graph nodes.
 
     ``CONTAINS`` links a room/container to what is inside it (a fridge
     ``CONTAINS`` a wine bottle); ``AT_PLACE`` links an object/agent to the
@@ -2272,7 +2275,7 @@ class SpatialRelationKind(str, Enum):
 
 
 class SpatialNode(BaseModel):
-    """A persistent, typed node in the scene-graph spatial memory (ADR-0038).
+    """A persistent, typed node in the scene-graph spatial memory.
 
     A superset of :class:`DetectedObject` for ``kind == OBJECT``; also used for
     places, rooms, and agents. The pose is anchored in a durable, drift-corrected
@@ -2280,8 +2283,8 @@ class SpatialNode(BaseModel):
     base frame at query time via tf2 — the node never stores a raw transform.
 
     This is **advisory** world-model state consumed by the S2 Reasoner. It is
-    never a safety input (ADR-0038 §1, CLAUDE.md §1.1): the safety kernel gates
-    only on the live, bounded ADR-0030 geometric world.
+    never a safety input (CLAUDE.md §1.1): the safety kernel gates
+    only on the live, bounded geometric world.
 
     Attributes:
         node_id: Stable identifier, unique within a :class:`SceneGraph`.
@@ -2292,7 +2295,7 @@ class SpatialNode(BaseModel):
         bbox_3d: Optional 3D bounding box
             (x_min, y_min, z_min, x_max, y_max, z_max).
         embedding_ref: Optional handle into the vector store for
-            open-vocabulary matching (ADR-0038 §5); ``None`` → label-only.
+            open-vocabulary matching; ``None`` → label-only.
         is_container: Whether the node can hold other nodes (fridge, cabinet).
         occludes_contents: Whether contents are unobservable until the
             container is opened. Requires ``is_container``.
@@ -2347,7 +2350,7 @@ class SpatialNode(BaseModel):
 
 
 class SpatialEdge(BaseModel):
-    """A directed relation between two scene-graph nodes (ADR-0038).
+    """A directed relation between two scene-graph nodes.
 
     Attributes:
         src: ``node_id`` of the source node.
@@ -2363,11 +2366,11 @@ class SpatialEdge(BaseModel):
 
 
 class SceneGraph(BaseModel):
-    """Persistent hierarchical scene-graph spatial memory (ADR-0038).
+    """Persistent hierarchical scene-graph spatial memory.
 
     The durable, queryable world model the S2 Reasoner consults to recall where
     objects/places/agents are and how to navigate to them. Distinct from the
-    ephemeral ADR-0030 collision grid and **advisory only** — never a safety
+    ephemeral collision grid and **advisory only** — never a safety
     input (CLAUDE.md §1.1).
 
     Invariants (enforced): node ids are unique; every edge references existing
@@ -2404,10 +2407,10 @@ class SceneGraph(BaseModel):
 
 
 class RecallObjectQuery(BaseModel):
-    """Read-only query to recall a remembered object (ADR-0038 §6).
+    """Read-only query to recall a remembered object.
 
     At least one of ``text`` / ``label`` must be non-empty. ``text`` is matched
-    against node embeddings when an embedder is configured (ADR-0038 §5),
+    against node embeddings when an embedder is configured,
     otherwise matching falls back to ``label``.
 
     Attributes:
@@ -2436,7 +2439,7 @@ class RecallObjectQuery(BaseModel):
 
 
 class ApproachViewpoint(BaseModel):
-    """A camera-facing standoff pose for viewing/manipulating an object (ADR-0038 §6).
+    """A camera-facing standoff pose for viewing/manipulating an object.
 
     Attributes:
         pose: Base/EE goal pose (map frame) at a standoff from the object,
@@ -2453,7 +2456,7 @@ class ApproachViewpoint(BaseModel):
 
 
 class RecallObjectMatch(BaseModel):
-    """One ranked match from a :class:`RecallObjectQuery` (ADR-0038 §6).
+    """One ranked match from a :class:`RecallObjectQuery`.
 
     Attributes:
         node_id: The matched node's id.
@@ -2478,7 +2481,7 @@ class RecallObjectMatch(BaseModel):
 
 
 class RecallObjectResult(BaseModel):
-    """Result of a :class:`RecallObjectQuery` (ADR-0038 §6).
+    """Result of a :class:`RecallObjectQuery`.
 
     Attributes:
         matches: Ranked matches (possibly empty — an empty result is how the
@@ -2493,7 +2496,7 @@ class RecallObjectResult(BaseModel):
 
 
 class ResolvePlaceQuery(BaseModel):
-    """Read-only query to resolve a place/room/agent reference to a goal (ADR-0038 §6).
+    """Read-only query to resolve a place/room/agent reference to a goal.
 
     Attributes:
         reference: Free-text, id, or label of the target (e.g. ``"kitchen"``,
@@ -2508,7 +2511,7 @@ class ResolvePlaceQuery(BaseModel):
 
 
 class ResolvePlaceResult(BaseModel):
-    """Result of a :class:`ResolvePlaceQuery` (ADR-0038 §6).
+    """Result of a :class:`ResolvePlaceQuery`.
 
     Attributes:
         node_id: The resolved node's id.
@@ -2564,7 +2567,7 @@ class Action(BaseModel):
     foot_placements: list[dict[str, object]] | None = None
     gripper: list[float] | None = None
     dex_hand_joints: list[list[float]] | None = None
-    # ADR-0028d — sim-only robosuite-composite multiplexer flag, 1-D
+    # Sim-only robosuite-composite multiplexer flag, 1-D
     # value per horizon step in [-1, +1].
     composite_mode: list[float] | None = None
     # metadata
@@ -2917,7 +2920,7 @@ StateLayout: TypeAlias = Literal[
     "human300_16d",
     "gr1",
     "rc365",
-    # RLDX-1 SimplerEnv layouts (ADR-0014 amendment 2026-05-22).
+    # RLDX-1 SimplerEnv layouts.
     # ``simpler_widowx`` matches RLWRLD/RLDX-1-FT-SIMPLER-WIDOWX's
     # ``bridge_orig`` modality config (8 scalar state keys, single
     # ``video.image_0`` camera, Bridge-data orientation rotation).
@@ -2927,7 +2930,7 @@ StateLayout: TypeAlias = Literal[
     # ``video.image`` camera, sticky-gripper postprocessing).
     "simpler_widowx",
     "simpler_google",
-    # LIBERO 8-D task-space proprio (ADR-0027). ``eef_pos(3) ‖
+    # LIBERO 8-D task-space proprio. ``eef_pos(3) ‖
     # eef_axisangle(3) ‖ gripper_qpos(2)`` in the world frame — what the
     # lerobot/smolvla_libero, pi05-libero and xvla-libero checkpoints were
     # trained on. The benchmark (``openral sim run``) supplies it directly;
@@ -2936,7 +2939,7 @@ StateLayout: TypeAlias = Literal[
     # joint-space state to a task-space policy.
     "libero_eef8d",
 ]
-"""Closed set of per-checkpoint proprioception layouts. ADR-0014 + ADR-0027.
+"""Closed set of per-checkpoint proprioception layouts.
 
 A layout names the SHAPE the checkpoint was trained on — field order,
 frame convention, gripper encoding, quaternion handedness. The per-robot
@@ -2964,7 +2967,7 @@ assembler.
 
 
 class StateContractBindings(BaseModel):
-    """Per-robot source bindings for an rSkill's `state_contract.layout`. ADR-0027.
+    """Per-robot source bindings for an rSkill's `state_contract.layout`.
 
     Symmetric to :class:`ControlModeSemantics` on the action side
     (``joint_order`` + ``reference_frame`` + ``gripper_convention``):
@@ -3014,7 +3017,7 @@ class StateContract(BaseModel):
 
     Surfaces the proprioception layout the *checkpoint* was trained
     against so the runtime adapter does not have to learn it from a
-    YAML override. ADR-0014 + ADR-0027.
+    YAML override.
 
     Attributes:
         layout: Named proprioception layout — see :data:`StateLayout`.
@@ -3043,7 +3046,7 @@ class StateContract(BaseModel):
                 raise ValueError(
                     f"StateContract.layout={self.layout!r} is a wrapped task-space "
                     "layout and REQUIRES `bindings` to name the per-robot TF "
-                    "frames + JointState entries. See ADR-0027.",
+                    "frames + JointState entries.",
                 )
             # Layout-specific binding requirements (the registry's
             # assemblers read these; if absent the assembler would raise
@@ -3084,7 +3087,7 @@ class StateContract(BaseModel):
 
 
 class ActionSlot(BaseModel):
-    """One contiguous slice of an rSkill's action vector (ADR-0028b).
+    """One contiguous slice of an rSkill's action vector.
 
     The skill_runner reads ``ActionContract.slots`` and emits one
     typed :class:`Action` per non-discard slot per step. All actions
@@ -3152,7 +3155,7 @@ class ActionSlot(BaseModel):
             return self
         if self.control_mode is None:
             raise ValueError("ActionSlot: control_mode is required when discard is False")
-        # Per-mode field requirements (ADR-0028b).
+        # Per-mode field requirements.
         mode = self.control_mode
         width = hi - lo + 1
         if mode in _JOINT_MODES:
@@ -3187,7 +3190,7 @@ class ActionSlot(BaseModel):
             if self.joint_names:
                 raise ValueError(f"ActionSlot[{mode.value}]: joint_names is forbidden")
         elif mode is ControlMode.COMPOSITE_MODE:
-            # ADR-0028d — sim-only multiplexer flag, 1-D, no ee/frame/joints.
+            # Sim-only multiplexer flag, 1-D, no ee/frame/joints.
             if width != 1:
                 raise ValueError(f"ActionSlot[composite_mode]: slot width must be 1; got {width}")
             if self.ee is not None:
@@ -3211,14 +3214,14 @@ _GRIPPER_MODES: frozenset[ControlMode] = frozenset(
 
 
 class ActionContract(BaseModel):
-    """Per-rSkill action-vector contract (ADR-0019 PR-revert).
+    """Per-rSkill action-vector contract.
 
     Mirrors :class:`StateContract` for the action side. Carries the
     output dimensionality the checkpoint emits so the dataset bridge
     (and any downstream consumer) can bind the LeRobot v3 ``action``
     feature shape without consulting the sim or hardware adapter.
 
-    Per ADR-0007, the sim-specific action contract belongs on the
+    The sim-specific action contract belongs on the
     per-checkpoint rSkill manifest, not on the physical
     :class:`RobotDescription` (the same Franka emits 7-D delta-EEF on
     LIBERO vs 8-D joint pos on a hardware deploy).
@@ -3231,7 +3234,7 @@ class ActionContract(BaseModel):
             :attr:`ActionSpec.representation`). When set, downstream
             consumers can map between equivalent representations
             (e.g. ``joint_positions`` → ``delta_ee_6d_plus_gripper``).
-        slots: ADR-0028b — declarative slot layout. When set, every
+        slots: Declarative slot layout. When set, every
             index in ``[0, dim)`` must be covered by exactly one
             :class:`ActionSlot` (no gaps, no overlaps). The
             skill_runner reads this to dispatch slices of the policy
@@ -3239,7 +3242,7 @@ class ActionContract(BaseModel):
             the runner falls back to the legacy single-Action path
             (one implicit ``JOINT_POSITION`` slot covering the whole
             vector). Manifests carrying ``slots`` are exempt from the
-            ADR-0028a ``dim <= len(robot.joints)`` invariant because
+            ``dim <= len(robot.joints)`` invariant because
             the slot decoder gives a typed contract per slice instead.
     """
 
@@ -3294,7 +3297,7 @@ class ActionContract(BaseModel):
         return self
 
 
-# ADR-0036 — representation → ControlMode + canonical slot layout. The
+# Representation → ControlMode + canonical slot layout. The
 # single source of truth shared by the skill_runner (action dispatch)
 # and the reasoner (deploy-path palette gate): given a VLA's declared
 # ``ActionRepresentation`` we derive (a) which ``ControlMode`` s the
@@ -3307,7 +3310,7 @@ _EE_3D_WIDTH = 3  # (dx, dy, dz) — translation-only cartesian slice (MetaWorld
 def control_modes_for_representation(rep: ActionRepresentation) -> set[ControlMode]:
     """Map an :class:`ActionRepresentation` to the :class:`ControlMode` s it drives.
 
-    ADR-0036. Used by the reasoner's deploy-path palette gate: a skill is
+    Used by the reasoner's deploy-path palette gate: a skill is
     only offered when the target robot advertises *every* mode in the
     returned set.
 
@@ -3339,7 +3342,7 @@ def control_modes_for_representation(rep: ActionRepresentation) -> set[ControlMo
     return {ControlMode.CARTESIAN_POSE}
 
 
-# ADR-0036 (amended 2026-06-04) — the canonical set of ControlModes the
+# The canonical set of ControlModes the
 # DEFAULT sim HAL action-packers can actually execute, the single source
 # of truth for the reasoner's ``hal_mode="sim"`` palette gate (see
 # ``openral_reasoner_ros.reasoner_node._action_executable``).
@@ -3386,7 +3389,7 @@ def canonical_slots_for_representation(
 ) -> list[ActionSlot] | None:
     """Build the canonical :class:`ActionSlot` layout for a representation.
 
-    ADR-0036. The skill_runner calls this to expand a skill that declares
+    The skill_runner calls this to expand a skill that declares
     only ``ActionContract.representation`` (no explicit ``slots``) into a
     typed slot layout it can dispatch. Joint representations return
     ``None`` so the caller keeps the legacy whole-vector ``JOINT_POSITION``
@@ -3496,13 +3499,13 @@ def canonical_slots_for_representation(
     return slots
 
 
-# ─── TaskSpace — layer-neutral action-space view (ADR-0071, DRAFT) ─────────────
+# ─── TaskSpace — layer-neutral action-space view ─────────────
 
 
 class TaskSpaceFamily(str, Enum):
     """Coarse classification of a :class:`ControlMode` for task-space views.
 
-    ADR-0071. Redundant with :class:`ControlMode` (derivable via
+    Redundant with :class:`ControlMode` (derivable via
     :data:`_FAMILY_FOR_MODE`) but stored on :class:`TaskSpaceSegment` so the
     object reads cleanly in logs / dashboards and so family↔mode consistency is
     validated once at construction.
@@ -3537,7 +3540,7 @@ _FAMILY_FOR_MODE: dict[ControlMode, TaskSpaceFamily] = {
 
 
 class TaskSpaceSegment(BaseModel):
-    """One typed slice of an action vector, layer-neutral (ADR-0071).
+    """One typed slice of an action vector, layer-neutral.
 
     The normalized form of an :class:`ActionSlot` (rSkill side) or a robot's
     advertised control mode (robot side), stripped of the slot's absolute
@@ -3579,7 +3582,7 @@ class TaskSpaceSegment(BaseModel):
 
 
 class TaskSpaceMatch(BaseModel):
-    """Result of :func:`task_space_compatible` (ADR-0071).
+    """Result of :func:`task_space_compatible`.
 
     Attributes:
         ok: ``True`` when every skill segment is executable on the robot.
@@ -3596,7 +3599,7 @@ class TaskSpaceMatch(BaseModel):
 class TaskSpace(BaseModel):
     """Layer-neutral view of an action interface as ordered typed segments.
 
-    ADR-0071. Produced from an rSkill's :class:`ActionContract` (and, in a later
+    Produced from an rSkill's :class:`ActionContract` (and, in a later
     phase, declared by a scene) so the three asset layers — robots, rSkills,
     scenes — share one comparable object instead of three implicit encodings
     (a flat ``supported_control_modes`` set, an ``ActionContract``, and a
@@ -3657,7 +3660,7 @@ class TaskSpace(BaseModel):
     def from_action_contract(cls, action: ActionContract, robot: RobotDescription) -> TaskSpace:
         """Build the task space an rSkill emits, expanding slots / representation.
 
-        ADR-0071 + ADR-0036. Resolution order:
+        Resolution order:
 
         1. ``action.slots`` set → one segment per non-discard slot.
         2. else ``action.representation`` set → expand via
@@ -3762,14 +3765,14 @@ def task_space_compatible(
     *,
     hal_mode: Literal["sim", "real"] = "real",
 ) -> TaskSpaceMatch:
-    """Check an rSkill's :class:`TaskSpace` is executable on a robot (ADR-0071).
+    """Check an rSkill's :class:`TaskSpace` is executable on a robot.
 
     The single cross-layer gate that subsumes today's implicit wiring
     (``embodiment_tags`` string match + raw dim equality + adapter magic). A skill
     is compatible when, for every segment:
 
     * the segment's ``control_mode`` is executable on the chosen ``hal_mode`` —
-      mirroring the reasoner deploy gate ``_action_executable`` (ADR-0036):
+      mirroring the reasoner deploy gate ``_action_executable``:
 
       - ``"sim"`` → the mode is in :data:`SIM_EXECUTABLE_CONTROL_MODES` (a
         robosuite OSC / composite controller synthesises cartesian + gripper +
@@ -3883,11 +3886,11 @@ def task_space_compatible(
     return TaskSpaceMatch(ok=not reasons, reasons=reasons)
 
 
-# ─── Scene side of the task space — the third layer (ADR-0071 Phase 4) ─────────
+# ─── Scene side of the task space — the third layer ─────────
 
 
 class SceneTaskSpace(BaseModel):
-    """The action interface a scene-adapter family executes (ADR-0071 Phase 4).
+    """The action interface a scene-adapter family executes.
 
     The scene leg of the cross-layer task-space contract. A scene picks a
     *backend adapter* (LIBERO OSC, RoboCasa composite, gym-aloha joints, the
@@ -3927,7 +3930,7 @@ def scene_family(task_id: str) -> str:
     """Reduce an ``evaluated_tasks`` entry to its scene-family key.
 
     The family is the leading token before any ``"/"`` — ``"rlbench/open_drawer"``
-    → ``"rlbench"``, ``"libero_spatial"`` → ``"libero_spatial"`` (ADR-0071 Phase 4).
+    → ``"rlbench"``, ``"libero_spatial"`` → ``"libero_spatial"``.
 
     Example:
         >>> scene_family("rlbench/open_drawer")
@@ -3973,7 +3976,7 @@ SCENE_FAMILY_TASK_SPACE: dict[str, SceneTaskSpace] = {
         action_dim=7,
     ),
     # VLABench Franka Panda EE control: 7-D [pos_delta(3) | euler_delta(3) | gripper(1)],
-    # in-process on lerobot 0.6.0 (ADR-0079). Same interface as the LIBERO/SimplerEnv
+    # in-process on lerobot 0.6.0. Same interface as the LIBERO/SimplerEnv
     # OSC families — drivable by the default sim packers.
     "vlabench": SceneTaskSpace(
         modes=frozenset({ControlMode.CARTESIAN_DELTA, ControlMode.GRIPPER_POSITION}),
@@ -3989,7 +3992,7 @@ SCENE_FAMILY_TASK_SPACE: dict[str, SceneTaskSpace] = {
     # ManiSkill3 pd_joint_pos: width is per-task (LiftCube 8) — left unfixed.
     "maniskill3": SceneTaskSpace(modes=frozenset({ControlMode.JOINT_POSITION}), action_dim=None),
     # PushT pymunk: 2-D absolute pusher position, driven as the robot's two
-    # prismatic tip_x/tip_y joints (ADR-0071 Phase 4 — robot mode aligned).
+    # prismatic tip_x/tip_y joints (robot mode aligned).
     "pusht": SceneTaskSpace(modes=frozenset({ControlMode.JOINT_POSITION}), action_dim=2),
     # RoboCasa panda_mobile BASIC/HybridMobileBase composite: arm OSC delta +
     # gripper + base joint-velocity + the composite multiplexer flag. Width is
@@ -4018,7 +4021,7 @@ SCENE_FAMILY_TASK_SPACE: dict[str, SceneTaskSpace] = {
 def scene_task_space_compatible(family: str, skill_space: TaskSpace) -> TaskSpaceMatch:
     """Check an rSkill's :class:`TaskSpace` is executable by a scene family.
 
-    The third leg of the cross-layer gate (ADR-0071 Phase 4): a skill fits a
+    The third leg of the cross-layer gate: a skill fits a
     scene when every :class:`ControlMode` it emits is in the scene family's
     executed set, and — when the family fixes a width — its total dimensionality
     matches. Pairs with :func:`task_space_compatible` (rSkill x robot); together
@@ -4324,8 +4327,8 @@ EmbodimentTag: TypeAlias = Literal[
 plus ``"custom"`` as the explicit "I know what I'm doing" escape hatch and
 ``"any"`` as the explicit **embodiment-agnostic wildcard**.
 
-``"any"`` is the *declared* way to say "this rSkill runs on every embodiment"
-(ADR-0072): perception kinds (``detector`` / ``vlm`` / ``reward``) and ``playbook``
+``"any"`` is the *declared* way to say "this rSkill runs on every embodiment":
+perception kinds (``detector`` / ``vlm`` / ``reward``) and ``playbook``
 decision procedures use ``embodiment_tags: ["any"]``. An empty ``embodiment_tags``
 is rejected by :meth:`RSkillManifest._check_embodiment_tags_present` — agnosticism
 must be declared, never derived from an empty list (CLAUDE.md §1.4). The rSkill↔robot
@@ -4343,7 +4346,7 @@ typo or framework hint (``lerobot``, ``libero``) cannot land in a manifest
 where the loader's compat check would silently never match. When
 ``"custom"`` is used, the manifest MUST also populate
 ``embodiment_extra`` (see :class:`EmbodimentExtra`); the cross-validator
-on :class:`RSkillManifest` enforces this. ADR-0013.
+on :class:`RSkillManifest` enforces this.
 """
 
 BenchmarkName: TypeAlias = Literal[
@@ -4397,13 +4400,13 @@ matching adapter under ``python/sim/src/openral_sim/adapters/``.
 
 ``gr00t`` (NVIDIA Isaac GR00T N1.x / N2) runs out-of-process via a ZMQ
 sidecar in an isolated Python 3.10 venv, sharing the architecture of the
-``rldx`` adapter (RLDX-1 is itself a GR00T-N1.5 finetune) — see ADR-0046.
+``rldx`` adapter (RLDX-1 is itself a GR00T-N1.5 finetune).
 
 ``openvla`` (OpenVLA / OpenVLA-OFT) is a transformers *custom-code* model
 loaded in-process (``trust_remote_code``, gated by
 ``OPENRAL_ALLOW_REMOTE_CODE=1``); the adapter de-normalizes the policy's
 discrete action tokens with the checkpoint's embedded ``unnorm_key`` stats
-and replays the action chunk closed-loop — see ADR-0063.
+and replays the action chunk closed-loop.
 """
 
 # Regexes pinned at module scope so error messages stay consistent and
@@ -4549,7 +4552,7 @@ RSkillKind: TypeAlias = Literal[
   :class:`~openral_core.schemas.Action`. Requires a
   :class:`DetectorContract` block and :attr:`RSkillManifest.weights_uri`
   (the exported ONNX / TensorRT engine). ``model_family`` and
-  ``action_contract`` / ``state_contract`` are forbidden. ADR-0037.
+  ``action_contract`` / ``state_contract`` are forbidden.
 * ``"vlm"`` — vision/video-language model used as a scene-understanding
   perception component (e.g. Qwen3.5-4B NF4). Accepts RGB image or video
   frames and a natural-language query; returns a text answer. Emits no
@@ -4559,7 +4562,7 @@ RSkillKind: TypeAlias = Literal[
   MUST be empty; ``action_contract``, ``state_contract``, ``detector``,
   ``ros_integration``, ``processors``, ``image_preprocessing``,
   ``n_action_steps``, and ``starting_pose`` are FORBIDDEN. ``model_family``
-  is OPTIONAL metadata. ADR-0047.
+  is OPTIONAL metadata.
 * ``"playbook"`` — a symbolic, human-authored **decision procedure** (a
   Markdown standard-operating-procedure) the S2 Reasoner *reads*, not code it
   executes. Carries no weights, no actuators, no ROS server, no Action
@@ -4572,7 +4575,7 @@ RSkillKind: TypeAlias = Literal[
   ``action_contract``, ``state_contract``, ``n_action_steps``, ``starting_pose``
   are FORBIDDEN. Surfaced to the reasoner by injecting its ``PLAYBOOK.md`` body
   into the system prompt (or via a retrieval tool at scale), never as an
-  ``ExecuteSkill`` policy. ADR-0072.
+  ``ExecuteSkill`` policy.
 """
 
 _ROS_WRAPPER_KINDS: frozenset[str] = frozenset({"ros_action", "ros_service"})
@@ -4580,7 +4583,7 @@ _ROS_WRAPPER_KINDS: frozenset[str] = frozenset({"ros_action", "ros_service"})
 # Embodiment-agnostic rSkills (perception kinds detector / vlm / reward, and
 # ``playbook`` decision procedures) do not target a specific embodiment. They
 # declare this **explicitly** with the wildcard ``embodiment_tags: ["any"]``
-# (ADR-0072) — never an empty list, which ``_check_embodiment_tags_present``
+# — never an empty list, which ``_check_embodiment_tags_present``
 # rejects. The rSkill↔robot gate (``openral_rskill.loader.rSkill.check_embodiment_tags``)
 # treats ``"any"`` in a skill's tags as match-any.
 
@@ -4651,7 +4654,7 @@ class RosIntegration(BaseModel):
     default_goal_json: str = Field(min_length=2, max_length=10_000)
     ros_dependencies: list[str] = Field(default_factory=list)
     goal_builder: Literal["joint", "pose", "look_at"] | None = None
-    """ADR-0044 / ADR-0054 — optional goal-lowering adapter over the shared
+    """Optional goal-lowering adapter over the shared
     ``ROSActionRskill`` MoveGroup engine. ``None`` (the default) sends
     ``default_goal_json`` + LLM overrides verbatim (the raw-IDL escape hatch).
     The named builders consume a typed block from the merged goal and lower it
@@ -4698,7 +4701,7 @@ class RosIntegration(BaseModel):
 
 
 class DetectorEngine(str, Enum):
-    """Backend that executes a ``kind: "detector"`` rSkill (ADR-0037).
+    """Backend that executes a ``kind: "detector"`` rSkill.
 
     Selects which runtime detector class :func:`build_manifest_detector`
     constructs. ``None`` (the default on :class:`DetectorContract`) preserves
@@ -4721,7 +4724,7 @@ class DetectorEngine(str, Enum):
             every frame, so it behaves like a large closed-vocabulary detector
             that needs no prompting — an unprompted background producer that
             populates the world object list with far more than the 80 COCO
-            classes (ADR-0037 2026-06-12 amendment).
+            classes.
 
     Example:
         >>> DetectorEngine.ZEROSHOT_HF.value
@@ -4734,7 +4737,7 @@ class DetectorEngine(str, Enum):
 
 
 class DetectorMode(str, Enum):
-    """Invocation mode of a ``kind: "detector"`` rSkill (ADR-0051).
+    """Invocation mode of a ``kind: "detector"`` rSkill.
 
     The axis **orthogonal** to :class:`DetectorEngine`: where ``engine`` says
     *how* the model runs, ``mode`` says *when the reasoner invokes it* and
@@ -4748,10 +4751,10 @@ class DetectorMode(str, Enum):
             **not** an ExecuteSkill-dispatchable tool and carries no actuation
             authority. RT-DETR (closed vocab) and OmDet-Turbo (frozen open
             vocab) are continuous. The reasoner may still toggle it via
-            ``LifecycleTransitionTool`` to free VRAM (ADR-0050).
+            ``LifecycleTransitionTool`` to free VRAM.
         ON_DEMAND: A prompted locator the reasoner invokes only when it needs
             to find a specific object **right now**. Surfaces the read-only
-            ``locate_in_view`` tool (ADR-0043) backed by an open-vocabulary
+            ``locate_in_view`` tool backed by an open-vocabulary
             detector; it is not run continuously. LocateAnything is on-demand.
 
     The two modes cleanly separate "open-vocabulary" from "prompting":
@@ -4770,7 +4773,7 @@ class DetectorMode(str, Enum):
 
 
 class DetectorContract(BaseModel):
-    """Manifest contract for ``kind: "detector"`` rSkills (ADR-0037).
+    """Manifest contract for ``kind: "detector"`` rSkills.
 
     Carries the configuration the runtime
     :class:`~openral_core.schemas.ObjectsDetector` needs to instantiate an
@@ -4799,7 +4802,7 @@ class DetectorContract(BaseModel):
         mode: Invocation mode (:class:`DetectorMode`; default ``continuous``).
             Declares whether the detector is an always-on background producer
             (output reaches the reasoner via world state) or an on-demand
-            prompted locator (surfaces the ``locate_in_view`` tool). ADR-0051.
+            prompted locator (surfaces the ``locate_in_view`` tool).
 
     Example:
         >>> c = DetectorContract(
@@ -4840,7 +4843,7 @@ class DetectorContract(BaseModel):
 
 
 class RewardContract(BaseModel):
-    """Manifest contract for ``kind: "reward"`` rSkills (ADR-0057).
+    """Manifest contract for ``kind: "reward"`` rSkills.
 
     Carries the configuration a robotic **reward / progress-monitor** model
     (e.g. Robometer-4B, a Qwen3-VL-4B reward foundation model) needs to score
@@ -4867,7 +4870,7 @@ class RewardContract(BaseModel):
         preference: Whether the model also exposes a trajectory-preference
             head (Robometer does). Default ``False`` — the progress/success
             path is the Reasoner-facing contract; preference is future work.
-        backend: Which reward runtime scores this skill (ADR-0057). ``"robometer"``
+        backend: Which reward runtime scores this skill. ``"robometer"``
             (default) → the fine-tuned Robometer RewardModel in-process;
             ``"topreward"`` → the zero-shot TOPReward monitor (lerobot
             ``TOPRewardModel``, per-frame progress from a prefix sweep of
@@ -4943,7 +4946,7 @@ class RewardContract(BaseModel):
 
 
 class PlaybookContract(BaseModel):
-    """Manifest contract for ``kind: "playbook"`` rSkills (ADR-0072).
+    """Manifest contract for ``kind: "playbook"`` rSkills.
 
     A **playbook** is a human-authored standard-operating-procedure — a
     structured Markdown document describing *how the S2 Reasoner should approach
@@ -5011,9 +5014,9 @@ class RSkillManifest(BaseModel):
     backward-incompatible change. Now the repo is published it is
     versioned for real (CLAUDE.md §1.6) — a backward-incompatible change
     bumps it and ships a migrator, while backward-compatible additions
-    (ADR-0013/0022/0024) evolve the surface in place.
+    evolve the surface in place.
 
-    ADR-0013 added two symmetric guards on top of the initial V1 shape:
+    Two symmetric guards were added on top of the initial V1 shape:
 
     1. **``actuators_required``** mirrors ``sensors_required`` on the
        output side. Every skill declares at least one
@@ -5039,7 +5042,7 @@ class RSkillManifest(BaseModel):
 
     Attributes:
         schema_version: On-disk format version. ``"0.1"`` today.
-            Backward-compatible extensions (ADR-0013/0022/0024) evolved
+            Backward-compatible extensions evolved
             the surface in place; now the repo is published, a
             backward-incompatible change bumps this and ships a migrator
             (CLAUDE.md §1.6).
@@ -5062,7 +5065,7 @@ class RSkillManifest(BaseModel):
             (:data:`EmbodimentTag`) so typos / framework hints cannot
             silently always-miss. ``"custom"`` is the explicit hatch
             (see :attr:`embodiment_extra`).
-        embodiment_extra: ADR-0013. When ``"custom"`` is in
+        embodiment_extra: When ``"custom"`` is in
             :attr:`embodiment_tags`, declares the sensor + actuator
             surface of the custom rig so the loader's compat check
             still has something to match against. MUST be ``None`` when
@@ -5072,7 +5075,7 @@ class RSkillManifest(BaseModel):
             installation on a robot that does not satisfy every flag.
         sensors_required: Sensor inputs the policy expects from the
             robot. See :class:`SensorRequirement`.
-        actuators_required: ADR-0013. Symmetric output-side
+        actuators_required: Symmetric output-side
             contract: at least one :class:`ActuatorRequirement`
             entry. The loader matches each entry's :attr:`kind` against
             :attr:`RobotDescription.action_spec.control_mode` and
@@ -5112,7 +5115,7 @@ class RSkillManifest(BaseModel):
             task it was not trained for — e.g. a LiftCube policy on PickCube).
             Empty (default) is permissive: legacy rSkills run with a warning.
             Matching: exact ``task.id``, a ``"<scene>/<...>"`` prefix family,
-            or the bare ``scene.id``. See ADR-0060.
+            or the bare ``scene.id``.
         sim_env_control_mode: Optional simulator controller mode this policy
             expects the env to run in, when the scene itself does not pin one.
             Currently consumed by the LIBERO backend (``"relative"`` = OSC
@@ -5163,7 +5166,7 @@ class RSkillManifest(BaseModel):
         state_contract: Per-checkpoint proprioception layout (named layouts
             for RoboCasa; explicit ``dim`` for everything else).
         action_contract: Per-checkpoint action vector contract (dim +
-            optional representation). ADR-0019: consumed by the dataset
+            optional representation). Consumed by the dataset
             bridge to bind the LeRobot v3 ``action`` feature shape
             without consulting the runtime adapter.
         n_action_steps: Replay cadence (how many actions to consume from a
@@ -5244,13 +5247,13 @@ class RSkillManifest(BaseModel):
     dataset_uri: str | None = Field(default=None, pattern=_HF_DATASET_URI_PATTERN)
     source_repo: str | None = Field(default=None, pattern=_HF_DATASET_URI_PATTERN)
     description: str = Field(min_length=1, max_length=500)
-    # ADR-0022 — per-skill action vocabulary surfaced to the reasoner LLM
+    # Per-skill action vocabulary surfaced to the reasoner LLM
     # tool palette so it can pick the right skill for a given goal.
     actions: list[RSkillAction] = Field(min_length=1)
     objects: list[str] = Field(default_factory=list)
     scenes: list[str] = Field(default_factory=list)
-    # ADR-0018 §5 / ADR-0020 (C++ safety kernel). Optional per-skill safety
-    # envelope. When set, the kernel enforces the *intersection* with the
+    # Optional per-skill safety envelope, enforced by the C++ safety
+    # kernel. When set, the kernel enforces the *intersection* with the
     # robot ceiling at goal acceptance (envelope_loader.py): every field that
     # is tighter than the robot's wins; any field that LOOSENS the robot
     # ceiling causes the loader to reject the skill with ROSConfigError
@@ -5289,10 +5292,10 @@ class RSkillManifest(BaseModel):
 
         Reads ``min_vram_gb[quantization.dtype]`` — the footprint the skill will
         actually use at load, since ``quantization.dtype`` pins the runtime format
-        (ADR-0077). Returns ``None`` when ``min_vram_gb`` is unset or has no entry
+        . Returns ``None`` when ``min_vram_gb`` is unset or has no entry
         for the active dtype (the size is simply not declared — the caller decides
         whether that is an error). See ``assert_vla_reward_fits`` for the pair
-        check that consumes this (ADR-0077).
+        check that consumes this.
         """
         if self.min_vram_gb is None:
             return None
@@ -5310,7 +5313,7 @@ class RSkillManifest(BaseModel):
 
     @model_validator(mode="after")
     def _check_embodiment_tags_present(self) -> RSkillManifest:
-        """Every rSkill must declare at least one embodiment tag (ADR-0072).
+        """Every rSkill must declare at least one embodiment tag.
 
         Empty ``embodiment_tags`` is rejected for **all** kinds: agnosticism is a
         contract to declare, not to derive from an empty list (CLAUDE.md §1.4).
@@ -5330,7 +5333,7 @@ class RSkillManifest(BaseModel):
 
     @model_validator(mode="after")
     def _check_custom_embodiment_extra(self) -> RSkillManifest:
-        """Enforce the ADR-0013 ``"custom"`` ↔ ``embodiment_extra`` contract.
+        """Enforce the ``"custom"`` ↔ ``embodiment_extra`` contract.
 
         Three rules:
 
@@ -5350,13 +5353,13 @@ class RSkillManifest(BaseModel):
             raise ValueError(
                 "embodiment_tags contains 'custom' but embodiment_extra is not set; "
                 "custom embodiments must declare their sensor + actuator surface "
-                "(ADR-0013). Either drop 'custom' or populate embodiment_extra."
+                ". Either drop 'custom' or populate embodiment_extra."
             )
         if has_extra and not is_custom:
             raise ValueError(
                 "embodiment_extra is set but 'custom' is not in embodiment_tags; "
                 "the extra block is only meaningful for the custom-embodiment hatch "
-                "(ADR-0013). Either add 'custom' to embodiment_tags or drop "
+                ". Either add 'custom' to embodiment_tags or drop "
                 "embodiment_extra."
             )
         if is_custom:
@@ -5412,7 +5415,7 @@ class RSkillManifest(BaseModel):
     processors: RSkillProcessors | None = None
     image_preprocessing: ImagePreprocessing | None = None
     state_contract: StateContract | None = None
-    # ADR-0019 PR-revert: action contract mirrors state_contract for the
+    # Action contract mirrors state_contract for the
     # bridge's LeRobot v3 feature binding. Optional today (backward-compat
     # with checkpoints that pre-date the bridge); the dataset bridge
     # requires either this OR RobotDescription.action_spec.dim, raising
@@ -5438,14 +5441,14 @@ class RSkillManifest(BaseModel):
     # manifest cannot accidentally carry stale wrapper config.
     ros_integration: RosIntegration | None = None
 
-    # Detector model contract (ADR-0037). REQUIRED when ``kind == "detector"``;
+    # Detector model contract. REQUIRED when ``kind == "detector"``;
     # FORBIDDEN otherwise. Carries the class-label list, input resolution, and
     # score threshold the runtime ObjectsDetector reads at configure time.
     # A detector emits no Action chunks and requires no actuators — it is a
     # pure perception producer.
     detector: DetectorContract | None = None
 
-    # Reward / progress-monitor model contract (ADR-0057). REQUIRED when
+    # Reward / progress-monitor model contract. REQUIRED when
     # ``kind == "reward"``; FORBIDDEN otherwise. Carries the rolling-window +
     # sampling-rate + progress-range config a robotic reward model (Robometer)
     # needs. A reward skill is a pure perception consumer — it emits no Action
@@ -5453,10 +5456,10 @@ class RSkillManifest(BaseModel):
     # advisory-only (never gates motors).
     reward: RewardContract | None = None
 
-    # ADR-0077 — the reward/progress-monitor rSkill this VLA pairs with (an rSkill
+    # The reward/progress-monitor rSkill this VLA pairs with (an rSkill
     # ``name``, e.g. ``"OpenRAL/rskill-robometer-4b-nf4"``). A VLA emits no success
     # signal of its own, so the reasoner needs a reward model resident alongside it
-    # to know whether the policy is progressing / has finished (ADR-0074). Allowed
+    # to know whether the policy is progressing / has finished. Allowed
     # ONLY for ``kind == "vla"`` (forbidden otherwise — it is a reference FROM a VLA,
     # distinct from the ``reward`` contract a reward-kind manifest carries). ``None``
     # defers to the deployment default reward model — it does NOT mean "run without
@@ -5464,14 +5467,14 @@ class RSkillManifest(BaseModel):
     # VRAM together (pre-load check over both manifests' ``min_vram_gb``).
     reward_rskill_name: str | None = None
 
-    # Playbook decision-procedure contract (ADR-0072). REQUIRED when
+    # Playbook decision-procedure contract. REQUIRED when
     # ``kind == "playbook"``; FORBIDDEN otherwise. Carries the SOP body pointer,
     # the trigger/done predicate, and the tool-call step bound. A playbook is a
     # symbolic, authored decision procedure the S2 Reasoner reads — it carries no
     # weights and never actuates (its proposed motions still cross the kernel).
     playbook: PlaybookContract | None = None
 
-    # ADR-0026 — optional JSON-Schema (OpenAPI / JSON-Schema 7 shape)
+    # Optional JSON-Schema (OpenAPI / JSON-Schema 7 shape)
     # describing the per-skill ``goal_params_json`` payload the LLM may
     # attach to an ``ExecuteRskillTool`` dispatch. The reasoner's
     # ``build_tool_palette`` surfaces this verbatim as the per-skill
@@ -5570,7 +5573,7 @@ class RSkillManifest(BaseModel):
           all FORBIDDEN (a detector has no VLA policy family, no ROS wrapper,
           and no VLA inference lifecycle);
           :attr:`actuators_required` MUST be empty (a detector actuates
-          nothing). ADR-0037.
+          nothing).
         * ``kind == "wam"`` → schema-side this is unconstrained beyond the
           base VLA shape; the loader's resolver branch raises
           :class:`~openral_core.exceptions.ROSConfigError` at resolve time
@@ -5578,7 +5581,7 @@ class RSkillManifest(BaseModel):
           (tracked separately).
         """
         # A ``playbook`` block belongs only to kind='playbook'. One guard here
-        # forbids it for every other kind (ADR-0072), so the per-kind branches
+        # forbids it for every other kind, so the per-kind branches
         # below stay focused on their own required/forbidden fields.
         if self.kind != "playbook" and self.playbook is not None:
             raise ValueError(
@@ -5586,7 +5589,7 @@ class RSkillManifest(BaseModel):
                 "`playbook` block (it is for kind='playbook' decision procedures only)."
             )
 
-        # ADR-0077 — `reward_rskill_name` pairs a VLA with its progress-monitor
+        # `reward_rskill_name` pairs a VLA with its progress-monitor
         # reward rSkill; it is a reference FROM a VLA and meaningless on any other
         # kind. One guard forbids it everywhere except kind='vla'.
         if self.kind != "vla" and self.reward_rskill_name is not None:
@@ -5871,14 +5874,14 @@ def assert_vla_reward_fits(
     *,
     margin_gb: float = 0.5,
 ) -> float:
-    """Verify a VLA + its paired reward model co-reside in GPU VRAM (ADR-0077).
+    """Verify a VLA + its paired reward model co-reside in GPU VRAM.
 
     A VLA emits no success signal of its own, so the reasoner needs the reward
-    model resident *alongside* the running policy (ADR-0074). This is the
+    model resident *alongside* the running policy. This is the
     pre-load gate: both sizes are declared in their manifests, so we check the
     pair fits before the VLA is ever loaded — failing fast and loud instead of a
     mid-run CUDA OOM. It checks the **model pair footprint** only (a necessary
-    condition); the sim / ROS overhead is budgeted separately (ADR-0050).
+    condition); the sim / ROS overhead is budgeted separately.
 
     Args:
         vla: The VLA manifest (``kind == "vla"``) about to be loaded.
@@ -5906,7 +5909,7 @@ def assert_vla_reward_fits(
         raise ROSConfigError(
             f"cannot verify VLA+reward VRAM co-residency: {missing!r} do not declare "
             f"min_vram_gb for their active dtype. Declare it so the pair can be "
-            f"checked before load (ADR-0077)."
+            f"checked before load."
         )
     assert vla_gb is not None and reward_gb is not None  # narrowed by the guard above
     combined = vla_gb + reward_gb
@@ -5915,8 +5918,8 @@ def assert_vla_reward_fits(
             f"VLA {vla.name!r} ({vla_gb:.2f} GB @ {vla.quantization.dtype.value}) + "
             f"reward {reward.name!r} ({reward_gb:.2f} GB @ {reward.quantization.dtype.value}) "
             f"= {combined:.2f} GB + {margin_gb:.2f} GB margin exceeds GPU VRAM "
-            f"{gpu_total_gb:.2f} GB. A VLA must run with its reward model resident "
-            f"(ADR-0074/0077); pick a smaller-footprint pair or a larger GPU."
+            f"{gpu_total_gb:.2f} GB. A VLA must run with its reward model resident; "
+            f"pick a smaller-footprint pair or a larger GPU."
         )
     return combined
 
@@ -6061,7 +6064,7 @@ class RSkillEvalResult(BaseModel):
 #
 # These three models compose into a :class:`SimEnvironment`, the swappable
 # triple consumed by ``openral_sim`` to validate rSkills before hardware
-# deployment (CLAUDE.md §6 "WAMs / sim eval", ADR-0002).
+# deployment (CLAUDE.md §6 "WAMs / sim eval").
 #
 # Design notes:
 #   - The registry pattern (string ids ↔ Python factories) keeps these specs
@@ -6078,17 +6081,17 @@ class PhysicsBackend(str, Enum):
 
     Attributes:
         MUJOCO: Vanilla MuJoCo (CPU / single-env). Default for LIBERO, MetaWorld,
-            and VLABench (native lerobot 0.6.0 VLABenchEnv, in-process — ADR-0079).
+            and VLABench (native lerobot 0.6.0 VLABenchEnv, in-process).
         MUJOCO_MJX: MuJoCo MJX (XLA, GPU-batched headless rollouts).
         PYBULLET: PyBullet (legacy adapters, contact-rich tabletop).
         SAPIEN: SAPIEN (Hillbot/UCSD physics + ray-traced rendering). The
             engine under ManiSkill3 and RoboTwin 2.0; the RoboTwin dual-arm
-            benchmark backend runs it out-of-process via a py3.10 sidecar
-            (ADR-0061). ManiSkill3 scenes predate this slot and historically
+            benchmark backend runs it out-of-process via a py3.10 sidecar.
+            ManiSkill3 scenes predate this slot and historically
             declared ``MUJOCO`` — new SAPIEN backends use this value.
         ISAACSIM: NVIDIA Isaac Sim (Omniverse, GPU). Future.
         COPPELIASIM: CoppeliaSim/PyRep — the RLBench benchmark backend, driven
-            out-of-process via a py3.10 sidecar (ADR-0062).
+            out-of-process via a py3.10 sidecar.
         GENESIS: Genesis (physics-language unification). Future.
         MOCK: In-process mock with no physics — used for wiring smoketests.
     """
@@ -6163,10 +6166,7 @@ class RoboCasaBackendOptions(BaseModel):
     at factory time via ``RoboCasaBackendOptions.model_validate(
     scene.backend_options)``. The parent ``SceneSpec.backend_options:
     dict[str, object]`` field is unchanged, so this class does not
-    constitute a schema migration (ADR-0015, CLAUDE.md §1.6).
-
-    See :doc:`ADR-0015 </adr/0015-robocasa-isolated-backend-lazy-assets>`
-    for the full backend rationale.
+    constitute a schema migration (CLAUDE.md §1.6).
 
     Attributes:
         mode: ``"prebuilt"`` (default) or ``"procedural"``.
@@ -6498,10 +6498,10 @@ class BenchmarkMetadata(BaseModel):
     a one-sentence "what this eval actually measured" statement.
 
     ``display_name`` / ``simulator`` are optional paper-comparison
-    labels (ADR-0042) that surface into ``RSkillEvalResult.benchmark``
+    labels that surface into ``RSkillEvalResult.benchmark``
     when present — ``display_name`` becomes ``benchmark.name`` and
-    ``simulator`` becomes ``benchmark.simulator``. Pre-ADR-0042 these
-    lived in a free-form dict on the deleted ``BenchmarkSpec``; moving
+    ``simulator`` becomes ``benchmark.simulator``. Before the scene-hierarchy
+    convergence these lived in a free-form dict on the deleted ``BenchmarkSpec``; moving
     them per-scene keeps them with their provenance and lets the
     aggregator emit identical JSON whether driven by ``run_benchmark``
     (suite) or ``run_benchmark_scene`` (single scene).
@@ -6562,7 +6562,7 @@ class DeployScene(BaseModel):
     sim composition, and deploy-time safety/collision tightening. No task, no
     eval config — the reasoner/operator supplies goals at runtime.
 
-    ``composition`` (ADR-0066) lets a deploy scene declare the MJCF composer that
+    ``composition`` lets a deploy scene declare the MJCF composer that
     builds its environment (e.g. the openarm tabletop arena: table + cubes +
     drawer + overview camera) instead of the robot manifest carrying it: the
     robot manifest describes the robot, the scene describes the scene. ``openral
@@ -6584,7 +6584,7 @@ class DeployScene(BaseModel):
     safety: SafetyEnvelope | None = None
     extra_allowed_collision_pairs: list[tuple[str, str]] = Field(default_factory=list)
     sensors: list[SensorSpec] = Field(default_factory=list)
-    """Deploy-time sensor bindings for this workcell (ADR-0078 amendment).
+    """Deploy-time sensor bindings for this workcell.
 
     Two kinds of entry, distinguished by name:
 
@@ -6602,7 +6602,7 @@ class DeployScene(BaseModel):
     Entries whose ``deploy_binding`` is set are opened by the real-deploy
     sensor leg and published on ``/openral/cameras/<name>/image``."""
     hal: HalParameters | None = None
-    """Deploy-time HAL binding for this workcell (ADR-0078 amendment).
+    """Deploy-time HAL binding for this workcell.
 
     The scene's host-specific HAL construction defaults — serial ``port``,
     lerobot calibration identity (``id`` + ``calibration_dir``),
@@ -6619,7 +6619,7 @@ class DeployScene(BaseModel):
     ``--hal`` > scene ``hal`` > ``robot.yaml`` ``hal.parameters.defaults``.
     ``None`` = fall back to the manifest defaults + ``--hal`` overrides."""
     memory_dir: str | None = None
-    """ADR-0072 Decision 3b — path to a per-robot deploy memory bundle directory
+    """Path to a per-robot deploy memory bundle directory
     holding any of ``MEMORY.md`` (self-maintained semantic memory), ``scene_graph.json``
     (3D world-state graph → ``recall_object``), and ``map.yaml`` (2D occupancy grid →
     nav2 ``map_server``). ``openral deploy sim`` derives the three launch paths from it
@@ -6707,7 +6707,7 @@ class BenchmarkScene(SimScene):
 
 # ─── Standalone protocol descriptor (eval suites are bare lists now) ─────────
 #
-# ADR-0009 originally split the "eval" responsibility into two named
+# Historically the "eval" responsibility was split into two named
 # subsystems:
 #   * SimEnvironment (above) — free-axis single rollouts. Every axis is a
 #     field on the spec; the user composes the rollout they want.
@@ -6716,7 +6716,8 @@ class BenchmarkScene(SimScene):
 #     varied. Loaded from ``benchmarks/<id>.yaml`` via
 #     ``BenchmarkSpec.from_yaml``.
 #
-# ADR-0042 (June 2026) deleted the wrapper. A benchmark suite is now a
+# The Task-10 scene-hierarchy convergence (June 2026) deleted the wrapper.
+# A benchmark suite is now a
 # bare ``list[BenchmarkScene]`` on disk and in memory; the suite-id is
 # the filename stem. Load via :func:`openral_core.load_benchmark_suite`
 # and validate the suite-level invariants (uniformity of robot_id,
@@ -6726,10 +6727,10 @@ class BenchmarkScene(SimScene):
 # ``rskills/<vla>/eval/<benchmark_id>.json`` with
 # ``reproduced_locally=true``.
 #
-# Task 10 of ADR-0041 (the precursor to ADR-0042) had already flattened
+# That same convergence had already flattened
 # the per-scene payload: each entry carries its own ``robot_id``, ``task``,
 # ``n_episodes``, ``seed``, and :class:`BenchmarkMetadata` block.
-# :class:`ProtocolSpec` survives as a standalone schema for ADR drafts
+# :class:`ProtocolSpec` survives as a standalone schema for design-doc drafts
 # and benchmark-report tooling that wants to describe a protocol outside
 # a suite context.
 
@@ -6737,12 +6738,12 @@ class BenchmarkScene(SimScene):
 class ProtocolSpec(BaseModel):
     """Stand-alone eval-protocol descriptor.
 
-    Historically the ``protocol`` block on the deleted ``BenchmarkSpec``
-    (ADR-0009). After the Task-10 scene-hierarchy convergence (ADR-0041,
-    June 2026) a benchmark became a list of :class:`BenchmarkScene`s —
+    Historically, the ``protocol`` block lived on the deleted ``BenchmarkSpec``.
+    After the Task-10 scene-hierarchy convergence (June 2026) a benchmark became
+    a list of :class:`BenchmarkScene`s —
     each scene carries its own ``n_episodes`` / ``seed`` /
-    ``task.success_key`` / ``task.max_steps`` — and ADR-0042 then
-    deleted the ``BenchmarkSpec`` wrapper altogether. ``ProtocolSpec``
+    ``task.success_key`` / ``task.max_steps`` — and the
+    ``BenchmarkSpec`` wrapper was then deleted altogether. ``ProtocolSpec``
     is retained as a public schema for callers that want to describe a
     protocol independently (e.g. ADR drafts, benchmark-report tooling).
 
@@ -6800,7 +6801,7 @@ class ProtocolSpec(BaseModel):
 
 # ─── Inference runner ─────────────────────────────────────────────
 #
-# ADR-0010 introduces a hardware inference runner: the loop that closes
+# This introduces a hardware inference runner: the loop that closes
 # ``WorldState → Skill.step → HAL.send_action`` at a cadence, mirroring the
 # sim ``SimRunner`` for hardware. The schemas below are the on-disk
 # contract for ``openral deploy --config <yaml>`` (sibling of ``openral sim run``) and
@@ -6815,15 +6816,15 @@ class ProtocolSpec(BaseModel):
 class SensorReaderBackend(str, Enum):
     """Which :class:`SensorReader` implementation to instantiate.
 
-    ADR-0010 §SensorReader — four backends are reserved. ``opencv_thread``
+    Four backends are reserved. ``opencv_thread``
     is the default and mirrors lerobot's per-camera background-thread
     pattern. ``ros2_image`` subscribes to a ROS 2 image topic published by
     a vendor driver. ``gstreamer`` runs a GStreamer pipeline whose appsink
     delivers frames (NVMM / DMA-BUF on Jetson; CPU bytes on x86).
 
-    ``holoscan`` is **reserved-but-unimplemented**: ADR-0010 Amendment
-    2026-05-12 evaluated NVIDIA Holoscan SDK as a parallel ingest backbone
-    and deferred adoption (lean GStreamer with custom NvBufSurface glue
+    ``holoscan`` is **reserved-but-unimplemented**: a 2026-05-12 evaluation
+    of NVIDIA Holoscan SDK as a parallel ingest backbone
+    deferred adoption (lean GStreamer with custom NvBufSurface glue
     won the comparison). The enum value exists so a future PR can add
     the backend additively without bumping the schema again; configs
     that select it today raise ``ROSConfigError`` at factory time.
@@ -7004,7 +7005,7 @@ class TickResult(BaseModel):
     The hardware fields (``sensors_ms``..``hal_ms``, ``safety_violations``,
     ``action_applied``) are the original (v1) surface used by
     :class:`DeployRunner`. The sim-specific fields
-    (``step_idx``..``truncated``) were added by ADR-0010 amendment 1 when
+    (``step_idx``..``truncated``) were added when
     :class:`SimRunner` adopted per-step tick semantics; hardware leaves
     them at their defaults (``None``), so a hardware tick serialises
     identically to v1 under ``model_dump(exclude_none=True)``.
@@ -7065,7 +7066,7 @@ class TickResult(BaseModel):
     chunk_index: int | None = None
     safety_violations: list[str] = Field(default_factory=list)
     action_applied: bool = True
-    # ADR-0010 amendment 1: sim-only fields. Default None so hardware ticks
+    # Sim-only fields. Default None so hardware ticks
     # round-trip byte-identically with v1 JSON under exclude_none=True.
     step_idx: int | None = Field(default=None, ge=0)
     episode_idx: int | None = Field(default=None, ge=0)
@@ -7113,7 +7114,7 @@ class RunResult(BaseModel):
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
-# ─── Failure evidence (ADR-0018 F3) ────────────────────────────────────────────
+# ─── Failure evidence ────────────────────────────────────────────
 
 
 class _FailureEvidenceBase(BaseModel):
@@ -7289,7 +7290,7 @@ class ReasonerTimeoutEvidence(_FailureEvidenceBase):
 
 
 class CollisionEvidence(_FailureEvidenceBase):
-    """Evidence for ``KIND_COLLISION`` — a proposed motion would collide (ADR-0030).
+    """Evidence for ``KIND_COLLISION`` — a proposed motion would collide.
 
     Attributes:
         kind: Discriminator (always ``"collision"``).
@@ -7373,12 +7374,12 @@ Consumers decode an incoming ``evidence_json`` string with::
 Producers serialize via ``evidence.model_dump_json()``.
 
 The union mirrors the ``KIND_*`` constants on
-``openral_msgs/msg/FailureTrigger`` (ADR-0018 F3). Adding a new
+``openral_msgs/msg/FailureTrigger``. Adding a new
 variant requires adding a new ``KIND_*`` constant to the IDL.
 """
 
 
-# ─── Perception event metadata (ADR-0018 F6) ───────────────────────────────────
+# ─── Perception event metadata ───────────────────────────────────
 
 
 class _PerceptionEventBase(BaseModel):
@@ -7388,7 +7389,7 @@ class _PerceptionEventBase(BaseModel):
     discriminator field. The discriminator is identical to the
     ``/openral/perception/<kind>`` ROS 2 topic suffix the
     :class:`openral_runner.backends.gstreamer.perception_tee.PerceptionEventPublisher`
-    publishes onto (ADR-0018 §3, "Topology of /openral/perception/events").
+    publishes onto ("Topology of /openral/perception/events").
     Producers serialise via ``model_dump_json()`` and stuff the result
     into ``PromptStamped.metadata_json``; consumers decode with
     ``TypeAdapter(PerceptionEventMetadata).validate_json(...)``.
@@ -7412,7 +7413,7 @@ class ObjectDetection2D(BaseModel):
         confidence: Detection confidence in ``[0, 1]``.
         bbox_xyxy: Axis-aligned bounding box in pixels
             ``(x_min, y_min, x_max, y_max)``; image origin top-left.
-        det_id: Stable per-detector, per-camera identity (ADR-0076), assigned by
+        det_id: Stable per-detector, per-camera identity, assigned by
             a 2D-IoU tracker at detection time so an object can be referred to and
             de-duplicated even when the 3D lift cannot run (RGB-only / no depth).
             ``-1`` means untracked (legacy detectors / single-shot). Propagated
@@ -7465,8 +7466,8 @@ class ObjectsMetadata(_PerceptionEventBase):
         model_id: Identifier of the detector that fired (e.g.
             ``"yolov8n"``, ``"nvinfer:resnet50"``).
         frame_width: Pixel width of the frame the detector ran on; the
-            ``bbox_xyxy`` of each detection is in this pixel space (ADR-0035
-            lift scales it to the sensor's intrinsics resolution).
+            ``bbox_xyxy`` of each detection is in this pixel space (the
+            cross-frame lift scales it to the sensor's intrinsics resolution).
         frame_height: Pixel height of that frame.
     """
 
@@ -7522,7 +7523,7 @@ PerceptionEventMetadata: TypeAlias = (
     MotionMetadata | ObjectsMetadata | OcrMetadata | SceneChangeMetadata
 )
 """Discriminated union for ``PromptStamped.metadata_json`` payloads on the
-``/openral/perception/<kind>`` topics (ADR-0018 F6).
+``/openral/perception/<kind>`` topics.
 
 The discriminator field is ``kind`` (a string ``Literal`` on each
 variant). Consumers decode an incoming ``metadata_json`` string with::
@@ -7535,7 +7536,7 @@ variant). Consumers decode an incoming ``metadata_json`` string with::
 Producers serialise via ``metadata.model_dump_json()``.
 
 The four variants map 1:1 onto the four per-kind topics fixed in
-ADR-0018 §3 (``motion``, ``objects``, ``ocr``, ``scene_change``).
+the perception-event contract (``motion``, ``objects``, ``ocr``, ``scene_change``).
 Adding a new variant requires adding a new ``/openral/perception/<kind>``
 topic to the contract — by design, new kinds get new topics, not a
 schema bump, so subscribers can subscribe to exactly the kinds they
@@ -7543,21 +7544,21 @@ care about.
 """
 
 
-# ─── Reasoner tool calls (ADR-0018 F4) ─────────────────────────────────────────
+# ─── Reasoner tool calls ─────────────────────────────────────────
 
 
 class _ReasonerToolBase(BaseModel):
     """Common base for every :data:`ReasonerToolCall` variant.
 
     Each variant declares ``tool: Literal["..."] = "..."`` as the
-    discriminator field. The reasoner (ADR-0018 F4) emits exactly one
+    discriminator field. The reasoner emits exactly one
     of these per tick via the LLM's structured-output / tool-use mode;
     the value is then dispatched onto the ROS graph (action client,
     service client, or publisher depending on the variant).
 
     Variants intentionally hold **no authority over actuation**: the
-    reasoner never publishes ``ActionChunk`` itself (see ADR-0018 §4
-    "Holds no authority over actuation"). :class:`ExecuteRskillTool` is
+    reasoner never publishes ``ActionChunk`` itself.
+    :class:`ExecuteRskillTool` is
     indirect — it sends an action goal to ``rskill_runner_node`` which
     in turn produces the chunk and gates it through ``safety_node``.
 
@@ -7588,7 +7589,7 @@ class ExecuteRskillTool(_ReasonerToolBase):
     ``openral_msgs/action/ExecuteSkill`` action server in F1's
     ``rskill_runner_node``). The chunk path that follows is
     ``Skill → /openral/candidate_action → safety_node →
-    /openral/safe_action → HAL`` per ADR-0018 §3.
+    /openral/safe_action → HAL``.
 
     Attributes:
         tool: Discriminator (always ``"execute_rskill"``).
@@ -7603,7 +7604,7 @@ class ExecuteRskillTool(_ReasonerToolBase):
             wrapped-ROS skills it's carried for trace / log context
             but the actual goal is built from ``goal_params_json``
             merged over the manifest's ``default_goal_json``.
-        goal_params_json: ADR-0026 — serialised JSON object carrying
+        goal_params_json: Serialised JSON object carrying
             per-skill typed parameters the LLM produces against the
             skill's :attr:`RSkillManifest.goal_params_schema`. Empty
             string disables the merge (today's behaviour). Wrapped-ROS
@@ -7692,7 +7693,7 @@ class EmitPromptTool(_ReasonerToolBase):
         tool: Discriminator (always ``"emit_prompt"``).
         target_topic: Absolute ROS topic name (must start with ``"/"``).
             The reasoner's own subscription on ``/openral/prompt`` plus
-            the prompt-router's FIFO queue (ADR-0018 F10) handle the
+            the prompt-router's FIFO queue handle the
             cascade.
         text: Human-readable prompt body forwarded as
             ``PromptStamped.text``.
@@ -7708,14 +7709,14 @@ class EmitPromptTool(_ReasonerToolBase):
 
 
 class RecallObjectTool(_ReasonerToolBase):
-    """Tool variant (**read-only**) — recall a remembered object (ADR-0039).
+    """Tool variant (**read-only**) — recall a remembered object.
 
-    Queries the ADR-0038 scene-graph spatial memory and returns the object's
+    Queries the scene-graph spatial memory and returns the object's
     ``map``-frame pose plus a camera-facing approach viewpoint and any occluding
     container to the reasoner's next reasoning step. Like every variant it
-    **holds no authority over actuation** (ADR-0018 §4) — it only *reads*
+    **holds no authority over actuation** — it only *reads*
     memory. The dispatch that runs the query and feeds the result back to the
-    LLM is wired in ADR-0039 Phase 2 (this is the typed contract).
+    LLM is wired separately (this is the typed contract).
 
     Attributes:
         tool: Discriminator (always ``"recall_object"``).
@@ -7730,11 +7731,11 @@ class RecallObjectTool(_ReasonerToolBase):
 
 
 class ResolvePlaceTool(_ReasonerToolBase):
-    """Tool variant (**read-only**) — resolve a place/room/agent to a goal (ADR-0039).
+    """Tool variant (**read-only**) — resolve a place/room/agent to a goal.
 
-    Queries the ADR-0038 scene-graph memory for a navigation goal pose plus a
+    Queries the scene-graph memory for a navigation goal pose plus a
     ``traversable_to`` path. Read-only; **holds no authority over actuation**.
-    Dispatch + result-return are ADR-0039 Phase 2.
+    Dispatch + result-return are wired separately.
 
     Attributes:
         tool: Discriminator (always ``"resolve_place"``).
@@ -7747,16 +7748,16 @@ class ResolvePlaceTool(_ReasonerToolBase):
 
 
 class LocateInViewTool(_ReasonerToolBase):
-    """Tool variant (**read-only**) — check if an object is in a *live* camera view (ADR-0043).
+    """Tool variant (**read-only**) — check if an object is in a *live* camera view.
 
     The complement to :class:`RecallObjectTool`: where ``recall_object`` recalls a
-    *remembered* object from the ADR-0038 scene-graph memory, ``locate_in_view``
-    asks a live camera-mounted VLM detector (e.g. LocateAnything, ADR-0037) to
+    *remembered* object from the scene-graph memory, ``locate_in_view``
+    asks a live camera-mounted VLM detector (e.g. LocateAnything) to
     look at the current frame *right now* and report whether the queried object is
     visible — and where. It runs the detector's open-vocabulary query on demand
     via the ``/openral/perception/locate_in_view`` ROS service and feeds the
     answer back to the LLM as a re-prompt (the prompt cascade). Like every variant
-    it **holds no authority over actuation** (ADR-0018 §4) — it only *reads* a
+    it **holds no authority over actuation** — it only *reads* a
     frame; the dispatch never gates the safety kernel.
 
     Attributes:
@@ -7776,7 +7777,7 @@ class LocateInViewTool(_ReasonerToolBase):
             primary camera; otherwise names one of the detector's configured
             cameras so the reasoner can pick a viewpoint. **Not a hardcoded
             name** — the detector is camera-agnostic and maps the id to a topic.
-        detector: Optional on-demand locator selector (ADR-0056). Empty (default)
+        detector: Optional on-demand locator selector. Empty (default)
             uses the deployment's default locator; otherwise an rSkill id / short
             alias of one of the on-demand locators in the graph (e.g.
             ``"omdet-turbo-locator"`` for fast simple "find X",
@@ -7792,7 +7793,7 @@ class LocateInViewTool(_ReasonerToolBase):
 
 
 class QuerySceneTool(_ReasonerToolBase):
-    """Tool variant (**read-only**) — ask a scene VLM a question about the live view (ADR-0047).
+    """Tool variant (**read-only**) — ask a scene VLM a question about the live view.
 
     Backed by a ``kind: "vlm"`` rSkill (e.g. Qwen3.5-4B NF4) running in an
     out-of-process ZMQ sidecar. Where :class:`LocateInViewTool` answers *where*
@@ -7806,7 +7807,7 @@ class QuerySceneTool(_ReasonerToolBase):
     question to the VLM over the ``/openral/perception/query_scene`` ROS service,
     and feeds the free-text answer back to the LLM as a re-prompt (the prompt
     cascade). Like every variant it **holds no authority over actuation**
-    (ADR-0018 §4) — it only *reads* a frame; the dispatch never gates the safety
+     — it only *reads* a frame; the dispatch never gates the safety
     kernel. It is not a localizer: use :class:`LocateInViewTool` to find objects.
 
     Attributes:
@@ -7825,7 +7826,7 @@ class QuerySceneTool(_ReasonerToolBase):
 
 
 class QueryTaskProgressTool(_ReasonerToolBase):
-    """Tool variant (**read-only**) — ask the reward monitor how the task is going (ADR-0057).
+    """Tool variant (**read-only**) — ask the reward monitor how the task is going.
 
     Backed by a ``kind: "reward"`` rSkill (Robometer-4B NF4) running in parallel
     with the active VLA in an out-of-process ZMQ sidecar. Where
@@ -7840,7 +7841,7 @@ class QueryTaskProgressTool(_ReasonerToolBase):
     ``success_trend`` / ``stalled`` / ``succeeded``. The reasoner uses it to
     decide whether to continue, escalate to :class:`QuerySceneTool`, advance, or
     enter the replanning ladder. Like every variant it **holds no authority over
-    actuation** (ADR-0018 §4) — the reward signal is advisory; the dispatch never
+    actuation** — the reward signal is advisory; the dispatch never
     gates the safety kernel.
 
     Attributes:
@@ -7859,7 +7860,7 @@ class QueryTaskProgressTool(_ReasonerToolBase):
 MemorySection: TypeAlias = Literal[
     "home_map", "preferences", "lessons", "object_locations", "open_tasks"
 ]
-"""The fixed sections of the self-maintained ``MEMORY.md`` core (ADR-0072 §3).
+"""The fixed sections of the self-maintained ``MEMORY.md`` core.
 
 * ``home_map`` — stable places / region-connectivity (EDIT in place).
 * ``preferences`` — distilled user-preference *rules* (TidyBot; EDIT in place).
@@ -7870,14 +7871,14 @@ MemorySection: TypeAlias = Literal[
 
 
 class MemoryWriteTool(_ReasonerToolBase):
-    """Tool variant (**write**) — edit the robot's self-maintained ``MEMORY.md`` (ADR-0072 §3).
+    """Tool variant (**write**) — edit the robot's self-maintained ``MEMORY.md``.
 
     The reasoner's **first write-capable tool**. It edits the persistent,
     human-readable *semantic* memory (preferences, corrections, lessons, durable
     home facts, object locations, open tasks) through an **explicit operation** —
     never a free-form rewrite (Mem0 ``ADD/UPDATE/DELETE`` + Zep temporal
     supersession). It writes ONLY to the advisory memory file and **holds no
-    authority over actuation** (ADR-0018 §4): a wrong memory yields a bad plan the
+    authority over actuation**: a wrong memory yields a bad plan the
     C++ kernel still vetoes (CLAUDE.md §1.1). The dispatch that applies the edit is
     wired in a later phase — this is the typed contract.
 
@@ -7911,12 +7912,12 @@ class MemoryWriteTool(_ReasonerToolBase):
 
 
 class MemorySearchTool(_ReasonerToolBase):
-    """Tool variant (**read-only**) — search the archival memory log (ADR-0072 §3).
+    """Tool variant (**read-only**) — search the archival memory log.
 
     Pages in entries evicted from the bounded ``MEMORY.md`` core into the archival
     JSONL (MemGPT recall), so the LLM can recall an older fact — e.g. a ``stale``
     object location used as a search prior — without loading the whole history.
-    Read-only; no actuation (ADR-0018 §4).
+    Read-only; no actuation.
 
     Attributes:
         tool: Discriminator (always ``"memory_search"``).
@@ -7931,7 +7932,7 @@ class MemorySearchTool(_ReasonerToolBase):
     limit: int = Field(default=5, ge=1, le=100)
 
 
-# ADR-0075 — the smallest actionable unit is a verb applied to exactly ONE
+# The smallest actionable unit is a verb applied to exactly ONE
 # specific object. A *collective* / *quantified* target ("all the objects", "the
 # items") names a SET the agent has not yet bound to perception, so it is never
 # directly actionable: it must be enumerated from the live scene and split into
@@ -7947,7 +7948,7 @@ _COLLECTIVE_TARGET_RE: re.Pattern[str] = re.compile(
 
 
 def is_collective_target(text: str) -> bool:
-    """True when ``text`` targets a *set* rather than one specific object (ADR-0075).
+    """True when ``text`` targets a *set* rather than one specific object.
 
     A quantifier (``all``/``every``/``each``/``both``/``everything``) or a bare
     generic plural (``objects``/``items``/``things``). Narrow by design: a
@@ -7963,7 +7964,7 @@ def is_collective_target(text: str) -> bool:
 
 
 class GroundedSubtask(BaseModel):
-    """One subtask bound to exactly ONE specific object (ADR-0075).
+    """One subtask bound to exactly ONE specific object.
 
     Makes the "smallest actionable unit" invariant a *type*: ``object_ref`` is
     the single concrete object (or place) this subtask acts on, and ``text`` is
@@ -7995,7 +7996,7 @@ class GroundedSubtask(BaseModel):
 
     @model_validator(mode="after")
     def _check_grounded(self) -> GroundedSubtask:
-        """Enforce the one-specific-object grounding invariant (ADR-0075)."""
+        """Enforce the one-specific-object grounding invariant."""
         obj = self.object_ref.strip()
         text = self.text.strip()
         if not obj:
@@ -8023,9 +8024,9 @@ class GroundedSubtask(BaseModel):
 
 
 class DecomposeMissionTool(_ReasonerToolBase):
-    """Tool variant — write the reasoner's typed task queue (ADR-0073 amendment / #123; ADR-0075).
+    """Tool variant — write the reasoner's typed task queue.
 
-    The typed path for the ``decompose-mission`` playbook (ADR-0072): the LLM
+    The typed path for the ``decompose-mission`` playbook: the LLM
     emits an ordered list of finer subtasks and the node applies it to the
     deterministic :class:`MissionState`, replacing the free-form-JSON gap with
     structured output (CLAUDE.md §3). Two modes, selected by ``target_task_id``:
@@ -8038,13 +8039,13 @@ class DecomposeMissionTool(_ReasonerToolBase):
       :data:`~openral_reasoner.mission.DEFAULT_MAX_SUBDIVIDE_DEPTH`; past the
       bound the node hands off instead.
 
-    ADR-0075: each subtask is a :class:`GroundedSubtask` (one specific object),
+    Each subtask is a :class:`GroundedSubtask` (one specific object),
     not a free string — so a collective "first batch of objects" cannot be
     emitted. The node renders them to :class:`MissionState` task text via
     :meth:`rendered_subtasks`.
 
     Like every :data:`ReasonerToolCall` variant it **holds no authority over
-    actuation** (ADR-0018 §4) — it only edits the S2 task ledger; a bad
+    actuation** — it only edits the S2 task ledger; a bad
     decomposition yields a worse plan the safety kernel still vetoes.
 
     Attributes:
@@ -8078,7 +8079,7 @@ ReasonerToolCall: TypeAlias = (
     | MemorySearchTool
     | DecomposeMissionTool
 )
-"""Discriminated union over the reasoner tool variants (ADR-0018 §4; ADR-0039).
+"""Discriminated union over the reasoner tool variants.
 
 The discriminator field is ``tool`` (a string ``Literal`` on each
 variant). Consumers decode an LLM tool-use payload with::
@@ -8090,17 +8091,17 @@ variant). Consumers decode an LLM tool-use payload with::
 
 Producers (LLM clients) serialise via ``call.model_dump_json()``.
 
-The first four variants are the actuation/effect palette ADR-0018 §4 commits
-to. ADR-0039 adds two **read-only query** variants — :class:`RecallObjectTool`
-and :class:`ResolvePlaceTool` — that only *read* the ADR-0038 spatial memory
-(no actuation authority). ADR-0073's amendment (#123) adds
+The first four variants are the actuation/effect palette this contract commits
+to. A later amendment adds two **read-only query** variants — :class:`RecallObjectTool`
+and :class:`ResolvePlaceTool` — that only *read* the spatial memory
+(no actuation authority). A further amendment adds
 :class:`DecomposeMissionTool` — the typed path for the ``decompose-mission``
 playbook to write/refine the deterministic :class:`MissionState` task queue
 (populate or flat-splice a blocked task); it edits only the S2 ledger, never
 actuation. Extending the palette requires (a) a new variant here, (b) the
 corresponding ROS-side dispatch in ``openral_reasoner_ros.reasoner_node``, (c) a
 CLAUDE.md §6.2 / §7.6 amendment if the new tool shifts the reasoner's authority
-surface. The two query variants' dispatch + result-return path is ADR-0039
-Phase 2; until then they are a typed contract not yet exposed in the live
+surface. The two query variants' dispatch + result-return path is wired
+separately; until then they are a typed contract not yet exposed in the live
 provider palette.
 """

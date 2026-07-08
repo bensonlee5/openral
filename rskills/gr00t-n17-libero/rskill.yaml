@@ -1,15 +1,16 @@
 schema_version: "0.1"
 name: "OpenRAL/rskill-gr00t-n17-libero"
-evaluated_tasks: ["libero_spatial"]  # ADR-0060: benchmark task this checkpoint is validated for (gate)
+evaluated_tasks: ["libero_spatial"]  # benchmark task this checkpoint is validated for (gate)
 version: "0.1.0"
 # NVIDIA Open Model License — GR00T N1.7 permits commercial use, unlike the
-# OneWay Noncommercial License on N1 / N1.5 / N1.6 (see ADR-0046). The loader
+# OneWay Noncommercial License on N1 / N1.5 / N1.6. The loader
 # therefore does NOT block this skill in a commercial deployment.
 license: "nvidia_open_model"
 role: "s1"
 kind: "vla"
 
-# In-process GR00T N1.7 (ADR-0046 amendment). lerobot 0.6.0 ships a native
+# In-process GR00T N1.7 (following a later amendment to the GR00T backend
+# design). lerobot 0.6.0 ships a native
 # `GrootPolicy` (Cosmos-Reason2 / Qwen3-VL backbone) that loads under the
 # workspace's Python 3.12, so the openral `gr00t` adapter now runs the 3B model
 # in-process (NF4 backbone rewrite, ~5.2 GiB peak) instead of the retired
@@ -97,7 +98,7 @@ description: >
   the LIBERO benchmark, packaged for OpenRAL. 7-D LIBERO action space
   (delta end-effector 6-DoF + gripper) over two RGB views. Runs in-process via
   lerobot 0.6.0's native GrootPolicy with an NF4-quantized backbone (~5.2 GiB
-  peak, fits an 8 GB GPU); ADR-0046. Open Model License — commercial use
+  peak, fits an 8 GB GPU). Open Model License — commercial use
   permitted.
 
 actions:

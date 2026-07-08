@@ -1,4 +1,4 @@
-"""Sim test: VLABench (MuJoCo + dm_control) + SmolVLA via the native backend (ADR-0079).
+"""Sim test: VLABench (MuJoCo + dm_control) + SmolVLA via the native backend.
 
 Two tiers:
 
@@ -9,14 +9,14 @@ Two tiers:
   ``openral_sim.make_env`` / ``make_policy`` and runs a few real steps of
   ``vlabench/select_fruit``. Asserts the 7-D state / 7-D action / 3-camera contract and
   that the episode reports the ``is_success`` key. It does NOT assert success:
-  ``smolvla_vlabench`` is a 0% integration baseline (ADR-0079) — the gate is that the
+  ``smolvla_vlabench`` is a 0% integration baseline — the gate is that the
   wiring drives a real closed loop.
 
 Skip policy
 -----------
 VLABench has no PyPI release and rides a ~12 GB CC-BY asset bundle; both are externally
 provisioned (the ``vlabench`` install plan handles the Python side, the assets are a manual
-Google-Drive fetch — ADR-0079 / CLAUDE.md §1.9). The live test skips unless VLABench is
+Google-Drive fetch — CLAUDE.md §1.9). The live test skips unless VLABench is
 importable, the asset bundle is unpacked, and CUDA is present. CI runners without the
 provisioned backend skip — the legitimate skip path (§1.12).
 """
@@ -84,7 +84,7 @@ def test_factories_registered() -> None:
 
 
 def test_install_plan_registered() -> None:
-    """The ADR-0079 ensure_backend_deps plan resolves and probes without a simulator."""
+    """The VLABench ensure_backend_deps plan resolves and probes without a simulator."""
     from openral_sim._deps import get_plan
 
     plan = get_plan("vlabench")
@@ -123,7 +123,7 @@ if importlib.util.find_spec("torch") is not None:
 @pytest.mark.slow
 @pytest.mark.skipif(
     not (_vlabench_ready() and _CUDA_AVAILABLE),
-    reason="VLABench backend + assets not provisioned, or no CUDA (ADR-0079)",
+    reason="VLABench backend + assets not provisioned, or no CUDA",
 )
 def test_select_fruit_live_episode() -> None:
     import openral_sim.backends

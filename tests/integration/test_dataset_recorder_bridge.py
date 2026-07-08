@@ -1,4 +1,4 @@
-"""ADR-0019 — DatasetRecorderBridge records the deploy bus to a rosbag2 mcap.
+"""DatasetRecorderBridge records the deploy bus to a rosbag2 mcap.
 
 Drives :class:`openral_runner.dataset_recorder_bridge.DatasetRecorderBridge`
 directly (no full ``ros2 launch``) with a minimal stand-in node, a REAL
@@ -172,7 +172,7 @@ def test_bridge_records_real_bus_data(
 
 
 def test_bridge_reassembles_slot_dispatched_action(tmp_path: Path) -> None:
-    """Multi-slot (ADR-0028b) ticks reassemble into one full action vector.
+    """Multi-slot ticks reassemble into one full action vector.
 
     Regression guard for the deploy-graph action-fidelity bug: a
     slot-dispatched skill (e.g. LIBERO = a 6-D cartesian_delta ActionChunk +
@@ -202,7 +202,7 @@ def test_bridge_reassembles_slot_dispatched_action(tmp_path: Path) -> None:
     for step in range(n_ticks):
         _feed_snapshot(aggregator, robot, state_dim=8, fill=100 + step, step=step)
         # Slot 1: 6-D cartesian delta; slot 2: 1-D gripper — same fixed order
-        # each tick, both stamped with the same 1-based tick_index (ADR-0019).
+        # each tick, both stamped with the same 1-based tick_index.
         tick = step + 1
         bridge._on_action(
             SimpleNamespace(
@@ -243,7 +243,7 @@ def test_bridge_tick_index_groups_same_key_slots(tmp_path: Path) -> None:
 
     This is the case the slot-cycle fallback CANNOT handle (a repeated key would
     flush prematurely): e.g. a bimanual robot emitting two same-mode joint
-    chunks with empty ee_name in one tick. ADR-0019's explicit ActionChunk
+    chunks with empty ee_name in one tick. The explicit ActionChunk
     tick_index groups them robustly — both chunks of a tick share the index, so
     they reassemble into one frame regardless of key collisions.
     """

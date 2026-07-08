@@ -1,4 +1,4 @@
-"""ADR-0051 — detector invocation mode (continuous background vs on-demand locator).
+"""Detector invocation mode (continuous background vs on-demand locator).
 
 Drives the **real** in-tree detector manifests through the **real** palette
 builder + tool-schema renderer (no mocks, CLAUDE.md §1.11):
@@ -85,7 +85,7 @@ def test_palette_collects_continuous_detectors_not_the_on_demand_locator() -> No
     assert omdet.num_labels > 200  # the curated indoor vocabulary
 
 
-# ── ADR-0056: on-demand locators surfaced as selectable locate_in_view options ──
+# ── on-demand locators surfaced as selectable locate_in_view options ─────────
 
 
 def test_palette_surfaces_on_demand_locators_with_aliases() -> None:
@@ -185,7 +185,7 @@ def test_locate_in_view_description_plain_without_continuous_detectors() -> None
     assert "already tracked continuously" not in tools["locate_in_view"]["description"].lower()
 
 
-# ── node wiring policy (ADR-0051): continuous publishes, on_demand serves ────
+# ── node wiring policy: continuous publishes, on_demand serves ───────────────
 
 
 def test_detector_node_wiring_continuous_publishes_not_serves() -> None:

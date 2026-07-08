@@ -1,7 +1,7 @@
 """reward_monitor_node's camera-label derivation for the dashboard rSkill card.
 
 Surfaces which camera the Robometer reward monitor attends to (``reward.camera``
-span attribute on ``reward.score``, ADR-0057) — see
+span attribute on ``reward.score``) — see
 ``openral_perception_ros.reward_monitor_node._camera_label``.
 """
 

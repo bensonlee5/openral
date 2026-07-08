@@ -7,7 +7,7 @@ network once the assets are in place. The dashboard's `dashboard.js` points
 directory (`/static/vendor/vad/`).
 
 All third-party, redistributed under permissive licenses (OpenRAL's own code
-stays Apache-2.0 per ADR-0012; these are external assets we ship unmodified).
+stays Apache-2.0 under OpenRAL's licensing policy; these are external assets we ship unmodified).
 
 **The three binary files are no longer committed to git** (they totalled
 ~15 MB): `silero_vad_v5.onnx`, `silero_vad_legacy.onnx`, and

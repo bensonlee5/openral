@@ -1,6 +1,7 @@
 r"""Live NVMM camera source — runs inside the x86 DeepStream Docker image.
 
-Proves ADR-0082 Phase 1 end-to-end on real hardware: the spec-driven
+Proves the NVMM zero-copy vision pipeline's Phase 1 end-to-end on real
+hardware: the spec-driven
 reader pipeline decodes an MJPG USB camera **directly into NVMM** via
 ``nvjpegdec`` and the reader lifts each frame to a CUDA device pointer —
 no decoded pixel ever touches system memory:
@@ -104,7 +105,7 @@ def main() -> int:
         print(f"second frame: handle=0x{frame2.handle:x} (streaming OK)")
         _ = first_handle  # handles may repeat (buffer pool); freshness is the max_age check
 
-    print("PASS: NVMM camera source live (ADR-0082 Phase 1)")
+    print("PASS: NVMM camera source live (zero-copy pipeline Phase 1)")
     return 0
 
 

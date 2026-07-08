@@ -1,4 +1,4 @@
-# SO-101 laptop bench rig (ADR-0078 amendment) — converted from the retired
+# SO-101 laptop bench rig — converted from the retired
 # deployments/so101.yaml RobotEnvironment.
 #
 # The `sensors:` entries are deploy-time bindings for the robot manifest's own
@@ -7,7 +7,7 @@
 # /dev/video* paths per host with `openral detect --deployment -i`.
 #
 # HAL facts (serial port + lerobot calibration identity) live in the `hal:`
-# binding below (ADR-0078) — the HAL analogue of a sensor `deploy_binding` — so
+# binding below — the HAL analogue of a sensor `deploy_binding` — so
 # this scene is self-contained and needs no `--hal` overrides:
 #
 #   openral deploy run --config scenes/deploy/so101_bench.yaml
@@ -20,7 +20,7 @@
 scene:
   id: so101_bench
 robot_id: so101_follower
-# Host-specific HAL binding (ADR-0078). port: this arm enumerates on
+# Host-specific HAL binding. port: this arm enumerates on
 # /dev/ttyACM0 (robot.yaml's generic default is /dev/ttyUSB0). id +
 # calibration_dir load the committed Feetech calibration
 # (calibration/so_follower.json, relative to this file); without it every
@@ -33,7 +33,7 @@ hal:
     calibrate_on_connect: false
 sensors:
   # Both bench cameras deliver MJPG (`v4l2-ctl --list-formats-ext`); the
-  # icspring wrist cam has no raw modes at all. `jpeg: true` (ADR-0082)
+  # icspring wrist cam has no raw modes at all. `jpeg: true`
   # inserts the JPEG decode: `jpegdec` (CPU) on plain hosts, `nvjpegdec` in
   # the DeepStream container — where the decoded frame is born in NVMM and
   # the policy leg stays zero-copy on the GPU end to end. This retired the
@@ -85,9 +85,9 @@ sensors:
 # CLI flag > this block > auto. The SO-101 bench is a fixed-base arm with two
 # RGB cameras: no lidar/depth → SLAM/Nav2/octomap off; the continuous
 # open-vocab detector stays on for locate_in_view; the reward monitor is on
-# by default (ADR-0077 §4 auto-pairs Robometer from the VLA's
+# by default (auto-pairs Robometer from the VLA's
 # reward_rskill_name; it scores /openral/cameras/top/image, which the
-# ADR-0082 NVMM tier keeps publishing via the observability tee).
+# NVMM tier keeps publishing via the observability tee).
 runtime:
   enable_slam: false
   enable_nav2: false
@@ -109,7 +109,7 @@ runtime:
 # override lived here to suppress a self-collision false-E-stop at the home pose
 # (base<->lower_arm reported -0.078 m while the true clearance is +0.16 m). That
 # was an expedient masking a geometry bug; it has been REMOVED. The real fix
-# (ADR-0081 / issue #84) replaces the base's over-conservative capsule with a
+# (issue #84) replaces the base's over-conservative capsule with a
 # tight OBB in robots/so101_follower/robot.yaml, so base<->lower_arm (and
 # base<->wrist) clear at reachable poses without loosening the ACM. Full base
 # self-collision detection is restored.

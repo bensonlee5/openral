@@ -168,7 +168,7 @@ def _resolve_action_dim(env_cfg: SimEnvironment) -> int:
     scene_default = _SCENE_DEFAULT_ACTION_DIM.get(env_cfg.scene.id)
     if scene_default is not None:
         return scene_default
-    # Isaac Sim (ADR-0045) serves two sidecar layouts under one scene id:
+    # Isaac Sim serves two sidecar layouts under one scene id:
     # lift_cube is 8-D (7 arm joint deltas + gripper); bowl_plate is the
     # LIBERO 7-D OSC-pose delta. The dim is layout-, not id-, determined.
     if env_cfg.scene.id == "isaac_sim":
@@ -194,7 +194,7 @@ _SCENE_DEFAULT_ACTION_DIM: dict[str, int] = {
     "metaworld": 4,
     "aloha_bimanual": 14,
     # isaac_sim is intentionally absent — its dim is layout-determined; see
-    # the layout branch in _resolve_action_dim (ADR-0045).
+    # the layout branch in _resolve_action_dim.
 }
 
 

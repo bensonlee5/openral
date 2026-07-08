@@ -1,4 +1,4 @@
-"""Shared gaze geometry — re-export shim (ADR-0044; relocated to core in ADR-0086).
+"""Shared gaze geometry — re-export shim.
 
 The look-at math now lives in :mod:`openral_core.geometry` so every layer —
 including the layer-0 HAL camera rig — can compute camera orientations from one

@@ -38,7 +38,7 @@ The only VLABench policy above 50% is `VLABench/pi0-fast-ft-primitive-10task-del
 `PI0FAST` (+int8 for 8 GB) to run in-process — a dedicated, not-yet-done effort.
 VLABench's composite/long-horizon suite is unsolved (<50%) by every known policy.
 
-## Provisioning (ADR-0079)
+## Provisioning
 
 The **Python side auto-installs** on first env build via the `vlabench`
 `ensure_backend_deps` plan (`OPENRAL_AUTO_INSTALL_DEPS=1`, the default): it clones

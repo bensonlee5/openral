@@ -150,7 +150,7 @@ def test_spin_wrapped_in_sigint_except() -> None:
     )
 
 
-# ── ADR-0050 lifecycle / VRAM-release contract (structural guard) ────────────
+# ── Single-resident-skill VRAM eviction: lifecycle / VRAM-release contract (structural guard) ──
 
 
 def _detector_class(tree: ast.Module) -> ast.ClassDef:
@@ -176,21 +176,24 @@ def _attr_calls(fn: ast.FunctionDef) -> set[str]:
 
 
 def test_detector_node_is_lifecycle_node() -> None:
-    """ADR-0050: the detector must be a managed LifecycleNode (not a plain Node)."""
+    """Single-resident-skill VRAM eviction: the detector must be a managed
+    LifecycleNode (not a plain Node)."""
     cls = _detector_class(_parse())
     bases = {b.id for b in cls.bases if isinstance(b, ast.Name)}
     assert "LifecycleNode" in bases, f"expected LifecycleNode base; got {bases}"
 
 
 def test_detector_node_defines_lifecycle_callbacks() -> None:
-    """ADR-0050: configure/activate/deactivate/cleanup callbacks must exist."""
+    """Single-resident-skill VRAM eviction: configure/activate/deactivate/cleanup
+    callbacks must exist."""
     names = {n.name for n in _detector_class(_parse()).body if isinstance(n, ast.FunctionDef)}
     for cb in ("on_configure", "on_activate", "on_deactivate", "on_cleanup"):
         assert cb in names, f"missing lifecycle callback {cb!r}"
 
 
 def test_on_deactivate_releases_detector_vram() -> None:
-    """ADR-0050: on_deactivate must release the detector backend (free its VRAM)."""
+    """Single-resident-skill VRAM eviction: on_deactivate must release the
+    detector backend (free its VRAM)."""
     cls = _detector_class(_parse())
     assert "_release_detector" in _attr_calls(_method(cls, "on_deactivate")), (
         "on_deactivate must call self._release_detector() to free the detector's VRAM"
@@ -200,7 +203,8 @@ def test_on_deactivate_releases_detector_vram() -> None:
 
 
 def test_on_activate_builds_detector() -> None:
-    """ADR-0050: on_activate must (re)build the detector backend (acquire VRAM)."""
+    """Single-resident-skill VRAM eviction: on_activate must (re)build the
+    detector backend (acquire VRAM)."""
     assert "_build_detector" in _attr_calls(_method(_detector_class(_parse()), "on_activate")), (
         "on_activate must call self._build_detector() so VRAM is acquired on activation"
     )

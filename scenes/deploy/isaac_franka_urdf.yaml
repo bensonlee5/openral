@@ -1,5 +1,5 @@
 # Franka in Isaac Sim, imported from the robot's URDF — robot-agnostic deploy
-# scene (ADR-0045 amendment).
+# scene.
 #
 # Unlike scenes/deploy/isaac_franka.yaml (which uses the `lift_cube` layout's
 # hardcoded Isaac built-in Franka example asset), this scene uses the
@@ -12,7 +12,7 @@
 #
 # M1 scope: fixed-base arm, one RGB camera, /joint_states from the imported
 # articulation. Generic depth/lidar (M2) and the mobile base (M3) extend the
-# same `manifest` path; see ADR-0045 §"Robot-agnostic, URDF-driven scenes".
+# same `manifest` path — the robot-agnostic, URDF-driven scene pattern.
 #
 # Requirements: NVIDIA RTX GPU, the externally-provisioned Isaac Sim sidecar
 # venv (set OPENRAL_ISAAC_SIDECAR_PYTHON).

@@ -1,4 +1,4 @@
-"""Offline URDF(+SRDF) → manifest collision-model lowering tool (ADR-0030).
+"""Offline URDF(+SRDF) → manifest collision-model lowering tool.
 
 Produces the hand-reviewable ``collision_geometry`` + ``allowed_collision_pairs``
 that ``robot.yaml`` carries and ``collision_params_from_description`` consumes:
@@ -108,8 +108,8 @@ def fit_capsule_to_vertices(vertices: _Arr) -> tuple[CapsuleShape, _Origin]:
     PCA via SVD: the dominant principal component is the capsule axis. ``length_m``
     is the span of the projections onto that axis; ``radius_m`` is the max distance
     of any vertex from the axis line. Every vertex therefore lies inside the result
-    — a conservative over-approximation, so the safety check never under-covers
-    (ADR-0030 §2). Returns the ``CapsuleShape`` plus its ``origin_xyz_rpy`` in the
+    — a conservative over-approximation, so the safety check never under-covers.
+    Returns the ``CapsuleShape`` plus its ``origin_xyz_rpy`` in the
     same frame as ``vertices``: the segment midpoint and the rotation taking local
     +Z onto the principal axis.
 
@@ -530,7 +530,7 @@ def lower_joint_fk(robot: RobotDescription, urdf_ref: str) -> dict[str, tuple[_V
     """Per-manifest-joint FK (``origin_xyz``, ``origin_rpy``, ``axis_xyz``) from the URDF.
 
     The kernel computes link poses from the manifest joints' fixed parent→joint
-    transform + axis (ADR-0030); a manifest that only declares the chain topology
+    transform + axis; a manifest that only declares the chain topology
     (parent/child) needs these populated. For each manifest joint the fixed
     ``origin`` is the URDF transform from the manifest ``parent_link`` to its
     ``child_link`` at the zero configuration — computed via the URDF's own forward
@@ -736,7 +736,7 @@ def lower_robot(
     geometry_only: bool = False,
     manifest_dir: Path | None = None,
 ) -> LoweredCollisionModel:
-    """Lower a robot's URDF/SRDF into the manifest collision blocks (ADR-0030).
+    """Lower a robot's URDF/SRDF into the manifest collision blocks.
 
     ACM source precedence: an explicit ``srdf_path`` → the manifest's
     ``assets.srdf`` → the URDF random-pose sampling fallback. The ACM is scoped to
@@ -862,7 +862,7 @@ def _urdf_has_collision_geometry(urdf_path: str) -> bool:
 
 
 def select_lowering(robot: RobotDescription, *, manifest_dir: Path | None = None) -> LoweringSource:
-    """Pick the provenance-correct lowering source for ``robot`` (ADR-0058 §5).
+    """Pick the provenance-correct lowering source for ``robot``.
 
     Deterministic routing that reproduces each robot's *committed* collision
     source exactly — a drift here changes what the C++ safety kernel checks, so

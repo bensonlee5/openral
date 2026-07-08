@@ -1,4 +1,4 @@
-"""Integration test: the query_scene ROS service path, end-to-end (ADR-0047).
+"""Integration test: the query_scene ROS service path, end-to-end.
 
 Brings up the REAL ``scene_vlm_node`` as a subprocess (real rclpy node, real
 ``openral_msgs/srv/QueryScene`` IDL, real ``QwenSceneVlm`` backend talking to a

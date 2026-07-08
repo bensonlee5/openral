@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 F4 — ``reasoner_node`` lifecycle wrapper.
+"""ROS 2 reasoner + supervisor graph — ``reasoner_node`` lifecycle wrapper.
 
 Subscribes to:
 
@@ -9,13 +9,13 @@ Subscribes to:
 * ``/openral/prompt``            — ``openral_msgs/PromptStamped`` (operator)
 
 Heartbeat tick at ``tick_hz`` (default 0.2 Hz = one every 5 s; was 5 Hz
-pre-2026-05-25 amendment to ADR-0018). The event bus is the primary
+pre-2026-05-25 amendment to this design). The event bus is the primary
 trigger: an incoming :class:`FailureTrigger` with
 ``severity>=SEVERITY_FAIL`` (or ``>=SEVERITY_WARN`` on
 ``/openral/failure/safety`` — Tier A), or a new ``/openral/prompt``
 arrival, forces an out-of-band tick (subject to the
 :class:`~openral_reasoner.ReasonerCore` 100 ms min-interval per
-ADR-0018 §4). Heartbeat ticks that see no new event since the last
+the reasoner+supervisor design §4). Heartbeat ticks that see no new event since the last
 successful tick are short-circuited inside ``ReasonerCore`` with
 ``suppressed_reason="heartbeat_idle"``.
 
@@ -42,8 +42,8 @@ Dispatches the selected :data:`~openral_core.ReasonerToolCall`:
 * :class:`EmitPromptTool` → republish on the target ``PromptStamped``
   topic.
 
-The reasoner **never** publishes ``openral_msgs/ActionChunk`` (ADR-0018
-§4 "Holds no authority over actuation").
+The reasoner **never** publishes ``openral_msgs/ActionChunk`` (per the
+reasoner+supervisor design §4 "Holds no authority over actuation").
 """
 
 from __future__ import annotations
@@ -187,7 +187,7 @@ except ImportError:  # pragma: no cover
 # std_msgs ships with ROS 2 Jazzy; this is the empty payload the
 # ``ral skill install`` / ``ral skill remove`` CLI fires on
 # ``/openral/skill_registry_changed`` to invalidate the reasoner's
-# palette (ADR-0018 §4 "palette ... refreshed on
+# palette ("palette ... refreshed on
 # /openral/skill_registry_changed").
 try:  # pragma: no cover — gated by sourced ROS install
     from std_msgs.msg import Empty as IDLEmpty
@@ -207,7 +207,7 @@ except ImportError:  # pragma: no cover
 
 __all__ = ["ReasonerNode"]
 
-# QoS profiles per ADR-0018 §1 + CLAUDE.md §5.3
+# QoS profiles per the reasoner+supervisor design §1 + CLAUDE.md §5.3
 _QOS_WORLD_STATE = QoSProfile(
     history=QoSHistoryPolicy.KEEP_LAST,
     depth=1,
@@ -241,9 +241,9 @@ _QOS_REGISTRY_CHANGED = QoSProfile(
     reliability=QoSReliabilityPolicy.RELIABLE,
     durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
 )
-# ADR-0044 Phase 4 — the slam_toolbox map is latched (description/static QoS
-# class): RELIABLE + TRANSIENT_LOCAL so a late-joining reasoner still receives
-# the current grid snapshot.
+# The occupancy-grid-refined approach phase — the slam_toolbox map is latched (description/static
+# QoS class): RELIABLE + TRANSIENT_LOCAL so a late-joining reasoner still receives the current grid
+# snapshot.
 _QOS_MAP = QoSProfile(
     history=QoSHistoryPolicy.KEEP_LAST,
     depth=1,
@@ -251,7 +251,7 @@ _QOS_MAP = QoSProfile(
     durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
 )
 
-# ADR-0074 §5 — BEST_EFFORT sensor QoS for the completion-camera frame cache.
+# VLM-adjudicated completion (§5) — BEST_EFFORT sensor QoS for the completion-camera frame cache.
 # One-frame keep-last: the adjudicator always sees the most recent frame; older
 # frames are dropped rather than queued. VOLATILE means no history replay (the
 # verification window is the present moment, not a historical one).
@@ -262,32 +262,31 @@ _QOS_COMPLETION_CAMERA = QoSProfile(
     durability=QoSDurabilityPolicy.VOLATILE,
 )
 
-# Closed sets from ADR-0018 §3 / capability review §3.
-# `rskill` was renamed from `skill` on 2026-05-25 (ADR-0018 amendment §5)
+# Closed sets from the reasoner+supervisor design §3 / capability review §3.
+# `rskill` was renamed from `skill` on 2026-05-25 (reasoner+supervisor design amendment §5)
 # for consistency with the carried `rskill_id` field.
 _FAILURE_SOURCES: tuple[str, ...] = ("hal", "sensor", "rskill", "safety", "wam", "critic")
 _PERCEPTION_KINDS: tuple[str, ...] = ("motion", "objects", "ocr", "scene_change")
 
-# ADR-0073 §1 — prompt frame_ids the reasoner re-publishes onto /openral/prompt
-# for its OWN cascade (advisory query responses + spatial-memory re-prompts).
-# These are not new operator goals, so they must NOT (re)build the mission queue
-# — only a genuine operator/cli/dashboard prompt does. Self-emits (frame_id ==
-# the node name) are already dropped earlier in `_on_prompt`.
+# Reward-gated task verification (§1) — prompt frame_ids the reasoner re-publishes onto
+# /openral/prompt for its OWN cascade (advisory query responses + spatial-memory re-prompts). These
+# are not new operator goals, so they must NOT (re)build the mission queue — only a genuine
+# operator/cli/dashboard prompt does. Self-emits (frame_id == the node name) are already dropped
+# earlier in `_on_prompt`.
 _CASCADE_PROMPT_SOURCES: frozenset[str] = frozenset(
     {"spatial_memory", "detector", "scene_vlm", "reward_monitor", "memory", "mission"}
 )
 
-# ADR-0073 §2 / ADR-0074 amendment — reward window (s) for the automatic
-# post-skill task verification. Robometer scores a trajectory from its START, so
-# the verify must request the WHOLE attempt (start→now), not a trailing slice: an
-# 8 s tail missed the completion arc and under-scored progress to ~0.70
-# (vlm_check/ladder) on real successes whose full-attempt progress was ~0.85. The
-# request uses the active reward model's ``frame_window_s`` (the buffer retention
-# = the attempt horizon) when a contract is wired; this constant is the fallback
-# when none is. Sized to span the default 30 s patience ceiling + margin.
+# Reward-gated task verification §2 / VLM-adjudicated completion amendment — reward window (s) for
+# the automatic post-skill task verification. Robometer scores a trajectory from its START, so the
+# verify must request the WHOLE attempt (start→now), not a trailing slice: an 8 s tail missed the
+# completion arc and under-scored progress to ~0.70 (vlm_check/ladder) on real successes whose
+# full-attempt progress was ~0.85. The request uses the active reward model's ``frame_window_s``
+# (the buffer retention = the attempt horizon) when a contract is wired; this constant is the
+# fallback when none is. Sized to span the default 30 s patience ceiling + margin.
 _MISSION_VERIFY_WINDOW_S: float = 40.0
 
-# ADR-0074 Decision 5 — three-tier verdict band edges + the patience ceiling.
+# VLM-adjudicated completion, Decision 5 — three-tier verdict band edges + the patience ceiling.
 # These are the SYSTEM FALLBACK in the authority stack (system < reward-model
 # calibrated default < LLM per-task override): used only when no reward manifest
 # is wired (``reward_manifest_path`` unset). When a reward model is active the
@@ -322,7 +321,7 @@ _SKILL_FAILURE_KIND_NAMES: dict[int, str] = {
 _EXECUTE_SKILL_SERVER_PROBE_S: float = 0.1
 _LIFECYCLE_SERVER_PROBE_S: float = 0.1
 
-# ADR-0018 2026-05-25 amendment — trigger taxonomy. Maps each failure
+# Reasoner+supervisor design, 2026-05-25 amendment — trigger taxonomy. Maps each failure
 # source to its tier so the reasoner_node stamps a ``reasoner.tier``
 # attribute on the OTel span (observability only — the preemption
 # threshold per source is decided inline in :meth:`_on_failure`). Tier
@@ -344,13 +343,13 @@ _FAILURE_TIER_FOR_SOURCE: dict[str, str] = {
 # fine, this robot path just doesn't expose the wrapped observation
 # it expects. Joint-space layouts (``smolvla_9d``, ``libero``, etc.)
 # ARE joint-count contracts, so a dim mismatch there IS a real
-# incompatibility worth a WARN. ADR-0025 amendment 2026-05-27.
+# incompatibility worth a WARN (amendment 2026-05-27).
 # Canonical source is ``openral_core.WRAPPED_TASK_SPACE_LAYOUTS``
-# (ADR-0027 — single source of truth so the schema validator and the
+# (single source of truth so the schema validator and the
 # reasoner filter stay in lockstep).
 from openral_core import WRAPPED_TASK_SPACE_LAYOUTS as _WRAPPED_TASK_SPACE_LAYOUTS  # noqa: E402
 
-# ADR-0036 (amended 2026-06-04) — deploy-path-aware action-mode palette gate.
+# Deploy-path-aware action-mode palette gate (amended 2026-06-04).
 #
 # The state-contract filter above gates a VLA's *input* (state dim vs
 # joint count); the ``hal_mode == "sim"`` executable set gates a VLA's
@@ -376,7 +375,7 @@ def _detect_gpu_total_vram_gb() -> float:
     """Total VRAM (GB) of GPU 0 via ``nvidia-smi``, or ``0.0`` when unavailable.
 
     Deliberately torch-free (the reasoner_node stays cheap to import — torch is
-    only pulled lazily for the skill loader). Used by the ADR-0077 pre-dispatch
+    only pulled lazily for the skill loader). Used by the VLA/reward VRAM-fit pre-dispatch
     pair check when the ``gpu_total_vram_gb`` param is unset. Any failure (no
     nvidia-smi, no GPU, parse error) returns ``0.0`` → the caller skips the check
     rather than blocking dispatch on a host where the budget can't be read.
@@ -401,7 +400,7 @@ def _detect_gpu_total_vram_gb() -> float:
 
 
 def _required_control_modes(manifest: RSkillManifest) -> set[ControlMode]:
-    """The :class:`ControlMode` s a skill's ``action_contract`` demands (ADR-0036).
+    """The :class:`ControlMode` s a skill's ``action_contract`` demands.
 
     Pure helper (no ROS spin) so the deploy-path palette gate is unit
     testable. The contract is read in order of specificity:
@@ -411,7 +410,7 @@ def _required_control_modes(manifest: RSkillManifest) -> set[ControlMode]:
     * ``representation`` set → :func:`control_modes_for_representation`.
     * ``slots`` set → every slot's ``control_mode`` (discard slots carry
       ``None`` and are skipped).
-    * Bare ``dim`` only (legacy ADR-0019 contract) → ``{JOINT_POSITION}``;
+    * Bare ``dim`` only (legacy rosbag2↔LeRobotDataset bridge contract) → ``{JOINT_POSITION}``;
       the skill_runner dispatches a bare-dim vector as one whole-vector
       joint-position Action.
 
@@ -436,7 +435,7 @@ def _action_executable(
     description: RobotDescription,
     hal_mode: str,
 ) -> bool:
-    """Whether the deploy path can execute a skill's action modes (ADR-0036).
+    """Whether the deploy path can execute a skill's action modes.
 
     Pure helper (no ROS spin). The executable set depends on ``hal_mode``:
 
@@ -472,9 +471,10 @@ def _action_executable(
 
 
 def _resets_search_episode(call: Any) -> bool:
-    """True when dispatching ``call`` should end the active-search episode (ADR-0039 §3).
+    """True when dispatching ``call`` should end the active-search episode.
 
-    The cascade bound counts only *consecutive* spatial-search queries, so any
+    The cascade bound (active object search §3) counts only *consecutive*
+    spatial-search queries, so any
     non-search dispatch resets ``_spatial_search`` + ``_locate_escalated``. The
     search actions that must NOT reset are ``recall_object`` / ``resolve_place``
     (remembered objects) and ``locate_in_view`` (live detector) — the latter is
@@ -516,7 +516,7 @@ def _resolve_execute_prompt(call_prompt: str, active_text: str | None) -> str:
     return active_text or ""
 
 
-# The "collective target" predicate (ADR-0075) is the single source of truth in
+# The "collective target" predicate (grounded task decomposition) is the single source of truth in
 # ``openral_core`` (`is_collective_target`) — shared by the `GroundedSubtask`
 # schema validator and this node's runtime execute gate so a skill never acts on
 # a quantified/plural set ("all the objects"); it must be enumerated from the live
@@ -524,12 +524,12 @@ def _resolve_execute_prompt(call_prompt: str, active_text: str | None) -> str:
 
 
 class ReasonerNode(LifecycleNode):
-    """ROS 2 lifecycle wrapper around :class:`ReasonerCore` (ADR-0018 F4).
+    """ROS 2 lifecycle wrapper around :class:`ReasonerCore` (reasoner + supervisor graph F4).
 
     Args:
         node_name: ROS node name. Default ``openral_reasoner``.
         tick_hz: Heartbeat tick rate in Hz. Default 0.2 (one every
-            5 s). Per ADR-0018 amendment 2026-05-25, the reasoner is
+            5 s). Per the reasoner+supervisor design amendment 2026-05-25, the reasoner is
             event-driven: failure/prompt arrivals preempt with
             ``force=True``, and the periodic timer is the safety net
             for "task is not making progress but nothing has fired".
@@ -573,8 +573,8 @@ class ReasonerNode(LifecycleNode):
     ) -> None:
         """Initialise without rclpy I/O; resources opened in on_configure.
 
-        ``spatial_memory`` (ADR-0039 Phase 2b) is an optional read-only
-        scene-graph query backend (an ADR-0038 ``SpatialMemory``). When
+        ``spatial_memory`` (active object search, Phase 2b) is an optional read-only
+        scene-graph query backend (a persistent-spatial-memory ``SpatialMemory``). When
         provided, the ``recall_object`` / ``resolve_place`` tools are offered to
         the LLM and dispatched against it; the result is republished as a
         ``PromptStamped`` so the next tick sees it (the prompt cascade). When
@@ -589,23 +589,23 @@ class ReasonerNode(LifecycleNode):
         self._robot_capabilities = robot_capabilities
         self._commercial_deployment = commercial_deployment
         self._spatial_memory = spatial_memory
-        # ADR-0038 live dynamic memory — when the reasoner *owns* the backend
+        # Persistent spatial memory, live dynamic memory — when the reasoner *owns* the backend
         # (preloaded from disk, or auto-created for `spatial_memory_ingest`),
         # this concrete handle lets `_on_tick` fold each WorldState.detected_objects
         # snapshot into it. Stays None for an externally-injected read-only
         # querier (we don't mutate a backend we don't own).
         self._spatial_memory_writer: SpatialMemory | None = None
-        # ADR-0044 Phase 4 — latest decoded occupancy grid (an
+        # Occupancy-grid-refined approach phase — latest decoded occupancy grid (an
         # ``openral_world_state.grid.OccupancyGridIndex``), from the latched
         # ``occupancy_map_topic`` subscription. ``None`` until a map arrives;
         # ``_dispatch_spatial_query`` then refines every recall_object approach
         # viewpoint through it (grid absent → geometric viewpoints pass
         # through unchanged).
         self._occupancy_grid: Any = None
-        # ADR-0039 §3 — bound the find→re-prompt cascade so a query that keeps
+        # Active object search §3 — bound the find→re-prompt cascade so a query that keeps
         # missing terminates in human-handoff instead of looping forever.
         self._spatial_search = SearchProgress(SearchBudget())
-        # ADR-0043/0056 — recall_object queries already escalated to a live
+        # locate_in_view / on-demand detectors — recall_object queries already escalated to a live
         # locate_in_view this search streak (one escalation per query term, so a
         # repeated miss doesn't re-fire the detector every tick). Reset whenever
         # the active-search bound resets (new operator goal / non-search action).
@@ -614,7 +614,7 @@ class ReasonerNode(LifecycleNode):
         # One offer per task so a task that declines to decompose still terminates
         # in human-handoff; cleared when a new operator goal rebuilds the mission.
         self._subdivide_offered: set[str] = set()
-        # ADR-0074 amendment — PER-TASK locate budget. The ``_spatial_search``
+        # VLM-adjudicated completion amendment — PER-TASK locate budget. The ``_spatial_search``
         # bound only counts locate MISSES and resets on a HIT, so a live
         # locate-loop where ``locate_in_view`` keeps HITTING (found=True) but the
         # reasoner never dispatches an ``execute_rskill`` never terminates. This
@@ -623,7 +623,7 @@ class ReasonerNode(LifecycleNode):
         # mission ladder with a displayed reason so the next pick proceeds. Reset
         # on task advance and on a successful execute dispatch.
         self._task_locate_budget = TaskLocateBudget()
-        # ADR-0074 amendment 2026-06-29 — locate-budget × ground-before-decompose:
+        # VLM-adjudicated completion amendment 2026-06-29 — locate-budget × ground-before-decompose:
         # on a COLLECTIVE goal, locating to confirm objects IS the legitimate path to
         # `decompose_mission` (which is not a skill dispatch), so a budget-hit there
         # must NOT abandon the mission — it nudges decompose and resets the budget.
@@ -641,7 +641,7 @@ class ReasonerNode(LifecycleNode):
         # refresh path for HF-Hub-installed skills.
         self.declare_parameter("robot_yaml", "")
         self.declare_parameter("rskill_search_paths", [""])
-        # ADR-0025 — additional lifecycle peer node names to surface in
+        # Reasoner-managed background services — additional lifecycle peer node names to surface in
         # the LLM tool palette's `node_ids` slot so the Reasoner can
         # emit `LifecycleTransitionTool(node=..., transition=...)` against
         # background services like `/openral_slam_toolbox`. Defaults to
@@ -649,39 +649,38 @@ class ReasonerNode(LifecycleNode):
         # [openral_slam_toolbox]` when the corresponding `--enable-<svc>`
         # CLI flag was passed.
         self.declare_parameter("lifecycle_peer_node_ids", [""])
-        # ADR-0050 — GPU lifecycle peers (the object-detector LifecycleNode is
-        # the canonical one) to DEACTIVATE before dispatching a GPU-heavy
-        # ``execute_rskill`` and REACTIVATE once it finishes, so their VRAM is
-        # freed for the policy. Without this the detector (~1.3 GB) co-resident
-        # with a VLA (~4.5 GB) OOMs an 8 GB card at load. Default empty; the
-        # deploy launch sets it to the detector node id when
-        # ``--enable-object-detector``. Distinct from ``lifecycle_peer_node_ids``
-        # (which only surfaces peers to the LLM tool palette, not auto-managed).
+        # Single-resident-skill VRAM eviction — GPU lifecycle peers (the object-detector
+        # LifecycleNode is the canonical one) to DEACTIVATE before dispatching a GPU-heavy
+        # ``execute_rskill`` and REACTIVATE once it finishes, so their VRAM is freed for the policy.
+        # Without this the detector (~1.3 GB) co-resident with a VLA (~4.5 GB) OOMs an 8 GB card at
+        # load. Default empty; the deploy launch sets it to the detector node id when
+        # ``--enable-object-detector``. Distinct from ``lifecycle_peer_node_ids`` (which only
+        # surfaces peers to the LLM tool palette, not auto-managed).
         self.declare_parameter("vram_lifecycle_peers", [""])
-        # ADR-0039 Phase 2b deployment wiring — absolute path to a persisted
-        # ADR-0038 scene graph (``SceneGraph`` JSON written by
+        # Active object search, Phase 2b deployment wiring — absolute path to a persisted
+        # persistent-spatial-memory scene graph (``SceneGraph`` JSON written by
         # ``SpatialMemory.save``). When set (and no ``spatial_memory`` backend
         # was injected), ``on_configure`` loads it into a ``SpatialMemory`` and
         # wires it as the read-only query backend, enabling the
         # ``recall_object`` / ``resolve_place`` tools against a preloaded map.
         # Empty = disabled.
         self.declare_parameter("spatial_memory_path", "")
-        # ADR-0072 §3 / Phase 4b — path to the self-maintained MEMORY.md (read at
-        # configure into the `## MEMORY` context block). Empty omits the section.
+        # Reasoner playbooks + self-maintained memory §3 / Phase 4b — path to the self-maintained
+        # MEMORY.md (read at configure into the `## MEMORY` context block). Empty omits the section.
         self.declare_parameter("memory_md_path", "")
-        # ADR-0072 §3 / Phase 5 — retrieval-under-cap: render at most this many
-        # memory entries in the always-on `## MEMORY` block (top by importance then
+        # Reasoner playbooks + self-maintained memory §3 / Phase 5 — retrieval-under-cap: render at
+        # most this many memory entries in the always-on `## MEMORY` block (top by importance then
         # recency; the tail stays searchable via memory_search). 0 = no cap.
         self.declare_parameter("memory_context_cap", 0)
-        # ADR-0038 live dynamic memory — when true, ``on_configure`` ensures a
+        # Persistent spatial memory, live dynamic memory — when true, ``on_configure`` ensures a
         # ``SpatialMemory`` backend exists (auto-creating an empty one if no
         # ``spatial_memory_path`` was loaded and none injected) and ``_on_tick``
         # folds each ``/openral/world_state_slow`` ``WorldState.detected_objects``
         # snapshot into it — accumulating the durable scene graph from the
-        # ADR-0035 perception object-lift producer so ``recall_object`` recalls
+        # perception → spatial-memory object-lift producer so ``recall_object`` recalls
         # what the robot has actually seen. Default false (preloaded-map only).
         self.declare_parameter("spatial_memory_ingest", False)
-        # ADR-0044 Phase 4 — occupancy-grid refinement of recall approach
+        # Occupancy-grid-refined approach phase — occupancy-grid refinement of recall approach
         # poses. The reasoner subscribes the latched slam_toolbox map on this
         # topic and validates/snaps every ``recall_object`` approach viewpoint
         # (free under ``approach_inflation_m`` + line-of-sight) before the LLM
@@ -689,33 +688,34 @@ class ReasonerNode(LifecycleNode):
         # geometric viewpoints pass through unchanged.
         self.declare_parameter("occupancy_map_topic", "/map")
         self.declare_parameter("approach_inflation_m", 0.25)
-        # ADR-0036 — deploy-path selector for the action-mode palette gate.
+        # Deploy-path-aware action-mode palette gate — deploy-path selector for the palette gate.
         # ``"sim"`` (default; deploy sim is the common path) admits skills
         # whose action modes a robosuite OSC / composite controller can
         # synthesise; ``"real"`` admits only the robot's declared
         # ``supported_control_modes``. The deploy launch sets this
         # explicitly to match the HAL it brings up (a later task).
         self.declare_parameter("hal_mode", "sim")
-        # ADR-0043 — when true, offer the read-only ``locate_in_view`` tool (ask a
-        # live VLM detector if an object is in the current frame, via the
-        # ``/openral/perception/locate_in_view`` service). The deploy launch sets
-        # this when it brings up an object detector. Default false (no hidden tool).
+        # locate_in_view: on-demand live-detector query — when true, offer the read-only
+        # ``locate_in_view`` tool (ask a live VLM detector if an object is in the current frame, via
+        # the ``/openral/perception/locate_in_view`` service). The deploy launch sets this when it
+        # brings up an object detector. Default false (no hidden tool).
         self.declare_parameter("detector_available", False)
         self._detector_available: bool = (
             self.get_parameter("detector_available").get_parameter_value().bool_value
         )
-        # ADR-0056 — the default on-demand locator alias used when a locate_in_view
-        # call leaves ``detector`` empty (e.g. "omdet-turbo-locator"). Empty = the
-        # legacy single-detector service /openral/perception/locate_in_view. Set by
-        # the deploy launch to the default locator it brings up.
+        # On-demand detectors as prompt-able reasoner tools — the default on-demand locator alias
+        # used when a locate_in_view call leaves ``detector`` empty (e.g. "omdet-turbo-locator").
+        # Empty = the legacy single-detector service /openral/perception/locate_in_view. Set by the
+        # deploy launch to the default locator it brings up.
         self.declare_parameter("default_on_demand_detector", "")
         self._default_on_demand_detector: str = (
             self.get_parameter("default_on_demand_detector").get_parameter_value().string_value
         )
-        # ADR-0056 — locate_in_view clients cached per resolved service name (one
-        # per on-demand locator the reasoner has routed to), created lazily.
+        # On-demand detectors as prompt-able reasoner tools — locate_in_view clients cached per
+        # resolved service name (one per on-demand locator the reasoner has routed to), created
+        # lazily.
         self._locate_in_view_clients: dict[str, Any] = {}
-        # ADR-0047 — when true, offer the read-only ``query_scene`` tool (ask a
+        # vlm rSkill kind — when true, offer the read-only ``query_scene`` tool (ask a
         # scene VLM an open-ended question about the current view, via the
         # ``/openral/perception/query_scene`` service). The deploy launch sets
         # this when it brings up a scene VLM. Default false (no hidden tool).
@@ -725,7 +725,7 @@ class ReasonerNode(LifecycleNode):
         )
         # Cached client for the query_scene service; created lazily on first use.
         self._query_scene_client: Any = None
-        # ADR-0057 — when true, offer the read-only ``query_task_progress`` tool
+        # kind: reward rSkills — when true, offer the read-only ``query_task_progress`` tool
         # (ask the Robometer reward monitor for a windowed progress/success
         # assessment of the current task, via the
         # ``/openral/perception/query_task_progress`` service). The deploy launch
@@ -737,19 +737,19 @@ class ReasonerNode(LifecycleNode):
         # Cached client for the query_task_progress service; created lazily.
         self._query_task_progress_client: Any = None
 
-        # ADR-0074 §1/§3 — the active reward model's manifest (same path the
+        # VLM-adjudicated completion §1/§3 — the active reward model's manifest (same path the
         # reward_monitor_node loads). When set, the node reads its
         # ``RewardContract`` calibration (band edges + default patience) and uses
         # it in place of the module-level system fallbacks. A bad path degrades
         # to the fallbacks (logged) rather than failing node construction.
         self._reward_contract: RewardContract | None = None
-        # ADR-0077 — the full reward manifest (not just its contract) so the
+        # VLA/reward VRAM-fit pairing — the full reward manifest (not just its contract) so the
         # pre-dispatch VLA+reward VRAM check has the reward model's `min_vram_gb`.
         self._reward_manifest: RSkillManifest | None = None
-        # ADR-0077 — VLA manifests keyed by rskill_id, loaded lazily on first
+        # VLA/reward VRAM-fit pairing — VLA manifests keyed by rskill_id, loaded lazily on first
         # dispatch (the palette path discards them); used for the pair fit check.
         self._manifests_by_id: dict[str, RSkillManifest] = {}
-        # ADR-0077 — total GPU VRAM (GB) for the pair fit check. The deploy may
+        # VLA/reward VRAM-fit pairing — total GPU VRAM (GB) for the pair fit check. The deploy may
         # pin it via the `gpu_total_vram_gb` param; else probe nvidia-smi once.
         # 0.0 = unknown → the check is skipped (cannot verify what we can't read).
         self.declare_parameter("gpu_total_vram_gb", 0.0)
@@ -780,11 +780,11 @@ class ReasonerNode(LifecycleNode):
                         f"default_patience_s={self._reward_contract.default_patience_s:.0f}",
                     )
 
-        # ADR-0077 — make the pair fit check's state explicit in the logs (§1.4):
+        # Make the pair fit check's state explicit in the logs (§1.4):
         # armed only when a reward model is active AND the GPU total is known.
         if self._reward_manifest is not None and self._gpu_total_vram_gb > 0.0:
             self.get_logger().info(
-                f"ADR-0077: VLA+reward VRAM fit check ARMED — reward="
+                f"VLA+reward VRAM fit check ARMED — reward="
                 f"{self._reward_manifest.name!r} "
                 f"({self._reward_manifest.active_min_vram_gb()} GB), "
                 f"gpu_total={self._gpu_total_vram_gb:.2f} GB",
@@ -795,29 +795,29 @@ class ReasonerNode(LifecycleNode):
                 if self._reward_manifest is None
                 else "GPU total unreadable"
             )
-            self.get_logger().info(f"ADR-0077: VLA+reward VRAM fit check SKIPPED ({why})")
+            self.get_logger().info(f"VLA+reward VRAM fit check SKIPPED ({why})")
 
-        # ADR-0074 §5 — completion-camera topic for VLM adjudication.
+        # VLM-adjudicated completion §5 — completion-camera topic for VLM adjudication.
         # When set to a non-empty string, on_configure subscribes sensor_msgs/Image
         # on this topic (BEST_EFFORT, VOLATILE, depth=1) and caches the latest frame
         # as JPEG bytes in `_latest_completion_frame` for `_adjudicate_completion`.
         # Empty string disables the subscription (no hidden camera subscription).
         self.declare_parameter("completion_camera_topic", "/openral/cameras/top/image")
-        # ADR-0074 §5 — the HAL publishes LIBERO/MuJoCo frames bottom-up (the topic
-        # is raw; OPENRAL_DASHBOARD_FLIP_180 flips only the dashboard thumbnail —
-        # sim_sensor_bridge). Rotate the cached completion frame 180° so the VLM
-        # judges an upright scene (the dashboard and the VLA apply the same flip).
+        # VLM-adjudicated completion §5 — the HAL publishes LIBERO/MuJoCo frames bottom-up (the
+        # topic is raw; OPENRAL_DASHBOARD_FLIP_180 flips only the dashboard thumbnail —
+        # sim_sensor_bridge). Rotate the cached completion frame 180° so the VLM judges an upright
+        # scene (the dashboard and the VLA apply the same flip).
         self.declare_parameter("completion_camera_flip_180", False)
-        # ADR-0074 §5 — reject a completion frame older than this many seconds (a
+        # VLM-adjudicated completion §5 — reject a completion frame older than this many seconds (a
         # stale frame from a prior attempt would make the VLM judge the wrong
         # scene → false verdict). 0 disables the guard. Frames stream continuously
         # on real hardware; in deploy-sim the sim-clock is frozen during verify so
         # the end-of-execution frame reads age≈0.
         self.declare_parameter("completion_frame_max_age_s", 2.0)
 
-        # ADR-0074 §5 — tool-use client handle (mirrors the one held by ReasonerCore)
-        # so the completion gate can call describe_image without reaching into the core.
-        # Set in on_configure; cleared in on_cleanup.
+        # VLM-adjudicated completion §5 — tool-use client handle (mirrors the one held by
+        # ReasonerCore) so the completion gate can call describe_image without reaching into the
+        # core. Set in on_configure; cleared in on_cleanup.
         self._tool_use_client: ToolUseClient | None = None
         # Latest completion frame as JPEG bytes; None until the first camera message.
         self._latest_completion_frame: bytes | None = None
@@ -836,19 +836,20 @@ class ReasonerNode(LifecycleNode):
         # non-retry_cap tick happens (a different tool, a dispatch, an error, or
         # a new operator prompt that resets the streak).
         self._retry_cap_warned: bool = False
-        # ADR-0072 Phase 3 — the rendered `## PLAYBOOKS` system-prompt block,
-        # collected from installed capability-matched playbook rSkills at seed time.
+        # Reasoner playbooks + self-maintained memory, Phase 3 — the rendered `## PLAYBOOKS`
+        # system-prompt block, collected from installed capability-matched playbook rSkills at seed
+        # time.
         self._playbooks_block: str = ""
-        # ADR-0072 §3 — the self-maintained MEMORY.md store (Phase 4b read path:
-        # loaded at configure + rendered as the `## MEMORY` context block; Phase 4c
-        # write path: `memory_write` edits + `memory_search` archival recall). The
-        # archive is the append-only log of superseded/deleted entries that left the
-        # live file (MemGPT recall storage); persisted as `<MEMORY.md>.archive.jsonl`.
+        # Reasoner playbooks + self-maintained memory §3 — the self-maintained MEMORY.md store
+        # (Phase 4b read path: loaded at configure + rendered as the `## MEMORY` context block;
+        # Phase 4c write path: `memory_write` edits + `memory_search` archival recall). The archive
+        # is the append-only log of superseded/deleted entries that left the live file (MemGPT
+        # recall storage); persisted as `<MEMORY.md>.archive.jsonl`.
         self._memory_store: MemoryStore | None = None
         self._memory_md_path: pathlib.Path | None = None
         self._memory_archive: list[MemoryEntry] = []
         self._palette: ToolPalette = palette or ToolPalette(execute_rskill_ids=frozenset())
-        # ADR-0039 — offer the read-only query tools only when a backend is wired.
+        # Active object search — offer the read-only query tools only when a backend is wired.
         if spatial_memory is not None and not self._palette.spatial_memory_available:
             self._palette = self._palette.model_copy(update={"spatial_memory_available": True})
         self._tick_timer: Any = None
@@ -858,16 +859,16 @@ class ReasonerNode(LifecycleNode):
         # Lifecycle clients are cached per target node — one
         # ``<node>/change_state`` client per peer.
         self._lifecycle_clients: dict[str, Any] = {}
-        # ADR-0050 — GPU lifecycle peers to free before a VLA dispatch (read
-        # from ``vram_lifecycle_peers`` at configure) and the subset actually
-        # deactivated for the in-flight skill (reactivated on its result).
+        # Single-resident-skill VRAM eviction — GPU lifecycle peers to free before a VLA dispatch
+        # (read from ``vram_lifecycle_peers`` at configure) and the subset actually deactivated for
+        # the in-flight skill (reactivated on its result).
         self._vram_lifecycle_peers: list[str] = []
         self._deactivated_vram_peers: list[str] = []
         # Pending skill-goal deadline timers, keyed by goal-uuid bytes so
         # the result callback can cancel the deadline timer when the
         # action server returns before deadline_s elapses.
         self._pending_skill_deadlines: dict[bytes, Any] = {}
-        # ADR-0074 §2 — the in-flight execute_rskill goal so a reward-watcher
+        # VLM-adjudicated completion §2 — the in-flight execute_rskill goal so a reward-watcher
         # wake can cancel it (stop the VLA now, verify on the reward signal,
         # not at the deadline clock). Tuple of (goal_handle, call, traceparent);
         # set on goal-accept, cleared on the terminal result. ``cancel_reason``
@@ -908,7 +909,7 @@ class ReasonerNode(LifecycleNode):
             self.get_logger().error(f"on_configure: {exc}")
             return TransitionCallbackReturn.FAILURE
 
-        # ADR-0074 §5 — hold the client on the node so the VLM adjudication gate
+        # VLM-adjudicated completion §5 — hold the client on the node so the VLM adjudication gate
         # can call describe_image without reaching into ReasonerCore internals.
         self._tool_use_client = client
 
@@ -965,7 +966,7 @@ class ReasonerNode(LifecycleNode):
             _estop_qos,
         )
 
-        # ADR-0074 §5 — completion-camera subscription (BEST_EFFORT sensor QoS).
+        # VLM-adjudicated completion §5 — completion-camera subscription (BEST_EFFORT sensor QoS).
         # sensor_msgs/Image ships with every ROS 2 install but is gated like
         # nav_msgs above so a stripped environment degrades to "no frame cache"
         # instead of failing configure. An empty topic param disables the sub.
@@ -998,7 +999,7 @@ class ReasonerNode(LifecycleNode):
                     f"on_configure: completion-camera subscribed on {completion_camera_topic!r}"
                 )
 
-        # ADR-0044 Phase 4 — latched occupancy grid for approach refinement.
+        # Occupancy-grid-refined approach phase — latched occupancy grid for approach refinement.
         # nav_msgs ships with every ROS 2 base install, but gate like the
         # other IDL imports so a stripped environment degrades to "no grid"
         # instead of failing configure.
@@ -1015,7 +1016,7 @@ class ReasonerNode(LifecycleNode):
             else:
                 self.create_subscription(OccupancyGrid, map_topic, self._on_map, _QOS_MAP)
 
-        # ADR-0018 §4: palette is rebuilt on every
+        # Palette is rebuilt on every
         # /openral/skill_registry_changed event (fired by
         # `ral skill install|remove`). Empty payload — the topic is
         # the signal. std_msgs/Empty may be absent on hosts without
@@ -1041,8 +1042,8 @@ class ReasonerNode(LifecycleNode):
         # ExecuteSkill goals are reported under the rskill-source bus
         # (kind=KIND_CONTROLLER for rejection/abort, kind=KIND_TIMEOUT
         # for deadline_s expiry). QoS matches the failure-bus profile.
-        # The `rskill` suffix replaced `skill` on 2026-05-25 (ADR-0018
-        # amendment §5).
+        # The `rskill` suffix replaced `skill` on 2026-05-25 (reasoner+supervisor
+        # design amendment §5).
         self._failure_pub = self.create_publisher(
             IDLFailureTrigger,
             "/openral/failure/rskill",
@@ -1085,16 +1086,16 @@ class ReasonerNode(LifecycleNode):
             "/openral/execute_rskill",
         )
 
-        # ADR-0039 — load a persisted scene graph into the query backend
+        # Active object search — load a persisted scene graph into the query backend
         # before the palette seed, so the rebuilt palette offers the query
         # tools when a map is preloaded.
         self._maybe_load_spatial_memory()
         self._maybe_load_memory()
 
-        # ADR-0050 — GPU lifecycle peers to deactivate before a VLA dispatch and
-        # reactivate after (the object detector is the canonical one). Read
-        # unconditionally so it is honoured regardless of whether the palette
-        # seed path runs. Empty entries skipped.
+        # Single-resident-skill VRAM eviction — GPU lifecycle peers to deactivate before a VLA
+        # dispatch and reactivate after (the object detector is the canonical one). Read
+        # unconditionally so it is honoured regardless of whether the palette seed path runs. Empty
+        # entries skipped.
         self._vram_lifecycle_peers = [
             p
             for p in self.get_parameter("vram_lifecycle_peers")
@@ -1110,14 +1111,14 @@ class ReasonerNode(LifecycleNode):
         # `/openral/skill_registry_changed` fires.
         self._maybe_seed_palette_from_search_paths()
 
-        # Option B (ADR-0018 F4): give the reasoner LLM standing knowledge of
+        # Option B (reasoner+supervisor design F4): give the reasoner LLM standing knowledge of
         # the body it drives. ``self._robot_capabilities`` is now finalised
         # (from the constructor or the ``robot_yaml`` loaded during the seed),
         # so the system prompt carries a ``## THIS ROBOT`` block; ``None``
         # leaves the robot-agnostic brief unchanged. The base brief honours
         # the ``OPENRAL_REASONER_SYSTEM_PROMPT`` deployment override.
         base_prompt = resolve_reasoner_system_prompt(self._robot_capabilities)
-        # ADR-0072 Phase 3 — append installed playbooks (empty block = no-op).
+        # Reasoner playbooks, Phase 3 — append installed playbooks (empty block = no-op).
         system_prompt = (
             f"{base_prompt}\n\n{self._playbooks_block}" if self._playbooks_block else base_prompt
         )
@@ -1156,7 +1157,7 @@ class ReasonerNode(LifecycleNode):
         self._core = None
         self._occupancy_grid = None
         self._renderer = ContextRenderer()
-        # ADR-0074 §5 — clear the VLM client handle and frame cache on cleanup.
+        # VLM-adjudicated completion §5 — clear the VLM client handle and frame cache on cleanup.
         self._tool_use_client = None
         self._latest_completion_frame = None
         for timer in list(self._pending_skill_deadlines.values()):
@@ -1183,7 +1184,7 @@ class ReasonerNode(LifecycleNode):
         self._world_state_msg = msg
 
     def _on_map(self, msg: Any) -> None:
-        """Decode the latched occupancy grid for approach refinement (ADR-0044).
+        """Decode the latched occupancy grid for approach refinement.
 
         Keeps only the latest snapshot; slam_toolbox republishes the latched
         map as it grows, so the refiner always sees the current grid.
@@ -1204,7 +1205,7 @@ class ReasonerNode(LifecycleNode):
             )
 
     def _on_completion_camera(self, msg: Any) -> None:
-        """Cache the latest camera frame as JPEG bytes for VLM adjudication (ADR-0074 §5).
+        """Cache the latest camera frame as JPEG bytes for VLM adjudication (§5).
 
         Converts ``sensor_msgs/Image`` to JPEG using numpy + PIL (no cv_bridge).
         Supports ``"rgb8"`` and ``"bgr8"`` encodings. On any decode failure the
@@ -1230,7 +1231,7 @@ class ReasonerNode(LifecycleNode):
 
         Returns ``True`` (complete), ``False`` (not complete), or ``None``
         (could not adjudicate — no frame cached or no multimodal client).
-        ``None`` degrades to the ladder (ADR-0074 §6 no-VLM path). A provider
+        ``None`` degrades to the ladder (§6 no-VLM path). A provider
         or transport error is logged and returns ``None`` — never a false ``True``.
 
         Args:
@@ -1306,7 +1307,7 @@ class ReasonerNode(LifecycleNode):
         self._on_tick(force=True, tier="C")
 
     def _on_failure(self, source: str, msg: Any) -> None:
-        """Append a failure event; preempt per the ADR-0018 trigger taxonomy.
+        """Append a failure event; preempt per the reasoner+supervisor design trigger taxonomy.
 
         Tier A (``source == "safety"``) preempts on
         ``severity >= SEVERITY_WARN`` (=1) — a safety WARN means the
@@ -1317,7 +1318,7 @@ class ReasonerNode(LifecycleNode):
         (``critic``) preempt on ``severity >= SEVERITY_FAIL`` (=2);
         WARN/INFO are buffered without preemption.
 
-        See ADR-0018 amendment 2026-05-25 §3 for the full taxonomy.
+        See the reasoner+supervisor design amendment 2026-05-25 §3 for the full taxonomy.
         """
         record = FailureEventRecord(
             source=source,
@@ -1329,7 +1330,7 @@ class ReasonerNode(LifecycleNode):
             stamp_ns=int(msg.header.stamp.sec) * 1_000_000_000 + int(msg.header.stamp.nanosec),
         )
         self._renderer.append_failure(record)
-        # ADR-0074 §2 — a reward-watcher wake (critic FAIL) while a VLA is in
+        # VLM-adjudicated completion §2 — a reward-watcher wake (critic FAIL) while a VLA is in
         # flight is the *primary* stop: cancel the attempt now so the verify
         # gate runs on the reward signal rather than burning the rest of the
         # deadline clock. The canceled result re-enters
@@ -1348,7 +1349,7 @@ class ReasonerNode(LifecycleNode):
             self._on_tick(force=True, tier=_FAILURE_TIER_FOR_SOURCE.get(source, "B"))
 
     def _band_edges(self) -> tuple[float, float]:
-        """Three-tier verdict band edges from the active reward calibration (ADR-0074 §1/§5).
+        """Three-tier verdict band edges from the active reward calibration (§1/§5).
 
         Thin adapter over :func:`openral_reasoner.completion.resolve_band_edges`
         — the live ``RewardContract`` when wired, else the system fallback.
@@ -1362,7 +1363,7 @@ class ReasonerNode(LifecycleNode):
         )
 
     def _effective_patience_s(self, call: ExecuteRskillTool) -> float:
-        """Patience ceiling for a dispatch (ADR-0074 §2/§3).
+        """Patience ceiling for a dispatch (§2/§3).
 
         Thin adapter over :func:`openral_reasoner.completion.resolve_patience_s`
         (LLM ``patience_s`` override > reward-model ``default_patience_s`` >
@@ -1378,7 +1379,7 @@ class ReasonerNode(LifecycleNode):
         )
 
     def _cancel_inflight_rskill_for_reward(self) -> None:
-        """Cancel the in-flight execute_rskill goal on a reward-watcher wake (ADR-0074 §2).
+        """Cancel the in-flight execute_rskill goal on a reward-watcher wake (§2).
 
         Sets ``_rskill_cancel_reason = "reward"`` so the canceled result runs
         the verify gate (a reward-ended attempt), then requests the cancel. A
@@ -1391,7 +1392,7 @@ class ReasonerNode(LifecycleNode):
         self._rskill_cancel_reason = "reward"
         self.get_logger().info(
             f"reward wake: cancelling in-flight execute_rskill {call.rskill_id!r} "
-            "to verify on the reward signal (ADR-0074 §2)",
+            "to verify on the reward signal",
         )
         try:
             goal_handle.cancel_goal_async()
@@ -1403,7 +1404,8 @@ class ReasonerNode(LifecycleNode):
     def _on_perception(self, kind: str, msg: Any) -> None:
         """Append a perception event; no preemption — perception is informational.
 
-        ADR-0076: an ``objects`` event also refreshes the reasoner's camera-space
+        Detection-time object identity + camera-space enumeration: an ``objects``
+        event also refreshes the reasoner's camera-space
         ``in_view`` enumeration (the continuous detector's 2D detections with stable
         det_ids), so the LLM can ground a goal noun / decompose a collective task
         even when the 3D lift (``scene_objects``) cannot run (RGB-only / no depth).
@@ -1457,7 +1459,7 @@ class ReasonerNode(LifecycleNode):
                 stamp_ns=int(msg.header.stamp.sec) * 1_000_000_000 + int(msg.header.stamp.nanosec),
             ),
         )
-        # ADR-0073 §1 — a genuine operator goal (re)builds the mission queue:
+        # Reward-gated task verification §1 — a genuine operator goal (re)builds the mission queue:
         # the operator goal seeds one task so the reasoner sequences and the
         # goal survives the pull-once prompt drain. Cascade re-prompts
         # (advisory query responses, spatial-memory) are NOT new goals and must
@@ -1468,7 +1470,7 @@ class ReasonerNode(LifecycleNode):
             if not mission.is_empty():
                 self._renderer.set_mission(mission)
                 self._subdivide_offered.clear()  # #123 — fresh goal, fresh offers
-                self._reset_task_locate_budget()  # ADR-0074 — fresh goal, fresh budget
+                self._reset_task_locate_budget()  # fresh goal, fresh budget
                 self._collective_decompose_nudges.clear()  # fresh goal, fresh nudge cap
                 self.get_logger().info(
                     f"mission: {len(mission)} task(s) — active={mission.active().text[:80]!r}",
@@ -1504,7 +1506,7 @@ class ReasonerNode(LifecycleNode):
         )
 
     def _on_skill_registry_changed(self, msg: Any) -> None:
-        """ADR-0018 §4 — rebuild the tool palette from the local rSkill registry.
+        """Rebuild the tool palette from the local rSkill registry.
 
         Fired by ``ral skill install|remove``. Walks the on-disk
         registry, loads each :class:`~openral_core.RSkillManifest`, and
@@ -1600,7 +1602,7 @@ class ReasonerNode(LifecycleNode):
         )
 
     def _maybe_load_memory(self) -> None:
-        """Load the self-maintained ``MEMORY.md`` into the ``## MEMORY`` block (ADR-0072 §3).
+        """Load the self-maintained ``MEMORY.md`` into the ``## MEMORY`` block (§3).
 
         Read path (Phase 4b): when the ``memory_md_path`` ROS parameter is set, parse
         the file (or start empty if absent) and render it as the reasoner's persistent
@@ -1668,9 +1670,10 @@ class ReasonerNode(LifecycleNode):
         return entries
 
     def _maybe_load_spatial_memory(self) -> None:
-        """Wire the ADR-0038 spatial-memory backend at ``on_configure`` (ADR-0039 / ADR-0038).
+        """Wire the persistent-spatial-memory backend at ``on_configure``.
 
-        No-op when a ``spatial_memory`` backend was injected at construction.
+        Used by active object search. No-op when a ``spatial_memory``
+        backend was injected at construction.
         Otherwise: if ``spatial_memory_path`` is set, load that persisted scene
         graph; else if ``spatial_memory_ingest`` is set, start an empty memory
         that ``_on_tick`` accumulates from live ``WorldState.detected_objects``.
@@ -1714,13 +1717,14 @@ class ReasonerNode(LifecycleNode):
         self._emit_scene_objects_span()
 
     def _emit_scene_objects_span(self) -> None:
-        """Publish the remembered objects as a ``world.scene_objects`` span (ADR-0038).
+        """Publish the remembered objects as a ``world.scene_objects`` span.
 
         Advisory dashboard telemetry only (never a safety input). No-op without a
         spatial-memory backend; any failure is swallowed at DEBUG so a telemetry
         hiccup can never disturb the reasoning loop. Today the backend is the
-        preloaded ``spatial_memory_path`` map; post-producer (ADR-0035 / PR #229)
-        the World-State node becomes the canonical emitter of the same span.
+        preloaded ``spatial_memory_path`` map; post-producer (once the
+        perception → spatial-memory object lift lands, PR #229) the World-State
+        node becomes the canonical emitter of the same span.
         """
         if self._spatial_memory is None:
             return
@@ -1735,7 +1739,7 @@ class ReasonerNode(LifecycleNode):
             self.get_logger().debug(f"scene-objects span emit failed: {exc!s}")
 
     def _ingest_detected_objects(self, world_state: Any) -> None:
-        """Fold a snapshot's ``detected_objects`` into the owned SpatialMemory (ADR-0038).
+        """Fold a snapshot's ``detected_objects`` into the owned SpatialMemory.
 
         No-op unless the reasoner owns a writable backend (``spatial_memory_ingest``
         or a preloaded map) and the snapshot carries detections. Accrual is
@@ -1763,7 +1767,7 @@ class ReasonerNode(LifecycleNode):
     ) -> str:
         """Render the ``## PLAYBOOKS`` block from installed, matched playbook rSkills.
 
-        ADR-0072 Phase 3: for each ``kind: playbook`` manifest this robot satisfies
+        Reasoner playbooks, Phase 3: for each ``kind: playbook`` manifest this robot satisfies
         (embodiment + capability flags), read its ``PLAYBOOK.md`` body and render it
         for the system prompt. Returns ``""`` when none match.
         """
@@ -1790,7 +1794,7 @@ class ReasonerNode(LifecycleNode):
                 continue
             # Label with the bare playbook name (strip the ``<org>/rskill-`` prefix):
             # the full machine id reads like an executable skill id and tempts the
-            # LLM to call ``execute_rskill`` on the playbook itself (ADR-0072 — a
+            # LLM to call ``execute_rskill`` on the playbook itself (a
             # playbook is an SOP to follow, never a dispatch target).
             label = manifest.name.split("/")[-1].removeprefix("rskill-")
             entries.append((f"{label} — {manifest.playbook.trigger}", body))
@@ -1837,7 +1841,7 @@ class ReasonerNode(LifecycleNode):
             )
             return
         self._robot_capabilities = description.capabilities
-        # ADR-0072 Decision 2.1 — render the static robot self-model once and
+        # Reasoner playbooks, Decision 2.1 — render the static robot self-model once and
         # surface it as the reasoner's `## ROBOT` context section so the LLM can
         # judge reach/view feasibility before dispatching a skill.
         self._renderer.set_robot_model(render_robot_self_model(description))
@@ -1863,13 +1867,13 @@ class ReasonerNode(LifecycleNode):
                     f"palette seed: skipping unloadable rskill {path!s}: {exc}",
                 )
 
-        # ADR-0072 Phase 3 — collect installed, capability-matched `kind: playbook`
+        # Reasoner playbooks, Phase 3 — collect installed, capability-matched `kind: playbook`
         # rSkills and render their PLAYBOOK.md bodies into the `## PLAYBOOKS`
         # system-prompt block. Playbooks are role:s2 (excluded from the ExecuteSkill
         # palette); they reach the LLM as authored decision-procedure *content*.
         self._playbooks_block = self._collect_playbooks_block(manifests, loaded_paths)
 
-        # ADR-0025 — merge any deploy-time lifecycle peer node ids
+        # Reasoner-managed background services — merge any deploy-time lifecycle peer node ids
         # (e.g. /openral_slam_toolbox when --enable-slam was passed) into
         # the palette's `node_ids` set so the Reasoner's LLM can target
         # them via LifecycleTransitionTool. The seed list comes from the
@@ -1976,7 +1980,7 @@ class ReasonerNode(LifecycleNode):
             sc = m.state_contract
             if m.kind == "vla" and sc is not None and sc.dim != n_joints:
                 if sc.layout in _WRAPPED_TASK_SPACE_LAYOUTS:
-                    # ADR-0027 — admit-with-adapter when the layout's
+                    # admit-with-adapter when the layout's
                     # assembler is registered in the openral_state_adapter
                     # registry. The skill_runner injects a live TF lookup
                     # at step time so the manifest-declared bindings
@@ -1992,7 +1996,7 @@ class ReasonerNode(LifecycleNode):
                             f"(model_family={m.model_family!r}): "
                             f"wrapped task-space layout {sc.layout!r} "
                             f"(dim={sc.dim}) has a registered assembler "
-                            "in openral_state_adapter (ADR-0027). "
+                            "in openral_state_adapter. "
                             "The skill_runner will assemble observation."
                             "state from live /tf at step time."
                         )
@@ -2024,19 +2028,16 @@ class ReasonerNode(LifecycleNode):
                 continue
             state_compatible.append(m)
 
-        # Action-mode executability filter (ADR-0036): drop VLA rSkills
-        # whose action vector drives a ControlMode the deploy path can't
-        # execute. The state-contract filter above gates the *input*
-        # (state dim vs joint count); this gates the *output*. Without it
-        # a cartesian/OSC skill gets offered to the LLM on a joint-only
-        # robot and fails at runtime — the n_dof / control-mode mismatch
-        # surfaces as a mid-run estop instead of a single boot-time
-        # warning. ``hal_mode`` selects the executable set: ``"sim"``
-        # admits the robosuite-OSC default set even on a joint-only
-        # physical robot; ``"real"`` admits only the robot's declared
-        # ``supported_control_modes``. Non-vla skills (``ros_action`` /
-        # ``ros_service``) pass through — they don't emit an
-        # ``ActionChunk`` from a learned action vector.
+        # Action-mode executability filter (deploy-path-aware action-mode palette gate): drop VLA
+        # rSkills whose action vector drives a ControlMode the deploy path can't execute. The
+        # state-contract filter above gates the *input* (state dim vs joint count); this gates the
+        # *output*. Without it a cartesian/OSC skill gets offered to the LLM on a joint-only robot
+        # and fails at runtime — the n_dof / control-mode mismatch surfaces as a mid-run estop
+        # instead of a single boot-time warning. ``hal_mode`` selects the executable set: ``"sim"``
+        # admits the robosuite-OSC default set even on a joint-only physical robot; ``"real"``
+        # admits only the robot's declared ``supported_control_modes``. Non-vla skills
+        # (``ros_action`` / ``ros_service``) pass through — they don't emit an ``ActionChunk`` from
+        # a learned action vector.
         hal_mode = self.get_parameter("hal_mode").get_parameter_value().string_value or "sim"
         if hal_mode == "sim":
             executable_modes = set(SIM_EXECUTABLE_CONTROL_MODES)
@@ -2049,12 +2050,11 @@ class ReasonerNode(LifecycleNode):
         for m in state_compatible:
             if m.kind == "vla":
                 legacy_ok = _action_executable(m, description, hal_mode)
-                # ADR-0071 Phase 2 — shadow the canonical TaskSpace gate alongside
-                # the legacy mode check (warn-only; the legacy verdict still
-                # decides the drop). Surfaces cross-layer mismatches the
-                # ``_action_executable`` mode-set check misses — an EE-addressed
-                # slot naming an end-effector the robot does not declare, or a
-                # joint segment wider than the robot's joint count. Phase 4 makes
+                # Shared TaskSpace action-space contract, Phase 2 — shadow the canonical TaskSpace
+                # gate alongside the legacy mode check (warn-only; the legacy verdict still decides
+                # the drop). Surfaces cross-layer mismatches the ``_action_executable`` mode-set
+                # check misses — an EE-addressed slot naming an end-effector the robot does not
+                # declare, or a joint segment wider than the robot's joint count. Phase 4 makes
                 # ``task_space_compatible`` authoritative.
                 ts_warning = task_space_disagreement(m, description, hal_mode, legacy_ok)
                 if ts_warning is not None:
@@ -2096,7 +2096,7 @@ class ReasonerNode(LifecycleNode):
             sensor_ids=self._palette.sensor_ids,
             node_ids=merged_node_ids,
             commercial_deployment=self._commercial_deployment,
-            # ADR-0039 — preserve the read-only query tools when a spatial-memory
+            # Active object search — preserve the read-only query tools when a spatial-memory
             # backend is wired; `_maybe_load_spatial_memory` runs before this seed
             # and a rebuild without the flag would silently drop recall_object /
             # resolve_place.
@@ -2141,7 +2141,7 @@ class ReasonerNode(LifecycleNode):
                     "A new operator prompt resets the streak; otherwise it self-clears "
                     "when the model picks a different tool. (Repeats logged at debug.)",
                 )
-                # ADR-0072 §2.3 — inject a Reflexion strategy hint into context
+                # Reasoner playbooks §2.3 — inject a Reflexion strategy hint into context
                 # (once per streak) so the NEXT tick changes approach instead of
                 # looping. Appending bumps `seq`, so the next heartbeat runs
                 # rather than being suppressed as idle.
@@ -2197,7 +2197,7 @@ class ReasonerNode(LifecycleNode):
                     f"world_state_from_idl failed; ticking without snapshot: {exc!s}",
                 )
                 world_state = None
-        # ADR-0038 — fold the snapshot's detected_objects into the durable memory
+        # Persistent spatial memory — fold the snapshot's detected_objects into the durable memory
         # we own, then refresh the dashboard's scene-objects view. Both run on
         # every heartbeat, independent of LLM readiness (a preloaded/accumulating
         # map is worth maintaining even before the tool-use client is built).
@@ -2220,7 +2220,7 @@ class ReasonerNode(LifecycleNode):
         self._retry_cap_warned = False
         if result.error is not None:
             self.get_logger().warning(f"tick error: {result.error!s}")
-            # ADR-0072 §2.2/§2.3 — an invalid plan is the model's *own* mistake
+            # Reasoner playbooks §2.2/§2.3 — an invalid plan is the model's *own* mistake
             # (malformed JSON args, a non-object payload, a field/rskill_id the
             # palette rejects). Feed it back into the `## EXECUTION` section with
             # a Reflexion hint so the NEXT tick emits a valid call instead of
@@ -2254,7 +2254,7 @@ class ReasonerNode(LifecycleNode):
         :class:`ReloadGstPipelineTool` remains a log-and-acknowledge
         stub pending the F6 sensor-package service IDL.
         """
-        # ADR-0039 §3 — any non-search dispatch ends the search episode, so the
+        # Active object search §3 — any non-search dispatch ends the search episode, so the
         # cascade bound counts only *consecutive* spatial queries (incl. the live
         # locate_in_view — see _resets_search_episode).
         if _resets_search_episode(call):
@@ -2312,7 +2312,7 @@ class ReasonerNode(LifecycleNode):
     ) -> None:
         """Publish a :class:`PromptStamped` on the target topic.
 
-        ADR-0018 §6 — the active OTel traceparent (captured by
+        The active OTel traceparent (captured by
         :meth:`ReasonerCore.tick` while the ``reasoner.tick`` span is
         open) is stamped into ``metadata_json`` so the F7 bag↔OTel
         correlator can join the published prompt back to the reasoner
@@ -2345,15 +2345,15 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Run a read-only spatial-memory query and re-prompt with the result (ADR-0039).
+        """Run a read-only spatial-memory query and re-prompt with the result.
 
-        The query runs against the injected ADR-0038 ``SpatialMemory`` backend and
+        The query runs against the injected persistent-spatial-memory ``SpatialMemory`` backend and
         the rendered result is republished as a ``PromptStamped`` with frame_id
         ``"spatial_memory"`` (so ``_on_prompt`` consumes it rather than filtering
         it as a reasoner self-emit), feeding the answer into the next tick — the
         prompt cascade. Read-only: no actuation, no ``FailureTrigger``.
 
-        ADR-0039 §3 bound: consecutive queries are counted against a
+        Active object search §3 bound: consecutive queries are counted against a
         ``SearchBudget``; once exhausted the result is published with the
         reasoner's own frame_id (so ``_on_prompt`` filters it — no further tick),
         terminating the search in human-handoff instead of looping forever.
@@ -2365,7 +2365,7 @@ class ReasonerNode(LifecycleNode):
             return
         assert self._prompt_pub is not None
         now_ns = self.get_clock().now().nanoseconds
-        # ADR-0044 Phase 4 — when a slam map is online, every recall_object
+        # Occupancy-grid-refined approach phase — when a slam map is online, every recall_object
         # approach viewpoint is validated/snapped against it (free under the
         # robot footprint + line-of-sight) before the LLM sees it; a match
         # with no reachable viewpoint is rendered BLOCKED, never fabricated.
@@ -2388,14 +2388,13 @@ class ReasonerNode(LifecycleNode):
         )
         result_text = outcome.text
 
-        # ADR-0043/0056 — a recall_object MISS escalates to a live locate_in_view
-        # (open-vocab, same query) BEFORE the search budget runs out and we hand
-        # off. The on-demand detector grounds objects the spatial map never
-        # ingested, and matches the goal term verbatim even when the stored label
-        # differs (e.g. recall "baguette" vs ingested "bread"). This is policy —
-        # it does not depend on the LLM choosing locate_in_view. One escalation
-        # per query term per search streak so a repeated miss can't spam the
-        # detector; if locate also misses, the normal budget/handoff path resumes.
+        # locate_in_view / on-demand detectors — a recall_object MISS escalates to a live
+        # locate_in_view (open-vocab, same query) BEFORE the search budget runs out and we hand off.
+        # The on-demand detector grounds objects the spatial map never ingested, and matches the
+        # goal term verbatim even when the stored label differs (e.g. recall "baguette" vs ingested
+        # "bread"). This is policy — it does not depend on the LLM choosing locate_in_view. One
+        # escalation per query term per search streak so a repeated miss can't spam the detector; if
+        # locate also misses, the normal budget/handoff path resumes.
         if (
             isinstance(call, RecallObjectTool)
             and not outcome.found
@@ -2443,7 +2442,7 @@ class ReasonerNode(LifecycleNode):
             )
 
     def _reset_task_locate_budget(self) -> None:
-        """Reset the per-task locate budget (ADR-0074 amendment).
+        """Reset the per-task locate budget (VLM-adjudicated completion amendment).
 
         Called when the active task makes real progress (an ``execute_rskill``
         dispatch) so locate cycles only count toward abandonment while the task
@@ -2475,7 +2474,7 @@ class ReasonerNode(LifecycleNode):
             return False
         if not self._task_locate_budget.charge(active.task_id):
             return False
-        # ADR-0074 amendment — a COLLECTIVE goal locating to confirm objects is on
+        # VLM-adjudicated completion amendment — a COLLECTIVE goal locating to confirm objects is on
         # the path to `decompose_mission`, not stuck. On a budget-hit, nudge it to
         # decompose NOW (objects are confirmed in `located` by this point) and reset
         # the budget, rather than abandoning the whole mission mid-grounding. Bounded
@@ -2535,7 +2534,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Ask a live VLM detector if an object is in view; re-prompt with the answer (ADR-0043).
+        """Ask a live VLM detector if an object is in view; re-prompt with the answer.
 
         The complement to :meth:`_dispatch_spatial_query` (remembered objects): this
         calls the detector node's ``/openral/perception/locate_in_view`` service to
@@ -2545,7 +2544,7 @@ class ReasonerNode(LifecycleNode):
         frame_id ``"detector"`` (consumed by ``_on_prompt``, feeding the next tick —
         the prompt cascade). Read-only: no actuation, no ``FailureTrigger``.
 
-        ADR-0074 amendment — before dispatching, charge this cycle against the
+        VLM-adjudicated completion amendment — before dispatching, charge this cycle against the
         per-task locate budget (:class:`TaskLocateBudget`). If the active mission
         task has now spent its locate budget without an ``execute_rskill``
         dispatch, the subtask is abandoned (with a displayed reason) instead of
@@ -2561,9 +2560,9 @@ class ReasonerNode(LifecycleNode):
                 "dispatch: locate_in_view — openral_msgs/srv/LocateInView not built; skipping",
             )
             return
-        # ADR-0056 — route to the chosen on-demand locator's namespaced service;
-        # empty ``detector`` falls back to the deployment default (or the legacy
-        # single-detector service). One cached client per resolved service name.
+        # On-demand detectors as prompt-able reasoner tools — route to the chosen on-demand
+        # locator's namespaced service; empty ``detector`` falls back to the deployment default (or
+        # the legacy single-detector service). One cached client per resolved service name.
         service = locate_in_view_service(call.detector, default=self._default_on_demand_detector)
         client = self._locate_in_view_clients.get(service)
         if client is None:
@@ -2597,7 +2596,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Render a ``LocateInView`` response as a re-prompt (ADR-0043 prompt cascade)."""
+        """Render a ``LocateInView`` response as a re-prompt (prompt cascade)."""
         try:
             resp = future.result()
         except Exception as exc:  # best-effort; a failed lookup must not kill the tick
@@ -2605,7 +2604,7 @@ class ReasonerNode(LifecycleNode):
             return
         assert self._prompt_pub is not None
         cam = resp.camera or call.camera or "default"
-        # A live locate counts as one spatial-search step (ADR-0039 §3): a miss
+        # A live locate counts as one spatial-search step (active object search §3): a miss
         # consumes budget so a repeated "not visible" terminates in handoff
         # instead of looping; a hit ends the search streak so the next find
         # starts fresh.
@@ -2613,10 +2612,10 @@ class ReasonerNode(LifecycleNode):
         if resp.found:
             self._spatial_search.reset()
             self._locate_escalated.clear()
-            # ADR-0076 — fold the open-vocab hit into the sticky ``located`` line so
-            # the goal noun (which the fixed-vocab continuous in_view mislabels)
-            # survives the next clobber and the LLM grounds / decomposes against it
-            # instead of re-locating it every tick (the deploy locate-loop).
+            # Detection-time object identity + camera-space enumeration — fold the open-vocab hit
+            # into the sticky ``located`` line so the goal noun (which the fixed-vocab continuous
+            # in_view mislabels) survives the next clobber and the LLM grounds / decomposes against
+            # it instead of re-locating it every tick (the deploy locate-loop).
             try:
                 self._renderer.note_located(ObjectsMetadata.model_validate_json(resp.metadata_json))
             except ValidationError as exc:
@@ -2659,7 +2658,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Ask a scene VLM an open-ended question; re-prompt with the answer (ADR-0047).
+        """Ask a scene VLM an open-ended question; re-prompt with the answer.
 
         The complement to :meth:`_dispatch_locate_in_view` (object localization): this
         calls the perception node's ``/openral/perception/query_scene`` service to ask
@@ -2708,7 +2707,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Render a ``QueryScene`` response as a re-prompt (ADR-0047 prompt cascade)."""
+        """Render a ``QueryScene`` response as a re-prompt (prompt cascade)."""
         try:
             resp = future.result()
         except Exception as exc:  # best-effort; a failed query must not kill the tick
@@ -2742,7 +2741,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Ask the reward monitor for a windowed progress/success assessment (ADR-0057).
+        """Ask the reward monitor for a windowed progress/success assessment.
 
         Calls ``/openral/perception/query_task_progress`` (served by the
         reward_monitor_node, backed by the Robometer NF4 scorer). Async
@@ -2791,7 +2790,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Render a ``QueryTaskProgress`` response as a re-prompt (ADR-0057 cascade).
+        """Render a ``QueryTaskProgress`` response as a re-prompt (cascade).
 
         Surfaces the quantitative assessment in plain language so the LLM can act
         on it — continue, escalate to ``query_scene``, advance, or replan when the
@@ -2818,9 +2817,9 @@ class ReasonerNode(LifecycleNode):
                 f"success={resp.success_now:.2f} (trend {resp.success_trend:+.3f}/frame) — "
                 f"{verdict}."
             )
-            # ADR-0074 amendment — surface BOTH heads in the persistent `## REWARD`
-            # context section (the re-prompt above is a one-shot; this keeps the
-            # latest assessment visible to every subsequent tick, labelled).
+            # VLM-adjudicated completion amendment — surface BOTH heads in the persistent `##
+            # REWARD` context section (the re-prompt above is a one-shot; this keeps the latest
+            # assessment visible to every subsequent tick, labelled).
             self._renderer.set_reward_state(
                 RewardStateRecord(
                     progress=float(resp.progress_now),
@@ -2844,7 +2843,7 @@ class ReasonerNode(LifecycleNode):
             f"dispatch: query_task_progress → re-prompt ok={resp.ok} ({len(text)} chars)",
         )
 
-    # ── ADR-0073 §2 — automatic reward-gated task verification ──────────────
+    # ── §2 — automatic reward-gated task verification ──────────────
 
     def _maybe_verify_active_mission_task(
         self, call: ExecuteRskillTool, *, traceparent: str | None
@@ -2887,7 +2886,7 @@ class ReasonerNode(LifecycleNode):
             )
             return
         req = QueryTaskProgress.Request()
-        # ADR-0074 amendment — score the whole attempt (start→now), not a trailing
+        # VLM-adjudicated completion amendment — score the whole attempt (start→now), not a trailing
         # slice. Request the reward model's full buffer span (``frame_window_s``)
         # when a contract is wired; the monitor clamps to its retained horizon.
         req.window_s = (
@@ -2908,7 +2907,7 @@ class ReasonerNode(LifecycleNode):
     def _on_mission_verify_response(  # noqa: PLR0911, PLR0912  # reason: one return per verdict branch — a flat dispatch table is clearer than collapsing the branches
         self, task_text: str, future: Any, *, traceparent: str | None
     ) -> None:
-        """Apply the reward gate (ADR-0073 §2): complete / abandon / retry.
+        """Apply the reward gate (§2): complete / abandon / retry.
 
         Runs ``evaluate_task_verdict`` on the reward response and the active task's
         attempt count, then advances the deterministic queue. ``complete`` →
@@ -2927,10 +2926,10 @@ class ReasonerNode(LifecycleNode):
         active = mission.active()
         if active is None or active.text != task_text:
             return  # the mission advanced or changed under us; stale verdict
-        # ADR-0074 §1/§5 — band edges from the active reward model's calibration
+        # VLM-adjudicated completion §1/§5 — band edges from the active reward model's calibration
         # (or the system fallback when none is wired).
         success_threshold, check_floor = self._band_edges()
-        # ADR-0074 amendment — gate the band on the PROGRESS head (task closeness,
+        # VLM-adjudicated completion amendment — gate the band on the PROGRESS head (task closeness,
         # reaches ~0.80–0.86 on a real success and separates well); the bars
         # (0.8/0.5) were calibrated against progress, not the compressed success
         # head (~0.56–0.79 even on a genuine success). ``success_now`` is threaded
@@ -2939,7 +2938,7 @@ class ReasonerNode(LifecycleNode):
         progress_now = float(resp.progress_now)
         success_now = float(resp.success_now)
         if resp.ok:
-            # ADR-0074 amendment — keep both heads visible in `## REWARD` for the
+            # VLM-adjudicated completion amendment — keep both heads visible in `## REWARD` for the
             # next tick's persist-vs-replan decision (the verify gate is internal).
             self._renderer.set_reward_state(
                 RewardStateRecord(
@@ -2960,7 +2959,7 @@ class ReasonerNode(LifecycleNode):
             attempts=active.attempts,
         )
         if action == "vlm_check":
-            # ADR-0074 §5 — ambiguous reward band: ask the VLM whether the task is
+            # VLM-adjudicated completion §5 — ambiguous reward band: ask the VLM whether the task is
             # visually complete. True → advance as if "complete"; False/None → degrade
             # to the ladder (same code path as action == "retry"). Never false-complete:
             # None (no frame / no client) is treated as "not done". The VLM is the
@@ -3001,7 +3000,7 @@ class ReasonerNode(LifecycleNode):
             # fall through — no return; the action == "retry" / "abandon" blocks below apply
         if action == "retry":
             self.get_logger().info(f"mission verify: {verdict} — retrying active task")
-            # ADR-0074 — surface the reward-plateau FAILURE to the LLM. The reward
+            # VLM-adjudicated completion — surface the reward-plateau FAILURE to the LLM. The reward
             # verify path otherwise records nothing on a retry, so the LLM only sees
             # "task still active" and blindly re-issues the identical instruction (a
             # direct replanning probe confirmed: no signal → repeat; the timeout hint
@@ -3068,7 +3067,7 @@ class ReasonerNode(LifecycleNode):
         self._on_tick(force=True, tier="C")
 
     def _emit_mission_complete(self, mission: MissionState, *, traceparent: str | None) -> None:
-        """Emit an honest operator-facing mission summary (self-prompt, ADR-0073 §2).
+        """Emit an honest operator-facing mission summary (self-prompt, §2).
 
         Frame_id ``openral_reasoner`` so it reaches operator surfaces but the
         reasoner's own subscriber filters it (no feedback loop). A new operator
@@ -3100,8 +3099,8 @@ class ReasonerNode(LifecycleNode):
     def _dispatch_decompose_mission(self, call: DecomposeMissionTool) -> None:
         """Apply an LLM mission decomposition to the typed task queue (#123).
 
-        Two modes by ``target_task_id`` (ADR-0073 amendment / ADR-0072
-        ``decompose-mission``):
+        Two modes by ``target_task_id`` (reward-gated task verification /
+        reasoner playbooks ``decompose-mission``):
 
         * **subdivide** (id set) — flat-splice the named *active* blocked task in
           place with finer children via :meth:`MissionState.subdivide_active`
@@ -3290,7 +3289,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Apply one explicit MEMORY.md edit, persist it, and confirm (ADR-0072 §3 / Phase 4c).
+        """Apply one explicit MEMORY.md edit, persist it, and confirm (§3 / Phase 4c).
 
         The reasoner's first **write-capable** tool: an ``add``/``update``/``supersede``/
         ``delete`` op over a typed :class:`~openral_core.MemorySection` — never a
@@ -3317,7 +3316,7 @@ class ReasonerNode(LifecycleNode):
         )
         if archived is not None:
             self._archive_memory_entry(archived)
-        # ADR-0072 Phase 5 — consolidate: merge any exact-duplicate facts the write
+        # Reasoner playbooks, Phase 5 — consolidate: merge any exact-duplicate facts the write
         # may have introduced, paging the removed copies to the archive (Mem0).
         for dup in self._memory_store.consolidate():
             self._archive_memory_entry(dup)
@@ -3337,7 +3336,7 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> None:
-        """Recall archived memory entries by keyword and re-prompt (ADR-0072 §3 / Phase 4c).
+        """Recall archived memory entries by keyword and re-prompt (§3 / Phase 4c).
 
         Read-only (the reader half): current memory is already in the ``## MEMORY``
         context block every tick, so this searches only the **archive** — superseded /
@@ -3361,7 +3360,7 @@ class ReasonerNode(LifecycleNode):
     def _manifest_for_rskill(self, rskill_id: str) -> RSkillManifest | None:
         """The installed :class:`RSkillManifest` for ``rskill_id`` (cached), or None.
 
-        ADR-0077 — the pre-dispatch pair check needs the VLA's manifest (for its
+        VLA/reward VRAM-fit pairing — the pre-dispatch pair check needs the VLA's manifest (for its
         ``min_vram_gb``), but the palette path does not retain manifests. Load
         them once on first miss (``rSkill`` pulls torch, so lazy-imported) and
         cache by name. Returns ``None`` when the id is not installed / unloadable.
@@ -3388,10 +3387,10 @@ class ReasonerNode(LifecycleNode):
         *,
         traceparent: str | None,
     ) -> bool:
-        """ADR-0077 pre-dispatch gate: refuse a VLA that can't co-reside with its reward.
+        """VLA/reward VRAM-fit pre-dispatch gate: refuse a VLA that can't co-reside with its reward.
 
         A VLA emits no success signal of its own, so it must run with its reward
-        model resident alongside it (ADR-0074). When a reward model is active and
+        model resident alongside it (VLM-adjudicated completion). When a reward model is active and
         the GPU budget is known, verify the pair fits *before* dispatch: on a miss
         we refuse + publish a ``FailureTrigger`` (the reasoner sees it and bounds
         retries → handoff) rather than OOM mid-run or run the VLA blind. Returns
@@ -3410,14 +3409,14 @@ class ReasonerNode(LifecycleNode):
             self.get_logger().warning(
                 f"reward pairing mismatch: VLA {call.rskill_id!r} names "
                 f"{vla.reward_rskill_name!r} but the active reward model is "
-                f"{self._reward_manifest.name!r} (ADR-0077)",
+                f"{self._reward_manifest.name!r}",
             )
         try:
             assert_vla_reward_fits(vla, self._reward_manifest, self._gpu_total_vram_gb)
         except (ROSGPUMemoryError, ROSConfigError) as exc:
             self.get_logger().error(
                 f"dispatch: refusing execute_rskill {call.rskill_id!r} — VLA + reward "
-                f"model cannot co-reside on GPU (ADR-0077): {exc}",
+                f"model cannot co-reside on GPU: {exc}",
             )
             self._publish_skill_failure(
                 kind=_KIND_CONTROLLER,
@@ -3492,29 +3491,29 @@ class ReasonerNode(LifecycleNode):
             )
             return
 
-        # ADR-0077 — a VLA runs only with its reward model resident alongside it.
+        # VLA/reward VRAM-fit pairing — a VLA runs only with its reward model resident alongside it.
         # Refuse (and notify) before the goal is sent if the pair can't co-reside
         # on the GPU, rather than running the VLA with no progress signal / OOMing
         # mid-run. No attempt is recorded — a refused dispatch is not a try.
         if self._refuse_unfittable_vla(call, traceparent=traceparent):
             return
 
-        # ADR-0073 §2 — count this dispatch as an attempt at the active mission
-        # task so the reward gate can bound retries (abandon + hand off after the
-        # cap). execute_rskill is the actuation tool; locate/query are separate
-        # tools, so a dispatch here is a manipulation attempt at the active task.
+        # Reward-gated task verification §2 — count this dispatch as an attempt at the active
+        # mission task so the reward gate can bound retries (abandon + hand off after the cap).
+        # execute_rskill is the actuation tool; locate/query are separate tools, so a dispatch here
+        # is a manipulation attempt at the active task.
         mission = self._renderer.mission
         if mission is not None and mission.active() is not None:
             mission.record_attempt(rskill_id=call.rskill_id, trace_id=traceparent)
-            # ADR-0074 amendment — an execute dispatch is real progress on the
+            # VLM-adjudicated completion amendment — an execute dispatch is real progress on the
             # active task, so the per-task locate budget resets (locate cycles only
             # count toward abandonment while no skill has been dispatched).
             self._reset_task_locate_budget()
 
-        # ADR-0050 — free GPU lifecycle peers (the object detector) before the
-        # policy loads, then reactivate when the skill finishes. Sequenced so
-        # the peer's VRAM is released before the goal reaches the runner; an
-        # 8 GB card OOMs if the ~1.3 GB detector co-resides with the VLA.
+        # Single-resident-skill VRAM eviction — free GPU lifecycle peers (the object detector)
+        # before the policy loads, then reactivate when the skill finishes. Sequenced so the peer's
+        # VRAM is released before the goal reaches the runner; an 8 GB card OOMs if the ~1.3 GB
+        # detector co-resides with the VLA.
         if self._vram_lifecycle_peers:
             self._free_vram_peers_then_send(call, list(self._vram_lifecycle_peers), traceparent)
         else:
@@ -3557,13 +3556,13 @@ class ReasonerNode(LifecycleNode):
         self._set_reward_task(goal.prompt)
         # The reasoner does not yet construct a SkillPrompt payload —
         # F4 stays on the text path; the structured-prompt route is
-        # wired in a later ADR-0018 follow-up.
+        # wired in a later follow-up.
         goal.prompt_metadata_json = ""
-        # ADR-0026 — forward the LLM's per-skill structured params, if
+        # rSkill structured goal parameters — forward the LLM's per-skill structured params, if
         # any. Wrapped-ROS adapters merge ``goal_params_json`` over
         # their manifest's ``default_goal_json`` at configure-time.
         goal.goal_params_json = call.goal_params_json
-        # ADR-0074 §2/§3 — the goal's ``deadline_s`` slot now carries the resolved
+        # VLM-adjudicated completion §2/§3 — the goal's ``deadline_s`` slot now carries the resolved
         # patience ceiling (LLM override > reward-model default > legacy deadline_s);
         # it is the runner's backstop, not the usual stop (the reward-watcher is).
         patience_s = self._effective_patience_s(call)
@@ -3589,8 +3588,9 @@ class ReasonerNode(LifecycleNode):
     ) -> None:
         """Deactivate GPU peers, then send the goal once they have all released.
 
-        ADR-0050. Each peer's ``change_state`` is async; the goal is sent only
-        after every in-flight deactivation has returned, so the freed VRAM is
+        Single-resident-skill VRAM eviction. Each peer's ``change_state`` is
+        async; the goal is sent only after every in-flight deactivation has
+        returned, so the freed VRAM is
         available before the runner loads the policy. Peers whose service isn't
         on the graph are skipped (best-effort — the dispatch still proceeds).
         The deactivated subset is recorded for reactivation on the skill result.
@@ -3634,7 +3634,7 @@ class ReasonerNode(LifecycleNode):
             future.add_done_callback(lambda fut, p=peer: _after_one(p, fut))
 
     def _reactivate_vram_peers(self) -> None:
-        """Reactivate the GPU peers deactivated for a now-finished skill (ADR-0050).
+        """Reactivate the GPU peers deactivated for a now-finished skill.
 
         Idempotent: clears the tracked set, so repeated terminal callbacks
         reactivate at most once.
@@ -3652,7 +3652,7 @@ class ReasonerNode(LifecycleNode):
             future.add_done_callback(lambda fut, p=peer: self._on_reactivate_result(p, fut))
 
     def _on_reactivate_result(self, peer: str, future: Any) -> None:
-        """Log the reactivation ``change_state`` outcome (best-effort, ADR-0050)."""
+        """Log the reactivation ``change_state`` outcome (best-effort)."""
         try:
             ok = bool(future.result().success)
         except Exception as exc:  # reason: surface rclpy errors
@@ -3752,8 +3752,8 @@ class ReasonerNode(LifecycleNode):
                 ),
                 traceparent=traceparent,
             )
-            # ADR-0050 — the goal never reached the runner; restore the GPU
-            # peers we froze for it so perception resumes.
+            # Single-resident-skill VRAM eviction — the goal never reached the runner; restore the
+            # GPU peers we froze for it so perception resumes.
             self._reactivate_vram_peers()
             return
         if not goal_handle.accepted:
@@ -3770,16 +3770,17 @@ class ReasonerNode(LifecycleNode):
                 ),
                 traceparent=traceparent,
             )
-            # ADR-0050 — goal rejected (skill won't run); restore the GPU peers.
+            # Single-resident-skill VRAM eviction — goal rejected (skill won't run); restore the GPU
+            # peers.
             self._reactivate_vram_peers()
             return
         goal_id = bytes(goal_handle.goal_id.uuid)
-        # ADR-0074 §2 — remember the in-flight goal so a reward-watcher wake can
+        # VLM-adjudicated completion §2 — remember the in-flight goal so a reward-watcher wake can
         # cancel it. Cleared on the terminal result. A new dispatch overwrites a
         # stale handle (the runner serves one goal at a time).
         self._active_rskill_goal = (goal_handle, call, traceparent)
         self._rskill_cancel_reason = None
-        # ADR-0074 §2/§3 — arm the reasoner-side backstop at the resolved patience
+        # VLM-adjudicated completion §2/§3 — arm the reasoner-side backstop at the resolved patience
         # (matches the goal's deadline_s sent to the runner). 0 → the runner owns
         # the ceiling (manifest latency budget); no reasoner-side timer.
         patience_s = self._effective_patience_s(call)
@@ -3806,13 +3807,13 @@ class ReasonerNode(LifecycleNode):
         traceparent: str | None,
     ) -> None:
         """Result done callback. Cancels deadline timer; emits on abort."""
-        # ADR-0050 — the skill is terminal (success/abort/cancel/error), so the
-        # policy's VRAM is released; restore the GPU peers (detector) we froze
-        # for it. Runs before any early return below so it always fires.
+        # Single-resident-skill VRAM eviction — the skill is terminal (success/abort/cancel/error),
+        # so the policy's VRAM is released; restore the GPU peers (detector) we froze for it. Runs
+        # before any early return below so it always fires.
         self._reactivate_vram_peers()
         # 2026-06-29 — close the reward-scoring window: no VLA is acting now.
         self._set_reward_task("")
-        # ADR-0074 §2 — the goal is terminal: drop the in-flight handle and read
+        # VLM-adjudicated completion §2 — the goal is terminal: drop the in-flight handle and read
         # (then clear) the cancel reason so a reward-driven cancel verifies below
         # while an operator/estop cancel stays a no-op.
         self._active_rskill_goal = None
@@ -3850,7 +3851,7 @@ class ReasonerNode(LifecycleNode):
                 f"execute_rskill succeeded rskill_id={call.rskill_id!r} "
                 f"trace_id={result.trace_id!r}",
             )
-            # ADR-0072 §2.2 — surface SUCCESS to the LLM (Inner Monologue). The
+            # Reasoner playbooks §2.2 — surface SUCCESS to the LLM (Inner Monologue). The
             # failure path already reaches the FAILURES buffer; success used to
             # pass through silently, leaving the reasoner blind to "it worked".
             self._renderer.append_execution(
@@ -3862,12 +3863,12 @@ class ReasonerNode(LifecycleNode):
                     stamp_ns=now_ns,
                 )
             )
-            # ADR-0073 §2 — runner "success" for a VLA means "ran to its deadline
-            # without a controller fault", NOT "task accomplished". Verify the
-            # active mission task against the reward signal before advancing.
+            # Reward-gated task verification §2 — runner "success" for a VLA means "ran to its
+            # deadline without a controller fault", NOT "task accomplished". Verify the active
+            # mission task against the reward signal before advancing.
             self._maybe_verify_active_mission_task(call, traceparent=traceparent)
             return
-        # ADR-0074 §2 — a reward-driven cancel (status 5, reason "reward") is an
+        # VLM-adjudicated completion §2 — a reward-driven cancel (status 5, reason "reward") is an
         # intentional stop, not a controller fault: the reward-watcher decided
         # the attempt was over (success/plateau/patience). Verify on the reward
         # signal — the three-tier / VLM gate completes or advances the ladder —
@@ -3884,7 +3885,7 @@ class ReasonerNode(LifecycleNode):
         )
         outcome_state = "aborted" if status == 6 else "canceled" if status == 5 else "failed"
         detail = result.failure_reason or f"GoalStatus={status}"
-        # ADR-0072 §2.2/§2.3 — execution feedback + a Reflexion strategy hint so
+        # Reasoner playbooks §2.2/§2.3 — execution feedback + a Reflexion strategy hint so
         # the next tick advances the ladder instead of blindly retrying.
         self._renderer.append_execution(
             ExecutionEventRecord(
@@ -3906,10 +3907,10 @@ class ReasonerNode(LifecycleNode):
             traceparent=traceparent,
             trace_id=result.trace_id or None,
         )
-        # ADR-0073 §2 — an aborted (terminal) episode still ran the policy, so it
-        # is a real attempt at the active task; verify so a repeatedly-aborting
-        # task is bounded by the attempt cap (abandon → hand off) rather than
-        # looping forever. Canceled (status 5) is operator-driven, not an attempt.
+        # Reward-gated task verification §2 — an aborted (terminal) episode still ran the policy, so
+        # it is a real attempt at the active task; verify so a repeatedly-aborting task is bounded
+        # by the attempt cap (abandon → hand off) rather than looping forever. Canceled (status 5)
+        # is operator-driven, not an attempt.
         if status == 6:
             self._maybe_verify_active_mission_task(call, traceparent=traceparent)
 
@@ -3921,7 +3922,7 @@ class ReasonerNode(LifecycleNode):
         goal_handle: Any,
         traceparent: str | None,
     ) -> None:
-        """Patience-ceiling backstop (ADR-0074 §2): cancel goal + emit ``KIND_TIMEOUT``.
+        """Patience-ceiling backstop (§2): cancel goal + emit ``KIND_TIMEOUT``.
 
         Fires only when the reward-watcher did not stop the attempt first — the
         resolved patience ceiling elapsed. ``deadline_s`` in the log/evidence is
@@ -4015,7 +4016,7 @@ class ReasonerNode(LifecycleNode):
         msg.trace_id = trace_id or traceparent or ""
         self._failure_pub.publish(msg)
         # Mirror the failure onto the OTLP span path so the dashboard tallies it
-        # on the "skill failures" counter + surfaces the state (ADR-0074/0077).
+        # on the "skill failures" counter + surfaces the state.
         # The ROS FailureTrigger bus is invisible to the dashboard (it ingests
         # OTLP, not ROS topics); this event is the only thing that reaches it.
         self._emit_skill_failure_event(kind=kind, rskill_id=rskill_id, evidence=evidence)

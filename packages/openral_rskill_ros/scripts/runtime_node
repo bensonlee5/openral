@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-r"""ADR-0018 F1 — composed-runtime entry point.
+r"""F1 — composed-runtime entry point.
 
 Brings up ``world_state_node`` + ``rskill_runner_node`` in a single OS
-process with one shared :class:`WorldStateAggregator` (ADR-0018 §3).
+process with one shared :class:`WorldStateAggregator`.
 The robot's on-disk ``robot.yaml`` is selected via a ROS parameter:
 
 .. code-block:: bash
@@ -84,13 +84,13 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
     # HAL's ResetToPose service with the manifest's starting_pose
     # before the first inference tick. Empty disables the call.
     bootstrap.declare_parameter("reset_to_pose_service", "")
-    # ADR-0030 — render the octomap occupied-voxel cloud
+    # Render the octomap occupied-voxel cloud
     # (``/octomap_point_cloud_centers``) into the dashboard's
     # ``world.pointcloud`` span family. Off by default; the
     # ``sim_e2e.launch.py`` flips this on when ``enable_octomap:=true``
     # so the robot-view pointcloud card populates as octomap_server runs.
     bootstrap.declare_parameter("enable_world_cloud_bridge", False)
-    # ADR-0019 — record the deploy session (proprio + action + camera frames
+    # Record the deploy session (proprio + action + camera frames
     # + episode markers) to a rosbag2 mcap. Empty disables recording; the
     # ``openral deploy sim/run --dataset-out`` flag sets it via the launch.
     bootstrap.declare_parameter("dataset_out", "")
@@ -168,7 +168,7 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
     from openral_rskill_ros.rskill_runner_node import make_default_skill_resolver
 
     def _build_resolver(skill_runner_node: object) -> object:
-        # ADR-0027 — wire a lazy ``tf_lookup_getter`` so the resolver
+        # Wire a lazy ``tf_lookup_getter`` so the resolver
         # reads ``skill_runner_node._tf_lookup`` AT DISPATCH TIME rather
         # than at factory time. ``_init_tf_lookup`` runs in
         # ``on_configure`` which fires AFTER this factory is invoked
@@ -216,8 +216,8 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
             # Robot-manifest ∪ scene sensors (scene wins on name collision —
             # a same-named scene entry is that robot sensor's deploy binding);
             # the leg opens only those carrying a `deploy_binding`. The shared
-            # aggregator gets frames straight from the readers (ADR-0082
-            # Phase 3 — zero-copy NVMM handles survive; no intra-process ROS
+            # aggregator gets frames straight from the readers (the
+            # zero-copy vision path — zero-copy NVMM handles survive; no intra-process ROS
             # round trip on the policy leg).
             sensor_leg = open_deploy_sensor_readers(
                 merge_deploy_sensors(runtime.description.sensors, scene.sensors),
@@ -300,7 +300,7 @@ def _main() -> int:  # noqa: PLR0911, PLR0912, PLR0915  # reason: linear bootstr
         # and the readers hold v4l2 / GStreamer pipeline handles.
         if sensor_leg is not None:
             sensor_leg.close()
-        # ADR-0019 — finalize the recorded bag (drains the writer thread,
+        # Finalize the recorded bag (drains the writer thread,
         # closes any open episode) BEFORE the nodes go down.
         if runtime.dataset_recorder_bridge is not None:
             runtime.dataset_recorder_bridge.destroy()

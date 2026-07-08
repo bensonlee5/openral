@@ -22,10 +22,10 @@
 ### `python/detect/src/openral_detect/probes/`
 - `probe_usb(*, warnings=None) -> UsbProbeResult` — Wraps `openral_cli.autodetect.enumerate_usb_devices` + `match_known_devices`.
 - `probe_dds(*, timeout_s=5.0, warnings=None) -> Ros2TopologyResult` — Wraps `scan_dds_topics` + `infer_robot_from_topics` and captures RMW / domain id.
-- `probe_gpus(*, warnings=None) -> GpuProbeResult` — NVIDIA pynvml → nvidia-smi fallback, Jetson via jtop / proc, Apple Silicon via system_profiler. Includes static `NVIDIA_TOPS_BY_NAME_KEYWORD`, `JETSON_BOARD_TOPS`, `DTYPES_BY_COMPUTE_CAPABILITY`, `_JETSON_CC_BY_BOARD_KEYWORD` tables (ADR-0016).
-- `_cc_for_jetson_board(board: str) -> tuple[int, int] | None` — Map device-tree board string to CUDA compute capability via `_JETSON_CC_BY_BOARD_KEYWORD`; replaces the legacy `"Orin" in board` heuristic. ADR-0016 PR 2/3. (gpu.py L193)
+- `probe_gpus(*, warnings=None) -> GpuProbeResult` — NVIDIA pynvml → nvidia-smi fallback, Jetson via jtop / proc, Apple Silicon via system_profiler. Includes static `NVIDIA_TOPS_BY_NAME_KEYWORD`, `JETSON_BOARD_TOPS`, `DTYPES_BY_COMPUTE_CAPABILITY`, `_JETSON_CC_BY_BOARD_KEYWORD` tables.
+- `_cc_for_jetson_board(board: str) -> tuple[int, int] | None` — Map device-tree board string to CUDA compute capability via `_JETSON_CC_BY_BOARD_KEYWORD`; replaces the legacy `"Orin" in board` heuristic. (gpu.py L193)
 - `_probe_jetson(warnings, *, model_path=None, release_path=None) -> JetsonInfo | None` — Probe a Tegra host. `model_path` / `release_path` accept fixtures for unit tests; production reads `/proc/device-tree/model` + `/etc/nv_tegra_release`. Returns `None` + warning when the board is unknown. (gpu.py L210)
-- `_probe_nvmm_available(*, search_paths=None) -> bool` — True when `libnvbufsurface.so` is installed (L4T multimedia stack). Populates `RobotCapabilities.nvmm_available`. `search_paths` overrides the canonical roots (`_NVBUFSURFACE_SEARCH_PATHS`) for tests. ADR-0016 PR 2/3. (gpu.py L219)
+- `_probe_nvmm_available(*, search_paths=None) -> bool` — True when `libnvbufsurface.so` is installed (L4T multimedia stack). Populates `RobotCapabilities.nvmm_available`. `search_paths` overrides the canonical roots (`_NVBUFSURFACE_SEARCH_PATHS`) for tests. (gpu.py L219)
 - `probe_v4l2_cameras(*, warnings=None) -> list[V4l2CameraInfo]` — Linux V4L2 enumeration via `v4l2-ctl --list-devices`.
 - `probe_realsense_devices(*, warnings=None) -> list[RealsenseDeviceInfo]` — `pyrealsense2.context()` wrapper; produces canonical `model_id` ready for catalog reverse-lookup.
 - `probe_network(*, warnings=None) -> NetworkProbeResult` — Hostname / per-interface MAC / IPv4 / MTU / link-speed / default route via psutil.

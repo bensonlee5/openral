@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 phase 2 — allocation-free geometric self-collision core.
+// Allocation-free geometric self-collision core.
 //
 // Hand-rolled, dependency-free (no Eigen/KDL/Pinocchio) so the safety kernel
 // stays small and auditable. All hot-path work is on the stack or in
@@ -489,7 +489,7 @@ CollisionHit check_self_collision(const CollisionModel& model, const CollisionSc
       }
     }
   }
-  // Blocky links carry an OBB instead of a capsule (ADR-0081 / issue #84):
+  // Blocky links carry an OBB instead of a capsule (issue #84):
   // every box↔capsule and box↔box pair is checked with the same allowed-pair /
   // same-link skips. A box↔capsule distance is exact; a box↔box distance is a
   // conservative lower bound (SAT). Boxes are few (one per blocky link), so
@@ -565,7 +565,7 @@ CollisionHit check_world_collision(const CollisionModel& model, const CollisionS
       }
     }
   }
-  // Blocky links (OBB, ADR-0081) are checked against every world obstacle too,
+  // Blocky links (OBB) are checked against every world obstacle too,
   // so a boxed link is never invisible to the world check.
   const std::size_t n_boxes = model.boxes.size();
   for (std::size_t b = 0; b < n_boxes; ++b) {
@@ -648,7 +648,7 @@ CollisionHit check_voxel_collision(const CollisionModel& model, const CollisionS
       }
     }
   }
-  // Blocky links (OBB, ADR-0081) are voxel-checked too: an occupied voxel is the
+  // Blocky links (OBB) are voxel-checked too: an occupied voxel is the
   // same conservative sphere, tested against the box via its box-local distance.
   const std::size_t n_boxes = model.boxes.size();
   for (std::size_t b = 0; b < n_boxes; ++b) {

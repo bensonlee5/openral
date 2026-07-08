@@ -5,8 +5,8 @@ Renders the most recent `rskill.execute`, `skill.chunk_inference`,
 and `safety.check` spans, rolling metric histograms, and an event
 log — live, no Jaeger required.
 
-See also ADR-0017 for the
-"embedded receiver, not in-process exporter" design choice.
+The dashboard runs as an embedded OTLP receiver rather than an in-process
+exporter, so instrumented workloads stay decoupled from the debug UI.
 
 ## Run it
 
@@ -73,10 +73,10 @@ draining (no `Connection refused` retries on the way down).
 
 - **Top bar** — service name, run mode (`sim` / `hardware` /
   `benchmark` once PR #108 lands), short run id, connection status.
-- **Reasoner · mission** — the reasoner's active task queue (ADR-0073),
+- **Reasoner · mission** — the reasoner's active task queue,
   rendered from `reasoner.mission_json` as an ordered checklist: each
   subtask shows its status (done ✓ / active ▶ / verifying ? / abandoned ✗
-  / pending), a reward bar coloured by the ADR-0074 three-tier verdict
+  / pending), a reward bar coloured by a three-tier verdict
   band (green at/above the success threshold, amber in the VLM-adjudicated
   ambiguous band, red below the check floor / unverified), the per-task
   verdict text (the *why* behind done/abandoned, e.g.
@@ -103,7 +103,7 @@ draining (no `Connection refused` retries on the way down).
 - **Safety** — running counters of `safety_violation`, `estop_requested`,
   `deadline_missed`, `sensor_stale`, and `skill_failure` span events,
   alongside the **Safety check ledger** (per-check pass/fail from
-  `safety.check` spans). The **skill failures** counter (ADR-0074/0077)
+  `safety.check` spans). The **skill failures** counter
   tallies every Reasoner-published `/openral/failure/rskill` event
   (mirrored onto the OTLP `openral.event.skill_failure` span event) and
   shows the latest failure state under it (e.g. `latest: vram_insufficient`).
@@ -185,9 +185,9 @@ of the dashboard expects one endpoint at a time.)
 
 ## Why this exists
 
-OpenRAL emits all the right OTel spans and metrics by design (see
-ADR-0010 for the runner-side contract, and PR #108 for the metric
-surface), and Jaeger renders them beautifully — **after** the run.
+OpenRAL emits all the right OTel spans and metrics by design — the
+inference runner carries its own tracing contract, and PR #108 added
+the metric surface — and Jaeger renders them beautifully — **after** the run.
 For the Day 30 demo and for on-robot debugging, the operator wants
 a *live* pane that updates as the robot moves. `openral dashboard` is
 that pane; it does not replace Jaeger for post-hoc analysis.

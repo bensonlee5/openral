@@ -12,7 +12,7 @@ _One-shot wall-time breakdown of a single policy load. Drives `openral_sim.facto
 - `main(argv=None) -> int` — Late-imports `openral_sim.factory.make_policy` so the import cost lands inside the profiled total; reports `HF_HUB_OFFLINE` status alongside the result.
 
 ### `tools/viz_collision.py`
-_Overlays a robot's **kernel** collision primitives (the box/capsule geometry the C++ safety kernel checks, lowered by `collision_params_from_description`) on its real MJCF meshes at any joint pose — the offline way to eyeball whether the SO-101 `base` OBB (ADR-0081 / issue #84) hugs the housing and clears the folded distal links without a `deploy run`. Standalone inspection tool, not a pytest test. Run the venv python with `PYTHONPATH=packages/openral_safety`._
+_Overlays a robot's **kernel** collision primitives (the box/capsule geometry the C++ safety kernel checks, lowered by `collision_params_from_description`) on its real MJCF meshes at any joint pose — the offline way to eyeball whether the SO-101 `base` OBB (issue #84) hugs the housing and clears the folded distal links without a `deploy run`. Standalone inspection tool, not a pytest test. Run the venv python with `PYTHONPATH=packages/openral_safety`._
 
 - `--viewer` — interactive MuJoCo window (`MUJOCO_GL=glfw`). `--screenshot PATH` — offscreen PNG (`MUJOCO_GL=egl`). `--rviz` — real RViz (spawns `robot_state_publisher` for RobotModel + TF and publishes the primitives as a latched `/collision_markers` MarkerArray; needs ROS sourced). `--robot <id>` (default `so101_follower`), `--deg <j...>` sets the pose in degrees (manifest joint order). Box = translucent red, capsules = translucent blue (cylinder + end spheres in RViz).
 
@@ -66,7 +66,7 @@ _Test-suite auditor — flags dead / shadowed / duplicate / no-assertion tests; 
 - `main(argv=None) -> int` (L384) — CLI; `--json` / `--write-report`.
 
 ### `python/observability/src/openral_observability/replay/`
-_ADR-0018 F7 — query-time joiner for rosbag2 (mcap) ↔ OTel spans. Backs `openral replay` + `openral record`._
+_Query-time joiner for rosbag2 (mcap) ↔ OTel spans. Backs `openral replay` + `openral record`._
 
 - `bag_reader.py`:
   - `@dataclass(frozen=True) class BagMessage(topic, log_time_ns, publish_time_ns, trace_id, traceparent, schema_name, payload_summary)` (L43) — One mcap record surfaced to the correlator.
@@ -79,7 +79,7 @@ _ADR-0018 F7 — query-time joiner for rosbag2 (mcap) ↔ OTel spans. Backs `ope
   - `list_bag_trace_ids(bag_messages) -> list[dict]` (L67) — Distinct trace_ids in the bag with counts, busiest first.
   - `build_timeline(bag_messages, spans, *, trace_id=None) -> list[TimelineEntry]` (L94) — Pure join. Filters both inputs to `trace_id`, merges, sorts ascending by `ts_ns`.
 - `cli.py`:
-  - `RECORD_PROFILES: dict[str, dict[str, list[str]]]` (L45) — Slim and full topic + regex presets matching ADR-0018 §F7.
+  - `RECORD_PROFILES: dict[str, dict[str, list[str]]]` (L45) — Slim and full topic + regex presets.
   - `build_record_command(*, profile, output_dir, storage="mcap", extra_topics=(), extra_regex=()) -> list[str]` (L85) — Compose `ros2 bag record` argv.
   - `@dataclass(frozen=True) class ReplayResult(trace_id, bag_trace_ids, timeline, bag_path)` (L132) — `.to_json()` returns a plain dict.
   - `run_replay(*, bag_path, trace_id, dashboard_url) -> ReplayResult` (L162) — Read a bag, fetch matching spans from the dashboard, return the joined timeline.
@@ -108,7 +108,7 @@ Mirrors `openral rskill new`; exists so power users can scaffold without install
 
 ### `tools/generate_rskill_skillmd.py`
 _Generate the standard agent-skill `SKILL.md` discovery view for every in-tree rSkill from its `rskill.yaml`._
-The single canonical producer of the `SKILL.md` mirror (CLAUDE.md §1.3): `rskill.yaml` is authoritative; the generated `SKILL.md` is discovery-only and never hand-edited. `--check` fails on any stale/missing `SKILL.md`, so the same process applies to every kind — including `playbook` (ADR-0072), whose `_KIND_NOUN` entry renders identically to `vla`/`detector`/`vlm`/`reward`.
+The single canonical producer of the `SKILL.md` mirror (CLAUDE.md §1.3): `rskill.yaml` is authoritative; the generated `SKILL.md` is discovery-only and never hand-edited. `--check` fails on any stale/missing `SKILL.md`, so the same process applies to every kind — including `playbook`, whose `_KIND_NOUN` entry renders identically to `vla`/`detector`/`vlm`/`reward`.
 
 - `render_skill_md(manifest_path: Path) -> str` (L162) — Render the `SKILL.md` text (YAML frontmatter + capability/verb summary + license/provenance) from one manifest; `_KIND_NOUN` maps each `kind` to its discovery noun.
 - `main(argv=None) -> int` (L261) — Entry point. No args = regenerate every `rskills/<id>/SKILL.md`; positional ids regenerate a subset; `--check` reports stale/missing without writing (exit 1 on drift).
@@ -122,19 +122,19 @@ Materialises a Python 3.10 venv under `_DEFAULT_HOME` (`~/.cache/openral/rldx-si
 - `main() -> int` — argparse entry point; flags `--model`, `--port`, `--quantization {none,nf4,int8}`, `--home`. Calls `run_sidecar(..., family="rldx", ...)`, which stamps the sidecar identity record (so the adapter can verify reuse) and then `os.execvpe`s into the sidecar venv so SIGINT reaches the server. (L237)
 
 ### `tools/qwen_vlm_sidecar.py` + `tools/_qwen_vlm_server.py`
-_Boot helper + server for the Qwen3.5-4B scene-VLM sidecar (ADR-0047), companion to `openral_runner.backends.gstreamer.qwen_scene_vlm.QwenSceneVlm`._ The launcher provisions an isolated venv (`OPENRAL_QWEN_VLM_SIDECAR_VENV` to reuse one) with transformers + bitsandbytes + `qwen-vl-utils` + pyzmq/msgpack, then `os.execvpe`s into the server. The server answers a ZMQ REQ/REP + msgpack protocol (`{"op":"query","image","question"}` → `{"ok","answer"}`); out-of-process for dependency/VRAM isolation (same pattern as `rldx_sidecar`). Apache-2.0 model.
+_Boot helper + server for the Qwen3.5-4B scene-VLM sidecar, companion to `openral_runner.backends.gstreamer.qwen_scene_vlm.QwenSceneVlm`._ The launcher provisions an isolated venv (`OPENRAL_QWEN_VLM_SIDECAR_VENV` to reuse one) with transformers + bitsandbytes + `qwen-vl-utils` + pyzmq/msgpack, then `os.execvpe`s into the server. The server answers a ZMQ REQ/REP + msgpack protocol (`{"op":"query","image","question"}` → `{"ok","answer"}`); out-of-process for dependency/VRAM isolation (same pattern as `rldx_sidecar`). Apache-2.0 model.
 
 - `ensure_venv(home, *, override=None) -> Path` (sidecar) — return the sidecar venv python, provisioning + installing pinned deps if absent (sentinel-guarded); honours `$OPENRAL_QWEN_VLM_SIDECAR_VENV`.
 - `main() -> int` (sidecar) — argparse (`--model`, `--host`, `--port`, `--max-side`, `--home`, `--venv`); strips `PYTHONPATH`/`PYTHONHOME` and `os.execvpe`s into `_qwen_vlm_server.py`.
 - `_load(model_id) -> (processor, model)` / `_query(...) -> str` / `main() -> int` (server) — dual-path NF4 load (auto-detect a pre-quantized checkpoint via the embedded `quantization_config` → load 4-bit directly; else quantize-at-load, serial materialization for 8 GB); one scene-question→answer generate via the canonical Qwen-VL recipe (strips the `<think>` trace); ZMQ REP loop (`ping`/`query`/`shutdown`). Validated live (CLAUDE.md §1.2).
 
 ### `tools/_robometer_scorer.py`
-_In-process stateless scorer for the Robometer-4B reward monitor (ADR-0057), companion to `openral_runner.backends.reward.robometer_reward.RobometerInProcessReward`._ `reward_monitor_node` imports `_robometer_scorer.py::_Scorer` directly; there is no separate Robometer ZMQ process or dedicated venv. As of lerobot 0.6.0 the reward model is lerobot's in-tree `lerobot.rewards.robometer.RobometerRewardModel` — a vanilla `AutoModelForImageTextToText` (Qwen3-VL-4B) loaded with plain `transformers`. There is **no** pinned `robometer` git package and **no** `transformers==4.57.1` force-pin. The scorer keeps OpenRAL's NF4 pre-quantized checkpoint (`OpenRAL/rskill-robometer-4b-nf4`, ~3.3 GB resident), meta-builds the native `RobometerRewardModel` skeleton and drops the packed 4-bit weights (remapped into the native module) in directly — no bf16 spike, no Qwen weight download. Validated live: 3.33 GB NF4, progress ramps to 0.88 + success 0.90 at task completion.
+_In-process stateless scorer for the Robometer-4B reward monitor, companion to `openral_runner.backends.reward.robometer_reward.RobometerInProcessReward`._ `reward_monitor_node` imports `_robometer_scorer.py::_Scorer` directly; there is no separate Robometer ZMQ process or dedicated venv. As of lerobot 0.6.0 the reward model is lerobot's in-tree `lerobot.rewards.robometer.RobometerRewardModel` — a vanilla `AutoModelForImageTextToText` (Qwen3-VL-4B) loaded with plain `transformers`. There is **no** pinned `robometer` git package and **no** `transformers==4.57.1` force-pin. The scorer keeps OpenRAL's NF4 pre-quantized checkpoint (`OpenRAL/rskill-robometer-4b-nf4`, ~3.3 GB resident), meta-builds the native `RobometerRewardModel` skeleton and drops the packed 4-bit weights (remapped into the native module) in directly — no bf16 spike, no Qwen weight download. Validated live: 3.33 GB NF4, progress ramps to 0.88 + success 0.90 at task completion.
 
 - `class _Scorer` (scorer) — meta-builds the native `RobometerRewardModel`, remaps + loads the NF4 prequant pack, then `score(frames_rgb, task, num_bins) -> (progress, success)` computes per-frame progress via the module-level `decode_progress_outputs` on `_compute_rbm_logits` (not `compute_reward`, which returns only a scalar). `_load_prequantized`, `_native_config`, `_remap_backbone_key`, `_resolve_local_dir` support the meta-load.
 
 ### `tools/build_qwen_vlm_nf4_checkpoint.py`
-_Reproducible recipe for the published `OpenRAL/rskill-qwen35-4b-nf4` pre-quantized NF4 checkpoint (ADR-0047). Runs in the sidecar venv._ `main() -> int` — argparse (`--source`, `--out`); loads the upstream model once (NF4 + serial materialization so the bf16 pass fits 8 GB), `save_pretrained`s the 4-bit weights + processor, then verifies the checkpoint reloads directly as 4-bit (no bf16 spike) and answers a smoke query. Pre-quantizing lets deployment load the 4-bit weights directly (~3.3 GB) with no loader workaround. Distinct from `quantize_rskill.py`, which writes an `install_prequantized_linears`-loaded pack for the in-process lerobot runtime; this writes a transformers-native `save_pretrained` checkpoint for the isolated VLM sidecar.
+_Reproducible recipe for the published `OpenRAL/rskill-qwen35-4b-nf4` pre-quantized NF4 checkpoint. Runs in the sidecar venv._ `main() -> int` — argparse (`--source`, `--out`); loads the upstream model once (NF4 + serial materialization so the bf16 pass fits 8 GB), `save_pretrained`s the 4-bit weights + processor, then verifies the checkpoint reloads directly as 4-bit (no bf16 spike) and answers a smoke query. Pre-quantizing lets deployment load the 4-bit weights directly (~3.3 GB) with no loader workaround. Distinct from `quantize_rskill.py`, which writes an `install_prequantized_linears`-loaded pack for the in-process lerobot runtime; this writes a transformers-native `save_pretrained` checkpoint for the isolated VLM sidecar.
 
 ### `tools/fix_libero_config.py`
 _Auto-fix for the stale `~/.libero/config.yaml` pitfall._

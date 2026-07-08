@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# OpenRAL — Tier-0 curl-bash installer (ADR-0021).
+# OpenRAL — Tier-0 curl-bash installer .
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/OpenRAL/openral/master/scripts/install.sh | bash
@@ -15,7 +15,7 @@
 #   6. Print the "next steps" menu for the heavier opt-in groups
 #      (`openral install sim|libero|metaworld|ros|…`).
 #
-# What this DOES NOT do (by design — see ADR-0021 / CLAUDE.md §4):
+# What this DOES NOT do (by design — see CLAUDE.md §4):
 #   - Install ROS 2 (sudo + apt).            Use: openral install ros
 #   - Install MuJoCo / LIBERO / RoboCasa.    Use: openral install sim|libero|robocasa
 #   - Install NVIDIA drivers / CUDA.         Out of scope.
@@ -165,7 +165,7 @@ Opt-in extras (installed into the same managed venv):
   openral install metaworld       # MetaWorld MT50 (Sawyer)
   openral install maniskill3      # SAPIEN GPU physics
   openral install simpler-env     # real-to-sim correlator
-  openral install robocasa        # RoboCasa kitchens (excludes libero — ADR-0011)
+  openral install robocasa        # RoboCasa kitchens (excludes libero — conflicting robosuite pins)
   openral install rldx            # RLDX-1 sidecar client
   openral install list            # show every known group
 

@@ -4,7 +4,7 @@
   <name>openral_reasoner_ros</name>
   <version>0.1.0</version>
   <description>
-    OpenRAL S2 reasoner lifecycle node (ADR-0018 F4) — direct typed
+    OpenRAL S2 reasoner lifecycle node — direct typed
     LLM tool-call dispatch. Subscribes to /openral/world_state_slow,
     /openral/failure/*, /openral/perception/*, /openral/prompt; ticks
     at 5-10 Hz with event preemption; dispatches one of four

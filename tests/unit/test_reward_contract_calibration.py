@@ -1,6 +1,6 @@
 """Unit tests for RewardContract progress calibration fields + ExecuteRskillTool overrides.
 
-ADR-0074 extends :class:`RewardContract` with four calibration fields
+Extends :class:`RewardContract` with four calibration fields
 (``check_floor``, ``plateau_window_s``, ``plateau_tolerance``,
 ``default_patience_s``) and :class:`ExecuteRskillTool` with two optional
 per-dispatch overrides (``patience_s``, ``progress_tolerance``).
@@ -95,22 +95,22 @@ def test_reward_contract_validator_accepts_floor_below_threshold() -> None:
 
 def test_robometer_manifest_carries_calibrated_reward_contract() -> None:
     """The real robometer-4b rskill.yaml loads and its reward contract
-    carries the model-calibrated values added in ADR-0074."""
+    carries the model-calibrated values."""
     root = _require_root()
     manifest_path = root / "rskills" / "robometer-4b" / "rskill.yaml"
     manifest = RSkillManifest.from_yaml(str(manifest_path))
 
     assert manifest.reward is not None
     rc = manifest.reward
-    # Recalibrated by ADR-0074 Decision 5 (genuine-success bar above robometer's
-    # ~0.55–0.78 not-done wander band; check_floor at the lower edge).
+    # Recalibrated for a genuine-success bar above robometer's
+    # ~0.55–0.78 not-done wander band; check_floor at the lower edge.
     assert rc.check_floor == 0.5
     assert rc.plateau_window_s == 3.0
     assert rc.plateau_tolerance == 0.06
     assert rc.default_patience_s == 30.0
     # Existing fields unchanged
     assert rc.success_threshold == 0.8
-    # ADR-0074 amendment — frame_window_s raised 8.0 → 40.0 so robometer scores
+    # frame_window_s raised 8.0 → 40.0 so robometer scores
     # the whole attempt (start→now), not an 8 s trailing slice that missed the
     # completion arc and under-scored progress into the ladder band.
     assert rc.frame_window_s == 40.0

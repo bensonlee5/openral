@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 §5 bullet 2 — human estop forwarder lifecycle node.
+"""ROS 2 reasoner + supervisor graph spec §5 bullet 2 — human estop forwarder lifecycle node.
 
 Subscribes to ``/openral/human_estop`` (where UI / Slack / voice
 adapters publish), and republishes onto ``/openral/estop`` plus emits a

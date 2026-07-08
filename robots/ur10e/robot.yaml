@@ -24,13 +24,13 @@ name: "ur10e"
 embodiment_kind: "manipulator"
 base_frame: "ur10e_base_link"
 
-# ADR-0027 — robot_state_publisher wiring. Same pattern as ur5e — the
+# robot_state_publisher wiring. Same pattern as ur5e — the
 # upstream UR URDF root is ``base_link``; we bridge to our namespaced
 # ``ur10e_base_link`` via a static transform.
-# Self-collision ACM source for the offline lowering tool (ADR-0030): the
+# Self-collision ACM source for the offline lowering tool: the
 # UR MoveIt SRDF (ros-industrial). Regenerate via
 # `openral collision lower --robot robots/ur10e/robot.yaml --write`.
-# ADR-0058 — unified asset block (vendored URDF / MJCF / SRDF).
+# Unified asset block (vendored URDF / MJCF / SRDF).
 assets:
   urdf:
     ref: "file:ur10e.urdf"
@@ -145,7 +145,7 @@ safety:
   deadman_required: true
 
 sdk_kind: "closed"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 hal:
   sim: "openral_hal.ur:UR10eHAL"
   real: "openral_hal.ur_real:UR10eRealHAL"
@@ -153,7 +153,7 @@ hal:
 # MuJoCo wiring consumed by ``openral_hal.MujocoArmHAL.from_description``
 # for the sim baseline.  Source: ``universal_robots_ur10e/ur10e.xml`` in
 # mujoco_menagerie.  Default 1:1 mapping applies (no gripper).
-# See ADR-0023.
+
 sim: {}
 
 onboard_compute:

@@ -199,7 +199,7 @@ def test_span_event_counters_increment() -> None:
 
 
 def test_skill_failure_event_counts_and_carries_state() -> None:
-    """ADR-0074/0077 — a Reasoner-published skill failure (mirrored onto the
+    """A Reasoner-published skill failure (mirrored onto the
     span path by ``_publish_skill_failure``) tallies on its own counter, lands
     on the event log at ``error`` severity, and carries the failure state so the
     dashboard can show *why* a skill failed (e.g. ``vram_insufficient``)."""
@@ -366,7 +366,8 @@ def test_event_ring_is_bounded() -> None:
 
 
 def test_world_scene_objects_span_populates_topic() -> None:
-    """``world.scene_objects`` (ADR-0038) → decoded objects in the topic bucket."""
+    """``world.scene_objects`` (durable spatial-memory scene-object graph) →
+    decoded objects in the topic bucket."""
     store = TelemetryStore()
     objects = [
         {

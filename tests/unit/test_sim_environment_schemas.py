@@ -1,6 +1,6 @@
 """Unit tests for SceneSpec / TaskSpec / VLASpec / SimEnvironment.
 
-These cover the new contracts added for the eval/sim layer (ADR-0002):
+These cover the new contracts added for the eval/sim layer:
 construction, defaults, cross-field validation, YAML round-trip.
 """
 
@@ -86,7 +86,7 @@ def test_sim_environment_n_episodes_validation() -> None:
 
 
 def test_scene_environment_yaml_round_trip(tmp_path: Path) -> None:
-    """``SimScene.from_yaml`` is the scene+task YAML entrypoint (ADR-0041).
+    """``SimScene.from_yaml`` is the scene+task YAML entrypoint.
 
     YAMLs carry scene + task only; the policy arrives via ``--rskill`` on
     the CLI, which composes the runtime :class:`SimEnvironment`.

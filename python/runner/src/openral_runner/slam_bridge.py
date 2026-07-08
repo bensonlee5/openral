@@ -1,4 +1,4 @@
-"""ADR-0025 — rclpy → OTLP bridge for slam_toolbox ``/map`` updates.
+"""rclpy → OTLP bridge for slam_toolbox ``/map`` updates.
 
 The OpenRAL dashboard is OTLP-only — it never subscribes to ROS topics
 directly. This module ships :class:`SlamMapBridge`, a small
@@ -230,7 +230,7 @@ class SlamMapBridge:
             QoSReliabilityPolicy,
         )
 
-        # ADR-0085 — `/map` is backend-agnostic: slam_toolbox publishes it
+        # `/map` is backend-agnostic: slam_toolbox publishes it
         # TRANSIENT_LOCAL (latched), but the visual backend (nvblox) publishes it
         # VOLATILE (not latched). A VOLATILE subscriber is compatible with BOTH
         # (a TRANSIENT_LOCAL publisher offers more than a VOLATILE subscriber
@@ -240,7 +240,7 @@ class SlamMapBridge:
         # backend's map. Trade-off: on a late join we miss slam_toolbox's last
         # latched grid and wait for its next update (~1 Hz) -- acceptable for a
         # live dashboard. Mirrors the nav2 static_layer's
-        # `map_subscribe_transient_local: False` (ADR-0085 Decision §5).
+        # `map_subscribe_transient_local: False`.
         map_qos = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.VOLATILE,
@@ -266,9 +266,10 @@ class SlamMapBridge:
             if footprint_polygon is not None
             else None
         )
-        # ADR-0025 — tf2 lookup for map→base_frame so the dashboard can
+        # tf2 lookup for map→base_frame so the dashboard can
         # draw the robot on the occupancy grid. Lazy: built on first
-        # /map callback (mirrors ADR-0027 in rskill_runner_node). Stays
+        # /map callback (mirrors the same lazy-buffer pattern in
+        # rskill_runner_node). Stays
         # None on non-ROS unit-test paths where tf2_ros isn't importable.
         self._tf_buffer: Any = None
         self._tf_listener: Any = None

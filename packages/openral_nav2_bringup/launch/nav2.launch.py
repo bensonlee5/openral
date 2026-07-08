@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0025 — stand-alone launch for the Nav2 stack.
+"""Stand-alone launch for the Nav2 stack.
 
 Includes the upstream ``nav2_bringup/launch/navigation_launch.py`` —
 brings up ``bt_navigator``, ``planner_server``, ``controller_server``,
@@ -45,7 +45,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def _params_path_for_backend(backend: str) -> str:
-    """ADR-0085 — pick the Nav2 base params for the SLAM backend.
+    """Pick the Nav2 base params for the SLAM backend.
 
     ``visual`` (cuVSLAM + nvblox) uses ``nav2_visual.yaml`` — global+local
     costmaps consume the backend-agnostic ``/map`` via ``static_layer``.
@@ -81,7 +81,7 @@ def generate_launch_description() -> LaunchDescription:
             "slam_backend",
             default_value="lidar",
             description=(
-                "ADR-0085 — which SLAM backend feeds the costmap: `visual` "
+                "Which SLAM backend feeds the costmap: `visual` "
                 "(cuVSLAM+nvblox; costmaps consume `/map` via static_layer) or "
                 "`lidar`/`none` (costmaps ray-cast `/scan`). Selects the base "
                 "params file when `params_file` is empty."
@@ -121,7 +121,7 @@ def generate_launch_description() -> LaunchDescription:
                 "`RobotDescription.nav2_param_overrides()` (robot_radius + "
                 "inflation_radius from footprint_radius, motion_model from "
                 "base_kinematics) so one shared base file serves any mobile "
-                "base. Empty string uses params_file verbatim (ADR-0025)."
+                "base. Empty string uses params_file verbatim."
             ),
         ),
     ]
@@ -140,7 +140,7 @@ def _nav2_include_with_robot_overrides(context: object) -> list[IncludeLaunchDes
     resolved ``robot_yaml`` / ``params_file`` launch args off the
     ``context``.
 
-    ADR-0025 — keeps the bringup generic: ``robot.yaml`` is the single
+    Keeps the bringup generic: ``robot.yaml`` is the single
     source for the per-robot Nav2 geometry/kinematics. ``RewrittenYaml``
     substitutes the matching keys in the shared base param file; an empty
     ``robot_yaml`` (or a fixed-base arm) yields no rewrites and the base
@@ -153,7 +153,7 @@ def _nav2_include_with_robot_overrides(context: object) -> list[IncludeLaunchDes
     params_file = LaunchConfiguration("params_file").perform(context)  # type: ignore[attr-defined]
     robot_yaml = LaunchConfiguration("robot_yaml").perform(context)  # type: ignore[attr-defined]
     slam_backend = LaunchConfiguration("slam_backend").perform(context)  # type: ignore[attr-defined]
-    # ADR-0085 — an empty params_file selects the base config by SLAM backend
+    # An empty params_file selects the base config by SLAM backend
     # (visual → nav2_visual.yaml consuming `/map`; lidar → the /scan base).
     if not params_file:
         params_file = _params_path_for_backend(slam_backend)

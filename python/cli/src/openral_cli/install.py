@@ -1,7 +1,7 @@
 """``openral install`` — install opt-in dependency groups into the managed venv.
 
 This subcommand is the post-install escape hatch for the Tier-0 curl-bash
-installer (``scripts/install.sh``, ADR-0021). The base install gives the user
+installer (``scripts/install.sh``). The base install gives the user
 ``openral`` on their ``$PATH`` with the CLI's own thin runtime; heavy / opt-in
 extras (sim physics, LIBERO / MetaWorld / RoboCasa task suites, ROS 2 system
 deps) ship separately and are layered in on demand.
@@ -21,7 +21,7 @@ Examples:
 
         openral install sim
 
-    Install LIBERO (mutually exclusive with robocasa — see ADR-0011)::
+    Install LIBERO (mutually exclusive with robocasa)::
 
         openral install libero
 
@@ -116,7 +116,7 @@ _GROUPS: Final[dict[str, list[str]]] = {
 }
 
 # Mutually exclusive groups — mirrors ``[tool.uv].conflicts`` in the workspace
-# root pyproject.toml (ADR-0011). Each entry is a frozenset of group names
+# root pyproject.toml. Each entry is a frozenset of group names
 # that cannot coexist in a single resolved environment.
 _CONFLICTS: Final[tuple[frozenset[str], ...]] = (frozenset({"libero", "robocasa"}),)
 
@@ -125,7 +125,7 @@ install_app = typer.Typer(
     name="install",
     help=(
         "Install opt-in dependency groups (sim, libero, metaworld, robocasa, "
-        "rldx, …) or re-run the ROS 2 system bootstrap. See ADR-0021."
+        "rldx, …) or re-run the ROS 2 system bootstrap."
     ),
     no_args_is_help=True,
 )
@@ -192,7 +192,7 @@ def _check_conflicts(group: str, already_installed: frozenset[str]) -> None:
                 others = ", ".join(sorted(collision))
                 raise ROSConfigError(
                     f"Cannot install `{group}` — mutually exclusive with already-"
-                    f"installed group(s): {others}. See ADR-0011. "
+                    f"installed group(s): {others}. "
                     f"Use a separate venv (`uv venv .venv-{group}`) for the other "
                     f"group, or `openral install --force {group}` to override."
                 )
@@ -309,7 +309,7 @@ def install_sim(
 def install_libero(
     force: bool = typer.Option(False, "--force", help="Bypass conflict checks."),
 ) -> None:
-    """Install LIBERO (mutually exclusive with ``robocasa`` — see ADR-0011)."""
+    """Install LIBERO (mutually exclusive with ``robocasa``)."""
     _install_group("libero", force=force)
 
 
@@ -325,7 +325,7 @@ def install_metaworld(
 def install_maniskill3(
     force: bool = typer.Option(False, "--force", help="Bypass conflict checks."),
 ) -> None:
-    """Install ManiSkill3 (SAPIEN GPU physics — ADR-0014)."""
+    """Install ManiSkill3 (SAPIEN GPU physics)."""
     _install_group("maniskill3", force=force)
 
 
@@ -333,7 +333,7 @@ def install_maniskill3(
 def install_simpler_env(
     force: bool = typer.Option(False, "--force", help="Bypass conflict checks."),
 ) -> None:
-    """Install the SimplerEnv real-to-sim correlator backend (ADR-0014)."""
+    """Install the SimplerEnv real-to-sim correlator backend."""
     _install_group("simpler-env", force=force)
 
 
@@ -341,7 +341,7 @@ def install_simpler_env(
 def install_robocasa(
     force: bool = typer.Option(False, "--force", help="Bypass conflict checks."),
 ) -> None:
-    """Install RoboCasa (mutually exclusive with ``libero`` — see ADR-0011/0015)."""
+    """Install RoboCasa (mutually exclusive with ``libero``)."""
     _install_group("robocasa", force=force)
 
 
@@ -349,7 +349,7 @@ def install_robocasa(
 def install_rldx(
     force: bool = typer.Option(False, "--force", help="Bypass conflict checks."),
 ) -> None:
-    """Install the RLDX-1 sidecar client (pyzmq + msgpack — ADR-0010)."""
+    """Install the RLDX-1 sidecar client (pyzmq + msgpack)."""
     _install_group("rldx", force=force)
 
 

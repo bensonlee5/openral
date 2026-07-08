@@ -111,7 +111,7 @@ def test_reasoner_node_emits_prompt_on_canned_response() -> None:
     from openral_reasoner import ToolPalette
     from openral_reasoner_ros import ReasonerNode
 
-    # ADR-0018 §6: the outbound PromptStamped.metadata_json must carry
+    # §6: the outbound PromptStamped.metadata_json must carry
     # the active reasoner.tick span's traceparent. That field is only
     # populated when a real TracerProvider is installed — by default the
     # OTel SDK is a no-op and ``current_traceparent()`` returns None.
@@ -210,20 +210,20 @@ def test_reasoner_node_emits_prompt_on_canned_response() -> None:
     # The reasoner emitted at least one tool call (the FakeToolUseClient
     # records every invocation; the queue may be empty by now).
     assert len(client.traces) >= 1
-    # ADR-0018 §6 — outbound EmitPromptTool carries the OTel
+    # §6 — outbound EmitPromptTool carries the OTel
     # traceparent that wrapped the reasoner.tick span.
     metadata = json.loads(msg.metadata_json)
     assert "traceparent" in metadata, (
         "Outbound PromptStamped metadata_json must carry traceparent "
-        "stamped from the reasoner.tick span (ADR-0018 §6)."
+        "stamped from the reasoner.tick span (§6)."
     )
 
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_recall_object_query_reprompts_with_spatial_memory_result() -> None:
-    """ADR-0039 Phase 2b — RecallObjectTool → SpatialMemory query → re-prompt cascade.
+    """Phase 2b — RecallObjectTool → SpatialMemory query → re-prompt cascade.
 
-    A reasoner wired with a real ADR-0038 ``SpatialMemory`` (loaded from the
+    A reasoner wired with a real ``SpatialMemory`` (loaded from the
     home fixture) dispatches a canned ``RecallObjectTool`` for the wine bottle; the
     node runs the query and republishes the rendered result as a
     ``PromptStamped`` with frame_id ``"spatial_memory"`` so the next tick sees
@@ -330,7 +330,7 @@ def test_recall_object_query_reprompts_with_spatial_memory_result() -> None:
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_spatial_memory_path_param_preloads_query_backend() -> None:
-    """ADR-0039 deployment wiring — the spatial_memory_path param loads a backend.
+    """Deployment wiring — the spatial_memory_path param loads a backend.
 
     Instead of injecting a SpatialMemory at construction (the unit path), this
     sets the ``spatial_memory_path`` ROS parameter to the real home fixture —
@@ -443,7 +443,7 @@ def _drive_memory_node(
 ) -> list[Any]:
     """Boot a ReasonerNode with ``memory_md_path`` wired, run a tick, collect ``memory`` re-prompts.
 
-    Shared harness for the ADR-0072 §3 / Phase 4c dispatch tests: mirrors the
+    Shared harness for the §3 / Phase 4c dispatch tests: mirrors the
     spatial-memory deployment wiring (param → configure → activate → publish a
     prompt → spin) but watches for the ``memory`` frame_id re-prompt.
     """
@@ -523,7 +523,7 @@ def _drive_memory_node(
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_memory_write_persists_to_disk_and_reprompts(tmp_path: Any) -> None:
-    """ADR-0072 §3 / Phase 4c — memory_write applies, persists MEMORY.md, and re-prompts.
+    """§3 / Phase 4c — memory_write applies, persists MEMORY.md, and re-prompts.
 
     The ``memory_md_path`` param wires an (initially absent) MEMORY.md; a canned
     ``MemoryWriteTool(add)`` is dispatched. We assert the new fact is written to
@@ -563,7 +563,7 @@ def test_memory_write_persists_to_disk_and_reprompts(tmp_path: Any) -> None:
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_memory_search_recalls_archived_entry_and_reprompts(tmp_path: Any) -> None:
-    """ADR-0072 §3 / Phase 4c — memory_search recalls an archived fact via re-prompt.
+    """§3 / Phase 4c — memory_search recalls an archived fact via re-prompt.
 
     A pre-existing archive JSONL (a fact that left the live file) is loaded
     alongside the MEMORY.md; a canned ``MemorySearchTool`` query recalls it and
@@ -607,7 +607,7 @@ def test_memory_search_recalls_archived_entry_and_reprompts(tmp_path: Any) -> No
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_active_search_cascade_is_bounded_and_hands_off() -> None:
-    """ADR-0039 §3 — a repeatedly-missing query terminates in human-handoff.
+    """§3 — a repeatedly-missing query terminates in human-handoff.
 
     A FakeToolUseClient that keeps emitting RecallObjectTool for an object that is
     not in memory would, without a bound, drive the find→re-prompt cascade
@@ -706,7 +706,7 @@ def test_active_search_cascade_is_bounded_and_hands_off() -> None:
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_recall_miss_escalates_to_locate_in_view() -> None:
-    """ADR-0043/0056 — a recall_object miss escalates to a live locate_in_view.
+    """A recall_object miss escalates to a live locate_in_view.
 
     When the goal object is not in spatial memory and an on-demand detector is
     available, the reasoner must (policy, not LLM choice) call the namespaced
@@ -816,7 +816,7 @@ def test_recall_miss_escalates_to_locate_in_view() -> None:
 def test_severity_fail_failure_preempts_reasoner_tick() -> None:
     """A SEVERITY_FAIL FailureTrigger forces an out-of-band reasoner tick.
 
-    ADR-0018 §4 commits to "event preemption on
+    The reasoner design commits to "event preemption on
     FailureTrigger.severity>=FAIL". This test publishes a real
     ``FailureTrigger`` with ``severity=SEVERITY_FAIL`` (=2) and asserts
     the reasoner dispatched a tool call within the next 100 ms
@@ -926,7 +926,7 @@ def test_severity_fail_failure_preempts_reasoner_tick() -> None:
 
     assert received, (
         "Reasoner did not preempt a tick after SEVERITY_FAIL within 5 s — "
-        "ADR-0018 §4 event-preemption path broken."
+        "event-preemption path broken."
     )
 
 
@@ -1039,7 +1039,7 @@ def test_execute_skill_rejection_emits_failure_trigger() -> None:
     Spins up a real :class:`rclpy_action.ActionServer` on
     ``/openral/execute_rskill`` that rejects every goal. The reasoner
     must publish a ``FailureTrigger`` on ``/openral/failure/rskill``
-    with ``kind=KIND_CONTROLLER`` (=5) per ADR-0018 F4 follow-up
+    with ``kind=KIND_CONTROLLER`` (=5) per the F4 follow-up
     (GH-126).
     """
     rclpy = pytest.importorskip("rclpy")
@@ -1738,11 +1738,11 @@ def test_execute_skill_abort_emits_kind_controller() -> None:
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_spatial_memory_ingest_accumulates_from_world_state() -> None:
-    """ADR-0038 — the live ingest edge end-to-end (reasoner half).
+    """The live ingest edge end-to-end (reasoner half).
 
     With ``spatial_memory_ingest:=true`` the reasoner auto-creates a durable
     SpatialMemory and folds each ``/openral/world_state_slow``
-    ``WorldState.detected_objects`` snapshot — what the ADR-0035 producer
+    ``WorldState.detected_objects`` snapshot — what the world-state producer
     publishes — into it. We publish a snapshot carrying a wine bottle, drive a
     tick, and confirm ``recall_object`` recalls it from the accumulated map.
     """
@@ -1838,7 +1838,7 @@ def test_spatial_memory_ingest_accumulates_from_world_state() -> None:
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_recall_object_approach_is_grid_refined_when_map_latched() -> None:
-    """ADR-0044 Phase 4 — a latched /map snaps recall_object approach poses.
+    """Phase 4 — a latched /map snaps recall_object approach poses.
 
     A latched ``nav_msgs/OccupancyGrid`` with a wall across the wine bottle's
     geometric approach (2.82, 0.38) is published before the query; the
@@ -1979,13 +1979,13 @@ def _write_nav2_map(d: Any, *, width: int = 20, height: int = 20) -> Any:
 
 @pytest.mark.skipif(not _LIVE_ROS, reason=_LIVE_ROS_REASON)
 def test_deploy_map_bundle_seeds_reasoner_occupancy_grid(tmp_path: Any) -> None:
-    """ADR-0072 Decision 3b — the deploy bundle's saved map.yaml seeds the reasoner grid.
+    """Decision 3b — the deploy bundle's saved map.yaml seeds the reasoner grid.
 
     The REAL deploy path (not a faked /map publisher): a saved nav2 ``map.yaml`` is
     loaded by a standalone ``nav2_map_server`` — exactly what ``sim_e2e.launch.py``
     brings up when ``map_path`` is set — which latches ``/map``. We assert (a) the
     saved map reaches ``/map`` (the costmap is populated from the bundle), (b) the
-    reasoner consumes it into its ADR-0044 occupancy grid, and (c) with the bundle's
+    reasoner consumes it into its occupancy grid, and (c) with the bundle's
     scene graph also wired, ``recall_object`` still answers — the two bundle
     modalities loaded together at deploy start.
     """
@@ -2133,7 +2133,7 @@ def test_deploy_map_bundle_seeds_reasoner_occupancy_grid(tmp_path: Any) -> None:
         # (a) the saved map reached /map (costmap populated from the bundle).
         assert maps, "saved map.yaml did not reach /map via nav2 map_server"
         assert maps[-1].info.width == 20 and maps[-1].info.height == 20
-        # (b) the reasoner consumed it into its ADR-0044 occupancy grid.
+        # (b) the reasoner consumed it into its occupancy grid.
         assert reasoner._occupancy_grid is not None, "reasoner did not consume the seeded /map"
         # (c) the bundle's scene graph still answers recall_object.
         assert received, "recall_object did not re-prompt within 5 s"

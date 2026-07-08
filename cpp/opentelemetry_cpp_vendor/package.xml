@@ -13,7 +13,7 @@
     Built with trace + OTLP/HTTP only (no gRPC, no Prometheus, no
     Jaeger, no logs/metrics SDK) — that is what the C++ safety kernel
     needs to emit ``safety.check`` spans to the dashboard's OTLP/HTTP
-    receiver on port 4318. See ADR-0020 §9 (PR-F).
+    receiver on port 4318.
   </description>
 
   <maintainer email="contact@openral.dev">OpenRAL Contributors</maintainer>

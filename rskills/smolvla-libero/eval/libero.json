@@ -10,9 +10,9 @@
     "reproduced_locally": false,
     "reproduction_planned": "Deferred \u2014 use lerobot-eval CLI (see reproduction_cli). Requires ~8h GPU on A100-class hardware.",
     "reproduction_cli": {
-      "description": "Re-run this benchmark inside the OpenRAL repo. ADR-0009 PR D: openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
+      "description": "Re-run this benchmark inside the OpenRAL repo. openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
       "command": "openral benchmark run --suite libero_spatial --rskill smolvla-libero",
-      "status": "in-tree (libero_spatial); libero_object / libero_goal / libero_10 catalogue YAMLs land in a follow-up to ADR-0009 PR E",
+      "status": "in-tree (libero_spatial); libero_object / libero_goal / libero_10 catalogue YAMLs land in a follow-up",
       "notes": [
         "The 'results' block on this file is still the paper snapshot (reproduced_locally=false); re-running the command above and overwriting the file with its output flips that flag.",
         "libero_10 is the lerobot/upstream name for LIBERO-Long (what the SmolVLA paper calls 'Long').",

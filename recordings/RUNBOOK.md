@@ -41,7 +41,7 @@ ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill 
 ```
 Expect: real base navigation + arm reach under safety-gated control.
 
-### 1b. Autonomous + open-vocab perception (LocateAnything-3B)   [ADR-0050 — code-complete, live-verify pending]
+### 1b. Autonomous + open-vocab perception (LocateAnything-3B)   [VRAM eviction — code-complete, live-verify pending]
 Real open-vocab perception of the baguette, then the autonomous grab — fits 8 GB via the
 single-resident-skill eviction (the detector's VRAM is freed before pi05 loads).
 ```bash
@@ -51,7 +51,7 @@ openral deploy sim --config scenes/deploy/robocasa_baguette.yaml --no-enable-oct
   --object-detector-query "baguette"
 # Drive it: type a goal in the dashboard prompt (autonomous reasoner), e.g. "pick up the baguette".
 # Flow: detector loads (~5.3 GB) → reasoner locate_in_view('baguette') → navigate
-#       → reasoner DEACTIVATEs the detector (frees VRAM, ADR-0050) → pi05 loads + grabs.
+#       → reasoner DEACTIVATEs the detector (frees VRAM) → pi05 loads + grabs.
 # If the LLM doesn't free the detector itself before the grab, do it manually:
 ros2 lifecycle set /openral_ros_image_detector deactivate   # frees the detector's VRAM
 ```
@@ -90,7 +90,7 @@ ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill 
   "{rskill_id: 'OpenRAL/rskill-act-libero', prompt: 'put the bowl on the plate', deadline_s: 120.0}"
 ```
 
-### 3b. sim-run path (NO dashboard, but VERIFIED in ADR-0045) — fallback
+### 3b. sim-run path (NO dashboard, but VERIFIED during the Isaac backend integration) — fallback
 ```bash
 openral sim run --config scenes/sim/isaac_franka_bowl_plate.yaml \
   --rskill rskill://rskills/act-libero --video recordings/clip3_isaac_franka_simrun.mp4
@@ -100,7 +100,7 @@ is expected; the point is perception + actuation, not a completed place.
 
 ---
 
-## Clip 4 — Isaac Sim · panda_mobile · autonomous nav   [deploy e2e verified in ADR-0045]
+## Clip 4 — Isaac Sim · panda_mobile · autonomous nav   [deploy e2e verified during the Isaac backend integration]
 ```bash
 openral deploy sim --config scenes/deploy/isaac_panda_mobile_urdf.yaml
 chromium --new-window --app=http://127.0.0.1:4318/ &

@@ -37,7 +37,7 @@ license surfacing, and latency budgets. It does **not** copy model weights.
 Detects objects from a fixed curated indoor vocabulary in every RGB camera
 frame and publishes 2D detections (`ObjectsMetadata`) on the perception bus. It
 emits no action chunks, drives no actuators, and has no proprioception
-contract — a pure ADR-0037 perception producer. Because the class list is fixed
+contract — a pure detector-kind perception producer. Because the class list is fixed
 (not query-driven), it behaves like a large closed-vocabulary detector: the
 reasoner does not retarget it.
 
@@ -65,7 +65,7 @@ vocabulary against each frame via `processor.post_process_grounded_object_detect
 It is selected as `DetectorTier.ZEROSHOT_HF` by `build_manifest_detector` for
 manifests whose `detector.engine` is `zeroshot_hf`, and consumes the same
 system-memory BGR camera-tee branch as the CPU ONNX and VLM-sidecar tiers
-(ADR-0037 2026-06-12 amendment).
+(added in the 2026-06-12 detector-runner amendment).
 
 ### Observation → action contract
 
@@ -177,5 +177,5 @@ unlike the NVIDIA non-commercial `locateanything-3b-nf4` open-vocab detector.
   open-vocab detector (NVIDIA non-commercial; `VLM_SIDECAR` tier).
 - [`rskills/rtdetr-coco-r18/`](../rtdetr-coco-r18/) — fixed 80-class COCO RT-DETR
   detector (ONNX tier).
-- ADR-0037 — detector kind + tier contract.
+- detector kind + tier contract.
 - [CLAUDE.md §6.4](../../CLAUDE.md) — rSkill packaging contract.

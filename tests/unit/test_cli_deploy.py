@@ -1,4 +1,4 @@
-"""Unit tests for ``openral deploy run`` (ADR-0032)."""
+"""Unit tests for ``openral deploy run``."""
 
 from __future__ import annotations
 

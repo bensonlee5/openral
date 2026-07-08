@@ -2,7 +2,6 @@
 
 One grammar replaces ``resolve_urdf_path``, ``resolve_mjcf_uri``, the
 plain-path SRDF handling, and ``openral_safety.urdf_lowering._load_urdf_model``.
-See ADR-0058 (OpenRAL/management).
 
 Grammar (``resolve_asset(ref, kind)``):
 

@@ -2,7 +2,7 @@ OpenRAL — Open-Source Robot Agent Harness for Vision-Language-Action Models
 Copyright 2025-2026 OpenRAL Contributors
 
 This product is licensed entirely under the Apache License, Version 2.0
-(see LICENSE and LICENSES/Apache-2.0.txt), per ADR-0012. Every package in
+(see LICENSE and LICENSES/Apache-2.0.txt), per the project licensing decision (docs/decisions.md). Every package in
 this monorepo —
 contracts, runtime substrate, simulators, HAL/sensors, observability
 primitives, safety code, the LLM reasoner, WAM adapters, dispatcher, skill

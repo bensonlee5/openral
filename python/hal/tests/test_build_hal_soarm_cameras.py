@@ -1,4 +1,4 @@
-"""SO-ARM (SO-100 / SO-101) deploy-sim cameras via the generic rig (ADR-0086; issue #88).
+"""SO-ARM (SO-100 / SO-101) deploy-sim cameras via the generic rig (issue #88).
 
 `openral deploy sim` builds a bare MuJoCo twin for the SO-ARM arms (their
 manifests set ``hal.sim: null`` → ``MujocoArmHAL.from_description``). The upstream
@@ -85,7 +85,7 @@ _SOARM = ["robots/so100_follower/robot.yaml", "robots/so101_follower/robot.yaml"
 @pytest.mark.parametrize("robot_yaml", _SOARM)
 def test_manifest_sensors_carry_sim_placement(robot_yaml: str) -> None:
     desc = RobotDescription.from_yaml(robot_yaml)
-    # No scene composition hook on the robot manifest (ADR-0086).
+    # No scene composition hook on the robot manifest.
     assert desc.scene_defaults is None or desc.scene_defaults.composition is None
     by_name = {s.name: s for s in desc.sensors if s.modality == "rgb"}
     # top = world-fixed overhead; wrist = parented to the roll-mounted end body.

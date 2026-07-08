@@ -1,5 +1,5 @@
 """Offline verification of the SO-101 all-OBB self-collision model + tuned
-negative self-collision margin (ADR-0081 / issue #84).
+negative self-collision margin (issue #84).
 
 Story: a live ``openral deploy run`` on the real SO-101 latched ``/openral/estop``
 before any motion. Root cause chain (all evidence-backed, no hardware needed):

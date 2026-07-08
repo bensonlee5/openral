@@ -38,7 +38,7 @@ override-dependencies = [
 constraint-dependencies = [
     "torchcodec<0.10; (platform_machine == 'x86_64' or platform_machine == 'AMD64') and sys_platform == 'linux'",
 ]
-# ADR-0011 — RoboCasa pins robosuite>=1.5 while LIBERO (`lerobot[libero]`)
+# RoboCasa pins robosuite>=1.5 while LIBERO (`lerobot[libero]`)
 # pins robosuite==1.4. The two extras groups cannot coexist in a single
 # resolved environment. Telling uv up-front lets `uv sync --group libero`
 # and `uv sync --group robocasa` each resolve cleanly and produces a
@@ -64,11 +64,11 @@ openral-cli = { workspace = true }
 openral-detect = { workspace = true }
 openral-sim = { workspace = true }
 openral-observability = { workspace = true }
-openral-runner = { workspace = true } # reason: ADR-0010 inference runner — InferenceRunner + SensorReader + clock
-openral-reasoner = { workspace = true } # reason: ADR-0005 S2 reasoner — LLMClient + Reasoner Protocols + Plan/ToolCall schemas
+openral-runner = { workspace = true } # reason: inference runner — InferenceRunner + SensorReader + clock
+openral-reasoner = { workspace = true } # reason: S2 reasoner — LLMClient + Reasoner Protocols + Plan/ToolCall schemas
 openral-wam = { workspace = true } # reason: CLAUDE.md §6.3 World Action Model layer — WorldModel Protocol + Rollout schema
-openral-dataset = { workspace = true } # reason: ADR-0019 rosbag2 ↔ LeRobotDataset v3 bridge — RolloutRecorder + LeRobotDatasetSink + Rosbag2Sink + Rosbag2ToLeRobotConverter
-openral-state-adapter = { workspace = true } # reason: ADR-0027 layout adapter registry — per-checkpoint state-vector assemblers
+openral-dataset = { workspace = true } # reason: rosbag2 ↔ LeRobotDataset v3 bridge — RolloutRecorder + LeRobotDatasetSink + Rosbag2Sink + Rosbag2ToLeRobotConverter
+openral-state-adapter = { workspace = true } # reason: layout adapter registry — per-checkpoint state-vector assemblers
 
 # robosuite is pinned to the ARISE-Initiative master branch at commit
 # 232ce7d ("synchronize rendering context for envs", 2026-05-09).
@@ -116,7 +116,7 @@ dev = [
     "types-protobuf>=7.34.1.20260518",
 ]
 clip = [
-    # ADR-0038 §5 — open-vocabulary object matching via OpenCLIP ViT-B/32 (MIT
+    # Open-vocabulary object matching via OpenCLIP ViT-B/32 (MIT
     # code + weights). Optional / compute-gated: SpatialMemory works on label +
     # pose + recency without it. torch is already pulled by dev/sim.
     "open-clip-torch>=2.24",
@@ -154,7 +154,7 @@ metaworld = [
     "num2words>=0.5.14",  # reason: required by SmolVLAProcessor (transformers) for number tokenization
 ]
 maniskill3 = [
-    # ADR-0010 — opt-in ManiSkill3 sim backend.
+    # Opt-in ManiSkill3 sim backend.
     # mani-skill is the PyPI distribution name; it pulls SAPIEN (Vulkan-backed
     # GPU physics, ~200 MB wheel) transitively. Bound at >=3.0.0b9 so SemVer-compatible
     # pre-release patches flow in; tighten to a >=3.0.0 pin when MS3 ships its stable release.
@@ -166,7 +166,7 @@ maniskill3 = [
     "num2words>=0.5.14",  # reason: required by SmolVLAProcessor (transformers) for number tokenization (matches metaworld group)
 ]
 simpler-env = [
-    # ADR-0010 — opt-in SimplerEnv real-to-sim correlator backend.
+    # Opt-in SimplerEnv real-to-sim correlator backend.
     #
     # The `simpler-env` package itself is NOT listed here — it has no PyPI
     # release and the upstream git URL slows every `uv run` invocation. Install
@@ -181,7 +181,7 @@ simpler-env = [
     "gymnasium>=1.0.0",
 ]
 robocasa = [
-    # ADR-0011 — opt-in RoboCasa MuJoCo kitchen backend.
+    # Opt-in RoboCasa MuJoCo kitchen backend.
     #
     # The `robocasa` package itself is NOT listed here — it has no PyPI
     # release and the upstream git URL slows every `uv run` invocation
@@ -204,7 +204,7 @@ robocasa = [
     # (`robocasa/<task>` for kitchen, `robocasa/gr1/<task>` for GR1
     # tabletop); the unavailable one fails at `robosuite.make()` with
     # a clean "unknown env_name" rather than at import time. See
-    # ADR-0011 / the GR1 fork README for the full set up.
+    # the GR1 fork README for the full set up.
     #
     # RoboCasa pins robosuite>=1.5 while LIBERO (`lerobot[libero]`) pins
     # robosuite==1.4; the two extras groups are **mutually exclusive** in
@@ -217,7 +217,7 @@ robocasa = [
     # scene adapter (PR B of issue #88) fetches it lazily on first use,
     # gated by a Rich license banner + typer.confirm() prompt or the
     # OPENRAL_ALLOW_ROBOCASA_ASSETS=1 env-var CI bypass. See
-    # ADR-0011 for the full rationale.
+    # the recorded dependency-isolation decision for the full rationale.
     # robosuite is sourced from the ARISE-Initiative master branch at a
     # pinned commit (see `[tool.uv.sources] robosuite = { git = ... }`
     # below). We pin `>=1.5.2` here so the resolver still satisfies the
@@ -266,7 +266,7 @@ robocasa = [
     "imageio[ffmpeg]>=2.34",  # reason: robocasa's env_utils imports imageio at load (playback_dataset_hdf5), and openral_sim's --save-video writer uses imageio's ffmpeg plugin. Both rode in transitively via lerobot's video deps under 0.5.1; lerobot 0.6.0 modularized those behind extras, dropping imageio[ffmpeg] from the bare-lerobot robocasa closure — declare it here so the robocasa runtime env resolves both the module and its ffmpeg plugin.
 ]
 rldx = [
-    # ADR-0010 — opt-in RLDX-1 sidecar adapter.
+    # Opt-in RLDX-1 sidecar adapter.
     #
     # The RLDX-1 inference server (`tools/rldx_sidecar.py`) runs in its
     # OWN Python 3.10 venv that this group does NOT touch; what we
@@ -277,7 +277,7 @@ rldx = [
     "msgpack>=1",
 ]
 gr00t = [
-    # ADR-0046 (amended) — in-process NVIDIA GR00T-N1.7 policy on lerobot 0.6.0.
+    # In-process NVIDIA GR00T-N1.7 policy on lerobot 0.6.0.
     #
     # GR00T-N1.7 is now first-party in lerobot (`lerobot.policies.groot`), runs
     # in-process under this repo's Python 3.12 / transformers 5.x, and is loaded
@@ -288,7 +288,7 @@ gr00t = [
     "lerobot[groot]",
 ]
 isaacsim = [
-    # ADR-0045 — opt-in NVIDIA Isaac Sim scene backend.
+    # Opt-in NVIDIA Isaac Sim scene backend.
     #
     # The Isaac Lab env (`tools/isaac_sidecar.py`) runs in its OWN Python 3.11
     # venv that this group does NOT touch — Isaac Sim ships per-interpreter
@@ -300,7 +300,7 @@ isaacsim = [
     "msgpack>=1",
 ]
 robotwin = [
-    # ADR-0061 — opt-in RoboTwin 2.0 SAPIEN dual-arm benchmark backend.
+    # Opt-in RoboTwin 2.0 SAPIEN dual-arm benchmark backend.
     #
     # Same shape as the `isaacsim` / `rldx` groups: the RoboTwin SAPIEN env
     # (`tools/robotwin_sidecar.py`, wrapping LeRobot's `robotwin` env) runs in its
@@ -314,7 +314,7 @@ robotwin = [
     "msgpack>=1",
 ]
 rlbench = [
-    # ADR-0061 — opt-in RLBench (CoppeliaSim/PyRep) benchmark backend + the
+    # Opt-in RLBench (CoppeliaSim/PyRep) benchmark backend + the
     # 3D Diffuser Actor keyframe policy.
     #
     # Both the RLBench scene (`tools/rlbench_sidecar.py`) and the 3D Diffuser
@@ -329,7 +329,7 @@ rlbench = [
     "msgpack>=1",
 ]
 locateanything = [
-    # ADR-0037 — opt-in LocateAnything-3B open-vocab VLM detector.
+    # Opt-in LocateAnything-3B open-vocab VLM detector.
     #
     # The model itself runs in its OWN transformers==4.57.1 venv
     # (`tools/locateanything_sidecar.py`, provisioned separately); what we
@@ -343,7 +343,7 @@ locateanything = [
     "msgpack>=1",
 ]
 qwen-vlm = [
-    # ADR-0047 — opt-in Qwen3.5-4B scene VLM for the reasoner's query_scene tool.
+    # Opt-in Qwen3.5-4B scene VLM for the reasoner's query_scene tool.
     #
     # The model itself runs in its OWN sidecar venv
     # (`tools/qwen_vlm_sidecar.py`, provisioned separately); what we install
@@ -356,7 +356,7 @@ qwen-vlm = [
     "msgpack>=1",
 ]
 omdet = [
-    # ADR-0037 (2026-06-12 amendment) — opt-in OmDet-Turbo in-process
+    # Opt-in OmDet-Turbo in-process
     # open-vocabulary detector (rskills/omdet-turbo-indoor, engine: zeroshot_hf).
     #
     # Unlike locateanything, OmDet-Turbo is a first-class transformers
@@ -371,11 +371,11 @@ omdet = [
     "timm>=1.0",            # reason: OmDet-Turbo's Swin backbone loads via TimmBackbone under transformers 5.3; also used to rebuild the backbone at the processor's 640² input (the pretrained checkpoint is pinned to 224² — see _fit_timm_backbone_to_processor).
 ]
 onnx-export = [
-    "transformers>=4.45",  # reason: RTDetrForObjectDetection for ONNX export (one-time, ADR-0037)
+    "transformers>=4.45",  # reason: RTDetrForObjectDetection for ONNX export (one-time)
     "torch>=2.2",          # reason: torch.onnx.export
 ]
 lowering = [
-    "yourdfpy>=0.0.56",   # reason: URDF parse + FK for the offline collision-lowering tool (ADR-0030)
+    "yourdfpy>=0.0.56",   # reason: URDF parse + FK for the offline collision-lowering tool
     "trimesh>=4.0.0",     # reason: load URDF collision meshes to fit conservative bounding capsules
     "numpy>=2.0.0,<2.3.0",  # reason: PCA capsule fitting + pose sampling; pin matches workspace-wide numpy constraint from lerobot>=0.5.1
     "xacrodoc>=0.3.0",    # reason: process xacro-only URDFs (UR / Flexiv) for onboarding via robot_descriptions:<module>

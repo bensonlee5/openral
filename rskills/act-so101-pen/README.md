@@ -100,12 +100,12 @@ or collect a short teleop set on your own rig and fine-tune.
 
 ## Reward monitor
 
-Per ADR-0077, this VLA emits no success signal of its own, so it runs paired
+This VLA emits no success signal of its own, so it runs paired
 with a reward / progress monitor: `reward_rskill_name:
 OpenRAL/rskill-robometer-4b-nf4` (Robometer-4B, NF4). Robometer's **measured**
 resident footprint is ~5.5 GB (weights + CUDA context + VLM-scoring
 activations), not the ~3.6 GB packed-weight size — its manifest `min_vram_gb`
-declares the measured value so the ADR-0077 preflight budgets it honestly. ACT
+declares the measured value so the co-residency preflight budgets it honestly. ACT
 (fp32, ~0.5 GB) + Robometer fit an 8 GB card for the host-path VLA; the
 device-resident NVMM path plus dual-camera DeepStream buffers, however, is a
 tight fit alongside Robometer on 8 GB — run reward-off for actuation there, or
@@ -123,7 +123,7 @@ plain CNN+transformer and exports **whole-model** to one ONNX graph:
 - **Ship:** `model.onnx` is committed into this rSkill's HF repo
   (`policy_extras.act_onnx_uri`).
 - **Run:** with `OPENRAL_ACT_TRT=1` and the private `openral-pro-trt` package
-  installed (ADR-0083), the ACT adapter loads `model.onnx` through the
+  installed, the ACT adapter loads `model.onnx` through the
   TensorRT backend, which builds and **caches** the engine on the host on
   first load (same delivery shape as `rtdetr-v2-r50vd`, also an OpenRAL Pro
   rSkill). Without `openral-pro-trt` the torch path runs unchanged — the
@@ -143,5 +143,5 @@ plain CNN+transformer and exports **whole-model** to one ONNX graph:
 
 ## License
 
-**Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0 (ADR-0012);
+**Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0;
 the upstream checkpoint and dataset are Apache-2.0 as published by the author.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — envelope.cpp: build the EnvelopeIntersection from per-field
+// envelope.cpp: build the EnvelopeIntersection from per-field
 // ROS parameters the Python launch populates from
 // `robots/<id>/robot.yaml`. Single-shot (configure-time) so allocations
 // are fine here; the hot validator path never touches this code.

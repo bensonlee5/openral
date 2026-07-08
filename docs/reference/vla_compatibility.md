@@ -56,7 +56,7 @@ Columns:
 > [`robots/franka_panda/`](https://github.com/OpenRAL/openral/tree/master/robots/franka_panda). The
 > sim-imposed observation/action contract (8-D EEF state, 7-D
 > delta-EEF action, 180° image flip) lives in the LIBERO scene
-> adapter (ADR-0007).
+> adapter.
 
 
 | VLA (HF ID) | Sim env | Robot tag | State dim | Cameras | Norm stats in ckpt | rSkill | License | Notes |
@@ -72,20 +72,19 @@ Columns:
 
 > RLBench tasks are fixed to the Franka Panda in CoppeliaSim/PyRep. OpenRAL
 > runs both the simulator and 3D keyframe policy out-of-process in an
-> externally-provisioned py3.10 sidecar venv (ADR-0062); CoppeliaSim is
+> externally-provisioned py3.10 sidecar venv; CoppeliaSim is
 > proprietary (free EDU) and is never vendored.
 
 | VLA (HF ID) | Sim env | Robot tag | State dim | Cameras | Norm stats in checkpoint | rSkill | License | Notes |
 |---|---|---|---|---|---|---|---|---|
-| `katefgroup/3d_diffuser_actor` (`diffuser_actor_peract.pth`) | RLBench PerAct subset | `franka_panda` | **8-D** `gripper_pose(7)+gripper_open(1)` history, policy emits an **8-D** absolute EE keyframe | `left_shoulder`, `right_shoulder`, `wrist`, `front` RGB-D point clouds at 256×256 | Precomputed CLIP instruction embeddings (`instructions.pkl`) + task bounds JSON | `rskills/3d-diffuser-actor-rlbench/` | MIT | ADR-0062 starter set: `rlbench_open_drawer.yaml`, `rlbench_meat_off_grill.yaml`, `rlbench_close_jar.yaml`; live-verified on an 8 GB Ada host. |
+| `katefgroup/3d_diffuser_actor` (`diffuser_actor_peract.pth`) | RLBench PerAct subset | `franka_panda` | **8-D** `gripper_pose(7)+gripper_open(1)` history, policy emits an **8-D** absolute EE keyframe | `left_shoulder`, `right_shoulder`, `wrist`, `front` RGB-D point clouds at 256×256 | Precomputed CLIP instruction embeddings (`instructions.pkl`) + task bounds JSON | `rskills/3d-diffuser-actor-rlbench/` | MIT | Starter scene set: `rlbench_open_drawer.yaml`, `rlbench_meat_off_grill.yaml`, `rlbench_close_jar.yaml`; live-verified on an 8 GB Ada host. |
 
 ### 3.3 MetaWorld (Sawyer, MuJoCo)
 
 > The OpenRAL embodiment for MetaWorld is `sawyer` — see
 > [`robots/sawyer/`](https://github.com/OpenRAL/openral/tree/master/robots/sawyer). The MetaWorld benchmark
 > simulates a Rethink Sawyer; some upstream checkpoints carry a
-> `franka_panda` tag, but the actual robot is Sawyer
-> (ADR-0007).
+> `franka_panda` tag, but the actual robot is Sawyer.
 
 
 | VLA (HF ID) | Sim env | Robot tag | State dim | Cameras | Norm stats in ckpt | rSkill | License | Notes |
@@ -171,11 +170,11 @@ Note: `libero_10` is the lerobot/upstream name for LIBERO-Long. `LiberoProcessor
 
 - **Checkpoint normalisation requires `snapshot_download`**: `lerobot/smolvla_libero` bundles normalisation statistics in `policy_preprocessor_step_5_normalizer_processor.safetensors`. A bare `from_pretrained` call that only fetches `model.safetensors` + `config.json` will fail at inference time. Use `snapshot_download(repo_id="lerobot/smolvla_libero")` or `hf_hub_download` for the preprocessor file explicitly.
 
-- **GR00T weights — license is version-specific** (ADR-0046): GR00T **N1 / N1.5 / N1.6** ship under the NVIDIA OneWay Noncommercial License. Any checkpoint that builds on those bases (e.g., `ar0s/groot_libero`) inherits the non-commercial restriction even if the fine-tune layer is Apache-2.0 — the rSkill manifest sets `license: nvidia_non_commercial` and the loader requires `OPENRAL_ALLOW_NONCOMMERCIAL=1` for a commercial deployment. GR00T **N1.7+** ship under the **NVIDIA Open Model License**, which permits commercial use — those manifests set `license: nvidia_open_model` (e.g., `rskills/gr00t-n17-libero`) and load without the guard. GR00T N1.7 runs **in-process** under the workspace's Python 3.12 via lerobot 0.6.0's native `GrootPolicy` with backbone-only NF4 (ADR-0046, 2026-07-07 amendment); the older Python-3.10 ZMQ sidecar is deleted. RLDX-1 (a GR00T-N1.5 finetune) still runs on its own ZMQ sidecar.
+- **GR00T weights — license is version-specific**: GR00T **N1 / N1.5 / N1.6** ship under the NVIDIA OneWay Noncommercial License. Any checkpoint that builds on those bases (e.g., `ar0s/groot_libero`) inherits the non-commercial restriction even if the fine-tune layer is Apache-2.0 — the rSkill manifest sets `license: nvidia_non_commercial` and the loader requires `OPENRAL_ALLOW_NONCOMMERCIAL=1` for a commercial deployment. GR00T **N1.7+** ship under the **NVIDIA Open Model License**, which permits commercial use — those manifests set `license: nvidia_open_model` (e.g., `rskills/gr00t-n17-libero`) and load without the guard. GR00T N1.7 runs **in-process** under the workspace's Python 3.12 via lerobot 0.6.0's native `GrootPolicy` with backbone-only NF4 (as of the 2026-07-07 amendment); the older Python-3.10 ZMQ sidecar is deleted. RLDX-1 (a GR00T-N1.5 finetune) still runs on its own ZMQ sidecar.
 
 - **π0 / π0.5 weights are "permissive research", not full Apache-2.0**: The code under `lerobot/` is Apache-2.0; the *weights* for `pi0` and `pi05` checkpoints carry a Physical Intelligence permissive-research license that is not equivalent to Apache-2.0 for commercial deployment. The corresponding rSkill manifests set `commercial_use_allowed: false`. See `CLAUDE.md §7.4` for the full VLA license matrix.
 
-- **Reward monitor (`rskills/robometer-4b`, ADR-0057) co-residency on 8 GB**: The Robometer-4B reward monitor (`kind: reward`) runs in parallel with a VLA to score per-frame progress/success. At NF4 it is ~3.33 GB resident / 3.56 GB peak (8-frame window) on the 8 GB reference GPU, leaving ~4.4 GB — enough for a **small NF4 VLA** (e.g. SmolVLA ≈ 1.5–2 GB) but **not** a 3–4 GB π0.5/GR00T checkpoint simultaneously. When the VLA already saturates the card, run the reward monitor on CPU, a second GPU, or a cloud host, or shrink the reward `frame_window_s` / `num_bins` (activation peak scales with both). It is an **S2-cadence** monitor (~0.2–1 Hz over a frame window), not a per-control-step signal, and is **advisory-only** (never gates motors). In `deploy-sim`, the signal is only available on camera-rendering robots (the monitor needs `sensor_msgs/Image` frames). Apache-2.0; commercially usable.
+- **Reward monitor (`rskills/robometer-4b`) co-residency on 8 GB**: The Robometer-4B reward monitor (`kind: reward`) runs in parallel with a VLA to score per-frame progress/success. At NF4 it is ~3.33 GB resident / 3.56 GB peak (8-frame window) on the 8 GB reference GPU, leaving ~4.4 GB — enough for a **small NF4 VLA** (e.g. SmolVLA ≈ 1.5–2 GB) but **not** a 3–4 GB π0.5/GR00T checkpoint simultaneously. When the VLA already saturates the card, run the reward monitor on CPU, a second GPU, or a cloud host, or shrink the reward `frame_window_s` / `num_bins` (activation peak scales with both). It is an **S2-cadence** monitor (~0.2–1 Hz over a frame window), not a per-control-step signal, and is **advisory-only** (never gates motors). In `deploy-sim`, the signal is only available on camera-rendering robots (the monitor needs `sensor_msgs/Image` frames). Apache-2.0; commercially usable.
 
 - **MetaWorld, RoboCasa, and most SO-101 community entries are TBD**: RoboCasa and SO-101 community entries have not been locally verified. MetaWorld and the four LIBERO entries (smolvla, pi05, xvla, pi0) are now fully verified — see ✓ markers in §3.
 

@@ -53,7 +53,7 @@ class RSkillPatch(TypedDict, total=False):
     n_action_steps: int | None
     image_preprocessing: dict[str, Any] | None
     state_contract: dict[str, Any] | None
-    # ADR-0019: per-checkpoint action contract. Required for any rSkill
+    # Per-checkpoint action contract. Required for any rSkill
     # that wants to write through the dataset bridge — the bridge reads
     # ``action_contract.dim`` to bind the LeRobot v3 ``action`` feature
     # shape (cf. ``state_contract`` for ``observation.state``).

@@ -47,7 +47,7 @@ ros2 run openral_hal_so100 lifecycle_node \
 | Sub | `/openral/estop` | RELIABLE / VOLATILE / KEEP_LAST=10 | `std_msgs/Empty` |
 
 The QoS profile follows CLAUDE.md §5.3 for control-class data. Actuator
-commands flow through the ADR-0018 F1/F5 `/openral/safe_action` path
+commands flow through the `/openral/safe_action` path
 (produced by `rskill_runner_node` and clamped by `safety_node`).
 
 ## Embodiment

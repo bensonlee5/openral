@@ -115,7 +115,7 @@
     el.textContent = parts.join("  ·  ");
   }
 
-  // ADR-0057 — latest reward-monitor assessment (reward.score span) as two
+  // Latest reward-monitor assessment (reward.score span) as two
   // colour-banded bars on the rSkill card. Numeric banding (unlike the
   // mission checklist's verdict-text banding): >=0.7 green, >=0.4 orange,
   // else red — the value IS the signal here, no reasoner verdict to defer to.
@@ -278,13 +278,13 @@
     }
   }
 
-  // ADR-0025 — render the live 2D occupancy map. Mirrors the camera-card
+  // Render the live 2D SLAM occupancy map. Mirrors the camera-card
   // pattern: empty-state when nothing has been emitted yet, switch to
   // an inline base64 PNG once the bridge sends a slam.occupancy_grid
   // span. Metadata (resolution / origin / frame_id / source node)
   // pinned below the image so operators can sanity-check what they
   // are looking at.
-  // ADR-0025 — map world (metres) → map PNG pixel coords. The bridge
+  // Map world (metres) → map PNG pixel coords. The bridge
   // rasterises the OccupancyGrid with a vertical flip (PIL top-left vs
   // grid bottom-left), so pixel-y is mirrored: py = (height-1) - row.
   function worldToPixel(wx, wy, originX, originY, resolution, height) {
@@ -293,7 +293,7 @@
     return { px: col, py: (height - 1) - row };
   }
 
-  // ADR-0025 — base-frame footprint vertices -> map pixel points. Rotate
+  // Base-frame footprint vertices -> map pixel points. Rotate
   // each (bx,by) by yaw, translate to the robot's world pose, then reuse
   // worldToPixel (which applies the PNG vertical flip).
   function footprintToPixels(polygon, robotX, robotY, yaw, originX, originY, resolution, height) {
@@ -410,7 +410,7 @@
     renderRobotMarker(slam);
   }
 
-  // ADR-0030 — render the robot-perspective octomap pointcloud. Mirrors
+  // Render the robot-perspective octomap pointcloud. Mirrors
   // renderSlamMap: empty-state until the first world.pointcloud span, then
   // an inline base64 PNG with n_points / range / frame / source pinned below.
   function renderWorldCloud(pc) {
@@ -438,7 +438,7 @@
     if (src) src.textContent = "source " + (pc.source_node || "?");
   }
 
-  // ADR-0038 — render the durable spatial-memory objects as a table. Empty
+  // Render the durable spatial-memory scene-object graph as a table. Empty
   // until the first world.scene_objects span (Reasoner preloaded map today;
   // World-State node once the perception object-lift producer lands). Rows are
   // built with textContent (labels are operator/perception controlled).
@@ -496,7 +496,7 @@
     if (srcEl) srcEl.textContent = "source " + (so.source_node || "?");
   }
 
-  // ADR-0038 — overlay remembered objects on the SLAM 2D map as labelled dots.
+  // Overlay remembered objects (durable spatial-memory scene-object graph) on the SLAM 2D map as labelled dots.
   // Reuses the SLAM card's worldToPixel transform (objects are in the same map
   // frame as the robot pose). Appends to the slam-overlay svg AFTER
   // renderRobotMarker so the robot footprint is preserved. Best-effort: a
@@ -528,10 +528,10 @@
     svg.insertAdjacentHTML("beforeend", markup);
   }
 
-  // ADR-0073 task-queue markers, mirroring MissionState.render().
+  // Mission task-queue markers, mirroring MissionState.render().
   const MISSION_MARK = { pending: "·", active: "▶", verifying: "?", done: "✓", abandoned: "✗" };
 
-  // ADR-0074 three-tier reward verdict → bar colour band. The verdict text the
+  // Reward-verdict reporting: three-tier reward verdict → bar colour band. The verdict text the
   // reasoner stamps is the source of truth (no client-side threshold guessing):
   // "success=…" → ok, "ambiguous=…" → amber, anything else (not verified /
   // unverified) or an abandoned task → fail.
@@ -543,7 +543,7 @@
     return "band-fail";
   }
 
-  // ADR-0073 + ADR-0018 F4 — render the reasoner's active MISSION queue
+  // Render the reasoner's active MISSION task queue
   // (ordered subtasks, status, attempts, reward verdict) with the latest
   // ReasonerCore tick (tool / model / error) demoted to a footer line.
   // Empty-state until the first reasoner.tick span lands.

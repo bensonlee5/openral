@@ -1,4 +1,4 @@
-"""``libero_eef8d`` layout assembler (ADR-0027).
+"""``libero_eef8d`` layout assembler.
 
 Mirrors the LIBERO training-time 8-D **task-space** proprio state verbatim —
 verified against ``python/sim/src/openral_sim/backends/libero.py:219`` (the

@@ -21,13 +21,13 @@ inference: false
 
 <!--
   rSkill README — 3D Diffuser Actor (RLBench PerAct setup).
-  Discovery + provenance card; mirrors rskill.yaml. ADR-0062.
+  Discovery + provenance card; mirrors rskill.yaml.
 -->
 
 # rskill-3d-diffuser-actor-rlbench
 
 3D Diffuser Actor — a diffusion policy over end-effector **keyposes** for RLBench,
-running on the CoppeliaSim/PyRep RLBench benchmark backend (ADR-0062).
+running on the CoppeliaSim/PyRep RLBench benchmark backend.
 
 ## What this skill does
 
@@ -113,7 +113,7 @@ supervision).
 
 ```bash
 # One-time: provision CoppeliaSim 4.1.0 + PyRep + RLBench@peract + the checkpoint
-# in the py3.10 sidecar venv (see ADR-0062).
+# in the py3.10 sidecar venv.
 openral benchmark scene \
   --config scenes/benchmark/rlbench_open_drawer.yaml \
   --rskill rskills/3d-diffuser-actor-rlbench
@@ -121,13 +121,13 @@ openral benchmark scene \
 
 Inference VRAM peaks ~0.43 GB; runs comfortably on an 8 GB GPU. CoppeliaSim is
 proprietary (free EDU license) and is **never** vendored — it is an
-externally-provisioned dependency (CLAUDE.md §1.9 / ADR-0062).
+externally-provisioned dependency (CLAUDE.md §1.9).
 
 ## Evaluation
 
 [`eval/rlbench.json`](eval/rlbench.json) is the **full official protocol**
 result (`reproduced_locally: true`), produced by the canonical
-`openral benchmark run` (ADR-0009 PR D) on an 8 GB Ada host (2026-06-20) —
+`openral benchmark run` on an 8 GB Ada host (2026-06-20) —
 **25 episodes per task**, seeds 0–24, max 25 macro-keyposes:
 
 | Task | Success rate |
@@ -147,7 +147,7 @@ openral benchmark run --suite rlbench --rskill rskills/3d-diffuser-actor-rlbench
 > **Note on variance.** RLBench's sampling-based `EndEffectorPoseViaPlanning`
 > mover is non-deterministic, so per-task rates vary run-to-run; 3 of the 75
 > episodes hit a planner path-failure and are counted as failed episodes (the
-> sidecar handles them gracefully rather than aborting the run — ADR-0062).
+> sidecar handles them gracefully rather than aborting the run).
 > Per-task paper baselines (Ke et al., 2402.10885, Table 1) are intentionally
 > not transcribed into the artifact to avoid mis-citation.
 
@@ -164,4 +164,3 @@ uses `license: mit` for the consumer-visible weight/runtime posture.
 - `scenes/benchmark/rlbench_meat_off_grill.yaml`
 - `scenes/benchmark/rlbench_close_jar.yaml`
 - `benchmarks/rlbench.yaml`
-- ADR-0062 (private, OpenRAL/management)

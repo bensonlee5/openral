@@ -1,7 +1,7 @@
 schema_version: "0.1"
 name: "OpenRAL/rskill-topreward-qwen3vl-4b-nf4"
 version: "0.1.0"
-# rSkill packaging is Apache-2.0 (ADR-0012). The TOPReward *method* is MIT and
+# rSkill packaging is uniformly Apache-2.0. The TOPReward *method* is MIT and
 # the wrapped Qwen3-VL-4B-Instruct *weights* are themselves Apache-2.0
 # (Qwen/Qwen3-VL-4B-Instruct, license: apache-2.0), so redistributing a
 # quantized copy is fully permitted — the whole stack is Apache-2.0 / MIT.
@@ -11,7 +11,7 @@ kind: "reward"
 
 # Embodiment-agnostic: a reward monitor scores any rollout video + task
 # instruction and is exempt from the rSkill<->robot embodiment gate.
-embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard (ADR-0072)
+embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard
 
 # Consumes the same RGB camera stream the co-active VLA uses. No actuators.
 sensors_required:
@@ -66,7 +66,7 @@ paper_url: "https://arxiv.org/abs/2602.19313"
 # into a per-frame series by the same prefix sweep + per-window min-max
 # normalization used by lerobot's offline labeler (compute_rabc_weights).
 reward:
-  backend: "topreward"  # select the in-process TOPReward monitor (ADR-0057)
+  backend: "topreward"  # select the in-process TOPReward monitor
   progress_range: [0.0, 1.0]
   # Advisory bars on the normalized progress signal — TOPReward is zero-shot and
   # not physically calibrated, so these gate the trend, not a hard success verdict.
@@ -89,7 +89,7 @@ description: >
   instruction is given the rollout video, reading log P("True") as the signal.
   Per-frame progress (0-1) comes from lerobot's prefix sweep. Runs parallel to a
   VLA, queried on demand by the Reasoner. Advisory-only — never gates motors.
-  Embodiment-agnostic. ADR-0057.
+  Embodiment-agnostic.
 
 actions:
   - "monitor"

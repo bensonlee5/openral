@@ -12,7 +12,7 @@ eight-layer model in the project docs.
 - **License:** Apache-2.0
 
 > All OpenRAL workspace packages move in lockstep at `0.1.x` until the first
-> public release (ADR-0021).
+> public release.
 
 ## Usage
 

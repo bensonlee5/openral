@@ -1,5 +1,5 @@
 """Shared NF4 quantize + pre-quantized meta-load helpers for the Robometer
-reward scorer (ADR-0057). It does not import ``openral_sim._quantization``;
+reward scorer. It does not import ``openral_sim._quantization``;
 it re-implements the same NF4 rule
 (``nn.Linear`` with ``numel >= MIN_PARAMS`` -> ``bitsandbytes`` ``Linear4bit``
 nf4/bf16) plus a pre-quantized direct-load path.

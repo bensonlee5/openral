@@ -1,9 +1,9 @@
-"""Sim-only free-running idle stepper for deploy-sim (ADR-0034 amendment).
+"""Sim-only free-running idle stepper for deploy-sim.
 
 In ``openral deploy sim`` the MuJoCo env lives only in the HAL node via
 :class:`~openral_hal.sim_attached.SimAttachedHAL`, and ``env.step()`` runs only
 from ``send_action`` — reached only while a skill is executing. When idle the
-env froze, so camera frames went stale and the ADR-0035 perception /
+env froze, so camera frames went stale and the perception /
 object-detector bus saw a dead scene. :meth:`SimAttachedHAL.idle_step` advances
 the env one tick with a zero/HOLD action so cameras keep rendering.
 
@@ -208,7 +208,7 @@ def test_idle_step_suppressed_when_estop_latched_native_so101() -> None:
 def test_idle_step_resets_then_steps_after_episode_termination() -> None:
     """Terminated episode → idle_step does reset-then-zero-step (no raise; latch cleared).
 
-    Mirrors the ADR-0036 reset test for ``send_action``.
+    Mirrors the reset test for ``send_action``.
     """
     pytest.importorskip("openral_sim")
     pytest.importorskip("mujoco")
@@ -301,7 +301,7 @@ class _RecordingNode:
     def create_timer(
         self, period: float, callback: object, *, clock: object | None = None
     ) -> _RecordingTimer:
-        # Mirror rclpy's ``Node.create_timer`` surface: ADR-0048 Phase 2 passes a
+        # Mirror rclpy's ``Node.create_timer`` surface: passes a
         # SYSTEM_TIME ``clock=`` so the idle stepper runs on wall time. The fake
         # just has to accept (and ignore) it — the timer itself is recorded.
         return _RecordingTimer()

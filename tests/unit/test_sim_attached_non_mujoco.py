@@ -1,6 +1,6 @@
 """Unit tests: SimAttachedHAL is backend-agnostic for non-MuJoCo SimRollouts.
 
-ADR-0034 amendment (deploy sim with a non-MuJoCo backend, e.g. the Isaac Sim
+Amendment for deploy sim with a non-MuJoCo backend (e.g. the Isaac Sim
 sidecar). A `SimRollout` with no `mujoco_handles` must still drive
 `openral deploy sim`:
 

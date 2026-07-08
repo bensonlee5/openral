@@ -26,10 +26,10 @@ name: "so101_follower"
 embodiment_kind: "manipulator"
 
 base_frame: "base"
-# ADR-0030 — URDF for the offline collision-lowering tool (geometry + joint FK).
+# URDF for the offline collision-lowering tool (geometry + joint FK).
 # robot_descriptions ships a real URDF for the SO-ARM101. No SRDF with matching
 # link names, so the ACM uses the conservative sampling fallback.
-# ADR-0058 — unified asset block (URDF / MJCF).
+# Unified asset block (URDF / MJCF).
 assets:
   urdf:
     ref: "file:so101_follower.urdf"
@@ -104,8 +104,9 @@ joints:
     velocity_limit: 4.5
     effort_limit: 3.35
     actuator_kind: "servo"
-    # ADR-0071 — tag the gripper joint (was role: unknown) so the runner /
-    # dataset bridge identify it structurally, matching so100_follower. The
+    # Per the gripper/task-space joint-role convention, tag the gripper joint
+    # (was role: unknown) so the runner / dataset bridge identify it structurally,
+    # matching so100_follower. The
     # gripper is one of the 6 enumerated joints (not a separate channel).
     role: "gripper"
 
@@ -124,13 +125,14 @@ end_effectors:
 # ``so101_box`` sim scene routes the in-scene OAK-D Pro overhead
 # stream into ``observation.images.camera1`` and the MJCF wrist
 # camera into ``observation.images.camera2`` (the ``vla_feature_key``
-# values stay camera1/2 since they are checkpoint-frozen per ADR-0070).
+# values stay camera1/2 since they are checkpoint-frozen per the canonical
+# HAL-facing sensor-naming convention).
 sensors:
   - name: "top"
     modality: "rgb"
     frame_id: "world"
     rate_hz: 30.0
-    # ADR-0065 — sim placement for the overhead OAK-D Pro. The generic HAL
+    # Per the sim camera-placement convention — sim placement for the overhead OAK-D Pro. The generic HAL
     # camera rig splices this `top` camera into the bare SO-101 MJCF for
     # `deploy sim` (the upstream arm ships zero cameras, issue #88), world-fixed
     # above the arm's workspace looking straight down. Poses are in metres
@@ -160,7 +162,7 @@ sensors:
     frame_id: "wrist_camera"
     parent_frame: "gripper"
     rate_hz: 30.0
-    # ADR-0065 — sim placement for the wrist camera, matching the real lerobot
+    # Per the sim camera-placement convention — sim placement for the wrist camera, matching the real lerobot
     # SO-101 phone-on-bracket rig (Cornito/so101_test2): mounted on the static
     # finger face (~60 mm out along the face normal + ~35 mm toward the
     # fingertips) and rolled 180° (`up: [0, 0, -1]`, the phone is inverted) so
@@ -213,7 +215,7 @@ safety:
   max_torque_nm: 3.35
   deadman_required: true
   contact_force_threshold_n: 5.0
-  # ADR-0081 — the SO-101 operates in light SELF-CONTACT across the pen VLA's
+  # Per the SO-101 negative self-collision-margin safety exception — the SO-101 operates in light SELF-CONTACT across the pen VLA's
   # compact folded envelope: the true (fcl non-convex) link clearance is ≈ 0
   # everywhere the arm works, so a geometric self-collision check cannot cleanly
   # separate safe grazing from harmful pressing — the *real* self-contact
@@ -228,13 +230,13 @@ safety:
   self_collision_margin_m: -0.06
 
 sdk_kind: "open"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # sim: null → derive MujocoArmHAL.from_description from the `sim:` block below.
 # real: the SO-101 reuses the SO-100 lerobot Feetech follower verbatim.
 hal:
   sim: null
   real: "openral_hal.so100_follower:SO100FollowerHAL"
-  # ADR-0029 — real-HAL construction defaults threaded by build_hal so the
+  # Real-HAL construction defaults threaded by build_hal so the
   # manifest-driven lifecycle node needs no bespoke `port` ROS parameter.
   parameters:
     defaults:
@@ -267,7 +269,8 @@ action_spec:
   representation: "joint_positions"
   control_freq_hz: 30.0
 
-# Hand-authored OBB (box) collision model (ADR-0081 / issue #84). Every link is
+# Hand-authored OBB (box) collision model, part of the SO-101 negative
+# self-collision-margin safety exception above (issue #84). Every link is
 # a tight oriented box fit to the link-frame mesh (PCA extents), NOT a capsule:
 # the SO-101 links are rectangular 3D-printed brackets, so a capsule's circular
 # cross-section over-reports clearance by ~7-9 cm at the arm's compact folded

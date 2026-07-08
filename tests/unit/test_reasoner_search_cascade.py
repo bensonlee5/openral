@@ -1,4 +1,4 @@
-"""Regression guard for the ADR-0039 §3 active-search cascade bound.
+"""Regression guard for the active-search cascade bound.
 
 The find→re-prompt cascade (recall_object → escalate locate_in_view → re-prompt)
 is bounded by ``SearchProgress``: after ``max_attempts`` consecutive lookups the

@@ -1,4 +1,4 @@
-"""End-to-end tests for :class:`DetectorRunner` (ADR-0037 integration).
+"""End-to-end tests for :class:`DetectorRunner`.
 
 These are **live** tests — no mocks, no stubs, per CLAUDE.md §1.11.
 

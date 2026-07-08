@@ -1,6 +1,6 @@
 # `openral_reasoner_ros`
 
-ROS 2 lifecycle wrapper for the OpenRAL S2 reasoner (ADR-0018 F4).
+ROS 2 lifecycle wrapper for the OpenRAL S2 reasoner.
 
 ## What it does
 
@@ -13,7 +13,7 @@ Subscribes to:
 - `/openral/perception/{motion,objects,ocr,scene_change}` (`openral_msgs/PromptStamped`)
 - `/openral/prompt` (`openral_msgs/PromptStamped`)
 
-Per the ADR-0018 amendment of 2026-05-25 the reasoner is
+Since the 2026-05-25 amendment the reasoner is
 **event-driven** with a slow heartbeat. The periodic timer ticks at
 `tick_hz` (default 0.2 Hz = one every 5 s; was 5 Hz pre-amendment).
 Event preemption is the primary trigger:
@@ -23,7 +23,7 @@ Event preemption is the primary trigger:
   on `severity ≥ SEVERITY_FAIL`.
 - `/openral/prompt` (Tier D) always preempts.
 
-All preemptions are subject to the 100 ms min-interval per ADR-0018 §4.
+All preemptions are subject to the 100 ms min-interval.
 Heartbeat ticks that see no new event since the last successful tick
 are short-circuited inside `ReasonerCore` with
 `suppressed_reason="heartbeat_idle"`.
@@ -40,7 +40,7 @@ Each tick the LLM picks one of four typed tool calls
 
 The reasoner **never** publishes `openral_msgs/ActionChunk` — actuation
 authority lives behind the F1 action server + the F5 safety boundary
-(ADR-0018 §4 "Holds no authority over actuation").
+("Holds no authority over actuation").
 
 ## LLM provider
 
@@ -172,7 +172,7 @@ brief alone.
 ## Baseline LLM (recommended configurations)
 
 The reasoner is event-driven with a 0.2 Hz heartbeat (one tick every
-5 s) per the ADR-0018 amendment of 2026-05-25; it sees no pixels and
+5 s) since the 2026-05-25 amendment; it sees no pixels and
 picks exactly one of four typed tool calls per tick from a small
 palette. This is a constrained tool-use task — a small instruction-
 tuned model with reliable function-calling is plenty. Three baselines:
@@ -265,12 +265,12 @@ Each `ReasonerCore.tick` opens an OTel span named `reasoner.tick`
 | `reasoner.rskill_id` | When tool=`execute_skill` | Skill id the LLM chose. |
 | `reasoner.suppressed_reason` | Suppressed ticks | One of `palette_empty` / `retry_cap` / `heartbeat_idle`. The `min_interval` and `heartbeat_idle` short-circuits fire BEFORE the span opens (so dashboards don't show noise). |
 | `reasoner.tier` | Always | Trigger tier that drove this call: `A` (safety), `B` (replan: hal/sensor/rskill/wam), `C` (critic), `D` (operator/perception), or `heartbeat`. |
-| `reasoner.mission_json` | When a mission is active (ADR-0073) | `MissionState.to_summary()` JSON — the ordered task queue (id/text/status/attempts/verdict) the live dashboard renders as the Mission card checklist. Absent on bare-goal deploys. |
+| `reasoner.mission_json` | When a mission is active | `MissionState.to_summary()` JSON — the ordered task queue (id/text/status/attempts/verdict) the live dashboard renders as the Mission card checklist. Absent on bare-goal deploys. |
 | `reasoner.error_kind` | Provider failure | `ROSPlanningError` subclass name; an `exception` event is added to the span. |
 
 The active W3C `traceparent` captured inside this span is threaded
 through onto the outbound `EmitPromptTool` `PromptStamped.metadata_json`
-(per ADR-0018 §6) so the F7 bag↔OTel correlator can join the
+so the F7 bag↔OTel correlator can join the
 published prompt back to the producing tick.
 
 Spans are emitted via `opentelemetry-sdk` — no provider installed
@@ -280,7 +280,7 @@ a no-op (cost <1 µs). The
 provider so the round-trip can be observed end-to-end inside the
 deploy image.
 
-## CLAUDE.md amendment (ADR-0018 §9)
+## CLAUDE.md amendment
 
 The §3 dual-system pattern wording was amended in the same PR that
 introduced this package to specify **direct typed `ReasonerToolCall`
@@ -289,6 +289,5 @@ typed tool call per tick and the node routes it onto the ROS graph.
 
 ## See also
 
-- ADR-0018 — graph contract (incl. the F4 dispatch decisions).
 - [`openral_reasoner.core`](../../python/reasoner/src/openral_reasoner/core.py) — transport-agnostic orchestrator.
 - [`packages/openral_prompt_router`](../openral_prompt_router/) — F10 prompt fan-in.

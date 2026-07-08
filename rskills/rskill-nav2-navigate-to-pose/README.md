@@ -21,8 +21,7 @@ inference: false
 > `/cmd_vel` directly to the base controller; no `Action` chunk flows
 > through OpenRAL's safety supervisor.
 
-This package uses `kind: ros_action` (see
-ADR-0024) with
+This package uses `kind: ros_action` with
 `ros_integration.result_trajectory_field: null` to put the
 [`ROSActionRskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py)
 adapter into result-only mode: it sends the goal, awaits the action
@@ -72,8 +71,9 @@ in a per-deployment copy for real targets.
 `/openral/candidate_action`, so the OpenRAL safety supervisor does NOT
 see Nav2's velocity commands. Collision avoidance relies entirely on
 Nav2's costmap + behaviour tree. The follow-up that brings velocity
-streams under the supervisor's envelope is tracked in ADR-0024's
-§Out-of-scope and depends on (a) a mobile-base HAL declaring
+streams under the supervisor's envelope is tracked as an explicit
+out-of-scope item for the ROS-wrapped rSkills design and depends on
+(a) a mobile-base HAL declaring
 `body_twist` in `supported_control_modes` (none exist in-tree today),
 and (b) a velocity / jerk envelope landing in the supervisor (it
 currently checks per-joint position only).
@@ -162,7 +162,8 @@ ros2 action send_goal /openral/execute_skill openral_msgs/action/ExecuteSkill \
 ## Limitations / Roadmap
 
 - **Velocity stream bypasses the OpenRAL safety supervisor.** Nav2
-  publishes `/cmd_vel` directly. See ADR-0024 §Out-of-scope.
+  publishes `/cmd_vel` directly. This is a tracked out-of-scope item
+  for the ROS-wrapped rSkills design.
 - **Goal hard-coded in the manifest.** v1 ships one goal per
   manifest; structured-prompt support is the next ADR.
 - **No mobile-base HAL in-tree.** Until one lands, the skill resolves
@@ -173,13 +174,12 @@ ros2 action send_goal /openral/execute_skill openral_msgs/action/ExecuteSkill \
 The rSkill package itself (this manifest + README) is **Apache-2.0**.
 The wrapped Nav2 code (`nav2_msgs` IDL, `navigation2` planners) is
 **Apache-2.0** and lives outside this repository — installed via
-`ros-${ROS_DISTRO}-nav2-bringup`. Per
-ADR-0012 both postures
+`ros-${ROS_DISTRO}-nav2-bringup`. Both postures
 are commercial-use-permissive.
 
 ## See also
 
-- ADR-0024 — ROS-wrapped rSkills
+- ROS-wrapped rSkills
 - [`openral_rskill.ros_action_rskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py) — adapter source
 - [`rskills/rskill-moveit-joints/`](../rskill-moveit-joints/) — sibling MoveIt wrapper (trajectory mode)
 - [CLAUDE.md §3 — Architecture Discipline](../../CLAUDE.md)

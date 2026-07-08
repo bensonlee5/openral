@@ -303,7 +303,7 @@ class UR5eHAL(MujocoArmHAL):
     """HAL adapter for the Universal Robots UR5e (MuJoCo-backed simulation).
 
     Thin manifest-driven wrapper — every wiring constant lives in
-    :data:`UR5e_DESCRIPTION.sim` (ADR-0023).
+    :data:`UR5e_DESCRIPTION.sim`.
 
     Args:
         mjcf_path: Optional override for the MJCF file path.  When ``None``,
@@ -346,7 +346,7 @@ class UR10eHAL(MujocoArmHAL):
 
     Args mirror :class:`UR5eHAL`; the only difference is the underlying MJCF
     and ``RobotDescription`` (different velocity / effort envelopes), both of
-    which now live in :data:`UR10e_DESCRIPTION` (ADR-0023).
+    which now live in :data:`UR10e_DESCRIPTION`.
 
     Example:
         >>> from openral_hal import UR10eHAL  # doctest: +SKIP

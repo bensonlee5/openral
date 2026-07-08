@@ -330,7 +330,7 @@ G1_DESCRIPTION = RobotDescription(
     hal=HalEntrypoints(sim="openral_hal.g1:G1MujocoHAL", real=None),
     # Floating-base humanoid — qpos is offset by 7 (3 position + 4 quaternion);
     # qvel is offset by 6 (3 linear vel + 3 angular vel).  ``MujocoArmHAL``
-    # derives both offsets from ``floating_base=True`` (ADR-0023).
+    # derives both offsets from ``floating_base=True``.
     assets=AssetRefs(
         urdf=UrdfAsset(ref="rd:g1_description"),
         mjcf="rd:g1_mj_description",
@@ -396,7 +396,7 @@ class G1MujocoHAL(MujocoArmHAL):
         """Initialise the G1 HAL; no MuJoCo state is created until ``connect()``.
 
         All wiring (MJCF URI, floating-base offsets) lives in
-        :data:`G1_DESCRIPTION.sim` (ADR-0023).
+        :data:`G1_DESCRIPTION.sim`.
         """
         self._init_from_description(
             G1_DESCRIPTION,

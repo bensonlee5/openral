@@ -5,20 +5,20 @@ Public surface:
   ``WorldState`` Pydantic snapshots at up to 30 Hz.
 - ``DEFAULT_RATE_HZ``: Advertised default snapshot rate.
 - ``DEFAULT_STALENESS_S``: Default staleness threshold in seconds.
-- ``SpatialMemory``: ADR-0038 persistent object-centric scene-graph memory —
+- ``SpatialMemory``: persistent object-centric scene-graph memory —
   accumulates ``WorldState.detected_objects`` and answers ``RecallObjectQuery`` /
   ``ResolvePlaceQuery``.
 - ``compute_approach_viewpoint``: camera-facing standoff-pose helper.
-- ``look_at_quat_wxyz`` / ``compute_gaze_pose``: ADR-0044 shared gaze geometry
+- ``look_at_quat_wxyz`` / ``compute_gaze_pose``: shared gaze geometry
   (look-at rotations per camera convention; the ``rskill-moveit-look-at`` goal pose).
-- ``OccupancyGridIndex`` / ``refine_approach_pose``: ADR-0044 occupancy-grid
+- ``OccupancyGridIndex`` / ``refine_approach_pose``: occupancy-grid
   queries + approach-pose snapping (free cell + line-of-sight; planning-layer,
   not a safety surface).
-- ``OpenClipEmbedder`` / ``TextEmbedder``: ADR-0038 §5 open-vocab text embedder
+- ``OpenClipEmbedder`` / ``TextEmbedder``: open-vocab text embedder
   (OpenCLIP ViT-B/32, MIT) — optional, ``uv sync --group clip``.
 - ``emit_scene_objects_span`` / ``scene_objects_payload``: publish the remembered
   object nodes as a ``world.scene_objects`` OTel span for the dashboard.
-- ``VoxelFrustumLifter`` / ``ObjectMemory`` / lift helpers (ADR-0035):
+- ``VoxelFrustumLifter`` / ``ObjectMemory`` / lift helpers:
   lift 2D detections to 3D object centres and remember them with IoU gating.
 """
 

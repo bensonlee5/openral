@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 — testable core of the OctoMap → OccupancyVoxels bridge: rasterize
+// Testable core of the OctoMap → OccupancyVoxels bridge: rasterize
 // an octree into a dense, base-frame occupancy grid the safety kernel can
 // ingest.
 

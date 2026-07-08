@@ -2,7 +2,7 @@
 
 These tests require two physical Trossen ViperX 300 arms wired through the
 Interbotix XS SDK + a running ``interbotix_xsarm_control`` ROS 2 launch
-(bringing up four ros2_control controllers per CLAUDE.md / ADR-0007).
+(bringing up four ros2_control controllers per CLAUDE.md).
 They must not run in standard CI.  Gated by the ``[self-hosted, lab-aloha]``
 runner label.
 

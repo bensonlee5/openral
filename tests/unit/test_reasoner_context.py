@@ -1,4 +1,4 @@
-"""Unit tests for :class:`openral_reasoner.ContextRenderer` (ADR-0018 F4).
+"""Unit tests for :class:`openral_reasoner.ContextRenderer`.
 
 Real Pydantic schemas + real ContextRenderer — no mocks. Tests assert
 deterministic rendering, rolling-buffer behaviour, and the drain-once
@@ -242,7 +242,7 @@ def test_perception_buffer_renders_per_kind() -> None:
 
 
 def test_high_priority_prompt_overtakes_queued_auto_prompts() -> None:
-    """ADR-0018 §3.F10 — a human-source prompt drains before queued auto-prompts."""
+    """A human-source prompt drains before queued auto-prompts."""
     r = ContextRenderer()
     # Auto cascade priority 10 (the reasoner's own EmitPromptTool cascade).
     r.append_prompt(
@@ -356,7 +356,7 @@ def test_render_is_deterministic_for_identical_input() -> None:
     assert r1.render(world_state=_world_state()) == r2.render(world_state=_world_state())
 
 
-# ── ADR-0018 amendment 2026-05-25 §2 — seq counter for heartbeat_idle ────────
+# ── seq counter for heartbeat_idle suppression ────────────────────────────────
 
 
 def test_seq_increments_on_every_append() -> None:
@@ -404,7 +404,7 @@ def test_seq_is_not_reset_by_drain_prompts() -> None:
     assert r.seq == seq_before
 
 
-# ── ADR-0073 §1 — mission (## MISSION) rendering ─────────────────────────────
+# ── mission (## MISSION) rendering ────────────────────────────────────────────
 
 
 def test_no_mission_omits_section() -> None:
@@ -478,7 +478,7 @@ def test_mission_finishes_when_last_task_completed() -> None:
 
 
 def _in_view() -> ObjectsMetadata:
-    """A camera-space ObjectsMetadata with stable det_ids (ADR-0076)."""
+    """A camera-space ObjectsMetadata with stable det_ids."""
     return ObjectsMetadata(
         sensor_id="top",
         model_id="omdet-turbo-indoor",
@@ -496,7 +496,7 @@ def _in_view() -> ObjectsMetadata:
 
 
 def test_in_view_line_rendered_in_world_state() -> None:
-    """ADR-0076 — set_in_view surfaces a camera-space `in_view[<cam>]` line with ids+px."""
+    """set_in_view surfaces a camera-space `in_view[<cam>]` line with ids+px."""
     r = ContextRenderer()
     r.set_in_view(_in_view())
     out = r.render(world_state=_world_state())
@@ -536,7 +536,7 @@ def _located_basket() -> ObjectsMetadata:
 
 
 def test_note_located_survives_continuous_in_view_clobber() -> None:
-    """ADR-0076 — the deploy locate-loop fix: a goal noun the reasoner confirmed via
+    """The deploy locate-loop fix: a goal noun the reasoner confirmed via
     open-vocab locate_in_view (``basket``) must persist on the ``located`` line even
     after the fixed-vocab continuous detector overwrites ``in_view`` (which never
     carries ``basket``), so the LLM can decompose/dispatch instead of re-locating."""

@@ -1,11 +1,11 @@
-"""ADR-0076 — camera-space 2D detection tracker.
+"""Camera-space 2D detection tracker.
 
-Pure, ROS-free, stateful. The 2D analog of ADR-0035's :class:`ObjectMemory`:
+Pure, ROS-free, stateful. The 2D analog of :class:`ObjectMemory`:
 assigns a **stable per-camera `det_id`** to each :class:`ObjectDetection2D` by
 greedy same-label 2D-AABB IoU association across frames, so an object can be
 referred to and de-duplicated **even when the 3D lift cannot run** (RGB-only / no
 depth). One tracker instance per camera; identity is camera-space, not a world
-entity. The id is propagated into the 3D path by the lift (ADR-0076 §3), so a
+entity. The id is propagated into the 3D path by the lift, so a
 physical object keeps one id with or without depth.
 """
 
@@ -58,7 +58,7 @@ class _Track2D:
 
 
 class DetectionTracker2D:
-    """Stateful 2D-IoU tracker assigning stable ``det_id``s (ADR-0076).
+    """Stateful 2D-IoU tracker assigning stable ``det_id``s.
 
     Args:
         iou_threshold: Minimum 2D AABB IoU (same label) to associate a detection

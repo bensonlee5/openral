@@ -65,7 +65,7 @@ _SEVERITY_ERROR_MIN = 17
 _SEVERITY_WARN_MIN = 13
 _SEVERITY_INFO_MIN = 9
 
-# ADR-0018 F7 — query-time bag↔OTel join. Cap memory: keep at most
+# Query-time bag↔OTel join. Cap memory: keep at most
 # _TRACE_INDEX_MAX_TRACES distinct trace_ids and _TRACE_INDEX_MAX_SPANS
 # spans per trace. Old traces evict in arrival order.
 _TRACE_INDEX_MAX_TRACES = 64
@@ -354,7 +354,7 @@ class TelemetryStore:
         # as a dedicated card. Latched/static keys (run mode, robot
         # model, skill id, kernel) live in :attr:`_identity`; everything
         # high-frequency lives under :attr:`_topics` keyed by topic name.
-        # ADR-0018 F7: bounded per-trace span index. Ordered dict so
+        # Bounded per-trace span index (bag↔OTel replay). Ordered dict so
         # eviction is FIFO on first-seen trace_id; each value is a deque
         # capped by _TRACE_INDEX_MAX_SPANS.
         self._spans_by_trace: dict[str, deque[_IndexedSpan]] = {}
@@ -370,21 +370,21 @@ class TelemetryStore:
             # E-STOP control while running and Reset e-stop while latched.
             "safety": {"checks": {}, "estopped": False},  # check_name -> {..., severity, ts}
             "system": {},  # populated by metrics ingest (gpu/cpu/ram)
-            # ADR-0025 — live 2D occupancy map from slam_toolbox (and any
+            # Live 2D SLAM occupancy map from slam_toolbox (and any
             # future Reasoner-managed mapping service). Populated by
             # ``slam.occupancy_grid`` spans emitted by
             # ``openral_runner.slam_bridge.SlamMapBridge``.
             "slam": {},
-            # ADR-0030 — robot-perspective octomap pointcloud render.
+            # Robot-perspective octomap pointcloud render.
             # Populated by ``world.pointcloud`` spans emitted by
             # ``openral_runner.world_cloud_bridge.WorldCloudBridge``.
             "pointcloud": {},
-            # ADR-0038 — durable spatial-memory objects (table card + map
+            # Durable spatial-memory scene-object graph (table card + map
             # overlay). Populated by ``world.scene_objects`` spans emitted by
             # ``openral_world_state.emit_scene_objects_span`` (the Reasoner's
             # preloaded map today; the World-State node post-producer).
             "scene_objects": {},
-            # ADR-0018 F4 — last Reasoner tick (one entry per
+            # Last Reasoner tick (one entry per
             # `reasoner.tick` span emitted by `ReasonerCore.tick`).
             # The dashboard "Reasoner" card reads this to show the
             # latest tool decision; the Event Log carries the full
@@ -576,7 +576,7 @@ class TelemetryStore:
         if trace_id_hex:
             self._topics["trace"]["latest_trace_id"] = trace_id_hex
             self._topics["trace"]["latest_ts_unix"] = ts_unix
-            # ADR-0018 F7: index full spans by trace_id for `openral replay`.
+            # Index full spans by trace_id for `openral replay` (bag↔OTel replay).
             self._index_span(span, trace_id_hex, ts_unix, attrs)
 
         # Always append a one-line event so the operator sees the
@@ -805,7 +805,7 @@ class TelemetryStore:
                     entry["thumbnail_jpeg_b64"] = existing["thumbnail_jpeg_b64"]
             per_camera[source] = entry
         elif span_name == "slam.occupancy_grid":
-            # ADR-0025 — live 2D occupancy map from slam_toolbox.
+            # Live 2D SLAM occupancy map from slam_toolbox.
             # Bridge emits one span per /map message (1 Hz throttled
             # in `openral_runner.slam_bridge.SlamMapBridge`).
             self._topics["slam"].update(
@@ -830,7 +830,7 @@ class TelemetryStore:
                 }
             )
         elif span_name == "world.pointcloud":
-            # ADR-0030 — robot-frame octomap pointcloud render (one span per
+            # Robot-frame octomap pointcloud render (one span per
             # accepted cloud, throttled in
             # ``openral_runner.world_cloud_bridge.WorldCloudBridge``).
             self._topics["pointcloud"].update(
@@ -844,7 +844,7 @@ class TelemetryStore:
                 }
             )
         elif span_name == "world.scene_objects":
-            # ADR-0038 — durable spatial-memory objects. One span per emit
+            # Durable spatial-memory scene-object graph. One span per emit
             # (0.2 Hz from the Reasoner's preloaded map today). ``objects`` is a
             # decoded list of {id,label,x,y,z,frame_id,confidence,
             # last_seen_ns,observation_count,is_container} dicts.
@@ -943,7 +943,7 @@ class TelemetryStore:
     ) -> None:
         """Stash the latest ``reasoner.tick`` attributes for the dashboard card.
 
-        ADR-0018 F4 — :meth:`openral_reasoner.ReasonerCore.tick` emits one
+        :meth:`openral_reasoner.ReasonerCore.tick` emits one
         of these spans per orchestrator pass via
         :func:`openral_observability.reasoner_span`. The dashboard's
         Reasoner card reads the slot this writes (the Event Log carries
@@ -1184,7 +1184,7 @@ _HEADLINE_FAMILIES: dict[str, str] = {
     "rskill.configure": "rskill_configure",
     "rskill.chunk_inference": "inference",
     "safety.check": "safety",
-    # ADR-0057 — reward monitor assessment (query or critic tick); the rSkill
+    # Reward monitor assessment (query or critic tick); the rSkill
     # card renders the latest progress/success as a colour-banded bar.
     "reward.score": "reward_score",
     "hal.send_action": "hal_send_action",
@@ -1205,7 +1205,7 @@ _COUNTED_EVENTS = frozenset(
         "openral.event.deadline_missed",
         "openral.event.sensor_stale",
         "openral.event.action_dropped",
-        # ADR-0074/0077 — Reasoner-published skill failures (vram_insufficient,
+        # Reasoner-published skill failures (vram_insufficient,
         # reward_plateau, unavailable, timeout, aborted). Tallied so the
         # dashboard's "skill failures" counter makes a failing run obvious.
         "openral.event.skill_failure",

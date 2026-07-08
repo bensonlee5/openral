@@ -8,8 +8,8 @@ name: "OpenRAL/rskill-rldx1-ft-simpler-widowx-nf4"
 version: "0.1.0"
 license: "rlwrld_non_commercial"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
-# ADR-0060: this is the SIMPLER WidowX carrot-on-plate finetune, so the
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+# Task-data gate: this is the SIMPLER WidowX carrot-on-plate finetune, so the
 # benchmark runner accepts the simpler_env/widowx_carrot_on_plate scene.
 evaluated_tasks: ["simpler_env/widowx_carrot_on_plate"]
 
@@ -50,7 +50,7 @@ state_contract:
   # (x/y/z + bridge-rotation-corrected roll/pitch/yaw + pad + gripper),
   # 1 video stream (video.image_0), 7-D delta-EEF + binary gripper
   # action. Drives the openral rldx adapter's simpler_widowx layout —
-  # see python/sim/src/openral_sim/policies/rldx.py and ADR-0014.
+  # see python/sim/src/openral_sim/policies/rldx.py.
   layout: "simpler_widowx"
   dim: 8
 
@@ -70,7 +70,7 @@ description: >
   RLDX-1 fine-tuned on the SIMPLER WidowX benchmark. Shares the rldx
   sidecar runtime. Non-commercial license.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -81,9 +81,9 @@ objects:
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
-# ADR-0028a — ``representation: delta_ee_6d_plus_gripper`` declares the
+# ``representation: delta_ee_6d_plus_gripper`` declares the
 # structural truth (matches the line 50 wire-schema comment): 6 cartesian
 # deltas + 1 binary gripper, NOT 7 joint positions. Without this the
 # invariant test reads ``kind: joint_position`` + no representation

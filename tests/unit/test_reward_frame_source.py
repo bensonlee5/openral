@@ -1,4 +1,4 @@
-"""Unit tests for the reward-monitor rolling frame buffer (ADR-0057).
+"""Unit tests for the reward-monitor rolling frame buffer.
 
 Pure-Python, no ROS / torch / GPU — exercises the node-side windowing the
 Robometer reward monitor relies on.

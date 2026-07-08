@@ -1,4 +1,4 @@
-"""Unit tests for ADR-0018 2026-05-25 amendment: trigger-tier observability.
+"""Unit tests for the 2026-05-25 amendment: trigger-tier observability.
 
 The full Tier-A/B/C/D preemption flow (callbacks driving the LLM)
 lives in ``tests/integration/test_reasoner_node_end_to_end.py``

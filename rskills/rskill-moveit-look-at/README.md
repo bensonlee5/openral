@@ -21,8 +21,8 @@ inference: false
 
 # rskill-moveit-look-at
 
-Aim a robot-mounted camera at a 3-D point (ADR-0044 Phase 3; renamed from
-`openral/rskill-look-at` under ADR-0054).
+Aim a robot-mounted camera at a 3-D point (renamed from
+`openral/rskill-look-at` as part of the MoveIt goal-builder rename).
 
 A `kind: ros_action` rSkill wrapping `moveit_msgs/action/MoveGroup` — like
 [`rskill-moveit-joints`](../rskill-moveit-joints/), but the goal is a
@@ -35,7 +35,7 @@ pose constraints.
 Given a target point and a camera name, plans a collision-aware arm motion
 that points the named camera's optical axis at the target — so a later
 perception query (`locate_in_view`) or manipulation skill sees the object
-framed. It is the "look" rung of the ADR-0044 *recall → navigate → look →
+framed. It is the "look" rung of the *recall → navigate → look →
 verify → manipulate* ladder.
 
 ## How it works
@@ -68,7 +68,7 @@ bypass the kernel and double-drive the arm.
 
 ### Observation → action contract
 
-Input is the ADR-0026 `goal_params_json` `look_at` block; output is a joint
+Input is the `goal_params_json` `look_at` block; output is a joint
 trajectory replayed one waypoint per `step()` as a 1-row `JOINT_POSITION`
 `Action` chunk.
 
@@ -80,7 +80,7 @@ Planner settings (`request.group_name`, scaling, attempts) are inherited from
 `default_goal_json`. Omit `standoff_m` to re-aim in place; set it to also move
 the camera to that distance from the target.
 
-### GPU-accelerated planning (cuMotion, ADR-0065)
+### GPU-accelerated planning (cuMotion)
 
 On a host that clears the cuMotion GPU floor (`RobotCapabilities.supports_cumotion()`
 — Ampere+, CUDA ≥ 13, ~8 GB VRAM), the runner sets
@@ -184,7 +184,7 @@ ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill 
 - **Reachability is the planner's call.** Roll about the optical axis is left
   free, but a target outside the arm's dexterous workspace simply fails to
   plan — there's no base-repositioning fallback here (that's the navigate rung
-  of the ladder, ADR-0044 Phase 4).
+  of the ladder).
 - **Single-camera aim.** One camera per dispatch; multi-camera coverage is a
   reasoner-level concern.
 - **No velocity / jerk bound at the supervisor.** Same posture as
@@ -195,14 +195,13 @@ ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill 
 
 The rSkill package itself (this manifest + README) is **Apache-2.0**. The
 wrapped MoveIt code (`moveit_msgs` IDL, `moveit2` planners) is **BSD-3-Clause**
-and is installed via `ros-${ROS_DISTRO}-moveit`, outside this repository. Per
-ADR-0012 both postures are
-commercial-use-permissive.
+and is installed via `ros-${ROS_DISTRO}-moveit`, outside this repository. Both
+postures are commercial-use-permissive.
 
 ## See also
 
-- ADR-0054 — MoveIt goal-builder library + rskill-moveit-* rename
-- ADR-0044 — look_at skill + grid-refined approach
+- MoveIt goal-builder library + rskill-moveit-* rename
+- look_at skill + grid-refined approach
 - [`openral_rskill.look_at_rskill`](../../python/rskill/src/openral_rskill/look_at_rskill.py) — adapter source
 - [`openral_world_state.geometry`](../../python/world_state/src/openral_world_state/geometry.py) — gaze math
 - [`rskills/rskill-moveit-joints/`](../rskill-moveit-joints/) — sibling joint-space MoveIt wrapper

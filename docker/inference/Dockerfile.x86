@@ -1,6 +1,6 @@
 # OpenRAL inference deploy image — x86_64 + CUDA 13 + ROS 2 Jazzy + GStreamer.
 #
-# **Single supported deployment surface.** ADR-0010 amendment
+# **Single supported deployment surface.** The
 # "Single-Dockerfile consolidation + CUDA-13/DeepStream-9 alignment"
 # (current-date) replaces the four-file matrix that PR #93 shipped
 # (`Dockerfile.x86`, `Dockerfile.x86-ros`, `Dockerfile.x86-deepstream`,
@@ -11,11 +11,11 @@
 #   * CPU-only — out of scope; the runtime always assumes an NVIDIA
 #     CUDA-13-capable host (driver ≥ 580).
 #   * No-ROS variant — out of scope; ROS 2 Jazzy is baked in because
-#     `openral_runner`'s ROS-tee branch (ADR-0010 PR I/4) is now
-#     part of the default deployment.
+#     `openral_runner`'s ROS-tee branch is now part of the default
+#     deployment.
 #
 # DeepStream + the TensorRT/NVMM zero-copy fast path are an OpenRAL Pro
-# plugin (ADR-0083), not part of this image. `openral-pro` ships its own
+# plugin, not part of this image. `openral-pro` ships its own
 # `docker/Dockerfile.pro`, which `FROM`s the image this file builds and
 # layers the DeepStream SDK + `--group tensorrt` on top — see that repo
 # for the EULA-gated build (the DeepStream SDK EULA §2.c forbids
@@ -44,7 +44,7 @@
 #       openral:x86-latest \
 #       run --config scenes/deploy/<your-workcell>.yaml
 #
-# `deploy run` is real-hardware only (ADR-0031): a DeployScene config
+# `deploy run` is real-hardware only: a DeployScene config
 # under `scenes/deploy/` + a connected robot are required.
 #
 # `--network host` is recommended when the workspace publishes on a DDS
@@ -132,7 +132,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-${ROS_DISTRO}-launch-testing-ros \
         ros-${ROS_DISTRO}-rosidl-default-generators \
         ros-${ROS_DISTRO}-rosidl-default-runtime \
-        # ADR-0024 / ADR-0025 — wrapped-ROS rSkills + lifecycle peers.
+        # Wrapped-ROS rSkills + lifecycle peers.
         # moveit + moveit-resources-panda: needed by the in-tree
         # ``rskills/rskill-moveit-joints/`` ros_action skill plus its
         # integration test (``tests/integration/test_moveit_joints_franka.py``)
@@ -144,7 +144,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-${ROS_DISTRO}-moveit-resources-panda-moveit-config \
         # Optional GPU planner: add the NVIDIA Isaac ROS apt repo and
         # `ros-${ROS_DISTRO}-isaac-ros-cumotion-moveit` to enable CUDA-accelerated
-        # MoveIt planning (ADR-0065). Auto-selected per-request via
+        # MoveIt planning. Auto-selected per-request via
         # supports_cumotion(); MoveIt falls back to OMPL when absent. See
         # docs/contributing/toolchain.md → "GPU motion planning — cuMotion".
         # nav2 + nav2-msgs: the IDL for the
@@ -153,7 +153,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # actually plan when a /map exists.
         ros-${ROS_DISTRO}-nav2-bringup \
         ros-${ROS_DISTRO}-nav2-msgs \
-        # slam_toolbox: ADR-0025 first concrete Reasoner-managed
+        # slam_toolbox: the first concrete Reasoner-managed
         # background service. The ``openral_slam_bringup`` launcher in
         # ``packages/openral_slam_bringup/`` brings up
         # ``async_slam_toolbox_node`` as a LifecycleNode under
@@ -164,7 +164,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # ``openral_runner.slam_bridge`` which subscribes /map and
         # emits the ``slam.occupancy_grid`` OTLP span.
         ros-${ROS_DISTRO}-nav-msgs \
-        # ADR-0030 — geometric world-collision via OctoMap. Build deps for
+        # Geometric world-collision via OctoMap. Build deps for
         # ``packages/openral_octomap_bridge/`` (octree→OccupancyVoxels
         # node feeding the C++ safety kernel's allocation-free voxel
         # check): octomap (liboctomap + ament cmake config),
@@ -207,9 +207,9 @@ COPY python/ python/
 #               VLA policy adapters import at load time (needed on REAL hardware
 #               too; the VLA runtime deps happen to live in this group).
 #   robometer — the node-side ZMQ + msgpack client the reward_monitor_node uses
-#               to talk to the out-of-process Robometer sidecar (ADR-0057).
+#               to talk to the out-of-process Robometer sidecar.
 # The TensorRT engine runtime (`--group tensorrt`, SmolVLA/ACT TRT engines)
-# is an OpenRAL Pro plugin (ADR-0083) layered on top of this image by
+# is an OpenRAL Pro plugin layered on top of this image by
 # openral-pro's own `Dockerfile.pro` — not installed here.
 # feetech-servo-sdk is the Feetech motor driver the so100/so101 REAL HAL needs
 # (`scservo_sdk`); it is not in the lock, so it goes in as a post-sync pip add.
@@ -263,15 +263,15 @@ RUN ln -sfT /usr/lib/python3/dist-packages/gi \
 #                                    binary lands at
 #                                    /workspace/install/openral_safety_kernel/bin/safety_kernel
 #   - openral_hal_so100 / _openarm:  HAL lifecycle nodes
-#   - openral_world_state:           ADR-0018 F8 30 Hz snapshot node
-#   - openral_reasoner_ros:          ADR-0018 F4 LLM tool dispatch
-#   - openral_prompt_router:         ADR-0018 F10 prompt fan-in
-#   - openral_safety / _watchdog:    ADR-0018 F5 + deadman
-#   - openral_human_estop:           ADR-0018 F5 forwarder
+#   - openral_world_state:           30 Hz world-state snapshot node
+#   - openral_reasoner_ros:          LLM tool dispatch
+#   - openral_prompt_router:         prompt fan-in
+#   - openral_safety / _watchdog:    safety envelope + deadman watchdog
+#   - openral_human_estop:           human e-stop forwarder
 #   - openral_foxglove_bringup:      read-only topic allowlists imported by
 #                                    openral_rskill_ros launch files
-#   - openral_rskill_ros:            ADR-0018 F1 ExecuteSkill action
-#   - openral_octomap_bridge:        ADR-0030 octree→OccupancyVoxels
+#   - openral_rskill_ros:            ExecuteSkill action server
+#   - openral_octomap_bridge:        octree→OccupancyVoxels
 #                                    bridge feeding the kernel voxel check
 #
 # `Python3_EXECUTABLE=/workspace/.venv/bin/python` is essential: the
@@ -362,21 +362,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-${ROS_DISTRO}-lifecycle-msgs \
         ros-${ROS_DISTRO}-launch-ros \
         ros-${ROS_DISTRO}-rosidl-default-runtime \
-        # ADR-0024 / ADR-0025 runtime deps — see the matching block in
-        # the builder stage above for rationale.
+        # Wrapped-ROS rSkills + lifecycle-peer runtime deps — see the
+        # matching block in the builder stage above for rationale.
         ros-${ROS_DISTRO}-moveit \
         ros-${ROS_DISTRO}-moveit-msgs \
         ros-${ROS_DISTRO}-moveit-resources-panda-moveit-config \
         # Optional GPU planner: add the NVIDIA Isaac ROS apt repo and
         # `ros-${ROS_DISTRO}-isaac-ros-cumotion-moveit` to enable CUDA-accelerated
-        # MoveIt planning (ADR-0065). Auto-selected per-request via
+        # MoveIt planning. Auto-selected per-request via
         # supports_cumotion(); MoveIt falls back to OMPL when absent. See
         # docs/contributing/toolchain.md → "GPU motion planning — cuMotion".
         ros-${ROS_DISTRO}-nav2-bringup \
         ros-${ROS_DISTRO}-nav2-msgs \
         ros-${ROS_DISTRO}-slam-toolbox \
         ros-${ROS_DISTRO}-nav-msgs \
-        # ADR-0030 — OctoMap runtime libs the openral_octomap_bridge node
+        # OctoMap runtime libs the openral_octomap_bridge node
         # links at process start (liboctomap + octomap_msgs typesupport +
         # tf2_geometry_msgs). octomap-server produces the upstream
         # octomap_msgs/Octomap from a depth point cloud; bundled so the
@@ -413,7 +413,7 @@ COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 RUN ln -sfT /usr/lib/python3/dist-packages/gi \
     /workspace/.venv/lib/python3.12/site-packages/gi
 
-# F9 (ADR-0018 LTTng opt-in): splice the distro's python3-lttngust
+# LTTng opt-in: splice the distro's python3-lttngust
 # (2.13.x, the only working Python 3.12 build — PyPI's 2.7.1 calls
 # the removed time.clock() at import time) into the venv site-packages.
 # Same pattern as the gi splice above; keeps the import path uv-resolves
@@ -449,7 +449,7 @@ ENV PATH=/workspace/.venv/bin:$PATH \
 # The final image is `runtime-base` as-is (CUDA 13 runtime + GStreamer +
 # ROS Jazzy + workspace venv + gi splice + entrypoint) — no DeepStream SDK,
 # no TensorRT group. openral-pro's `Dockerfile.pro` FROMs this image and
-# layers both on top (ADR-0083).
+# layers both on top.
 
 FROM runtime-base AS final
 
@@ -461,6 +461,6 @@ WORKDIR /workspace
 # CMD runs `openral deploy run --help`; override with the desired
 # tool call, e.g. `docker run img python smoke_ros_tee.py` or
 # `docker run img openral deploy run --config /workspace/examples/...`.
-# Post-ADR-0021 the CLI ships as `openral`, no `ral` alias.
+# The CLI ships as `openral`, no `ral` alias.
 ENTRYPOINT ["/entrypoint.sh", "openral", "deploy", "run"]
 CMD ["--help"]

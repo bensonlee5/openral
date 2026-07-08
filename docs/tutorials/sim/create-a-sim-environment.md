@@ -8,7 +8,7 @@ runtime form the adapters see is the composed **`SimEnvironment`**
 (`SimScene` + `RSkillManifest`); the YAML on disk never carries a
 `vla:` block.
 
-`SimScene` is the middle tier of the ADR-0041
+`SimScene` is the middle tier of the three-tier
 scene hierarchy:
 
 ```
@@ -35,11 +35,7 @@ It covers six things, in increasing depth:
 5. Writing a **new policy adapter** (a new VLA backend) and matching it to an
    rSkill.
 
-The companion cookbook is [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md);
-the reference schemas are documented in
-ADR-0002,
-ADR-0009, and
-ADR-0041.
+The companion cookbook is [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md).
 
 ---
 
@@ -267,10 +263,10 @@ for a 7-DoF arm. The required top-level blocks are:
 | `capabilities` | Control modes, embodiment tags, lift / dexterity flags |
 | `safety` | Workspace box, speed/force/torque limits, deadman flag |
 | `observation_spec`, `action_spec` | State / action shapes and representations |
-| `assets` (optional) | URDF / MJCF / SRDF reference block (ADR-0058) — see below |
+| `assets` (optional) | URDF / MJCF / SRDF reference block — see below |
 | `sim` (optional) | MuJoCo joint↔qpos wiring consumed by `MujocoArmHAL.from_description` — see below |
 
-### The `assets:` block (ADR-0058)
+### The `assets:` block
 
 The robot's URDF / MJCF / SRDF are named once, at the top level, via the
 unified `assets:` block. Every ref shares the
@@ -287,13 +283,13 @@ assets:
   # Optional URDF (robot_state_publisher / collision lowering):
   # urdf:
   #   ref: "file:ur5e.urdf"          # or rd:<module> / ros2://robot_description
-  #   root_frame: "base_link"         # ADR-0027 robot_state_publisher wiring
+  #   root_frame: "base_link"         # robot_state_publisher root-frame wiring
   #   base_to_root_xyz_rpy: [0, 0, 0, 0, 0, 0]
   # Optional SRDF (seeds allowed_collision_pairs):
   # srdf: "file:ur5e.srdf"
 ```
 
-### The `sim:` block (ADR-0023)
+### The `sim:` block
 
 For any robot that should drive a MuJoCo digital twin through the shared
 `MujocoArmHAL` base, declare a `sim:` block alongside `assets.mjcf`. The
@@ -619,7 +615,7 @@ under `rskills/README.md`; existing manifests (e.g. `rskills/smolvla-libero/`)
 are the practical templates.
 
 If your rollout needs to write a LeRobotDataset v3 via the bridge
-(ADR-0019, `openral sim run --dataset-out`), declare BOTH `state_contract`
+(`openral sim run --dataset-out`), declare BOTH `state_contract`
 AND `action_contract` on the manifest:
 
 ```yaml
@@ -665,10 +661,9 @@ fails loud on mismatches.)
 
 ---
 
-## Level 6: a custom MuJoCo environment via RoboCasa (ADR-0011)
+## Level 6: a custom MuJoCo environment via RoboCasa
 
-ADR-0015
-adds **RoboCasa** as a `openral sim` backend so you can run kitchen
+**RoboCasa** is a `openral sim` backend so you can run kitchen
 scenarios with custom robots, tasks, and rSkills against real MuJoCo
 physics.
 
@@ -888,22 +883,16 @@ The auto-install prompts fire from the benchmark runner's path too —
 - The full list of registered IDs on your machine: `openral sim list`.
 - The cookbook of existing configs and a per-backend ID table:
   [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md).
-- ADRs that explain the design:
-  ADR-0002 (the original
-  scene/eval design — the `SceneEnvironment` → `SimScene` rename and the
-  three-tier split landed in ADR-0041),
-  ADR-0009 (`openral sim
-  run` vs `openral benchmark run`),
-  ADR-0041 (the
-  `DeployScene ⊆ SimScene ⊆ BenchmarkScene` hierarchy + per-tier loader
-  strictness), and
-  ADR-0015
-  (RoboCasa as a free-axis MuJoCo backend with custom robots + tasks —
-  rolling out in five PRs per
+- Design background: the original scene/eval design renamed
+  `SceneEnvironment` to `SimScene` and later split it into the
+  three-tier `DeployScene ⊆ SimScene ⊆ BenchmarkScene` hierarchy (with
+  per-tier loader strictness) that also underlies the `openral sim run`
+  vs `openral benchmark run` split. RoboCasa was added as a free-axis
+  MuJoCo backend with custom robots + tasks — rolling out in five PRs per
   [issue #88](https://github.com/OpenRAL/openral/issues/88);
   the Pydantic `RoboCasaBackendOptions` validator and the
   `[dependency-groups].robocasa` extras group already ship today, the
   adapter and a Level-6 procedural-kitchen walkthrough land in later
-  PRs).
+  PRs.
 - The public-symbol inventory for the sim layer:
   [`docs/METHODS.md`](../../METHODS.md), section **Eval (sim)**.

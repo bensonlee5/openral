@@ -1,4 +1,4 @@
-"""ADR-0024 — pin that ``build_tool_palette`` does not filter on ``kind``.
+"""Pin that ``build_tool_palette`` does not filter on ``kind``.
 
 The Reasoner's tool palette filter at
 ``python/reasoner/src/openral_reasoner/palette.py`` consults only

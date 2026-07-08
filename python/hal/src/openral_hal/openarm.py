@@ -260,7 +260,7 @@ OPENARM_DESCRIPTION = RobotDescription(
     # SimSensorBridge publishes these via MujocoArmHAL.read_images, which renders
     # the MJCF camera `sim_camera_name or name`. Kept in sync with
     # robots/openarm/robot.yaml. The MJCF overview camera is named "top" and the
-    # canonical sensor name (per ADR-0070) is also "top", so sim_camera_name is
+    # canonical sensor name is also "top", so sim_camera_name is
     # no longer set explicitly. vla_feature_key values are checkpoint-frozen.
     sensors=[
         SensorSpec(
@@ -334,7 +334,7 @@ OPENARM_DESCRIPTION = RobotDescription(
     # ``seed_ctrl_from_qpos=True`` is required because v2's <position>
     # actuators with per-class PD gains would drive every joint to ctrl=0
     # otherwise.  qpos[8] is the left follower finger (passive); qpos[17]
-    # is the right follower finger — we skip both.  See ADR-0023.
+    # is the right follower finger — we skip both.
     assets=AssetRefs(
         urdf=UrdfAsset(ref="file:openarm.urdf"),
         mjcf="openarm:bimanual",
@@ -378,7 +378,7 @@ OPENARM_DESCRIPTION = RobotDescription(
         ],
         seed_ctrl_from_qpos=True,
     ),
-    # ADR-0066 — the tabletop arena composition + overview-camera pose are NOT
+    # The tabletop arena composition + overview-camera pose are NOT
     # robot properties; they live on the scenes that own them (the deploy scene's
     # `composition:` and the sim scene's `backend_options.top_camera_*`). This
     # constant (and `robots/openarm/robot.yaml`, drift-checked equal) therefore
@@ -387,7 +387,7 @@ OPENARM_DESCRIPTION = RobotDescription(
 
 
 # ── HAL ──────────────────────────────────────────────────────────────────────
-# Post-ADR-0023, OpenArmMujocoHAL is a thin :class:`MujocoArmHAL` subclass.
+# OpenArmMujocoHAL is a thin :class:`MujocoArmHAL` subclass.
 # v2 has 18 qpos (7 arm + 2 finger per side) but only 16 actuators — the
 # follower finger tracks via an MJCF ``<equality>`` constraint, so we
 # skip qpos 8 / qpos 17 via the explicit ``joint_qpos_addr`` on
@@ -403,7 +403,7 @@ class OpenArmMujocoHAL(MujocoArmHAL):
     (MJCF URI via the ``openarm_v2:`` scheme, joint→qpos map that skips
     the passive follower fingers, two ``PASSTHROUGH`` grippers,
     ``seed_ctrl_from_qpos`` to hold the initial pose under the v2 PD
-    actuators) lives in :data:`OPENARM_DESCRIPTION.sim` (ADR-0023).
+    actuators) lives in :data:`OPENARM_DESCRIPTION.sim`.
 
     Public 16-DoF surface (7 arm + 1 gripper per side, left then right)
     matches what a future ``OpenArmRealHAL`` wrapping the LeRobot OpenArm
@@ -445,7 +445,7 @@ class OpenArmMujocoHAL(MujocoArmHAL):
         a Skill needs is carried by the rSkill manifest's
         ``starting_pose:`` and applied by ``rskill_runner_node`` via
         :meth:`MujocoArmHAL.reset_to_pose` before the first inference
-        tick (ADR-0023 bimanual amendment).
+        tick (bimanual amendment).
         """
         self._init_from_description(
             OPENARM_DESCRIPTION,

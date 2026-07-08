@@ -7,7 +7,7 @@
 #   - 7-D OSC-pose-delta action -> Lula IK (core motion_generation) moves the arm
 #
 # The props are out-of-distribution for a LIBERO policy, so this validates that
-# the pipeline RUNS and the arm MOVES — not task success. ADR-0045.
+# the pipeline RUNS and the arm MOVES — not task success.
 #
 # Run (ACT is the smallest VLA → easiest on an 8 GB GPU):
 #   uv sync --all-packages --group isaacsim --inexact
@@ -45,7 +45,7 @@ n_episodes: 1
 seed: 0
 
 metadata:
-  adr: "ADR-0045 (OpenRAL/management)"
+  adr: "Isaac Sim core-scene bring-up (OpenRAL/management)"
   honest_scope: >-
     LIBERO-shaped Isaac Sim scene for driving a LIBERO rSkill (act/smolvla) end-to-end.
     Proves the wire + EE-delta IK arm motion; the props are OOD for the policy so this

@@ -23,11 +23,11 @@
 # ── Identity ───────────────────────────────────────────────────────────────
 schema_version: "0.1"
 name: "OpenRAL/rskill-pi05-libero-int8"
-evaluated_tasks: ["libero_spatial", "libero_object", "libero_goal", "libero_10"]  # ADR-0060: trained on the full LIBERO set (all 4 suites, 40 tasks)
+evaluated_tasks: ["libero_spatial", "libero_object", "libero_goal", "libero_10"]  # trained on the full LIBERO set (all 4 suites, 40 tasks)
 version: "0.1.0"
 license: "permissive_research"   # non-standard; weights are NOT apache-2.0
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "pi05"
@@ -50,7 +50,7 @@ sensors_required:
     min_width: 224
     min_height: 224
 
-# Output side (ADR-0013). For the canonical franka_panda embodiment the
+# Output side. For the canonical franka_panda embodiment the
 # loader auto-fills n_dof + vla_action_key from robots/franka_panda/robot.yaml.
 actuators_required:
   - kind: "joint_position"
@@ -93,7 +93,7 @@ image_preprocessing:
     top: "image"
     wrist: "image2"
 state_contract:
-  # ADR-0027 — LIBERO checkpoints train on 8-D TASK-SPACE proprio
+  # LIBERO checkpoints train on 8-D TASK-SPACE proprio
   # (eef_pos ‖ eef_axisangle ‖ gripper). `openral sim run` supplies it directly;
   # `openral deploy sim` assembles it from live TF + JointState via the
   # `libero_eef8d` state-adapter. Without the layout the runner falls back to raw
@@ -131,7 +131,7 @@ description: >
   needs a vendor agreement. See eval/scene_libero_spatial.json for the
   locally-reproduced result.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool
+# Action vocabulary surfaced to the reasoner LLM tool
 # palette so it can pick this skill by what it does (action verb +
 # object + scene), not just by its slug.
 actions:
@@ -148,11 +148,11 @@ scenes:
   - "tabletop"
   - "kitchen"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 action_contract:
   dim: 7
-  # ADR-0036 — LIBERO action space is 6-D OSC end-effector delta + gripper.
+  # LIBERO action space is 6-D OSC end-effector delta + gripper.
   # Declaring the representation makes deploy-sim dispatch cartesian_delta +
   # gripper (via canonical_slots_for_representation) instead of defaulting the
   # whole vector to JOINT_POSITION, which the joint-space envelope rejects.

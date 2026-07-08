@@ -1,4 +1,4 @@
-"""Unit tests for the deploy-path-aware action-mode palette gate (ADR-0036).
+"""Unit tests for the deploy-path-aware action-mode palette gate.
 
 Exercises the two module-level pure helpers in
 :mod:`openral_reasoner_ros.reasoner_node`:
@@ -177,7 +177,7 @@ def test_no_action_contract_always_executable() -> None:
     assert _action_executable(m, franka, "sim") is True
 
 
-# ── composite_mode (ADR-0036 amendment 2026-06-04) ──────────────────────────
+# ── composite_mode (added 2026-06-04) ───────────────────────────────────────
 
 
 def test_required_modes_robocasa_composite_slots() -> None:
@@ -195,9 +195,9 @@ def test_composite_skill_executable_on_sim() -> None:
     """The RoboCasa composite skill IS executable in sim.
 
     ``composite_mode`` is the sim robosuite-composite (HybridMobileBase)
-    multiplexer the deploy path runs (ADR-0028d) — excluding it dropped
-    pi05 / rldx robocasa VLAs at boot even though SimAttachedHAL executes
-    them (the regression this amendment fixes).
+    multiplexer the deploy path runs — excluding it dropped pi05 / rldx
+    robocasa VLAs at boot even though SimAttachedHAL executes them (the
+    regression this amendment fixes).
     """
     m = _rldx_robocasa()
     panda_mobile = _panda_mobile()

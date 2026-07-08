@@ -122,7 +122,7 @@ just ros2-test                  # colcon test + colcon test-result --verbose
 source install/setup.bash       # after build
 ```
 
-## GPU motion planning — cuMotion (optional, ADR-0065)
+## GPU motion planning — cuMotion (optional)
 
 NVIDIA Isaac ROS **cuMotion** is a CUDA-accelerated MoveIt planning pipeline
 (backed by cuRobo). The `rskill-moveit-*` family uses it automatically when the
@@ -158,13 +158,12 @@ cuRobo to install** and no `uv`/`pip` group. The apt packages are the supported
 path on OpenRAL's Python 3.12 + Jazzy stack. *Verified 2026-06-22 on an RTX 4070
 (Ada): the planner node loads the panda config and solves a joint-space plan in
 ~0.12 s.* cuMotion never bypasses the safety kernel: planned trajectories still
-replay through `/openral/candidate_action` and are validated waypoint-by-waypoint
-(ADR-0065 D2).
+replay through `/openral/candidate_action` and are validated waypoint-by-waypoint.
 
 ## Sim
 
 ```bash
-just sim-eval <config>          # canonical config-driven entry point — ADR-0002
+just sim-eval <config>          # canonical config-driven entry point
                                 # (`openral sim run --config FILE`)
 just sim-libero                 # SmolVLA × LIBERO (real lerobot[libero]; needs GPU + MUJOCO_GL)
 just sim-xvla-libero            # xVLA × LIBERO   (Florence-2 backbone)
@@ -200,14 +199,14 @@ just install-cli
 
 The wrapper sources the ROS 2 distro overlay and the colcon workspace overlay before delegating to `.venv/bin/openral`, so ROS 2 node/topic/action commands work transparently. Pure-Python commands (`openral doctor`, `openral detect`, etc.) still work even if ROS 2 is not yet built.
 
-Bare `openral` (no args) drops into an interactive REPL where subcommands run without the prefix (`sim run --config …`); pass a subcommand for one-shot mode in scripts/CI. See ADR-0021.
+Bare `openral` (no args) drops into an interactive REPL where subcommands run without the prefix (`sim run --config …`); pass a subcommand for one-shot mode in scripts/CI.
 
 ```bash
 openral doctor                   # diagnose host: Python, OS, ROS 2 distro, GPU, USB
 openral detect                   # auto-detect robot + sensors + GPU; write a full robot.yaml
 openral connect --robot so100    # open a HAL connection (only so100 wired today)
 openral calibrate camera --sensor S  # ros2 camera_calibration helper
-openral install sim              # post-install opt-in dep groups (ADR-0021)
+openral install sim              # post-install opt-in dep groups
 openral install ros              # re-run scripts/bootstrap_ubuntu.sh (sudo)
 openral install list             # show every known dep group
 openral rskill install <hub-id>  # download an rSkill from HF Hub (license-gated)
@@ -215,9 +214,9 @@ openral rskill list              # list installed rSkills
 openral rskill new <id>          # scaffold a new local rSkill from rskills/template/
 openral sensor list              # browse the sensor catalog
 openral sensor show <id>         # resolve a catalog entry to a SensorSpec/Bundle
-openral benchmark run --suite S --vla V  # run a benchmark suite (canonical eval producer, ADR-0009)
+openral benchmark run --suite S --vla V  # run a benchmark suite (canonical eval producer)
 openral benchmark report         # aggregate rskills/<id>/eval/*.json benchmark blocks
-openral sim run --config FILE    # run a SimScene YAML end-to-end (ADR-0009)
+openral sim run --config FILE    # run a SimScene YAML end-to-end
 ```
 
 ## Tooling self-help

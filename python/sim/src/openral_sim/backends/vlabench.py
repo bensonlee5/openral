@@ -19,7 +19,7 @@ Env contract (``obs_type="pixels_agent_pos"``, ``n_envs=1``):
 Task ID convention: ``"vlabench/<task-name>"`` (e.g. ``"vlabench/select_fruit"``).
 ``scene.id`` MUST be ``"vlabench"``.
 
-Provisioning (ADR-0079). The Python side (clone + editable install + numpy-2 sim
+Provisioning. The Python side (clone + editable install + numpy-2 sim
 deps + rrt-algorithms stub) is handled by :func:`ensure_backend_deps` under the
 ``"vlabench"`` plan, auto-installed on first env build (``OPENRAL_AUTO_INSTALL_DEPS``).
 The ~12 GB CC-BY asset bundle is a separate one-time Google-Drive fetch that this
@@ -139,7 +139,7 @@ def _resolve_vlabench_root() -> None:
     if override:
         os.environ["VLABENCH_ROOT"] = override
         return
-    import VLABench  # type: ignore[import-not-found,import-untyped,unused-ignore]  # reason: opt-in vlabench backend, externally provisioned (ADR-0079)
+    import VLABench  # type: ignore[import-not-found,import-untyped,unused-ignore]  # reason: opt-in vlabench backend, externally provisioned
 
     os.environ["VLABENCH_ROOT"] = os.path.dirname(VLABench.__file__)
 
@@ -150,7 +150,7 @@ def _check_vlabench_assets() -> None:
     The clone ships ``assets/base`` + ``assets/robots``, but the object + scene
     meshes (``assets/obj``, ``assets/scenes``) come from the separate Google-Drive
     download and are what every task's MJCF references. We do NOT auto-fetch them
-    (a 12 GB gdown pull is too flaky to drive unattended — ADR-0079); raise with
+    (a 12 GB gdown pull is too flaky to drive unattended); raise with
     the exact recipe when they are missing so the failure is legible instead of a
     ``FileNotFoundError`` deep in dm_control at ``env.reset()``.
     """
@@ -163,7 +163,7 @@ def _check_vlabench_assets() -> None:
         f"VLABench asset bundle missing under {root / 'assets'} (no populated "
         "assets/obj). It is a one-time ~12 GB CC-BY download from Google Drive; "
         f"fetch it with:\n  VLABENCH_ROOT={root} python {scripts}\n"
-        "See ADR-0079 (OpenRAL/management)."
+        "See this module's docstring for the full provisioning recipe."
     )
 
 
@@ -185,8 +185,9 @@ def _build_vlabench_scene(env_cfg: SimEnvironment) -> _VLABenchSim:
         raise ROSConfigError(
             "VLABench backend not installed; the 'vlabench' install plan "
             "(openral_sim._deps) auto-provisions it — re-run with "
-            "OPENRAL_AUTO_INSTALL_DEPS=1, or install manually per "
-            "ADR-0079 (OpenRAL/management) and set VLABENCH_ROOT."
+            "OPENRAL_AUTO_INSTALL_DEPS=1, or install manually per the "
+            "provisioning recipe in this module's docstring and set "
+            "VLABENCH_ROOT."
         ) from exc
     _check_vlabench_assets()
 

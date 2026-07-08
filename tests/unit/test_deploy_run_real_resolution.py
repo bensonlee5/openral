@@ -1,5 +1,5 @@
 """Unit tests for ``resolve_launch_invocation(hal_mode="real")`` — the
-``openral deploy run`` resolution contract (ADR-0032).
+``openral deploy run`` resolution contract.
 
 These pin the *resolution layer* (which argv + HAL params the real-mode launch
 gets) without running ``ros2 launch`` — the live launch is HIL-verified on a
@@ -78,7 +78,7 @@ class TestRealModeResolution:
         assert any(arg.startswith("workcell_json:=") for arg in inv.argv_template)
 
     def test_scene_hal_binding_feeds_hal_params(self, tmp_path) -> None:
-        """ADR-0078 — a DeployScene ``hal:`` binding lands in hal_params so
+        """A DeployScene ``hal:`` binding lands in hal_params so
         ``deploy run --config <scene>`` needs no ``--hal`` (port + calibration)."""
         (tmp_path / "calibration").mkdir()
         (tmp_path / "calibration" / "so_follower.json").write_text("{}", encoding="utf-8")

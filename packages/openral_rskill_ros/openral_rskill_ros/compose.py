@@ -1,6 +1,6 @@
-"""ADR-0018 F1 — single-process composer for rskill_runner + world_state.
+"""Single-process composer for rskill_runner + world_state.
 
-ADR-0018 §3 locks the contract that ``WorldStateAggregator`` is the
+This module locks the contract that ``WorldStateAggregator`` is the
 *only* subscriber of ``/joint_states`` and bridges them in-process via
 ``.snapshot()`` to the rskill. That contract requires the world_state
 lifecycle node and the rskill_runner_node to share **one** aggregator
@@ -52,7 +52,7 @@ class ComposedRuntime:
         description: The :class:`RobotDescription` shared by both
             nodes.
         aggregator: The single :class:`WorldStateAggregator` shared
-            in-process per ADR-0018 §3.
+            in-process.
         world_state_node: The colocated
             :class:`_WorldStateLifecycleNode` (publishes the typed
             ``/openral/world_state_*`` topics).
@@ -65,21 +65,21 @@ class ComposedRuntime:
     world_state_node: _WorldStateLifecycleNode
     skill_runner_node: RskillRunnerNode
     slam_bridge: object
-    """ADR-0025 — rclpy → OTLP bridge subscribing to ``/map``.
+    """rclpy → OTLP bridge subscribing to ``/map``.
 
     Always constructed with the runtime so the dashboard renders any compatible
     ``nav_msgs/OccupancyGrid`` publisher, regardless of whether the mapper was
     launched by OpenRAL or separately by the operator.
     """
     world_cloud_bridge: object | None = None
-    """ADR-0030 — optional rclpy → OTLP bridge subscribing to
+    """Optional rclpy → OTLP bridge subscribing to
     ``/octomap_point_cloud_centers``. Constructed when
     :func:`compose_runtime` is called with
     ``enable_world_cloud_bridge=True``. ``None`` otherwise. Production
     launches enable it through the same ``--enable-octomap`` CLI flag
     that brings up octomap_server itself."""
     dataset_recorder_bridge: object | None = None
-    """ADR-0019 — optional bus-attached recorder writing a rosbag2 mcap of
+    """Optional bus-attached recorder writing a rosbag2 mcap of
     the deploy session (proprio + action + camera frames + episode
     markers). Constructed when :func:`compose_runtime` is called with a
     ``dataset_out`` path. ``None`` otherwise. Production launches enable it
@@ -116,17 +116,17 @@ def compose_runtime(
             SkillResolver`` used by the production runtime to build
             a resolver that closes over the just-constructed
             ``RskillRunnerNode``. Required for wrapped-ROS skills
-            (ADR-0024) whose adapter needs the host rclpy node to
+            whose adapter needs the host rclpy node to
             create per-skill ActionClients on the same spin.
             Mutually exclusive with ``skill_resolver``.
-        enable_world_cloud_bridge: ADR-0030 — when ``True``, attach a
+        enable_world_cloud_bridge: when ``True``, attach a
             :class:`~openral_runner.world_cloud_bridge.WorldCloudBridge`
             to the composed ``RskillRunnerNode`` so the octomap occupied
             voxel cloud (``/octomap_point_cloud_centers``) is rendered
             into the dashboard via the ``world.pointcloud`` OTel span
             family. Defaults to ``False`` so deployments without octomap
             don't pay the subscription cost.
-        dataset_out: ADR-0019 — when set, attach a
+        dataset_out: when set, attach a
             :class:`~openral_runner.dataset_recorder_bridge.DatasetRecorderBridge`
             that records the deploy session (proprio + action + camera
             frames + episode markers) to this rosbag2 ``.mcap`` path. The
@@ -189,7 +189,7 @@ def compose_runtime(
             aggregator=aggregator,
             skill_resolver=skill_resolver,
         )
-    # ADR-0025/0064 — share the RskillRunnerNode's executor so the /map
+    # Share the RskillRunnerNode's executor so the /map
     # subscription's callbacks fire alongside the existing
     # /joint_states + /openral/estop subscriptions without a second rclpy spin.
     from openral_runner.slam_bridge import SlamMapBridge
@@ -202,7 +202,7 @@ def compose_runtime(
     )
     world_cloud_bridge: object | None = None
     if enable_world_cloud_bridge:
-        # ADR-0030 — share the RskillRunnerNode's executor so the
+        # Share the RskillRunnerNode's executor so the
         # /octomap_point_cloud_centers subscription + TF listener spin
         # alongside the existing runner subscriptions, no second rclpy spin.
         from openral_runner.world_cloud_bridge import WorldCloudBridge
@@ -210,7 +210,7 @@ def compose_runtime(
         world_cloud_bridge = WorldCloudBridge(skill_runner_node)
     dataset_recorder_bridge: object | None = None
     if dataset_out is not None:
-        # ADR-0019 — attach a bus recorder sharing the runner's executor +
+        # Attach a bus recorder sharing the runner's executor +
         # aggregator. Robot-agnostic: every shape is derived from the bus
         # data + this ``description`` (no observation_spec dependency,
         # since Rosbag2Sink writes raw arrays — `openral dataset from-bag`

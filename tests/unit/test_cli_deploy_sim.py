@@ -99,7 +99,7 @@ def test_bh_deploy_sim_resolve_openarm_invocation() -> None:
     assert invocation.hal.supported_robot_names == frozenset({"openarm_v2", "openarm"})
     # openarm is manifest-driven: robot_yaml + hal_mode are injected; HAL kwargs
     # live in hal.parameters. `bare_twin_sim=True` suppresses the `sim_env_yaml`
-    # scene-attach (openarm composes its own MJCF). ADR-0066 — the tabletop arena
+    # scene-attach (openarm composes its own MJCF). The tabletop arena
     # composition lives on the DeployScene now (not the robot manifest), so it is
     # forwarded to the node as `scene_composition_json`.
     import json
@@ -120,7 +120,7 @@ def test_bh_deploy_sim_resolve_openarm_invocation() -> None:
     assert _comp["params"]["top_camera_pos"] == [0.20, 0.0, 0.95]
     assert "sim_env_yaml" not in invocation.hal_params
     assert invocation.reset_to_pose_service == "/openral/openarm/reset_to_pose"
-    # ADR-0053 — MoveIt approach is opt-in; empty default keeps the legacy snap
+    # MoveIt approach is opt-in; empty default keeps the legacy snap
     # and is NOT forwarded as a launch arg (ros2 launch rejects empty name:=).
     assert invocation.approach_skill_id == ""
     joined = " ".join(invocation.argv_template)
@@ -129,7 +129,7 @@ def test_bh_deploy_sim_resolve_openarm_invocation() -> None:
     assert "envelope_file:=" not in joined  # no file path of any kind
     assert "HAL_PARAMS_FILE_PLACEHOLDER" in joined
     assert "hal_package:=openral_hal_openarm" in joined
-    # ADR-0025: default is enable_slam=false; the launch arg is still
+    # Default is enable_slam=false; the launch arg is still
     # forwarded so the OpaqueFunction can read it.
     assert "enable_slam:=false" in joined
     assert invocation.enable_slam is False
@@ -260,7 +260,7 @@ def test_deploy_sim_real_mode_uses_host_wall_clock_origin() -> None:
 
 
 def test_deploy_sim_object_detector_manifest_selects_vlm() -> None:
-    """A detector manifest auto-enables the leg and is forwarded (ADR-0037 amendment).
+    """A detector manifest auto-enables the leg and is forwarded.
 
     Passing ``--object-detector-manifest`` for the LocateAnything VLM rSkill must
     auto-enable the object-detection leg (no ONNX file needed) and forward both the
@@ -286,7 +286,7 @@ def test_deploy_sim_object_detector_manifest_selects_vlm() -> None:
 
 
 def test_deploy_sim_reward_monitor_forwarded() -> None:
-    """``--enable-reward-monitor`` forwards the leg + overrides into the argv (ADR-0057).
+    """``--enable-reward-monitor`` forwards the leg + overrides into the argv.
 
     The reward monitor runs parallel to the VLA; the launch sets the reasoner's
     ``task_progress_available`` from this flag. A ``local://`` manifest (pre-quantized
@@ -332,7 +332,7 @@ def test_deploy_sim_no_detector_emits_no_empty_launch_args(tmp_path: Path) -> No
     unset rather than forwarded blank — otherwise the whole graph aborts at
     launch. (Surfaced bringing up robocasa deploy-sim without a detector.)
 
-    The detector is on by default (ADR-0035), but auto-downgrades to off when no
+    The detector is on by default, but auto-downgrades to off when no
     backend is available. An explicit ``--object-detector-onnx`` selects the
     RT-DETR path; pointing it at a guaranteed-absent file (and supplying no
     manifest) reproduces the no-weights condition deterministically on every
@@ -415,7 +415,7 @@ def test_deploy_sim_default_detector_falls_back_to_rtdetr_when_omdet_absent(
 def test_deploy_sim_default_locator_is_omdet_turbo_locator_when_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """ADR-0056 — default on-demand locator is omdet-turbo-locator when omdet deps import."""
+    """Default on-demand locator is omdet-turbo-locator when omdet deps import."""
     monkeypatch.setattr(deploy_sim, "_omdet_runtime_available", lambda: True)
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
@@ -590,7 +590,7 @@ def test_bh_deploy_sim_hal_executables_have_main_entrypoint() -> None:
 
 
 def test_bh_deploy_sim_enable_slam_forwards_launch_arg_and_flag() -> None:
-    """ADR-0025 — --enable-slam toggles the launch arg and the dataclass field."""
+    """--enable-slam toggles the launch arg and the dataclass field."""
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
         robot_override=None,
@@ -604,7 +604,7 @@ def test_bh_deploy_sim_enable_slam_forwards_launch_arg_and_flag() -> None:
     assert "enable_slam:=true" in joined
 
 
-# ADR-0085 — SLAM backend selection (cuVSLAM/nvblox visual vs slam_toolbox lidar).
+# SLAM backend selection (cuVSLAM/nvblox visual vs slam_toolbox lidar).
 
 
 @pytest.mark.parametrize(
@@ -632,7 +632,7 @@ def test_resolve_slam_backend(
 
 
 def test_bh_deploy_sim_lidar_robot_forwards_slam_backend_lidar() -> None:
-    """ADR-0085 — panda_mobile (lidar) resolves the lidar backend and forwards it."""
+    """panda_mobile (lidar) resolves the lidar backend and forwards it."""
     invocation = resolve_launch_invocation(
         config=_PANDA_MOBILE_CONFIG,
         robot_override=None,
@@ -646,7 +646,7 @@ def test_bh_deploy_sim_lidar_robot_forwards_slam_backend_lidar() -> None:
 
 
 def test_bh_deploy_sim_no_slam_robot_forwards_backend_none() -> None:
-    """ADR-0085 — openarm (no lidar, no vision SLAM) resolves backend ``none``."""
+    """openarm (no lidar, no vision SLAM) resolves backend ``none``."""
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
         robot_override=None,
@@ -659,7 +659,7 @@ def test_bh_deploy_sim_no_slam_robot_forwards_backend_none() -> None:
 
 
 def test_bh_deploy_sim_forwards_hal_mode_sim() -> None:
-    """ADR-0036 — ``deploy sim`` forwards ``hal_mode:=sim`` so the reasoner's
+    """``deploy sim`` forwards ``hal_mode:=sim`` so the reasoner's
     action-mode palette gate admits the scene's robosuite-OSC cartesian skills.
     """
     invocation = resolve_launch_invocation(
@@ -675,7 +675,7 @@ def test_bh_deploy_sim_forwards_hal_mode_sim() -> None:
 
 
 def test_bh_deploy_run_forwards_hal_mode_real() -> None:
-    """ADR-0036 — ``deploy run`` (``hal_mode="real"``) shells the SAME launch
+    """``deploy run`` (``hal_mode="real"``) shells the SAME launch
     with ``hal_mode:=real`` so the reasoner admits only the robot's declared
     ``supported_control_modes``.
 
@@ -696,7 +696,7 @@ def test_bh_deploy_run_forwards_hal_mode_real() -> None:
 
 
 def test_deploy_sim_octomap_auto_off_without_depth_sensor() -> None:
-    """ADR-0030 — openarm has no depth SensorSpec → octomap auto-disabled."""
+    """openarm has no depth SensorSpec → octomap auto-disabled."""
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
         robot_override=None,
@@ -709,7 +709,7 @@ def test_deploy_sim_octomap_auto_off_without_depth_sensor() -> None:
 
 
 def test_deploy_sim_octomap_auto_on_with_depth_sensor() -> None:
-    """ADR-0030 — panda_mobile declares a depth SensorSpec → octomap auto-on."""
+    """panda_mobile declares a depth SensorSpec → octomap auto-on."""
     invocation = resolve_launch_invocation(
         config=_PANDA_MOBILE_CONFIG,
         robot_override=None,
@@ -722,7 +722,7 @@ def test_deploy_sim_octomap_auto_on_with_depth_sensor() -> None:
 
 
 def test_deploy_sim_octomap_explicit_override_wins() -> None:
-    """ADR-0030 — ``--no-enable-octomap`` overrides the depth-sensor auto-on."""
+    """``--no-enable-octomap`` overrides the depth-sensor auto-on."""
     invocation = resolve_launch_invocation(
         config=_PANDA_MOBILE_CONFIG,
         robot_override=None,
@@ -808,7 +808,7 @@ def test_bh_deploy_sim_hal_robot_mismatch_fails(tmp_path: Path) -> None:
     # Synthesise a DeployScene whose ``robot_id`` resolves to "openarm",
     # whose manifest name ("openarm_v2") will then mismatch the HAL's
     # repointed ``supported_robot_names``. ``deploy sim --config`` is
-    # strict DeployScene (ADR-0041), so no ``task:`` block is included.
+    # strict DeployScene, so no ``task:`` block is included.
     scene_yaml = tmp_path / "scene.yaml"
     scene_yaml.write_text(
         "robot_id: openarm\nscene:\n  id: noop/zero\n  backend: mujoco\n  cameras: []\n"
@@ -1070,7 +1070,7 @@ def test_bh_preflight_accept_propagates_auto_install_consent(
     The operator's "yes, install" must propagate to the launched graph: the scene
     backend's ``on_configure`` asset/dep install (openral_sim._assets, gated on
     that env var) would otherwise re-prompt and block before the viewer opens
-    (ADR-0034 step-4 fix). ``run_launch_invocation`` copies ``os.environ`` into the
+    ``run_launch_invocation`` copies ``os.environ`` into the
     launch env, so setting it here carries the single consent answer downstream.
     """
     import contextlib
@@ -1359,7 +1359,7 @@ def test_bh_prepare_launch_env_defaults_expandable_segments(
 ) -> None:
     """_prepare_launch_env (shared by `deploy sim` AND `deploy run`) defaults the
     expandable-segments CUDA allocator so the runtime_node's VLA load doesn't
-    fragment-OOM on a tight 8 GiB GPU (ADR-0034). ``setdefault`` → an operator
+    fragment-OOM on a tight 8 GiB GPU. ``setdefault`` → an operator
     override wins. Both env-var spellings are set (cross-torch-version).
 
     Regression guard: the fix originally lived only in run_launch_invocation, but
@@ -1385,7 +1385,7 @@ def test_bh_run_launch_invocation_sets_expandable_segments(
     The runtime_node loads VLA weights on the GPU; on a tight 8 GiB card the
     default CUDA allocator fragments and OOMs at the forward pass even for an
     NF4 model that otherwise fits (molmoact2-libero-nf4 peaks ~7.6 GiB).
-    expandable_segments recovers the fragmented headroom (ADR-0034 OOM fix).
+    expandable_segments recovers the fragmented headroom.
     ``setdefault`` so an operator override wins. Both env-var spellings are set
     (PYTORCH_ALLOC_CONF / PYTORCH_CUDA_ALLOC_CONF) for cross-torch-version safety.
     """
@@ -1418,7 +1418,7 @@ def test_bh_run_launch_invocation_sets_expandable_segments(
     assert captured["env"]["PYTORCH_ALLOC_CONF"] == "garbage_collection_threshold:0.9"
 
 
-# ── Launch process-group teardown (ADR-0027 orphan-reap hardening) ──────────
+# ── Launch process-group teardown (orphan-reap hardening) ───────────────────
 #
 # These exercise the real teardown path with real child processes (no
 # mocks, CLAUDE.md §1.11): the bug they guard against is deploy_sim's
@@ -1553,7 +1553,7 @@ def test_orphan_needles_cover_tf_publishers_and_sidecar() -> None:
 
 
 def test_scan_params_derived_from_robot_yaml_lidar() -> None:
-    """ADR-0025 single source — deploy_sim maps the panda_mobile
+    """Single source — deploy_sim maps the panda_mobile
     robot.yaml ``lidar_2d`` sensor onto the HAL ``scan_*`` ROS params
     instead of hardcoding a scan envelope in ``_ROBOT_HAL_REGISTRY``."""
     description = RobotDescription.from_yaml(
@@ -1580,7 +1580,7 @@ def test_scan_params_empty_for_robot_without_lidar() -> None:
 
 
 def test_nav2_param_overrides_from_robot_yaml() -> None:
-    """ADR-0025 — Nav2 robot_radius + inflation_radius + motion_model derive
+    """Nav2 robot_radius + inflation_radius + motion_model derive
     from the panda_mobile robot.yaml (footprint_radius + base_kinematics) so
     the Nav2 bringup needs no hand-vendored per-robot param values."""
     description = RobotDescription.from_yaml(
@@ -1654,11 +1654,11 @@ def test_panda_mobile_declares_real_footprint_polygon() -> None:
     ]
 
 
-# ── ADR-0059 — Foxglove live-scene bridge ────────────────────────────────────
+# ── Foxglove live-scene bridge ────────────────────────────────────────────────
 
 
 def test_deploy_sim_foxglove_disabled_by_default() -> None:
-    """ADR-0059 — foxglove bridge is off by default (decision 3: default-off).
+    """Foxglove bridge is off by default (decision 3: default-off).
 
     When ``--foxglove`` is not passed, ``enable_foxglove:=false`` must appear
     in the launch argv and the dataclass field must be False. Default-off keeps
@@ -1679,7 +1679,7 @@ def test_deploy_sim_foxglove_disabled_by_default() -> None:
 
 
 def test_deploy_sim_foxglove_enabled_forwards_launch_args() -> None:
-    """ADR-0059 — ``--foxglove`` forwards ``enable_foxglove:=true`` + the port.
+    """``--foxglove`` forwards ``enable_foxglove:=true`` + the port.
 
     The launch file reads these args in ``compose_runtime_graph`` to decide
     whether to append the bridge node wrapped in a ``TimerAction``.
@@ -1701,7 +1701,7 @@ def test_deploy_sim_foxglove_enabled_forwards_launch_args() -> None:
 
 
 def test_deploy_sim_foxglove_custom_port_forwarded() -> None:
-    """ADR-0059 — a custom ``--foxglove-port`` is forwarded into the launch argv."""
+    """A custom ``--foxglove-port`` is forwarded into the launch argv."""
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
         robot_override=None,
@@ -1715,7 +1715,7 @@ def test_deploy_sim_foxglove_custom_port_forwarded() -> None:
     assert "foxglove_port:=9999" in " ".join(invocation.argv_template)
 
 
-# ── ADR-0072 Decision 3b — deploy memory bundle (--memory-dir) ─────────────────
+# ── Deploy memory bundle (--memory-dir) ─────────────────────────────────────
 
 
 def _resolve_with_memory_dir(memory_dir: str) -> object:
@@ -1730,7 +1730,7 @@ def _resolve_with_memory_dir(memory_dir: str) -> object:
 
 
 def test_deploy_sim_memory_dir_forwards_all_present_bundle_artifacts(tmp_path: Path) -> None:
-    """ADR-0072 §3b — --memory-dir forwards a launch arg per present bundle artifact."""
+    """--memory-dir forwards a launch arg per present bundle artifact."""
     bundle = tmp_path / "bundle"
     bundle.mkdir()
     (bundle / "scene_graph.json").write_text("{}", encoding="utf-8")

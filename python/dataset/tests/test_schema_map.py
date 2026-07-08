@@ -47,7 +47,7 @@ def test_so100_features_include_both_cameras(so100_robot: RobotDescription) -> N
     for cam_key in ("observation.images.camera1", "observation.images.camera2"):
         cam = feats[cam_key]
         assert cam.dtype == "video"
-        # ADR-0019: shape comes from SensorSpec.intrinsics. SO-100's
+        # Shape comes from SensorSpec.intrinsics. SO-100's
         # manifest declares 256x256 for both cameras.
         assert cam.shape == (256, 256, 3)
 
@@ -87,7 +87,7 @@ def test_features_are_featurespec_dataclasses(so100_robot: RobotDescription) -> 
 def test_overrides_unlock_robots_without_observation_spec(repo_root: Path) -> None:
     """``state_shape_override`` + ``action_dim_override`` work for franka_panda.
 
-    Per ADR-0007 most robots leave observation_spec / action_spec unset
+    Most robots leave observation_spec / action_spec unset
     because the sim-imposed contract lives on the rSkill manifest or
     scene adapter. The bridge sink resolves shapes from the first frame;
     here we exercise that path directly via the override kwargs.

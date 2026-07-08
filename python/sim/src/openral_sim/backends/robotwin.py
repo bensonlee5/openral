@@ -1,6 +1,6 @@
 r"""RoboTwin 2.0 scene adapter — drives a SAPIEN dual-arm env through a sidecar venv.
 
-ADR-0061. RoboTwin 2.0 (Chen et al., arXiv 2506.18088, MIT) is a large-scale
+RoboTwin 2.0 (Chen et al., arXiv 2506.18088, MIT) is a large-scale
 **bimanual** benchmark: 50 dual-arm tasks on the SAPIEN physics engine, evaluated
 on the aloha-agilex embodiment (14-DoF, 7 per arm; action 14-D joint-space).
 
@@ -88,7 +88,7 @@ _ROBOTWIN_PYTHON = "3.10"
 # openral-side wire. This is the pip-installable core ONLY: the RoboTwin checkout
 # (RoboTwin-Platform/RoboTwin, passed via OPENRAL_ROBOTWIN_ROOT) and its multi-GB
 # **assets** (`script/_download_assets.sh`) are a separate manual step — see the
-# ROSConfigError recipe in `_sidecar_python` and ADR-0061. Auto-provision is a
+# ROSConfigError recipe in `_sidecar_python`. Auto-provision is a
 # best-effort head start, not a complete install.
 _ROBOTWIN_DEPS = (
     "lerobot @ git+https://github.com/huggingface/lerobot.git",
@@ -318,8 +318,8 @@ def _sidecar_python() -> Path:
         return _provision_robotwin_venv()
     raise ROSConfigError(
         "RoboTwin sidecar venv not found. It is an externally-provisioned dependency "
-        "(SAPIEN + RoboTwin 2.0, Python 3.10, CUDA 12.1, Linux-only, multi-GB; "
-        "ADR-0061). Set "
+        "(SAPIEN + RoboTwin 2.0, Python 3.10, CUDA 12.1, Linux-only, multi-GB). "
+        "Set "
         f"{_AUTO_PROVISION_ENV}=1 to auto-provision the LeRobot+SAPIEN venv (a "
         "multi-GB download), or provision it manually and point "
         f"{_SIDECAR_PYTHON_ENV} at its py3.10 python:\n"

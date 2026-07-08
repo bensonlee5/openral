@@ -52,7 +52,7 @@ _topics = _load_topics()
 BUCKET1_TOPIC_WHITELIST: list[str] = _topics.BUCKET1_TOPIC_WHITELIST
 
 # Topics that MUST NOT appear in the recorder's scope.  Their absence keeps
-# the recorded MCAP free of safety/actuation data (ADR-0059 decision 5).
+# the recorded MCAP free of safety/actuation data.
 _FORBIDDEN_TOPIC_LITERALS = [
     "/openral/estop",
     "/openral/human_estop",

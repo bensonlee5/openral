@@ -1,4 +1,4 @@
-"""GStreamer-backed :class:`SensorReader` (CPU appsink path — ADR-0010 PR I/2).
+"""GStreamer-backed :class:`SensorReader` (CPU appsink path).
 
 The :class:`GStreamerSensorReader` runs a user-supplied (or
 :class:`PipelineSpec`-generated) GStreamer pipeline that terminates
@@ -25,7 +25,7 @@ The CPU path here delivers system-memory frames as
 :class:`~openral_core.SensorFrame` with ``data=bytes`` and
 ``encoding`` ∈ {BGR8, RGB8, MONO8}. The NVMM / CUDA zero-copy path
 (commit #3) populates ``handle`` + ``encoding`` ∈ {CUDA_NV12 on Tegra,
-CUDA_RGBA on x86 DeepStream — ADR-0082} instead and is grafted into
+CUDA_RGBA on x86 DeepStream} instead and is grafted into
 :meth:`_on_new_sample` without changing the Protocol surface.
 """
 
@@ -208,7 +208,7 @@ class GStreamerSensorReader:
         self._latest_data: bytes | None = None
         self._latest_handle: int | None = None
         # NVMM frames are DtoD-mirrored into the reader-owned
-        # StableSurfaceMirror double buffer (ADR-0082 Phase 3), so the latched
+        # StableSurfaceMirror double buffer, so the latched
         # handle never points into the Gst buffer pool; the buffer/map slots
         # below remain only as defensive cleanup for a pre-mirror frame.
         self._latest_handle_descriptor: Any | None = None
@@ -536,8 +536,8 @@ class GStreamerSensorReader:
         through the handle.
         """
         # Lazy import: keeps the CPU path independent of libnvbufsurface.
-        # ``nvbufsurface`` ships in the private openral-pro-trt package
-        # (ADR-0083); a physically-absent module degrades identically to a
+        # ``nvbufsurface`` ships in the private openral-pro-trt package;
+        # a physically-absent module degrades identically to a
         # present-but-unloadable libnvbufsurface.so — both are "NVMM caps
         # negotiated but the runtime backend is unavailable" (§1.4, no
         # silent fallback: this is a bus error, not a quiet skip).
@@ -587,8 +587,8 @@ class GStreamerSensorReader:
             if buffer_address is None:
                 raise ValueError("NVMM mapped buffer has NULL base address")
             pool_handle = wrap_buffer(buffer_address)
-            # Decouple the latched handle from the Gst buffer pool (ADR-0082
-            # Phase 3): DtoD-copy the surface into a reader-owned double buffer
+            # Decouple the latched handle from the Gst buffer pool:
+            # DtoD-copy the surface into a reader-owned double buffer
             # while the map is provably valid. Consumers (VLA vision leg /
             # detector) then read stable memory — an async read racing the next
             # frame is at worst a torn frame, never a use-after-free — and the
@@ -606,8 +606,8 @@ class GStreamerSensorReader:
         mono_ns = time.monotonic_ns()
         wall_ns = time.time_ns()
         # Label the handle by the surface's actual colour format: RGBA on the
-        # x86 DeepStream tier (nvjpegdec/nvvideoconvert emit packed RGBA —
-        # ADR-0082), NV12 on Tegra. NV12 is semi-planar Y + UV interleaved
+        # x86 DeepStream tier (nvjpegdec/nvvideoconvert emit packed RGBA),
+        # NV12 on Tegra. NV12 is semi-planar Y + UV interleaved
         # (1.5 bytes/pixel) reported as 3 channels because consumers typically
         # want a 3-channel CUDA view.
         is_rgba = handle.color_format == NvBufSurfaceColorFormat.RGBA

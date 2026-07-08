@@ -1,7 +1,7 @@
 """End-to-end manifest dispatch for ``MujocoArmHAL.from_description``.
 
 Parametrises across every robot whose ``robots/<id>/robot.yaml`` carries a
-``sim:`` block (ADR-0023).  For each one, loads the YAML through the real
+``sim:`` block.  For each one, loads the YAML through the real
 :class:`openral_core.RobotDescription` validator, then builds the HAL
 purely from the manifest via :meth:`MujocoArmHAL.from_description` (no
 per-robot subclass), connects against the real MJCF resolved through
@@ -37,7 +37,7 @@ pytestmark = pytest.mark.sim
 _GYM_ALOHA_MISSING = importlib.util.find_spec("gym_aloha") is None
 
 
-# Robots whose robot.yaml carries a sim: block (ADR-0023 scope).
+# Robots whose robot.yaml carries a sim: block (manifest-driven HAL scope).
 _MANIFEST_DRIVEN_ROBOTS = [
     "so100_follower",
     "franka_panda",
@@ -119,7 +119,7 @@ def test_from_description_round_trips(description: RobotDescription) -> None:
 def test_no_user_facing_python_required(robot_id: str) -> None:
     """The user-facing path is "load YAML → from_description → HAL".
 
-    This is the contract ADR-0023 promises: no per-robot Python import is
+    This is the contract the manifest-driven HAL promises: no per-robot Python import is
     required to drive the HAL.  We exercise that path explicitly here
     (the parametrised ``description`` fixture above goes through the same
     seam, but the assertion is implicit in the round-trip — make it
@@ -149,7 +149,7 @@ def test_python_description_matches_yaml(robot_id: str, description: RobotDescri
 
     Drift between the Python-side constant and ``robots/<id>/robot.yaml``
     is a known footgun (cf. ``tests/unit/test_robot_manifests_match_hal_constants.py``).
-    For the ADR-0023 scope, both surfaces must agree on the ``sim:``
+    For the manifest-driven HAL scope, both surfaces must agree on the ``sim:``
     block; otherwise the manifest-driven path and the legacy
     subclass-driven path would silently diverge.
     """

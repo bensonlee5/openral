@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 phase 2 — unit coverage for the allocation-free self-collision
+// Unit coverage for the allocation-free self-collision
 // core: hand-rolled forward kinematics + closed-form capsule-capsule
 // distance + non-adjacent-pair self-collision over a joint configuration.
 //
@@ -364,7 +364,7 @@ TEST(VoxelCollision, NullGridNeverHits) {
   EXPECT_FALSE(hit.hit);
 }
 
-// ── jacobian_dls_step (ADR-0040 predictive Cartesian) ─────────────────────────
+// ── jacobian_dls_step (predictive Cartesian) ─────────────────────────
 
 namespace {
 
@@ -540,7 +540,7 @@ TEST(NoAlloc, ForwardKinematicsAndSelfCollisionAreAllocationFree) {
   }
   g_count_enabled.store(false, std::memory_order_relaxed);
   EXPECT_EQ(g_alloc_count.load(std::memory_order_relaxed), 0U)
-      << "collision hot path allocated; ADR-0030 requires it to be allocation-free.";
+      << "collision hot path allocated; the self-collision core must stay allocation-free.";
 }
 
 TEST(NoAlloc, JacobianDlsStepIsAllocationFree) {
@@ -570,7 +570,7 @@ TEST(NoAlloc, JacobianDlsStepIsAllocationFree) {
       << "jacobian_dls_step allocated; the predictive Cartesian path must be allocation-free.";
 }
 
-// ── Box/OBB primitive (ADR-0081 / issue #84) ──────────────────────────────────
+// ── Box/OBB primitive (issue #84) ──────────────────────────────────
 //
 // A blocky link (SO-ARM100/101 `base`) carries an OBB instead of a capsule so
 // its flat faces don't over-report clearance. Ground truth here is hand-computed
@@ -702,7 +702,7 @@ TEST(SelfCollisionBox, BoxBoxPairFiresAndClears) {
   EXPECT_TRUE(hit.hit);  // overlapping
 }
 
-// ── Box link vs world / voxel (ADR-0081 — blocky links stay world-visible) ────
+// ── Box link vs world / voxel (blocky links stay world-visible) ────
 
 namespace {
 osk::CollisionModel one_box_model() {

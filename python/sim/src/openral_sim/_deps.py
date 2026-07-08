@@ -1132,7 +1132,7 @@ def _has_isaac_client() -> bool:
     """Isaac sidecar client side needs pyzmq + msgpack on the openral venv.
 
     The heavy ``isaacsim`` / ``isaaclab`` install lives in a separate py3.11
-    sidecar venv (ADR-0045), provisioned out-of-band; this probe only covers the
+    sidecar venv, provisioned out-of-band; this probe only covers the
     openral-side wire, same shape as :func:`_has_rldx_client`.
     """
     return _has_module("zmq") and _has_module("msgpack")
@@ -1147,7 +1147,7 @@ def _isaac_client_plan() -> BackendInstallPlan:
             "Pulls pyzmq (LGPL+ZeroMQ exception → effectively permissive) and "
             "msgpack (Apache-2.0). The Isaac Sim / Isaac Lab sidecar itself is an "
             "externally-provisioned py3.11 venv (NVIDIA Omniverse Kit components "
-            "are proprietary, non-redistributable; ADR-0045 / CLAUDE.md §1.9) and "
+            "are proprietary, non-redistributable; see CLAUDE.md §1.9) and "
             "is NOT installed by this plan."
         ),
         probe=_has_isaac_client,
@@ -1174,8 +1174,8 @@ def _isaac_client_plan() -> BackendInstallPlan:
 def _has_robotwin_client() -> bool:
     """RoboTwin sidecar client side needs pyzmq + msgpack on the openral venv.
 
-    The heavy SAPIEN + RoboTwin install lives in a separate py3.10 sidecar venv
-    (ADR-0061), provisioned out-of-band; this probe only covers the openral-side
+    The heavy SAPIEN + RoboTwin install lives in a separate py3.10 sidecar venv,
+    provisioned out-of-band; this probe only covers the openral-side
     wire, same shape as :func:`_has_isaac_client`.
     """
     return _has_module("zmq") and _has_module("msgpack")
@@ -1185,7 +1185,7 @@ def _has_rlbench_client() -> bool:
     """RLBench sidecar client side needs pyzmq + msgpack on the openral venv.
 
     CoppeliaSim/PyRep + the peract RLBench fork live in a separate py3.10 sidecar
-    venv (ADR-0062), provisioned out-of-band (CoppeliaSim is proprietary and never
+    venv, provisioned out-of-band (CoppeliaSim is proprietary and never
     vendored); this probe only covers the openral-side wire, same shape as
     :func:`_has_isaac_client`.
     """
@@ -1201,7 +1201,7 @@ def _robotwin_client_plan() -> BackendInstallPlan:
             "Pulls pyzmq (LGPL+ZeroMQ exception → effectively permissive) and "
             "msgpack (Apache-2.0). The SAPIEN + RoboTwin 2.0 sidecar itself is an "
             "externally-provisioned py3.10 venv (SAPIEN/RoboTwin/CuRobo are large + "
-            "CUDA-12.1-pinned; ADR-0061 / CLAUDE.md §1.9) and is NOT installed by "
+            "CUDA-12.1-pinned; see CLAUDE.md §1.9) and is NOT installed by "
             "this plan. RoboTwin is MIT-licensed."
         ),
         probe=_has_robotwin_client,
@@ -1235,7 +1235,7 @@ def _rlbench_client_plan() -> BackendInstallPlan:
             "msgpack (Apache-2.0). The CoppeliaSim/PyRep + peract-RLBench sidecar "
             "(plus the 3D Diffuser Actor checkpoint) is an externally-provisioned "
             "py3.10 venv — CoppeliaSim is proprietary, free-EDU, NEVER vendored "
-            "(ADR-0062 / CLAUDE.md §1.9) — and is NOT installed by this plan."
+            "(see CLAUDE.md §1.9) — and is NOT installed by this plan."
         ),
         probe=_has_rlbench_client,
         steps=(
@@ -1614,7 +1614,7 @@ def _vlabench_plan() -> BackendInstallPlan:
     VLABench has no PyPI release: it ships as a git clone installed editable
     ``--no-deps`` (its pins conflict with the numpy-2 workspace lock), plus its
     handful of numpy-2-compatible sim deps installed loose. The ~12 GB CC-BY
-    asset bundle is a separate first-env-build fetch (ADR-0079); this plan only
+    asset bundle is a separate first-env-build fetch; this plan only
     covers the Python side.
     """
     uv = _uv()
@@ -1640,7 +1640,7 @@ def _vlabench_plan() -> BackendInstallPlan:
             "gdown — all permissive). rrt-algorithms (a git-only data-gen dep, "
             "MIT) is STUBBED in site-packages — imported transitively but never "
             "run on the VLA eval path. The ~12 GB CC-BY asset bundle is fetched "
-            "separately on first env build (ADR-0079)."
+            "separately on first env build."
         ),
         probe=_has_vlabench,
         steps=(
@@ -1706,7 +1706,7 @@ def _openarm_robosuite_plan() -> BackendInstallPlan:
         license_note=(
             "Pulls robosuite>=1.5 (MIT) via the `robocasa` extras group. "
             "Mutually exclusive with the `libero` group (robosuite==1.4 pin) "
-            "in a single venv — see ADR-0011."
+            "in a single venv."
         ),
         probe=_has_openarm_robosuite,
         steps=(

@@ -1,4 +1,4 @@
-"""``openral dataset`` Typer app — ADR-0019 PR5.
+"""``openral dataset`` Typer app.
 
 Subcommands:
 
@@ -43,7 +43,7 @@ _CONSENT_ENV_VAR: Final[str] = "OPENRAL_DATASET_CONSENT"
 dataset_app = typer.Typer(
     name="dataset",
     help=(
-        "Publish or convert OpenRAL datasets (ADR-0019).\n"
+        "Publish or convert OpenRAL datasets.\n"
         "\n"
         "Commands:\n"
         "  push      — upload a local LeRobotDataset v3 to the HF Hub (private; consent-gated).\n"
@@ -61,7 +61,7 @@ dataset_app = typer.Typer(
 def from_bag_command(
     bag_path: Path = typer.Argument(
         ...,
-        help="Input .mcap bag written by openral_dataset.Rosbag2Sink (ADR-0019 PR3).",
+        help="Input .mcap bag written by openral_dataset.Rosbag2Sink.",
         exists=True,
         file_okay=True,
         dir_okay=False,
@@ -355,10 +355,9 @@ def push_command(
 
     The repo is **always** created with ``private=True``. A safety gate
     re-fetches the repo metadata after creation and aborts if the API
-    reports it as public. PR0 / ADR-0019 §3 covers the "discard vs
-    persist + tag" decision; this command is the one place where
-    user consent gates whether dataset persistence becomes dataset
-    publication.
+    reports it as public. The "discard vs persist + tag" decision is
+    deliberate; this command is the one place where user consent gates
+    whether dataset persistence becomes dataset publication.
     """
     try:
         info = _read_info_json(root)

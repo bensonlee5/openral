@@ -137,7 +137,7 @@ just ros2-test              # colcon test + colcon test-result --verbose
 ### Sim evals (closed-loop, opt-in — needs HF weights ± GPU)
 
 ```bash
-just sim-eval scenes/<name>.yaml   # canonical entry point (ADR-0002)
+just sim-eval scenes/<name>.yaml   # canonical entry point
 just sim-libero                              # SmolVLA × LIBERO
 just sim-xvla-libero                         # xVLA × LIBERO
 just sim-pi05-libero                         # π0.5 × LIBERO (≥8 GB VRAM)

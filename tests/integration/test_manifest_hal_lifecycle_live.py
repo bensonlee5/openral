@@ -1,4 +1,4 @@
-"""Live exercise of the public ``ManifestHALLifecycleNode`` (issue #191, ADR-0032).
+"""Live exercise of the public ``ManifestHALLifecycleNode`` (issue #191).
 
 The unified, ``robot.yaml``-driven node is the generic lifecycle node the
 per-robot HAL packages collapse into. No existing integration test brings it up
@@ -13,7 +13,7 @@ It asserts:
   ``connect()``s it) and activates;
 * a real ``/joint_states`` stream flows at the configured rate, carrying the
   manifest's joints;
-* a manifest that declares a ``hal.parameters`` block (ADR-0029) still brings
+* a manifest that declares a ``hal.parameters`` block still brings
   the node up cleanly — ``build_hal`` threads the defaults and drops the keys
   the sim HAL does not accept, rather than crashing.
 
@@ -147,7 +147,7 @@ def test_manifest_node_tolerates_hal_parameters_block(tmp_path: Path) -> None:
     ``build_hal`` threads ``hal.parameters.defaults`` into the constructor and
     drops keys the derived sim ``MujocoArmHAL`` does not accept (here a real
     ``robot_ip`` transport default), so the node configures cleanly instead of
-    raising — proving the ADR-0029 seam is safe on the live path.
+    raising — proving the ``hal.parameters`` seam is safe on the live path.
     """
     manifest = yaml.safe_load(FRANKA_YAML.read_text())
     manifest["hal"] = {

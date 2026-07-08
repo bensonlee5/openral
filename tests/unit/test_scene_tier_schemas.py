@@ -58,7 +58,7 @@ def test_deploy_scene_minimal():
 
 
 def test_deploy_scene_rejects_tasks_field():
-    """ADR-0073 amendment — deploy goals come from the operator prompt, not the scene."""
+    """Deploy goals come from the operator prompt, not the scene."""
     import pytest
     from openral_core import DeployScene
     from pydantic import ValidationError
@@ -70,7 +70,7 @@ def test_deploy_scene_rejects_tasks_field():
 
 
 def test_deploy_scene_composition_round_trips():
-    # ADR-0066 — a deploy scene declares its own MJCF composition (its arena),
+    # A deploy scene declares its own MJCF composition (its arena),
     # so the robot manifest doesn't have to carry scene config.
     from openral_core import DeployScene, SceneComposition, SceneSpec
 
@@ -104,7 +104,7 @@ def test_deploy_scene_workcell_fields_round_trip():
 
 
 def test_openarm_deploy_scene_owns_composition_robot_manifest_does_not():
-    # ADR-0066 separation: the openarm tabletop arena lives on the scene; the
+    # Separation of concerns: the openarm tabletop arena lives on the scene; the
     # robot manifest describes only the robot (no scene_defaults).
     from openral_core import DeployScene, RobotDescription
 

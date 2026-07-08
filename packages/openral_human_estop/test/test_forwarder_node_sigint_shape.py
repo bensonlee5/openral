@@ -15,7 +15,8 @@ the finally then crashed with::
     rclpy._rclpy_pybind11.RCLError: failed to shutdown:
     rcl_shutdown already called on the given context
 
-This is a safety-path node (Layer 6 — ADR-0018 §5 bullet 2). The structural
+This is a safety-path node (Layer 6 — ROS 2 reasoner + supervisor graph spec
+§5 bullet 2). The structural
 contract here additionally proves that the ``except`` clause is scoped to
 teardown-signal-only exceptions (``KeyboardInterrupt`` /
 ``ExternalShutdownException``) — it does NOT catch ``Exception``,
@@ -25,7 +26,7 @@ safety-path failure cannot be silently swallowed at shutdown entry.
 These nodes are shutdown *entry-points* for the process, not actuation
 control loops, so this ``except`` cannot leave motors energised: by the time
 ``main()`` is exiting the forwarder has already published its estop on
-``/openral/estop`` and the C++ safety kernel (ADR-0020) owns the actuation
+``/openral/estop`` and the C++ safety kernel owns the actuation
 gate independently.
 """
 

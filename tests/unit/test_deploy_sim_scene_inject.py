@@ -1,8 +1,8 @@
-"""deploy sim forwards the scene YAML to manifest-driven arms in sim mode (ADR-0034).
+"""deploy sim forwards the scene YAML to manifest-driven arms in sim mode.
 
 Uses ``scenes/deploy/libero_pnp.yaml`` — a DeployScene (env-only, no task)
 that resolves to ``franka_panda`` via ``SCENES.fixed_robot("libero_spatial")``.
-``openral deploy sim --config`` is strict on DeployScene (ADR-0041), so the
+``openral deploy sim --config`` is strict on DeployScene, so the
 fixture must be DeployScene-shaped.
 
 Parents depth: tests/unit/test_*.py → parents[0]=tests/unit, parents[1]=tests,

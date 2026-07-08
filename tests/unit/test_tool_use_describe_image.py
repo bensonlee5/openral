@@ -2,7 +2,7 @@
 
 ``describe_image`` is the single-shot "ask the LLM about a camera frame"
 primitive (image_jpeg + question → text) used by the VLM-adjudicated
-completion gate (ADR-0073/C).
+completion gate (amendment C).
 
 §1.11 rule: the ONLY doubles are the ``anthropic`` / ``openai`` SDK objects
 at the network boundary — tiny ``SimpleNamespace`` fakes returning canned

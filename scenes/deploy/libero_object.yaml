@@ -10,7 +10,7 @@
 #
 # The operator supplies one goal at runtime (``--initial-task`` / ``/openral/prompt``);
 # the reasoner decomposes that single goal into an ordered queue via
-# ``decompose_mission`` (ADR-0073), locates each named object via the
+# ``decompose_mission``, locates each named object via the
 # omdet-turbo-locator, executes smolvla-libero per subtask, reward-gates each
 # attempt against robometer-4b, and advances one task at a time until the queue is
 # drained. Every subtask selection, localisation, VLA execution, and reward verdict
@@ -26,7 +26,7 @@
 # OPENRAL_DASHBOARD_FLIP_180=1 rotates the dashboard cameras 180° so LIBERO's
 # bottom-up MuJoCo render shows upright (display-only; the VLA already flips its
 # own copy via the manifest's image_preprocessing.flip_180). The scene runs the
-# episode continuously (ADR-0036) — a task success no longer resets the arena, so
+# episode continuously — a task success no longer resets the arena, so
 # the reasoner-decomposed mission persists across its subtasks and the MuJoCo viewer stays in sync.
 
 scene:
@@ -40,4 +40,4 @@ scene:
 # Deploy goal is supplied by the operator at runtime, e.g.:
 #   openral deploy sim --config scenes/deploy/libero_object.yaml \
 #     --initial-task "pick up the milk, the ketchup, and the alphabet soup and put each in the basket"
-# The reasoner decomposes that single goal into ordered subtasks via decompose_mission (ADR-0073).
+# The reasoner decomposes that single goal into ordered subtasks via decompose_mission.

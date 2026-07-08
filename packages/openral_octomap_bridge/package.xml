@@ -3,7 +3,7 @@
   <name>openral_octomap_bridge</name>
   <version>0.1.0</version>
   <description>
-    ADR-0030 — lower an OctoMap into the C++ safety kernel's dense base-frame
+    Lower an OctoMap into the C++ safety kernel's dense base-frame
     OccupancyVoxels grid. Keeps the octomap dependency OUT of the safety kernel:
     this perception-side node does the octree deserialization + TF crop, the
     kernel does the allocation-free rasterized capsule-vs-voxel check.

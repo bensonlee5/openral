@@ -1,6 +1,6 @@
 name: hil-so100
 
-# ADR-0020 PR-I — Hardware-in-the-loop safety gate for the SO-100 follower arm.
+# Hardware-in-the-loop safety gate for the SO-100 follower arm.
 #
 # Runs the real C++ safety_kernel_node against a physically connected SO-100 and
 # exercises the deny-by-default envelope + geometric self/world-collision checks

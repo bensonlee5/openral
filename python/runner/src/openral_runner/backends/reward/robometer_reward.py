@@ -1,4 +1,4 @@
-"""Robometer reward-monitor backends (ADR-0057).
+"""Robometer reward-monitor backends.
 
 The backend loads lerobot 0.6.0's native
 Robometer model inside ``reward_monitor_node`` and scores clips on demand. That
@@ -32,7 +32,7 @@ def critic_score_from_assessment(
 ) -> tuple[float, float]:
     """Map a reward-monitor assessment to a generic critic ``(score, threshold)``.
 
-    The Tier-C critic bus (ADR-0064) consumes a higher-is-better scalar per
+    The Tier-C critic bus consumes a higher-is-better scalar per
     sample; a reward model's per-window ``progress_now`` (in [0, 1]) is exactly
     that. The producer's ``CriticWatchdogGroup`` decides when the score has
     *stalled* — this helper only normalises one reward assessment
@@ -65,7 +65,7 @@ def _evenly_spaced_indices(n: int, k: int) -> list[int]:
     """``k`` evenly-spaced indices into ``range(n)``, always including the last.
 
     Used to subsample a frame window to a fixed budget so the reward model's
-    vision-transformer activation stays bounded on an 8 GB GPU (ADR-0058). The
+    vision-transformer activation stays bounded on an 8 GB GPU. The
     newest frame (index ``n-1``) is always kept — the reasoner reads
     ``progress_now`` from it. Returns ``list(range(n))`` when ``n <= k``.
     """
@@ -228,7 +228,7 @@ def build_reward_monitor(
         )
     if manifest.reward is None:  # pragma: no cover — validator guarantees this
         raise ROSConfigError(f"reward manifest {manifest.name!r} has no `reward` block")
-    # Backend dispatch (ADR-0057): TOPReward and Robometer run in the reward
+    # Backend dispatch: TOPReward and Robometer run in the reward
     # monitor process.
     if manifest.reward.backend == "topreward":
         from openral_runner.backends.reward.topreward_reward import (  # noqa: PLC0415

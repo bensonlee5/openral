@@ -14,8 +14,8 @@ does **not** import ``gi`` at module load. All it does is
    (default ``bh_sink``) so the reader can fetch it via
    ``Gst.Bin.get_by_name``.
 
-The output is fed verbatim to ``Gst.parse_launch`` inside the reader
-(commit #2 of ADR-0010 PR I). Keeping the builder a pure-Python
+The output is fed verbatim to ``Gst.parse_launch`` inside the reader.
+Keeping the builder a pure-Python
 string transformer means every code path can be unit-tested on
 stock Ubuntu without NVIDIA plugins or PyGObject.
 """
@@ -53,7 +53,7 @@ _DEFAULT_APPSINK_NAME: Final[str] = "bh_sink"
 
 # Name of the per-camera ``tee`` that fans the decoded / GPU-uploaded frame to
 # the policy leg and every optional leg. This tee is the **perception-bus
-# attach point** (ADR-0037): the runtime ``TeeManager`` looks it up by name via
+# attach point**: the runtime ``TeeManager`` looks it up by name via
 # ``Gst.Bin.get_by_name`` to request pads for reasoner-activated consumers (the
 # object detector now, VLAs later) at runtime. Exported so that module can
 # reference the same name the static builder emits.
@@ -61,7 +61,7 @@ TEE_NAME: Final[str] = "openral_cam_tee"
 
 # Per-branch leaky queue. Every tee branch is prefixed with this so a slow or
 # crashing consumer drops its own frames rather than backpressuring the policy
-# leg (ADR-0018 §3 isolation invariant). Defined once and shared by the static
+# leg (isolation invariant). Defined once and shared by the static
 # builder (:func:`leaky_branch`) and the runtime ``TeeManager`` so a dynamically
 # attached branch carries the identical isolation policy.
 LEAKY_BRANCH_QUEUE: Final[str] = "queue leaky=downstream max-size-buffers=2"
@@ -71,8 +71,8 @@ def leaky_branch(elements: str, *, tee_name: str = TEE_NAME) -> str:
     """Return one ``tee`` branch: ``<tee>. ! <leaky queue> ! <elements>``.
 
     The single definition of the per-branch isolation policy (a
-    ``leaky=downstream`` queue, ADR-0018 §3) so the static pipeline builder and
-    the runtime ``TeeManager`` (ADR-0037) construct branches identically — a
+    ``leaky=downstream`` queue) so the static pipeline builder and
+    the runtime ``TeeManager`` construct branches identically — a
     stalled consumer drops its own frames instead of stalling the policy leg.
 
     Args:
@@ -115,7 +115,7 @@ class Platform(str, Enum):
     ``WITH_DEEPSTREAM_STAGE=on``, shipped as
     ``openral:x86-deepstream-latest``). Detected by the presence of
     **both** ``nvjpegdec`` and ``nvvideoconvert``. On this tier the main
-    reader pipeline is NVMM-native (ADR-0082): ``nvjpegdec`` decodes
+    reader pipeline is NVMM-native: ``nvjpegdec`` decodes
     MJPG **directly into** ``video/x-raw(memory:NVMM)`` (the decoded
     frame is born in GPU memory; only the compressed JPEG crosses PCIe)
     and ``nvvideoconvert`` colour-converts on-GPU, so the appsink
@@ -195,7 +195,7 @@ class PipelineSpec(BaseModel):
             raw modes at all). Inserts an ``image/jpeg`` capsfilter +
             JPEG decoder after ``v4l2src``: ``nvjpegdec`` on
             :attr:`Platform.NVIDIA_DEEPSTREAM` (decodes straight into
-            NVMM — ADR-0082), stock ``jpegdec`` elsewhere. USB source
+            NVMM), stock ``jpegdec`` elsewhere. USB source
             only; mutually exclusive with ``encoded``.
         enable_nvmm: Hint to keep frames in ``memory:NVMM`` caps for
             NVMM→CUDA handoff. Honored only when the platform is
@@ -206,12 +206,12 @@ class PipelineSpec(BaseModel):
             ``tee`` branch terminating in ``event_appsink_name``. The
             event branch lifts frames to system memory and rate-limits
             via ``videorate`` to :attr:`event_rate_hz`; the
-            :class:`PerceptionEventPublisher` (ADR-0018 F6) runs
+            :class:`PerceptionEventPublisher` runs
             detectors on its samples and publishes
             ``PromptStamped`` on ``/openral/perception/<kind>``. Policy
             and event legs share the ``cuda_context`` shared CUDA
-            context singleton, per ADR-0011 §"Shared CUDA context"
-            (moved to openral-pro, ADR-0083).
+            context singleton, per the shared CUDA context design
+            (now living in the private OpenRAL Pro plugin).
         appsink_name: Name attached to the openral appsink for
             ``Gst.Bin.get_by_name``. Defaults to ``bh_sink``.
         ros_appsink_name: Name attached to the ROS-side appsink (when
@@ -417,8 +417,8 @@ def build_pipeline_string(spec: PipelineSpec, platform: Platform | None = None) 
       for CSI on Tegra (raises on non-Tegra); ``rtspsrc`` for RTSP;
       ``filesrc`` for file; ``videotestsrc`` for synthetic.
     * Decode: MJPG USB (``spec.jpeg``) → ``image/jpeg`` caps +
-      ``nvjpegdec`` (DeepStream tier, decodes straight into NVMM —
-      ADR-0082) or ``jpegdec`` elsewhere; H.264 (``spec.encoded``) →
+      ``nvjpegdec`` (DeepStream tier, decodes straight into NVMM)
+      or ``jpegdec`` elsewhere; H.264 (``spec.encoded``) →
       ``nvv4l2decoder`` on Tegra / DeepStream, ``nvh264dec`` on desktop
       NVIDIA, ``avdec_h264`` on CPU-only.
     * Colour convert: ``nvvidconv`` on Tegra; ``nvvideoconvert`` on the
@@ -472,10 +472,10 @@ def build_pipeline_string(spec: PipelineSpec, platform: Platform | None = None) 
 
     if spec.enable_ros_tee or spec.enable_event_tee:
         # Fan the frame to the policy leg + every optional leg off a single
-        # named tee — the perception-bus attach point (ADR-0037) the runtime
+        # named tee — the perception-bus attach point the runtime
         # TeeManager later requests pads on. Each leg is wrapped by
         # ``leaky_branch`` so a slow / crashing consumer drops its own frames
-        # rather than backpressuring the policy leg (ADR-0018 §3).
+        # rather than backpressuring the policy leg (isolation invariant).
         branches: list[str] = [leaky_branch(appsink)]
         if spec.enable_ros_tee:
             branches.append(leaky_branch(_build_ros_tee_branch(spec, platform)))
@@ -528,7 +528,7 @@ def _build_decode(spec: PipelineSpec, platform: Platform) -> str:
     cameras (``spec.jpeg``) get an ``image/jpeg`` capsfilter (pinning
     width/height/framerate *before* the decoder so v4l2 negotiates the
     MJPG mode) followed by ``nvjpegdec`` on the DeepStream tier — which
-    decodes **directly into NVMM** (ADR-0082) — or stock ``jpegdec``
+    decodes **directly into NVMM** — or stock ``jpegdec``
     elsewhere; RTSP and encoded USB share a per-platform H.264 decoder
     lookup, with RTSP prefixing the depay element.
     """
@@ -570,11 +570,11 @@ def _build_convert(spec: PipelineSpec, platform: Platform) -> str:
 
     ``nvvidconv`` exists on Tegra (L4T multimedia stack, NVMM-aware).
     ``nvvideoconvert`` is a NVIDIA DeepStream element used on
-    :attr:`Platform.NVIDIA_DEEPSTREAM` (the ``ds-on`` image, ADR-0082) —
+    :attr:`Platform.NVIDIA_DEEPSTREAM` (the ``ds-on`` image) —
     it converts on-GPU and negotiates ``memory:NVMM`` caps on x86. It is
     **not** in the open-source ``gstreamer1.0-plugins-bad`` ``nvcodec``
-    plugin family; ADR-0010 Amendment 2026-05-12 rejected bundling
-    DeepStream into open-core, so ``Platform.NVIDIA_DESKTOP`` falls back
+    plugin family; OpenRAL's open-core licensing deliberately rejects
+    bundling DeepStream into open-core, so ``Platform.NVIDIA_DESKTOP`` falls back
     to stock ``videoconvert`` (CPU) — H.264 dec/enc stays on GPU there,
     only the colour-space convert runs on CPU.
     """
@@ -594,7 +594,7 @@ def _build_caps(spec: PipelineSpec, platform: Platform) -> str:
     ``nvvidconv`` outputs by default and the NvBufSurface ctypes wrapper
     expects) and ``RGBA`` on :attr:`Platform.NVIDIA_DEEPSTREAM` (what the
     NVMM→CUDA consumers — ``TrtNvmmExecutor`` and the detector NVMM
-    branch — take as input; ADR-0082).
+    branch — take as input).
 
     NVMM caps are emitted for ``Platform.TEGRA`` and
     ``Platform.NVIDIA_DEEPSTREAM``. On ``Platform.NVIDIA_DESKTOP`` the
@@ -647,7 +647,7 @@ def _build_ros_tee_branch(spec: PipelineSpec, platform: Platform) -> str:
 
 
 def _build_event_tee_branch(spec: PipelineSpec, platform: Platform) -> str:
-    """Return the perception/event branch fed into the event detector (ADR-0018 F6).
+    """Return the perception/event branch fed into the event detector.
 
     The event branch is the third leg of the per-camera ``tee`` (after the
     policy NVMM/CUDA leg and the ROS observability leg). It always lifts

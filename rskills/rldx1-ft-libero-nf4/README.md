@@ -93,7 +93,7 @@ RLDX-1 cannot run in-process with openral. We evaluated the in-process path and 
 3. Force-installing `rldx` with `--no-deps` cascades through 15+ packages with major-version-incompatible APIs (albumentations 2.x vs 1.4, lmdb, av, dm-tree, …) — and even past the imports the model load runs through transformers 5.x against rldx code written for 4.57.
 4. Reimplementing the policy in openral would mean porting ~25 kLOC of custom Triton kernels + MSAT flow-matching code — out of scope.
 
-So we run RLDX-1 as an **out-of-process sidecar**, communicating over its native ZMQ + msgpack wire protocol (ADR-0010-aligned). The `openral_sim.policies.rldx` adapter **auto-manages the sidecar lifecycle** so end users never invoke the boot helper by hand: it pings the port, forks `tools/rldx_sidecar.py` if no server is up, polls until the server answers, and tears the child down on `close()`. The single 3.10 venv at `~/.cache/openral/rldx-sidecar/source/.venv` is reused across **every** RLDX-1 rSkill — one cached env on disk, not one per checkpoint.
+So we run RLDX-1 as an **out-of-process sidecar**, communicating over its native ZMQ + msgpack wire protocol (aligned with the out-of-process sidecar wire-protocol convention). The `openral_sim.policies.rldx` adapter **auto-manages the sidecar lifecycle** so end users never invoke the boot helper by hand: it pings the port, forks `tools/rldx_sidecar.py` if no server is up, polls until the server answers, and tears the child down on `close()`. The single 3.10 venv at `~/.cache/openral/rldx-sidecar/source/.venv` is reused across **every** RLDX-1 rSkill — one cached env on disk, not one per checkpoint.
 
 ```
                      ┌──────────────────────────────────────┐

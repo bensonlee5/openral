@@ -1,4 +1,4 @@
-"""Deploy-side VLA↔reward resolution + VRAM preflight (ADR-0077 §4).
+"""Deploy-side VLA↔reward resolution + VRAM preflight.
 
 `openral deploy sim` does not preselect a VLA — the reasoner picks one at runtime
 from the capability-matched palette. So the deploy resolves the reward model from

@@ -16,7 +16,7 @@
     <span class="sub">robot action layer · live telemetry</span>
   </div>
   <div class="spacer"></div>
-  <!-- Trace demoted from its own section to a compact header control (ADR-0073 reorg). -->
+  <!-- Trace demoted from its own section to a compact header control. -->
   <span class="trace-chip">
     <span class="lbl">trace</span>
     <span class="trace-id" id="trace-id" title="click to copy">—</span>
@@ -129,7 +129,7 @@
         </div>
       </section>
 
-      <!-- SLAM 2D MAP (ADR-0025) — enlarged -->
+      <!-- SLAM 2D map — enlarged -->
       <section class="card accent-world mv-slam" id="card-slam-map">
         <div class="hd">
           <span class="title">SLAM · 2D map</span>
@@ -164,7 +164,7 @@
         </div>
       </section>
 
-      <!-- WORLD POINTCLOUD · robot view (ADR-0030) — enlarged -->
+      <!-- WORLD POINTCLOUD · robot view (robot-perspective octomap pointcloud render) — enlarged -->
       <section class="card accent-world mv-cloud" id="card-world-cloud">
         <div class="hd">
           <span class="title">Pointcloud · robot view</span>
@@ -200,7 +200,7 @@
         <div class="hd"><span class="title">rSkill · running skill</span><span class="age">—</span></div>
         <div class="primary">waiting…</div>
         <div class="substat" id="rskill-inference"></div>
-        <!-- ADR-0057 — latest reward-monitor assessment (reward.score span):
+        <!-- Latest reward-monitor assessment (reward.score span):
              progress + success bars, colour-banded red/orange/green by value. -->
         <div class="reward-bars" id="rskill-reward" style="display:none"></div>
       </div>
@@ -272,7 +272,7 @@
       </div>
     </section>
 
-    <!-- World state (+ durable scene-object memory, ADR-0038) -->
+    <!-- World state (+ durable spatial-memory scene-object graph) -->
     <div class="card accent-world world stream-world" id="card-world-state">
       <div class="hd"><span class="title">World state</span><span class="age" id="ws-age">—</span></div>
       <div class="scroll-y grow">

@@ -1,4 +1,5 @@
-"""ADR-0030 voxel phase — dense occupancy-grid (octomap path) collision via the real kernel.
+"""Collision-lowering voxel phase — dense occupancy-grid (octomap path) collision via
+the real kernel.
 
 A synthetic 1-link arm is driven through the **real safety_kernel_node** while a
 dense occupancy voxel grid is published on ``/openral/world_voxels`` (the

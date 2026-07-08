@@ -7,7 +7,7 @@ kind: "reward"
 
 # Embodiment-agnostic: a reward monitor scores any rollout video + task
 # instruction and is exempt from the rSkill<->robot embodiment gate.
-embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard (ADR-0072)
+embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard
 
 # Consumes the same RGB camera stream the co-active VLA uses. No actuators.
 sensors_required:
@@ -19,7 +19,7 @@ actuators_required: []
 
 runtime: "pytorch"
 
-# NF4 bitsandbytes quantization (empirically validated, ADR-0057 Phase 2):
+# NF4 bitsandbytes quantization (empirically validated):
 # 236 Linear modules -> Linear4bit, 8.91 GB bf16 -> 3.33 GB resident,
 # 3.56 GB peak incl. an 8-frame forward (4.44 GB headroom on an 8 GB GPU).
 quantization:
@@ -42,7 +42,7 @@ quantization:
 # robometer-sidecar process), NOT weights-only. The NF4 packed weights are
 # ~3.6 GB, but the live sidecar also holds a CUDA context + the Qwen3-VL-4B
 # backbone's VLM-scoring activations over its frame window, measured at ~5.34 GB
-# steady-state → declare 5.5 GB so the ADR-0077 co-residency preflight budgets
+# steady-state → declare 5.5 GB so the VLA↔reward co-residency preflight budgets
 # the real footprint (a 3.6 GB figure under-counted it and greenlit a pair that
 # OOM-crashed the runner beside it on an 8 GB card). fp32/bf16 stay weights-only
 # estimates — they carry the same context/activation overhead, unmeasured here.
@@ -51,7 +51,7 @@ min_vram_gb:
   bf16: 9.0
   int4: 5.5
 
-# Pre-quantized NF4 checkpoint (ADR-0057): the runtime loads the packed weights
+# Pre-quantized NF4 checkpoint: the runtime loads the packed weights
 # DIRECTLY on the meta device via Params4bit.from_prequantized — no bf16
 # materialization, no requantize (~25 s to ready vs ~110 s + a 19 GB CPU spike).
 # Bit-identical to the bf16+quantize path. Built by
@@ -65,11 +65,11 @@ latency_budget:
 
 source_repo: "hf://robometer/Robometer-4B@beef63bc914c5c189329d49c6d712d96d632aa34"
 
-# Reward / progress-monitor contract (ADR-0057). Discrete mode yields
+# Reward / progress-monitor contract. Discrete mode yields
 # per-frame normalized progress in [0,1] + per-frame success probability.
 reward:
   progress_range: [0.0, 1.0]
-  # Calibrated to ADR-0074 Decision 5 (amendment): the bars gate the PROGRESS head
+  # Calibrated to a later reward-calibration amendment (Decision 5): the bars gate the PROGRESS head
   # (task closeness). Measured on cached LIBERO rollouts, full-attempt progress
   # reaches ~0.80–0.86 on a genuine physical success and ~0.74 on a failure, so
   # 0.8 is the auto-pass bar and 0.5 the clearly-incomplete floor. The success
@@ -77,7 +77,7 @@ reward:
   # secondary corroborating cue, never as the completion bar.
   success_threshold: 0.8
   preference: false
-  # Robometer (ADR-0057) scores a trajectory from its START; the attempt horizon
+  # Robometer scores a trajectory from its START; the attempt horizon
   # is the patience ceiling (default_patience_s=30 s). An 8 s trailing slice
   # systematically MISSED the completion arc and under-scored progress to ~0.70
   # (vlm_check/ladder) on real successes whose full-attempt progress was ~0.85.
@@ -97,7 +97,7 @@ description: >
   as an NF4 reward rSkill. Runs parallel to a VLA: given rollout frames + the
   task instruction it emits per-frame normalized progress (0-1) and success
   probability, queried on demand by the Reasoner. Advisory-only — never gates
-  motors. Embodiment-agnostic. Apache-2.0. ADR-0057.
+  motors. Embodiment-agnostic. Apache-2.0.
 
 actions:
   - "monitor"

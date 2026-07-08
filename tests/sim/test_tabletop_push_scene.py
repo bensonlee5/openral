@@ -1,4 +1,4 @@
-"""Sim tests for the robot-agnostic ``tabletop_push`` scene (ADR-0033).
+"""Sim tests for the robot-agnostic ``tabletop_push`` scene.
 
 The point of this scene is that the robot is a **flag**: the same composer +
 rollout drives any position-controlled arm. So the suite runs the full

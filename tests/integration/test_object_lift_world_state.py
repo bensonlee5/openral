@@ -1,6 +1,6 @@
 """E2E integration tests for the object-lift path in the world-state lifecycle node.
 
-ADR-0035 — Task 8: drives the real ``_WorldStateLifecycleNode`` object-lift pipeline
+Task 8: drives the real ``_WorldStateLifecycleNode`` object-lift pipeline
 with real components (real node, real VoxelFrustumLifter + ObjectMemory, real
 TF2 transforms, real OccupancyVoxels + PromptStamped messages).
 

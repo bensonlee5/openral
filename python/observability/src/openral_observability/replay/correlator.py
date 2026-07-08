@@ -1,7 +1,7 @@
 """Join rosbag2 messages with OTel spans at view time.
 
-ADR-0018 F7 — the canonical message log lives in mcap; the canonical
-span log lives behind the dashboard receiver (ADR-0017). This module
+The canonical message log lives in mcap; the canonical
+span log lives behind the observability dashboard receiver. This module
 opens both, joins on ``trace_id``, and emits one chronological list of
 :class:`TimelineEntry` records suitable for ``openral replay`` output or a
 dashboard scrub UI.
@@ -35,7 +35,7 @@ class TimelineEntry:
         ts_ns: Unix nanoseconds of the event start (``log_time_ns`` for
             bag messages, ``start_unix_ns`` for spans).
         trace_id: 32-hex-char trace_id (empty for unjoined bag messages
-            published without an ADR-0018 ``trace_id`` field).
+            published without a ``trace_id`` field).
         topic: ROS topic when ``kind=='bag'``; empty for spans.
         span_name: OTel span name when ``kind=='span'``; empty for bag
             messages.
@@ -108,7 +108,7 @@ def build_timeline(
             trace_id before merging — spans with a different trace_id
             are dropped, and bag messages with an empty trace_id are
             dropped only if any of them have a non-empty one (so a bag
-            recorded without ADR-0018 trace_ids still surfaces).
+            recorded without trace_ids still surfaces).
 
     Returns:
         Timeline entries sorted by ``ts_ns`` ascending.

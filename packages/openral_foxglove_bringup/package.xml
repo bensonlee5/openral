@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>
     Read-only live-scene visualisation surface for OpenRAL, wrapping upstream
-    foxglove_bridge (ADR-0059). Exposes only the "Bucket-1" topics (camera
+    foxglove_bridge. Exposes only the "Bucket-1" topics (camera
     images, /map occupancy grid, octomap point cloud, joint states, TF,
     robot_description) plus the Bucket-2 converter outputs (collision-capsule
     markers, voxel point cloud) over the Foxglove WebSocket protocol, with
@@ -14,9 +14,8 @@
     config/openral_layout.json, an opt-in compressed-image republish path, a
     Bucket-2 converter node, and an MCAP recorder.
 
-    ADR-0059 governs this
-    component as the live-scene half of a hybrid with the OTel dashboard
-    (ADR-0017, kept for traces/metrics). Any path that re-enables
+    This component is the live-scene half of a hybrid with the OTel dashboard
+    (kept for traces/metrics). Any path that re-enables
     clientPublish/services (e.g. an E-stop button) remains out of scope and
     requires safety-WG review (CLAUDE.md §3).
   </description>
@@ -35,11 +34,11 @@
        with_joint_state_publisher launch args). -->
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>joint_state_publisher</exec_depend>
-  <!-- ADR-0059 Phase 2 — opt-in compressed-image republish path
+  <!-- Opt-in compressed-image republish path
        (republish_compressed launch arg) to cut camera bandwidth ~10x. -->
   <exec_depend>image_transport</exec_depend>
   <exec_depend>compressed_image_transport</exec_depend>
-  <!-- ADR-0059 Phase 3 — Bucket-2 converter node: re-publishes the custom
+  <!-- Bucket-2 converter node: re-publishes the custom
        openral_msgs world types as standard visualization_msgs / sensor_msgs
        so Foxglove renders them natively. -->
   <exec_depend>openral_msgs</exec_depend>

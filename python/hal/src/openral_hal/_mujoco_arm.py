@@ -211,7 +211,7 @@ class MujocoArmHAL(HALBase):
 
         self._connected: bool = False
         self._last_state_time: float = 0.0
-        # ADR-0049 / ADR-0034 — the idle-step hand-off timestamp the
+        # The idle-step hand-off timestamp the
         # SimSensorBridge reads to decide when an idle scene may auto-step
         # (``should_idle_step``). ``0`` = never actuated → idle-stepping starts
         # immediately so a parked arm keeps its cameras + joint_state snapshot
@@ -255,7 +255,7 @@ class MujocoArmHAL(HALBase):
                 "just sync --all-packages --group sim"
             ) from exc
 
-        # ADR-0086 — generic camera rig: splice the manifest's declared RGB
+        # Generic camera rig: splice the manifest's declared RGB
         # cameras into the MJCF when they are absent (a bare-arm twin ships
         # none), so deploy sim renders them without a per-robot scene composer.
         # Idempotent: a scene-attached / already-composed MJCF that already has
@@ -671,8 +671,8 @@ class MujocoArmHAL(HALBase):
     def idle_step(self) -> bool:
         """Advance the sim one HOLD tick so cameras + state stay live while idle.
 
-        Gives a bare ``MujocoArmHAL`` the ADR-0034 (idle cameras) + ADR-0049
-        (off-executor joint_state via ``ProprioSnapshot``) treatment that the
+        Gives a bare ``MujocoArmHAL`` the idle-cameras
+        + off-executor joint_state (via ``ProprioSnapshot``) treatment that the
         lifecycle node gates on a *callable* ``idle_step``. ``ctrl`` is left
         untouched — it already holds the last commanded / seeded pose, so a HOLD
         step does not move the arm; it only re-integrates physics and refreshes
@@ -839,7 +839,7 @@ class MujocoArmHAL(HALBase):
             raise ROSConfigError(
                 f"RobotDescription '{description.name}' has no `sim` block; "
                 "cannot construct a MujocoArmHAL from it. Add a `sim:` section "
-                "to the manifest (see ADR-0023)."
+                "to the manifest."
             )
         sim = description.sim
         joint_names = [j.name for j in description.joints]

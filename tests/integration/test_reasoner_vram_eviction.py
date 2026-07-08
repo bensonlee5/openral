@@ -1,4 +1,4 @@
-"""Live ROS integration test for ADR-0050 VRAM eviction on VLA dispatch.
+"""Live ROS integration test for VRAM eviction on VLA dispatch.
 
 The reasoner, before dispatching a GPU-heavy ``execute_rskill`` (a VLA policy),
 must deactivate its configured GPU lifecycle peers — the object-detector
@@ -208,7 +208,7 @@ def test_execute_rskill_frees_vram_peer_before_dispatch_then_reactivates() -> No
     labels = [label for label, _ in sorted(events, key=lambda e: e[1])]
     assert "deactivate" in labels, (
         f"GPU peer was never deactivated before the VLA dispatch; events={labels}. "
-        "ADR-0050 VRAM eviction on execute_rskill did not fire."
+        "VRAM eviction on execute_rskill did not fire."
     )
     assert "execute" in labels, f"action server never ran the goal; events={labels}"
     # Crux: the peer's VRAM is freed BEFORE the policy loads.

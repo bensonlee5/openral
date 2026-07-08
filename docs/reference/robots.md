@@ -8,7 +8,7 @@ Every embodiment is a typed `RobotDescription` manifest under `robots/<robot_id>
 |---|---|---|---|
 | SO-100 (LeRobot follower arm) | [`robots/so100_follower/`](https://github.com/OpenRAL/openral/tree/master/robots/so100_follower/) | `SO100FollowerHAL` (real) + `SO100MujocoHAL` (sim) + `openral_hal_so100` lifecycle node | ✓ HW + sim |
 | SO-101 (LeRobot follower arm) | [`robots/so101_follower/`](https://github.com/OpenRAL/openral/tree/master/robots/so101_follower/) | shares SO-100 family — `SO100FollowerHAL` (real) + `SO100MujocoHAL` (sim) + `openral_hal_so100` lifecycle node | ✓ HW + sim |
-| Franka Panda | [`robots/franka_panda/`](https://github.com/OpenRAL/openral/tree/master/robots/franka_panda/) | `FrankaPandaHAL` (`MujocoArmHAL`, ADR-0023) + `openral_hal_franka` | ✓ sim · HW bring-up M3 (#56) |
+| Franka Panda | [`robots/franka_panda/`](https://github.com/OpenRAL/openral/tree/master/robots/franka_panda/) | `FrankaPandaHAL` (`MujocoArmHAL`) + `openral_hal_franka` | ✓ sim · HW bring-up M3 (#56) |
 | UR5e | [`robots/ur5e/`](https://github.com/OpenRAL/openral/tree/master/robots/ur5e/) | `UR5eHAL` (`MujocoArmHAL`) + `openral_hal_ur5e` | ✓ sim · HW bring-up M3 |
 | UR10e | [`robots/ur10e/`](https://github.com/OpenRAL/openral/tree/master/robots/ur10e/) | `UR10eHAL` (`MujocoArmHAL`) + `openral_hal_ur10e` | ✓ sim · HW bring-up M3 |
 | Flexiv Rizon 4 | [`robots/rizon4/`](https://github.com/OpenRAL/openral/tree/master/robots/rizon4/) | `Rizon4MujocoHAL` (`MujocoArmHAL`) | ✓ sim |

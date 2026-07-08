@@ -27,7 +27,7 @@ name: "openarm_v2"
 embodiment_kind: "bimanual"
 base_frame: "openarm_base"
 
-# ADR-0027 — robot_state_publisher: `assets.urdf` deliberately unset.
+# robot_state_publisher: `assets.urdf` deliberately unset.
 # Upstream URDF + xacro live at github.com/enactic/openarm_description
 # (single-arm) and github.com/reazon-research/openarm_ros2
 # (bimanual bringup); both require xacro processing at launch time
@@ -36,7 +36,7 @@ base_frame: "openarm_base"
 # `openarm_v1_mj_description` (MJCF). Wire one of these once a
 # wrapped-task-space VLA targets openarm.
 
-# ADR-0058 — unified asset block. Vendored URDF + bimanual MJCF.
+# Unified asset block. Vendored URDF + bimanual MJCF.
 assets:
   urdf:
     ref: "file:openarm.urdf"
@@ -299,7 +299,7 @@ safety:
 # `OpenArmRealHAL` wrapping lerobot will keep `sdk_kind: open` and
 # set `hal.real` to the real adapter.
 sdk_kind: "open"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # Sim-only today → real: null until the lerobot OpenArm driver wrapper lands.
 hal:
   sim: "openral_hal.openarm:OpenArmMujocoHAL"
@@ -315,7 +315,7 @@ hal:
 # Cameras declared by the openarm_tabletop_pnp MJCF scene. The HAL's
 # offscreen renderer publishes each to /openral/cameras/<name>/image
 # and the WorldStateAggregator forwards them onto observation.images.
-# Per ADR-0070 the HAL-facing sensor names are canonical; the
+# Per the canonical HAL-facing sensor-naming convention, these sensor names are canonical; the
 # checkpoint-facing ``vla_feature_key`` is frozen per checkpoint and
 # the rskill manifest's ``image_preprocessing.aliases`` bridges
 # scene-side → checkpoint-side names.
@@ -379,7 +379,7 @@ sensors:
 # OpenArm v2 ships <position> actuators with per-class PD gains, so
 # ``seed_ctrl_from_qpos=true`` is required: the actuators must hold the
 # initial pose on the first ``mj_step`` or they'll drive every joint to
-# ``ctrl == 0``.  See ADR-0023.
+# ``ctrl == 0``.
 sim:
   joint_qpos_addr:
     left_joint1: 0
@@ -414,14 +414,15 @@ sim:
   seed_ctrl_from_qpos: true
 
 # Per-robot scene rendering defaults (openral-core 0.3.0).
-# ADR-0066 — the tabletop arena composition + the overview-camera pose moved OUT
+# Per the scene-composition / robot-manifest separation convention — the
+# tabletop arena composition + the overview-camera pose moved OUT
 # of this robot manifest into the scenes that own them: the deploy scene
 # (`scenes/deploy/openarm_tabletop.yaml` `composition:`) and the sim/eval scene
 # (`scenes/sim/openarm_tabletop.yaml` `backend_options.top_camera_*`). The robot
 # manifest now describes only the robot; the scene describes the scene; the
-# rSkill is separate. (Was `scene_defaults`, issue #191 Phase 3b / ADR-0044.)
+# rSkill is separate. (Was `scene_defaults`, reworked in issue #191 Phase 3b.)
 
-# ADR-0030 — geometric safety. Conservative capsule/sphere bounds per arm
+# Geometric safety. Conservative capsule/sphere bounds per arm
 # link plus the self-collision allowed-collision matrix (adjacent links touch
 # by design). Hand-authored here as the real fixture; on a production robot
 # the offline lowering tool would emit this from the MJCF (which already

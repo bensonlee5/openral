@@ -33,7 +33,7 @@ the URCap `external_control` program on the teach pendant, not that the
 adapter or driver carry a restrictive license. The sim entry point
 (`UR5e_DESCRIPTION` / `openral_hal.ur:UR5eHAL`) remains in-code as
 the MuJoCo-backed sibling — kinematics, safety envelope, and capabilities
-are identical between the two; only `sdk_kind` differs (the `hal` block is shared, ADR-0031).
+are identical between the two; only `sdk_kind` differs (the `hal` block is shared between them, per the HAL entrypoint-resolution convention).
 
 ## Wiring
 

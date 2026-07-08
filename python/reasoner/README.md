@@ -12,15 +12,15 @@ wraps this core with rclpy subscriptions and dispatch plumbing.
 
 CLAUDE.md §3 Layer 4 — S2 slow reasoning: event-driven with a ~0.2 Hz
 heartbeat, sitting between the `WorldStateAggregator` and the S1 skill
-executor. Dispatch is direct typed tool calls (ADR-0018 §9).
+executor. Dispatch is direct typed tool calls.
 
-## ADRs
+## Design
 
-- ADR-0018 — ROS 2 reasoner supervisor (F4: typed tool-call dispatch)
-- ADR-0071/0072/0073 — symbolic S2 reasoner: authored playbooks,
-  self-maintained memory, success-gated task queue.
-- ADR-0074/0075/0076 — VLM-adjudicated completion, grounding-before-
-  decompose, detection identity.
+- ROS 2 reasoner supervisor: direct typed tool-call dispatch.
+- Symbolic S2 reasoner: authored playbooks, self-maintained memory,
+  success-gated task queue.
+- VLM-adjudicated completion, grounding-before-decompose, detection
+  identity.
 
 ## Public surface
 
@@ -48,7 +48,7 @@ from openral_reasoner import (
   `openai-compatible`, `openrouter`}). No hidden default.
 - `ToolPalette` / `build_tool_palette` — generated from the local skill
   registry, rebuilt on `/openral/skill_registry_changed`.
-- `MemoryStore`, `MissionState`, `evaluate_task_verdict` — ADR-0072/0074
+- `MemoryStore`, `MissionState`, `evaluate_task_verdict` — self-maintained
   memory and success-gated task queue.
 
 See [`docs/methods/06-reasoning-wam-safety-observability.md`](../../docs/methods/06-reasoning-wam-safety-observability.md)

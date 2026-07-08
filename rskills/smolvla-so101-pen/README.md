@@ -87,5 +87,5 @@ Both are 224×224. Proprioception is the 6-D joint-position vector.
 
 ## License
 
-**Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0 (ADR-0012);
+**Apache-2.0** (code and weights). OpenRAL's packaging is Apache-2.0;
 the upstream checkpoint and dataset are Apache-2.0 as published by the author.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Tier-C critic producer node (ADR-0064 / ADR-0074 / observability audit P1 R3).
+"""Tier-C critic producer node (observability audit P1 R3).
 
 Subscribes the generic ``/openral/critic/score`` topic (``openral_msgs/CriticScore``)
-that reward models publish — the Robometer reward rSkill today (ADR-0057), a
+that reward models publish — the Robometer reward rSkill today, a
 future SARM, success classifiers — routes each self-describing
 ``(critic_id, score, threshold)`` sample through a
 :class:`~openral_reasoner.CriticWatchdogGroup`, and on a **stall or success**
@@ -14,7 +14,7 @@ via :class:`~openral_observability.failure_bus.FailureBusPublisher`. The
 
 A **stall** fires when ``stall_patience`` consecutive sub-threshold,
 non-improving observations accumulate. A **success** fires the first time
-``score >= threshold`` per streak (ADR-0074 reward-watcher), so the reasoner is
+``score >= threshold`` per streak (reward-watcher), so the reasoner is
 woken the moment an attempt is likely done — not only after a subsequent stall.
 
 The producer keys one watchdog per ``critic_id``, so several reward models share

@@ -1,9 +1,8 @@
-"""Per-control-mode envelope dispatch tests for ``SafetyPassthroughNode``
-(ADR-0028b step 5).
+"""Per-control-mode envelope dispatch tests for ``SafetyPassthroughNode``.
 
 The supervisor used to enforce ``n_dof`` + per-joint bounds and reject
 non-joint chunks implicitly (every non-joint chunk passed through with
-zero validation). ADR-0028b adds per-mode dispatch:
+zero validation). This adds per-mode dispatch:
 
 * JOINT_*       → existing path (unchanged — first test below pins this).
 * CARTESIAN_DELTA / CARTESIAN_TWIST / BODY_TWIST → per-axis bounds.
@@ -12,7 +11,7 @@ zero validation). ADR-0028b adds per-mode dispatch:
 All new bounds default to ``-1.0`` ("no enforcement declared, skip")
 so a legacy launch that doesn't override them keeps passing every
 non-joint chunk through verbatim. The "joint path unchanged" property
-is the most important guard: the existing ADR-0018 supervisor test
+is the most important guard: the existing supervisor test
 (``packages/openral_safety/test/test_supervisor_node.py``) is gated on
 ``openral_msgs`` and skipped in this worktree, so we re-pin the joint
 behaviour here in pure Python.
@@ -79,7 +78,7 @@ def _chunk(mode: ControlMode, *, flat: list[float], n_dof: int) -> _StubChunk:
     )
 
 
-# ─── JOINT path — must remain byte-identical to the pre-ADR-0028b behaviour ──
+# ─── JOINT path — must remain byte-identical to the pre-per-mode-dispatch behaviour ──
 
 
 def test_joint_path_unchanged_pass_when_no_envelope_declared(node: Any) -> None:

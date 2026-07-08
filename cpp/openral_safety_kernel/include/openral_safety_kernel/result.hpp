@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 / CLAUDE.md §5.2: no exceptions across the kernel boundary.
+// CLAUDE.md §5.2: no exceptions across the kernel boundary.
 // Use std::expected-shaped Result type to propagate validator outcomes.
 
 #pragma once

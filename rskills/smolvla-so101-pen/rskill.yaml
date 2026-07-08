@@ -48,14 +48,14 @@ sensors_required:
     min_width: 224
     min_height: 224
 
-# Output side (ADR-0013). The loader auto-fills n_dof + vla_action_key from
+# Output side. The loader auto-fills n_dof + vla_action_key from
 # robots/so101_follower/robot.yaml. Absolute joint-position targets.
 actuators_required:
   - kind: "joint_position"
     control_mode_semantics:
       mode: "absolute"
 
-# ── Starting pose (ADR-0053 / ADR-0081) ─────────────────────────────────────
+# ── Starting pose ────────────────────────────────────────────────────────
 # Joint order = robots/so101_follower manifest joints
 # [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper]
 # (radians). Before the first VLA tick the runner moves the arm here (approach
@@ -73,17 +73,17 @@ runtime: "pytorch"
 quantization:
   dtype: "bf16"
   backend: "pytorch"
-# ADR-0077 — VRAM the deployed policy needs resident (SmolVLA ~450M bf16
+# VRAM the deployed policy needs resident (SmolVLA ~450M bf16
 # weights + TRT vision/policy engines + activations; sibling smolvla-libero
 # declares 1.2, +0.3 TRT engine margin). Feeds the VLA↔reward co-residency
 # preflight: 1.5 + Robometer NF4 3.6 + 0.5 margin = 5.6 GB on an 8 GB card.
 min_vram_gb:
   bf16: 1.5
-# ADR-0077 §4 — pair this VLA with its task-progress reward monitor so a
+# Pair this VLA with its task-progress reward monitor so a
 # reward-enabled deploy auto-resolves the Robometer NF4 manifest (the launch's
 # _resolve_reward_monitor_manifest reads this across the capability-matched
 # palette). The monitor scores the camera ROS topic (/openral/cameras/top/image)
-# — alive on the NVMM/gstreamer tier too via the observability tee (ADR-0082).
+# — alive on the NVMM/gstreamer tier too via the observability tee.
 reward_rskill_name: "OpenRAL/rskill-robometer-4b-nf4"
 weights_uri: "hf://sapanostic/so_101_smolvla_pen_placement"
 
@@ -126,7 +126,7 @@ description: >
   upstream repo went gated after this host cached the snapshot — deploy
   with HF_HUB_OFFLINE=1.
 
-# ADR-0022 — action vocabulary for the reasoner LLM tool palette.
+# Action vocabulary for the reasoner LLM tool palette.
 actions:
   - "pick"
   - "place"
@@ -136,10 +136,10 @@ objects:
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract.
+# Per-checkpoint action contract.
 action_contract:
   dim: 6
-  # ADR-0071 — SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
+  # SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
   representation: "joint_positions"
   # EXPLICIT joint units — this checkpoint's normalizer stats span ±100 (verified:
   # observation.state.max=100.0, .min=-99.7, .std=46.5), i.e. DEGREES. The runner

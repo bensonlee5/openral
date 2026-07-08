@@ -1,4 +1,4 @@
-"""ADR-0044 Phase 1 — shared gaze geometry property + degenerate-case tests.
+"""Shared gaze geometry property + degenerate-case tests.
 
 The independent oracle is ``homogeneous_from_quat_xyz`` (the existing
 quat→matrix helper from object_lift): rotate the claimed view axis by the
@@ -109,7 +109,7 @@ def test_matches_sim_composer_behaviour() -> None:
 
     The three sim composers' ``_look_at_quat`` now alias this helper, so the pin
     uses literal values captured from the original implementation (2026-06-10,
-    pre ADR-0044 refactor) — not a re-import that would be tautological.
+    pre shared-gaze-geometry refactor) — not a re-import that would be tautological.
     """
     cases = [
         (

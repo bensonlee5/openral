@@ -1,4 +1,4 @@
-"""Live native Robometer reward on a real clip (ADR-0057, lerobot 0.6.0 port).
+"""Live native Robometer reward on a real clip (lerobot 0.6.0 port).
 
 Runs the in-process scorer — lerobot's in-tree
 ``RobometerRewardModel`` (Qwen3-VL-4B + NF4 pre-quantized weights, loaded with

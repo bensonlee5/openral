@@ -1,6 +1,6 @@
 """SimAttachedHAL probes the LIBERO env's true action width (7), not the robocasa fallback (11).
 
-ADR-0036 — a cartesian rSkill's slot-packed action must be sized to the env's
+A cartesian rSkill's slot-packed action must be sized to the env's
 action space. The LIBERO Franka env (robosuite with an OSC_POSE controller)
 accepts a 7-D action (6-D end-effector delta + gripper). Before this fix
 ``_probe_env_action_dim`` missed it (the action width is only reachable as
@@ -148,7 +148,7 @@ def test_libero_action_dim_is_seven() -> None:
 
 @_requires_renderer
 def test_send_action_auto_resets_after_episode_termination() -> None:
-    """ADR-0036 — a terminated episodic backend (LIBERO) is reset, not re-stepped.
+    """A terminated episodic backend (LIBERO) is reset, not re-stepped.
 
     Without the auto-reset, ``env.step`` on a terminated robosuite episode
     raises "executing action in terminated episode" and the deploy-sim
@@ -189,7 +189,7 @@ def test_send_action_auto_resets_after_episode_termination() -> None:
 
 @_requires_renderer
 def test_send_action_recovers_when_env_terminal_but_latch_clear() -> None:
-    """ADR-0036 follow-up — recover from a *raised* terminal, not just a returned one.
+    """Follow-up — recover from a *raised* terminal, not just a returned one.
 
     Raw-robosuite backends (LIBERO, ``so100_robosuite``)
     run with ``ignore_done=False`` and HARD-RAISE
@@ -252,7 +252,7 @@ def test_send_action_recovers_when_env_terminal_but_latch_clear() -> None:
     hal.send_action(zero_delta)  # and a follow-up tick still steps cleanly
 
 
-# ── ADR-0034 probe-gap fix — native MuJoCo backends expose their own action_dim ──
+# ── Probe-gap fix — native MuJoCo backends expose their own action_dim ──
 #
 # Before the fix ``_probe_env_action_dim`` fell back to a hardcoded 11 for any
 # backend that didn't expose ``action_dim``. The native MuJoCo backends
@@ -314,7 +314,7 @@ def test_openarm_tabletop_action_dim_matches_state_dim() -> None:
 
     Built through the deploy-sim ``build_sim_env_from_yaml`` loader (robosuite
     MJCF wrapper). The ``openarm_tabletop_pnp`` scene mandates a ``base_pose``
-    at compose time (ADR-0002 Amendment 3); the loader now propagates the
+    at compose time; the loader now propagates the
     SimScene YAML's ``base_pose`` into the composed ``SimEnvironment``,
     so the scene builds through the loader exactly as it does through the direct
     factory path.

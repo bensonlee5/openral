@@ -1,6 +1,6 @@
 """_probe_jetson fallback path — exercised against recorded real-device strings.
 
-ADR-0013 PR 2/3 — replaces the legacy ``(8, 7) if "Orin" in board else (7, 2)``
+Replaces the legacy ``(8, 7) if "Orin" in board else (7, 2)``
 heuristic with an explicit per-SoC table and pins the mapping with
 fixtures captured from real boards (no mocks per CLAUDE.md §1.11).
 """

@@ -1,4 +1,4 @@
-"""ADR-0019 — bus-attached LeRobot/rosbag recorder for the deploy graph.
+"""Bus-attached LeRobot/rosbag recorder for the deploy graph.
 
 :class:`DatasetRecorderBridge` is the deploy-side counterpart to the
 ``SimRunner`` recording path. It mirrors
@@ -16,7 +16,7 @@ Per tick it joins three already-on-the-graph signals into one
   runner feeds the policy. No separate camera-topic publisher is required.
 * **action** — the per-tick action, reassembled from the
   ``openral_msgs/ActionChunk`` stream on ``/openral/candidate_action``. For
-  slot-dispatched skills (ADR-0028b) the node emits one chunk per slot per
+  slot-dispatched skills the node emits one chunk per slot per
   tick in a fixed order (e.g. LIBERO = 6-D cartesian_delta + 1-D gripper;
   RoboCasa composite = cartesian + gripper + body_twist); the bridge
   accumulates a tick's slots and concatenates their next-applied rows
@@ -124,7 +124,7 @@ class DatasetRecorderBridge:
         self._sensor_to_slot = _sensor_name_to_slot(robot)
         self._episode_open = False
         self._n_frames = 0
-        # Per-tick action reassembly (ADR-0028b slot dispatch): the node emits
+        # Per-tick action reassembly (slot dispatch): the node emits
         # one ActionChunk per slot per tick (e.g. LIBERO = cartesian_delta +
         # gripper; RoboCasa composite = cartesian + gripper + body_twist), in a
         # fixed slot order. We accumulate the slots of the current tick and
@@ -211,7 +211,7 @@ class DatasetRecorderBridge:
 
         Tick boundary detection, in order of preference:
 
-        1. **``ActionChunk.tick_index``** (ADR-0019, set by the node) — the
+        1. **``ActionChunk.tick_index``** (set by the node) — the
            authoritative, unambiguous key: every slot chunk of one inference
            tick carries the same 1-based index, so a change of index ends the
            tick. Robust even if two slots share a ``(control_mode, ee_name)``.
@@ -268,7 +268,7 @@ class DatasetRecorderBridge:
         except (ValueError, ROSConfigError) as exc:
             # A per-frame shape mismatch (e.g. a robot that gained a defined
             # action_spec.dim AND runs a multi-slot skill whose slots sum to a
-            # different dim — none today; see ADR-0019 amendment). Surface it
+            # different dim — none today). Surface it
             # loudly + stop recording this episode rather than crash the
             # shared executor or silently mis-record (CLAUDE.md §1.4).
             _log.error(

@@ -54,7 +54,7 @@ sys.path.insert(0, str(_REPO_ROOT / "python" / "cli" / "src"))
 
 import structlog  # noqa: E402 — after sys.path fixup
 
-# De-duped per CLAUDE.md §1.13 — ADR-0019 PR5 lifted these helpers into
+# De-duped per CLAUDE.md §1.13 — the dataset-bridge work (PR5) lifted these helpers into
 # the openral_cli._hf_publish module so `openral dataset push` and this
 # tool share one canonical token/scope/ignore-patterns surface.
 from openral_cli._hf_publish import IGNORE_PATTERNS as _IGNORE_PATTERNS  # noqa: E402
@@ -175,14 +175,14 @@ def _validate_manifest(skill_dir: Path) -> RSkillManifest:  # type: ignore[name-
 
 
 def _validate_task_space(manifest: RSkillManifest, skill_dir: Path) -> None:  # type: ignore[name-defined]  # noqa: F821
-    """ADR-0071 Phase 2 — warn-only cross-layer task-space check at publish time.
+    """TaskSpace-contract Phase 2 — warn-only cross-layer task-space check at publish time.
 
     For an actuating rSkill (one carrying an ``action_contract``), build its
     :class:`openral_core.TaskSpace` and run :func:`task_space_compatible`
     (``hal_mode="sim"``) against every in-tree ``robots/<id>/robot.yaml`` whose
     ``embodiment_tags`` the skill targets. Emits a warning per incompatible
     (skill, robot) pair — catching slot end-effector-name mismatches and
-    joint-width overruns (the class of bug ADR-0071's sweep surfaced) before the
+    joint-width overruns (the class of bug the TaskSpace-contract sweep surfaced) before the
     manifest reaches the Hub. **Never fails the publish** — Phase 4 makes this
     gate blocking.
 
@@ -217,7 +217,7 @@ def _validate_task_space(manifest: RSkillManifest, skill_dir: Path) -> None:  # 
                 skill=manifest.name,
                 robot=robot.name,
                 reasons=match.reasons,
-                note="ADR-0071 Phase 2 — warn-only, not yet blocking",
+                note="TaskSpace-contract Phase 2 — warn-only, not yet blocking",
             )
     if matched == 0:
         log.info(
@@ -475,7 +475,7 @@ def main() -> None:
     # ── Validate manifest ──────────────────────────────────────────────────────
     manifest = _validate_manifest(skill_dir)
 
-    # ── Cross-layer task-space check (ADR-0071 Phase 2, warn-only) ──────────────
+    # ── Cross-layer task-space check (TaskSpace-contract Phase 2, warn-only) ────
     _validate_task_space(manifest, skill_dir)
 
     # ── Validate README + manifest documentation (CLAUDE.md §6.4) ──────────────

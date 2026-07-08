@@ -1,6 +1,6 @@
 """Integration coverage for the sim-only idle stepper's WIRED bridge+HAL path.
 
-ADR-0034 (2026-06-04 idle-stepper amendment). The unit suite
+The 2026-06-04 idle-stepper amendment added this coverage. The unit suite
 (``python/hal/tests/test_sim_attached_idle_step.py``) already covers
 :meth:`SimAttachedHAL.idle_step` in isolation (frame-advance, estop-suppress,
 terminal-reset, crash-containment) and the pure :func:`should_idle_step`

@@ -1,4 +1,4 @@
-"""Tests for the Qwen3.5-4B scene-VLM backend + query_scene tool (ADR-0047).
+"""Tests for the Qwen3.5-4B scene-VLM backend + query_scene tool.
 
 Two tiers:
 
@@ -34,7 +34,7 @@ _RTDETR_MANIFEST = _REPO / "rskills" / "rtdetr-coco-r18" / "rskill.yaml"
 
 
 def test_query_scene_tool_schema_round_trips() -> None:
-    """QuerySceneTool parses via the ReasonerToolCall discriminated union (ADR-0047)."""
+    """QuerySceneTool parses via the ReasonerToolCall discriminated union."""
     from openral_core import QuerySceneTool, ReasonerToolCall
     from pydantic import TypeAdapter
 
@@ -62,7 +62,7 @@ def test_query_scene_requires_non_empty_question() -> None:
 
 
 def test_query_scene_palette_gated_on_scene_query_available() -> None:
-    """The LLM sees query_scene only when a scene VLM is available (ADR-0047)."""
+    """The LLM sees query_scene only when a scene VLM is available."""
     from openral_reasoner.palette import ToolPalette
     from openral_reasoner.tool_use import _tool_palette_to_anthropic_tools
 
@@ -75,7 +75,7 @@ def test_query_scene_palette_gated_on_scene_query_available() -> None:
 
 
 def test_query_scene_independent_of_detector_available() -> None:
-    """scene_query and locate_in_view are independently provisioned (ADR-0047)."""
+    """scene_query and locate_in_view are independently provisioned."""
     from openral_reasoner.palette import ToolPalette
     from openral_reasoner.tool_use import _tool_palette_to_anthropic_tools
 
@@ -87,7 +87,7 @@ def test_query_scene_independent_of_detector_available() -> None:
 
 
 def test_qwen_vlm_extra_declares_sidecar_client_deps() -> None:
-    """The node-side ZMQ client transport is a declared dependency (ADR-0047).
+    """The node-side ZMQ client transport is a declared dependency.
 
     Regression guard: ``QwenSceneVlm`` lazily imports ``zmq`` + ``msgpack``;
     they must ship in a real optional-dependency group so the scene_vlm_node's
@@ -105,7 +105,7 @@ def test_qwen_vlm_extra_declares_sidecar_client_deps() -> None:
 
 
 def test_build_scene_vlm_rejects_non_vlm_manifest() -> None:
-    """build_scene_vlm only accepts kind='vlm' manifests (ADR-0047)."""
+    """build_scene_vlm only accepts kind='vlm' manifests."""
     from openral_runner.backends.gstreamer.qwen_scene_vlm import build_scene_vlm
 
     m = RSkillManifest.from_yaml(str(_RTDETR_MANIFEST))  # kind: detector

@@ -1,6 +1,6 @@
 """Boot the Qwen3.5-4B scene-VLM inference server in an isolated sidecar venv.
 
-The ``query_scene`` reasoner tool (ADR-0047) asks a vision-language model
+The ``query_scene`` reasoner tool asks a vision-language model
 open-ended questions about the current camera view ("has the robot grasped the
 mug?", "is the task complete?"). The model is ``Qwen/Qwen3.5-4B``, loaded NF4
 via bitsandbytes, and is run **out-of-process** for three reasons:
@@ -35,7 +35,7 @@ CLAUDE.md compliance:
 * Real subprocess running real upstream model code — no mocks (§1.11). The
   openral-side wire protocol is a real ZMQ client.
 * ``Qwen/Qwen3.5-4B`` is Apache-2.0 (commercial OK) — no license guard needed
-  here (the ``RSkillManifest`` loader handles posture, ADR-0047 / ADR-0012).
+  here (the ``RSkillManifest`` loader handles posture).
 """
 
 from __future__ import annotations

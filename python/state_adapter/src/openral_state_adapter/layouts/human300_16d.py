@@ -1,4 +1,4 @@
-"""``human300_16d`` layout assembler (ADR-0027).
+"""``human300_16d`` layout assembler.
 
 Mirrors the RoboCasa365 ``pi05_pretrain_human300`` training-time layout
 verbatim — verified against

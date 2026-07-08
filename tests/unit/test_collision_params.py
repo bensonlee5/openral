@@ -1,4 +1,4 @@
-"""Unit tests for ``collision_params_from_description`` (ADR-0030).
+"""Unit tests for ``collision_params_from_description``.
 
 Verifies the RobotDescription → kernel collision-param flattening: topological
 link ordering (parent precedes child), per-link joint/dof/origin/axis arrays,
@@ -127,7 +127,7 @@ def test_openarm_fixture_lowers_to_well_formed_params() -> None:
 
 
 def test_ee_link_index_picks_deepest_link() -> None:
-    """ADR-0040 Phase 3 — the EE control link is the kinematically deepest link."""
+    """The EE control link is the kinematically deepest link."""
     params = collision_params_from_description(_two_link_arm())
     ee = ee_link_index_from_collision_params(params)
     parent = params["collision_parent"]

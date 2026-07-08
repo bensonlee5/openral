@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — proves the validator does NOT allocate on the hot path.
+// Proves the validator does NOT allocate on the hot path.
 //
 // Strategy: globally-overridden ``operator new`` increments a counter
 // when called. The validator is run 10,000 times under a pre-built

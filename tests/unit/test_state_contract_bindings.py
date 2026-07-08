@@ -1,4 +1,4 @@
-"""ADR-0027 — StateContract.bindings + the wrapped-task-space requirement.
+"""StateContract.bindings + the wrapped-task-space requirement.
 
 Pins the per-layout binding policy: task-space layouts (``human300_16d`` /
 ``rc365``) require ``bindings``; joint-space layouts
@@ -87,7 +87,7 @@ def test_wrapped_set_matches_task_space_definition() -> None:
     assert {"human300_16d", "rc365", "libero_eef8d"} == WRAPPED_TASK_SPACE_LAYOUTS
     assert "human300_16d" in WRAPPED_TASK_SPACE_LAYOUTS
     assert "rc365" in WRAPPED_TASK_SPACE_LAYOUTS
-    assert "libero_eef8d" in WRAPPED_TASK_SPACE_LAYOUTS  # ADR-0027 LIBERO task-space proprio
+    assert "libero_eef8d" in WRAPPED_TASK_SPACE_LAYOUTS  # LIBERO task-space proprio
     # pi0_16d / eef_pose_7d / base_pose_7d were robocasa sim-observation
     # layouts with no state-adapter assembler — removed (to be recreated
     # later); they must not advertise as wrapped-task-space layouts.

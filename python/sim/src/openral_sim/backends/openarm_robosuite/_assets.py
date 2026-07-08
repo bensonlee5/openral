@@ -253,7 +253,7 @@ _FALLBACK_TOP_CAMERA_FOVY: float = 65.0
 
 
 # MuJoCo (w, x, y, z) look-at quaternion — promoted to the shared gaze-geometry
-# helper in ADR-0044 Phase 1; the "-z" default is the MuJoCo camera convention
+# helper; the "-z" default is the MuJoCo camera convention
 # (and gains the zero-norm / parallel-up guards this copy lacked).
 _look_at_quat = look_at_quat_wxyz
 
@@ -362,8 +362,9 @@ def _rename_upstream_wrist_cameras(xml: str) -> str:
     """Rename upstream ``camera_wrist_{left,right}`` → ``wrist_{left,right}``.
 
     The upstream OpenArm v2 MJCF already provides wrist-mounted camera tags
-    parented inside each ``openarm_*_ee_base_link`` body. Per ADR-0070 the
-    canonical HAL/sensor name is ``wrist_left`` / ``wrist_right``, so the
+    parented inside each ``openarm_*_ee_base_link`` body. Per the scene's
+    canonical camera-naming convention the canonical HAL/sensor name is
+    ``wrist_left`` / ``wrist_right``, so the
     composer preserves the upstream camera IDs and only renames them. The
     rollout renderer may re-aim those named cameras at runtime when the
     physical hand-mounted view is occluded by the tabletop reset pose.

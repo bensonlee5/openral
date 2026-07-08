@@ -1,4 +1,4 @@
-"""In-process TOPReward reward monitor (``reward.backend: "topreward"``, ADR-0057).
+"""In-process TOPReward reward monitor (``reward.backend: "topreward"``).
 
 TOPReward (arXiv 2602.19313) is a **zero-shot** reward: it asks an off-the-shelf
 Qwen3-VL VLM ``P("True" | video, instruction)`` and reads the token log-prob as

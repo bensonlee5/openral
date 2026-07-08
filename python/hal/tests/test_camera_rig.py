@@ -1,4 +1,4 @@
-"""Generic camera rig — splice manifest cameras into a bare MJCF (ADR-0086)."""
+"""Generic camera rig — splice manifest cameras into a bare MJCF."""
 
 from __future__ import annotations
 

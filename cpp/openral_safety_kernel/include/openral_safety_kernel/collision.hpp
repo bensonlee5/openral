@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 phase 2 — allocation-free geometric self-collision core.
+// Allocation-free geometric self-collision core.
 //
 // Hand-rolled forward kinematics + closed-form capsule-capsule distance, with
 // NO external dependency (no Eigen / KDL / Pinocchio) so the safety kernel
-// stays small and auditable (ADR-0020 ethos). All hot-path functions are
+// stays small and auditable. All hot-path functions are
 // allocation-free: the model is built once at configure time and the FK
 // scratch is pre-sized and reused, so they only touch caller-owned storage.
 //
@@ -52,7 +52,7 @@ struct Capsule {
 /// `origin` places+orients it in the link frame (same convention as `Capsule`).
 /// A box fits a blocky link (a near-cubic housing, e.g. the SO-ARM100/101
 /// `base`) far tighter than a capsule, whose circular cross-section must bulge
-/// past the block's flat faces and over-report clearance (ADR-0081 / issue #84).
+/// past the block's flat faces and over-report clearance (issue #84).
 struct Obb {
   Vec3 half_extents{};
   Transform origin{};
@@ -166,7 +166,7 @@ CollisionHit check_world_collision(const CollisionModel& model, const CollisionS
 /// false → caller falls back to the reactive check).
 inline constexpr std::size_t kMaxJacobianDof = 64;
 
-/// ADR-0040 Phase 3 — damped-least-squares IK step for predictive Cartesian
+/// Damped-least-squares IK step for predictive Cartesian
 /// checking. Forward kinematics must already be run for the current
 /// configuration (`scratch`). Given the end-effector link index `ee_link` and a
 /// desired base-frame EE twist `ee_twist` (6 = [vx,vy,vz, wx,wy,wz], the

@@ -1,4 +1,4 @@
-"""Unit tests for the Robometer reward backend factory + input guards (ADR-0057).
+"""Unit tests for the Robometer reward backend factory + input guards.
 
 No GPU needed for most tests — these cover manifest wiring and pre-flight
 validation. The live scoring path is gated on local GPU/deps.
@@ -54,7 +54,7 @@ def test_build_reward_monitor_local_scheme() -> None:
 
 
 def test_evenly_spaced_indices_bounds_frames() -> None:
-    """Subsampling a frame window keeps a bounded, end-inclusive, unique set (ADR-0058)."""
+    """Subsampling a frame window keeps a bounded, end-inclusive, unique set."""
     from openral_runner.backends.reward.robometer_reward import _evenly_spaced_indices
 
     # n <= k: identity (no subsampling).

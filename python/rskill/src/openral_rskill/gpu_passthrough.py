@@ -194,7 +194,7 @@ class GpuPassthroughSkill(rSkillBase):
            via ``torch.from_numpy(...).to(device)`` — this is the explicit
            CPU→GPU copy that the SensorFrame.data: bytes contract today
            requires. (Removing this copy means switching to
-           ``SensorFrame.handle`` — see ADR-0011.)
+           ``SensorFrame.handle``.)
         4. Run a real GPU reduction (per-channel mean) — the actual on-GPU
            work that earns the "all on GPU" claim.
         5. Read back the 3 scalars and pack them into the action's

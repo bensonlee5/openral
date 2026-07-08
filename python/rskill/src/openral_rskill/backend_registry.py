@@ -1,6 +1,6 @@
-"""Runtime-backend + policy-attach-hook registry (ADR-0083 extraction seam).
+"""Runtime-backend + policy-attach-hook registry (OpenRAL Pro extraction seam).
 
-OpenRAL Pro (ADR-0083) ships proprietary inference backends — the TensorRT
+OpenRAL Pro ships proprietary inference backends — the TensorRT
 engine runtime and the NVMM zero-copy consumers — as a separate, privately
 distributed package (``openral-pro-trt``) rather than in-tree. This module is
 the seam that lets those packages plug into the open ``openral-rskill`` /
@@ -99,7 +99,7 @@ def resolve_runtime_backend(kind: str) -> type[Runtime]:
         f"resolve_runtime_backend: unknown runtime backend {kind!r}. Built-in "
         f"backends are {sorted(_BUILTIN_RUNTIME_BACKENDS)!r}; 'tensorrt' and "
         "other proprietary backends require the private openral-pro-trt "
-        "package (ADR-0083), which registers itself via the "
+        "package, which registers itself via the "
         f"{_RUNTIME_BACKENDS_GROUP!r} entry-point group."
     )
 

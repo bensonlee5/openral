@@ -1,4 +1,4 @@
-"""ADR-0024/0054 end-to-end exercise — joint goal rSkill against live MoveIt.
+"""End-to-end exercise — joint goal rSkill against live MoveIt.
 
 Brings up the upstream ``moveit_resources_panda_moveit_config`` demo
 launch as a subprocess (real ``move_group`` + ``ros2_control`` fake
@@ -44,7 +44,7 @@ pytest.importorskip("rclpy")
 
 
 # The shared `move_group_subprocess` fixture (live MoveIt panda demo)
-# lives in tests/integration/conftest.py (ADR-0044 made it shared with
+# lives in tests/integration/conftest.py (shared with
 # test_look_at_franka.py).
 
 

@@ -1,4 +1,4 @@
-"""Unit tests for the ``libero_eef8d`` task-space layout assembler (ADR-0027).
+"""Unit tests for the ``libero_eef8d`` task-space layout assembler.
 
 Proves the deploy-path state vector byte-matches the LIBERO benchmark's
 task-space construction (``eef_pos(3) ‖ eef_axisangle(3) ‖ gripper_qpos(2)``),

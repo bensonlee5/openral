@@ -223,7 +223,7 @@ def _build_xvla(env_cfg: Any) -> _XVLAAdapter:
     env_pre, env_post = make_xvla_libero_pre_post_processors()
     # Manifest-first: when spec.weights_uri is a bare rSkill reference and
     # the manifest declares a `processors` block, fetch exactly those two
-    # files per-file (ADR-0013). The snapshot fallback covers legacy
+    # files per-file. The snapshot fallback covers legacy
     # hf:// URIs that predate the per-file contract.
     pretrained_path = resolve_processor_dir(spec, repo_id)
     policy_pre = PolicyProcessorPipeline.from_pretrained(

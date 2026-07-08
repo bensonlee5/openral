@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — SafetyKernelLifecycleNode source.
+// SafetyKernelLifecycleNode source.
 
 #include "openral_safety_kernel/lifecycle_kernel.hpp"
 
@@ -26,7 +26,7 @@ namespace openral_safety_kernel {
 namespace {
 
 rclcpp::QoS chunk_qos() {
-  // ADR-0028b — the openral slot dispatcher publishes N chunks per
+  // The openral slot dispatcher publishes N chunks per
   // policy tick on /openral/candidate_action (arm CARTESIAN_DELTA +
   // gripper GRIPPER_POSITION + optional base BODY_TWIST). KEEP_LAST=1
   // on the subscriber side coalesces back-to-back publishes inside
@@ -98,13 +98,13 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
   this->declare_parameter<bool>("request_sched_fifo", false);
   this->declare_parameter<std::vector<std::int64_t>>("cpu_affinity", std::vector<std::int64_t>{});
 
-  // ADR-0020 PR-K (2026-05-24) — parameter-based envelope source. The
+  // Parameter-based envelope source (2026-05-24). The
   // Python `sim_e2e.launch.py` unpacks `robots/<id>/robot.yaml` via
   // Pydantic, calls
   // `openral_safety.envelope_loader.kernel_params_from_envelope`, and
   // forwards each field as a ROS parameter here. There is exactly one
   // transport: ROS parameters. The flat-YAML `envelope_file:=PATH`
-  // path the kernel had pre-PR-K is gone.
+  // path the kernel had before this is gone.
   this->declare_parameter<std::int64_t>("n_dof", 0);
   this->declare_parameter<std::string>("robot_name", "");
   this->declare_parameter<std::string>("rskill_id", "");
@@ -122,7 +122,7 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
   this->declare_parameter<double>("contact_force_threshold_n", kPosInfinity);
   this->declare_parameter<bool>("deadman_required", false);
 
-  // ADR-0030 — self-collision model. Disabled unless the launch emits a
+  // Self-collision model. Disabled unless the launch emits a
   // populated model (openral_safety.envelope_loader.collision_params_from_*).
   // Flat parallel arrays mirror the per-joint envelope arrays above.
   this->declare_parameter<bool>("self_collision_enabled", false);
@@ -143,7 +143,7 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
                                                std::vector<double>{});
   this->declare_parameter<std::vector<double>>("collision_capsule_origin_xyzrpy",
                                                std::vector<double>{});
-  // ADR-0081 / issue #84 — OBB primitive for blocky links (e.g. SO-ARM base).
+  // OBB primitive for blocky links (e.g. SO-ARM base; issue #84).
   this->declare_parameter<std::vector<std::int64_t>>("collision_box_link",
                                                      std::vector<std::int64_t>{});
   this->declare_parameter<std::vector<double>>("collision_box_half_extents",
@@ -155,20 +155,20 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
   this->declare_parameter<std::vector<std::string>>("collision_link_names",
                                                     std::vector<std::string>{});
 
-  // ADR-0030 world phase — world-obstacle collision check (opt-in). Obstacles
+  // World phase — world-obstacle collision check (opt-in). Obstacles
   // arrive on /openral/world_collision in the robot base frame.
   this->declare_parameter<bool>("world_collision_enabled", false);
   this->declare_parameter<double>("world_collision_margin_m", 0.0);
   this->declare_parameter<double>("world_collision_deadline_ms", 500.0);
   this->declare_parameter<std::int64_t>("world_collision_max_primitives", 64);
 
-  // ADR-0030 voxel phase — dense occupancy-grid world check (octomap path).
+  // Voxel phase — dense occupancy-grid world check (octomap path).
   this->declare_parameter<bool>("world_voxel_enabled", false);
   this->declare_parameter<double>("world_voxel_margin_m", 0.0);
   this->declare_parameter<double>("world_voxel_deadline_ms", 500.0);
   this->declare_parameter<std::int64_t>("world_voxel_max_cells", 262144);
 
-  // ADR-0040 — measured joint-state seed for non-position collision checks.
+  // Measured joint-state seed for non-position collision checks.
   // `collision_joint_names` is the actuated joint order (length n_dof) the
   // launch forwards from the robot manifest; it maps /joint_states names to the
   // action's dof index. `collision_seed_dt_s` is the velocity-integration step
@@ -179,7 +179,7 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
                                                     std::vector<std::string>{});
   this->declare_parameter<double>("collision_seed_dt_s", 0.0);
   this->declare_parameter<double>("collision_state_deadline_ms", 200.0);
-  // ADR-0040 — dof indices of the planar mobile-base joints (description
+  // Dof indices of the planar mobile-base joints (description
   // base_joints). They are zeroed before the base-relative geometric FK so the
   // arm is placed in the base_link frame the world/voxel grid lives in;
   // otherwise FK applies the base's world pose and the arm sits metres outside
@@ -187,7 +187,7 @@ SafetyKernelLifecycleNode::SafetyKernelLifecycleNode(const std::string& node_nam
   this->declare_parameter<std::vector<std::int64_t>>("collision_base_dofs",
                                                      std::vector<std::int64_t>{});
 
-  // ADR-0040 Phase 3 — predictive Cartesian look-ahead. The EE collision-link
+  // Phase 3 — predictive Cartesian look-ahead. The EE collision-link
   // index lets the kernel build the arm Jacobian and reconstruct where a
   // CARTESIAN_DELTA chunk's EE deltas drive the arm; <0 (default) leaves
   // predictive Cartesian disabled (reactive measured-config check only). The
@@ -211,7 +211,7 @@ SafetyKernelLifecycleNode::on_configure(const rclcpp_lifecycle::State& /*state*/
   // re-configure returns false and reuses the existing provider.
   otel::initialize_tracing();
 
-  // Load envelope from ROS parameters (ADR-0020 PR-K). The Python
+  // Load envelope from ROS parameters. The Python
   // `sim_e2e.launch.py` populates each field from
   // `robots/<id>/robot.yaml` via Pydantic +
   // `openral_safety.envelope_loader.kernel_params_from_envelope`.
@@ -230,7 +230,7 @@ SafetyKernelLifecycleNode::on_configure(const rclcpp_lifecycle::State& /*state*/
   RCLCPP_INFO(this->get_logger(), "envelope loaded from ROS params: robot=%s rskill=%s n_dof=%zu",
               envelope_.robot_name.c_str(), envelope_.rskill_id.c_str(), envelope_.n_dof);
 
-  // ADR-0030 — load the optional self-collision model. A malformed model when
+  // Load the optional self-collision model. A malformed model when
   // the feature is enabled is a configuration error: refuse to leave
   // UNCONFIGURED rather than run with a broken safety check (§1.4 fail-closed).
   std::string coll_err;
@@ -244,7 +244,7 @@ SafetyKernelLifecycleNode::on_configure(const rclcpp_lifecycle::State& /*state*/
                 collision_model_.n_links, self_collision_margin_m_);
   }
 
-  // ADR-0040 — set up the measured joint-state seed used to reconstruct
+  // Set up the measured joint-state seed used to reconstruct
   // non-position chunks (Phase 1) for the velocity check (Phase 2). Sized to
   // n_dof; the name→dof map lets /joint_states (named) fill q_meas_ in the
   // action's dof order. `collision_fk_dofs_` is the set of dof indices FK
@@ -277,7 +277,7 @@ SafetyKernelLifecycleNode::on_configure(const rclcpp_lifecycle::State& /*state*/
     }
   }
 
-  // ADR-0040 Phase 3 — predictive Cartesian scratch + params. dof_blocked_ marks
+  // Phase 3 — predictive Cartesian scratch + params. dof_blocked_ marks
   // the base dofs so the arm Jacobian never realises an EE delta by "moving the
   // base" (which the collision FK zeroes anyway).
   q_predict_.assign(ndof, 0.0);
@@ -310,7 +310,7 @@ SafetyKernelLifecycleNode::on_configure(const rclcpp_lifecycle::State& /*state*/
   const bool seed_ready = !collision_joint_names_.empty() && !collision_fk_dofs_.empty();
   if (self_collision_enabled_ || world_collision_enabled_ || world_voxel_enabled_) {
     RCLCPP_INFO(this->get_logger(),
-                "ADR-0040 velocity+cartesian collision: %s (joint_names=%zu, fk_dofs=%zu, dt=%gs, "
+                "velocity+cartesian collision: %s (joint_names=%zu, fk_dofs=%zu, dt=%gs, "
                 "state_deadline=%gs)",
                 seed_ready ? "armed"
                            : "INACTIVE (no collision_joint_names — velocity/cartesian "
@@ -334,7 +334,7 @@ SafetyKernelLifecycleNode::on_configure(const rclcpp_lifecycle::State& /*state*/
       "/openral/estop", estop_qos(),
       std::bind(&SafetyKernelLifecycleNode::on_external_estop, this, std::placeholders::_1));
 
-  // ADR-0040 — subscribe /joint_states only when a geometric check is enabled
+  // Subscribe /joint_states only when a geometric check is enabled
   // and the joint-name map is plumbed (otherwise there is nothing to seed).
   if ((self_collision_enabled_ || world_collision_enabled_ || world_voxel_enabled_) &&
       !collision_joint_names_.empty()) {
@@ -431,7 +431,7 @@ void SafetyKernelLifecycleNode::on_candidate_action(
   }
 
   // Resume the producer's trace if the chunk carries a W3C traceparent
-  // in `trace_id` (ADR-0018 §6 — "OTel context is the truth; ROS fields
+  // in `trace_id` ("OTel context is the truth; ROS fields
   // are set from it"). Empty / malformed values give us a root span,
   // which still flows to the dashboard's Safety card.
   auto parent_ctx = otel::extract_parent_context(msg->trace_id);
@@ -485,14 +485,14 @@ void SafetyKernelLifecycleNode::on_candidate_action(
 
   const auto result = validate(view, envelope_);
   if (result) {
-    // ADR-0030 — geometric collision over the chunk horizon (self + world).
+    // Geometric collision over the chunk horizon (self + world).
     // Runs only for absolute joint-position chunks (the rows are full joint
     // configs FK can place). Allocation-free: FK reuses the pre-sized scratch.
     const bool geom_enabled =
         self_collision_enabled_ || world_collision_enabled_ || world_voxel_enabled_;
     const auto mode = static_cast<ControlMode>(view.control_mode);
     const bool is_position = (mode == ControlMode::kJointPosition);
-    // ADR-0040 — non-position chunks carry velocities / EE deltas, not joint
+    // Non-position chunks carry velocities / EE deltas, not joint
     // configs FK can place; reconstruct from the latest measured joint state.
     // Active only once the joint-name map is plumbed (`collision_joint_names`),
     // otherwise we cannot order the measured seed.
@@ -531,7 +531,7 @@ void SafetyKernelLifecycleNode::on_candidate_action(
         span->SetAttribute("safety.drop_reason", reason);
         span->End();
       };
-      // ADR-0040 — velocity/Cartesian reconstruction needs a fresh, complete
+      // Velocity/Cartesian reconstruction needs a fresh, complete
       // measured seed; fail-closed otherwise.
       if ((is_velocity || is_cartesian) && !measured_state_fresh()) {
         unavailable("state_unavailable");
@@ -670,7 +670,7 @@ void SafetyKernelLifecycleNode::on_candidate_action(
             }
           }
         }
-        // Predictive Cartesian (CARTESIAN_DELTA, ADR-0040 Phase 3): reconstruct
+        // Predictive Cartesian (CARTESIAN_DELTA, Phase 3): reconstruct
         // where the proposed EE deltas drive the ARM via the damped-least-squares
         // Jacobian and check the full capsule boundary at each look-ahead step.
         // The user contract: at minimum the LAST action in the chunk is verified
@@ -760,7 +760,7 @@ void SafetyKernelLifecycleNode::on_candidate_action(
 }
 
 void SafetyKernelLifecycleNode::on_joint_state(const sensor_msgs::msg::JointState::SharedPtr msg) {
-  // ADR-0040 Phase 1 — fold the measured positions into q_meas_ in the action's
+  // Phase 1 — fold the measured positions into q_meas_ in the action's
   // dof order. Single-threaded executor → direct write, no lock (mirrors the
   // world/voxel ingest). Unknown joint names are ignored; missing FK-relevant
   // dofs leave q_meas_seen_ false so measured_state_fresh() fails closed.

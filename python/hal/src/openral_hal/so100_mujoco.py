@@ -116,7 +116,7 @@ class SO100MujocoHAL(MujocoArmHAL):
         """Initialise the SO-100 MuJoCo HAL; no MuJoCo state is created until ``connect()``.
 
         All wiring (MJCF URI, joint indices, Jaw ``affine_low_high`` gripper
-        read mode) lives in :data:`SO100_DESCRIPTION.sim` (ADR-0023).
+        read mode) lives in :data:`SO100_DESCRIPTION.sim`.
         """
         self._init_from_description(
             SO100_DESCRIPTION,

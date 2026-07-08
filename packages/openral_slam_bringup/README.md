@@ -6,10 +6,10 @@ provides a `/map` (+ `map → odom` TF) to
 [`openral_nav2_bringup`](../openral_nav2_bringup/). Two backends, selected by
 robot capability:
 
-| Backend | `RobotCapabilities` flag | Sensor | ADR | Lifecycle |
-|---|---|---|---|---|
-| **lidar** (`slam_toolbox`) | `has_lidar` | `sensor_msgs/LaserScan` on `/scan` | ADR-0025 | Reasoner-managed lifecycle node |
-| **visual** (cuVSLAM) | `has_vision_slam` | stereo / mono+IMU / RGB-D cameras | ADR-0085 | plain composable node (live once composed) |
+| Backend | `RobotCapabilities` flag | Sensor | Lifecycle |
+|---|---|---|---|
+| **lidar** (`slam_toolbox`) | `has_lidar` | `sensor_msgs/LaserScan` on `/scan` | Reasoner-managed lifecycle node |
+| **visual** (cuVSLAM) | `has_vision_slam` | stereo / mono+IMU / RGB-D cameras | plain composable node (live once composed) |
 
 ```
 lidar:   /scan ─────────────▶ slam_toolbox ──▶ /map  (+ map → odom TF)
@@ -24,7 +24,7 @@ needs no AI depth model) and forwards `slam_backend:=lidar|visual|none`;
 ## Run
 
 Normally started by the deploy graph when the robot declares a lidar
-(`has_lidar`, ADR-0025) or vision SLAM (`has_vision_slam`, ADR-0085). Standalone:
+(`has_lidar`) or vision SLAM (`has_vision_slam`). Standalone:
 
 ```bash
 # lidar backend — needs ros-${ROS_DISTRO}-slam-toolbox + a /scan
@@ -42,7 +42,7 @@ ros2 launch openral_slam_bringup nvblox.launch.py robot_yaml:=/abs/path/to/robot
 
 ### Installing the NVIDIA Isaac ROS stack (visual backend only)
 
-cuVSLAM + nvblox are **not bundled** (closed NVIDIA binaries, ADR-0085 license
+cuVSLAM + nvblox are **not bundled** (closed NVIDIA binaries, license
 guard). Install them once on the GPU host (Ubuntu 24.04 x86_64 / supported
 Jetson, CUDA 13.0+, driver 580+):
 
@@ -84,8 +84,8 @@ python tools/da3_depth_sidecar.py --port 5771   # DA3-Small, ~0.27 GB / ~27 Hz o
 
 > **cuVSLAM is the camera-based backend for lidar-less robots.** It produces
 > `map → odom` localization, **not** an occupancy grid — Nav2's costmap needs the
-> companion **nvblox** stage (depth + cuVSLAM pose → `/map`), which is Phase 2 of
-> ADR-0085. The cuVSLAM/nvblox engines are precompiled NVIDIA binaries under an
+> companion **nvblox** stage (depth + cuVSLAM pose → `/map`). The cuVSLAM/nvblox
+> engines are precompiled NVIDIA binaries under an
 > NVIDIA EULA — **not bundled** by OpenRAL; install them on the target GPU host
-> behind the ADR-0085 license guard. Live bring-up is operator-run (needs a GPU +
+> behind the NVIDIA license guard. Live bring-up is operator-run (needs a GPU +
 > the Isaac ROS stack); the in-tree tests are hermetic launch-contract checks.

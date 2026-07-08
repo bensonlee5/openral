@@ -1,4 +1,4 @@
-"""Build the publishable pre-quantized Robometer-4B NF4 checkpoint (ADR-0057).
+"""Build the publishable pre-quantized Robometer-4B NF4 checkpoint.
 
 Loads the upstream Apache-2.0 ``robometer/Robometer-4B`` bf16 via the pinned
 robometer loader (vanilla, ``use_unsloth=False``), NF4-quantizes in place, and

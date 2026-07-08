@@ -23,7 +23,7 @@ guarantees every camera ends up on the WorldState subscription topic
 Publishers use the CLAUDE.md §2 sensor-stream QoS (BEST_EFFORT); the
 WorldState image subscription requests BEST_EFFORT so both match.
 
-**Direct aggregator path (ADR-0082 Phase 3).** The reader, WorldState
+**Direct aggregator path (zero-copy vision path).** The reader, WorldState
 aggregator, and skill runner share one OS process (``compose_runtime``), yet
 frames historically took an intra-process ROS round trip (reader tee →
 ``sensor_msgs/Image`` → ``_on_image`` rebuilds a data-only ``SensorFrame``) —
@@ -79,7 +79,7 @@ class _AggregatorPump:
     The in-process sibling of ``SensorRosPublisher``: same start/stop shape,
     but the destination is ``WorldStateAggregator.update_image_frame`` — the
     frame object (including a zero-copy NVMM ``handle``) reaches the skill
-    runner without a ROS serialize/deserialize (ADR-0082 Phase 3).
+    runner without a ROS serialize/deserialize (the zero-copy vision path).
 
     A frame is written only when its monotonic stamp changed, so re-polling
     the same latched frame never refreshes the aggregator's staleness stamp.
@@ -140,7 +140,7 @@ class SensorLeg:
 
     readers: list[object] = field(default_factory=list)
     publishers: list[object] = field(default_factory=list)
-    #: Sensors written straight into the shared aggregator (ADR-0082 Phase 3).
+    #: Sensors written straight into the shared aggregator (zero-copy vision path).
     #: WorldState's ``direct_image_frame_sensors`` parameter must list these
     #: so ``_on_image`` doesn't double-write them from the ROS tee.
     direct_sensors: list[str] = field(default_factory=list)
@@ -173,7 +173,7 @@ def merge_deploy_sensors(
     """Robot-manifest sensors ∪ ``DeployScene.sensors``, scene wins on name collision.
 
     A scene entry named like a manifest sensor is that sensor's deploy-time
-    binding (ADR-0078 amendment) — keeping both would double-open the device
+    binding — keeping both would double-open the device
     and publish the same topic twice.
     """
     scene = list(scene_sensors)
@@ -335,7 +335,7 @@ def open_deploy_sensor_readers(
                 publisher.start()
                 leg.publishers.append(publisher)
             if aggregator is not None:
-                # ADR-0082 Phase 3: in-process reader → aggregator, no ROS hop
+                # Zero-copy vision path: in-process reader → aggregator, no ROS hop
                 # for the policy leg (NVMM handles survive). The ROS tee above
                 # keeps serving observability consumers.
                 pump = _AggregatorPump(reader, spec.name, aggregator, _publish_rate_hz(spec))

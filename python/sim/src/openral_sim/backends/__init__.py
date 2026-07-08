@@ -8,8 +8,8 @@ The factories themselves are responsible for lazily importing heavy backends
 (robosuite, libero, metaworld, mujoco, …) so installing ``openral-sim``
 never pulls those transitively.
 
-Two scene categories (ADR-0033)
--------------------------------
+Two scene categories
+---------------------
 A scene is one of two kinds, set by the ``fixed_robot=`` argument to
 ``@SCENES.register`` — the runtime source of truth (``SCENES.fixed_robot(id)``
 returns the bound robot or ``None``):
@@ -20,17 +20,17 @@ returns the bound robot or ``None``):
   from that robot's manifest ``assets.mjcf``). **New robot-flexible scenes
   belong here.** Today: ``tabletop_push`` (the greenfield robot-agnostic native
   scene — composes its table/cube/goal world onto any position-controlled arm
-  via MjSpec; ADR-0033), ``maniskill3``, ``openarm_robosuite``, ``simpler_env``,
-  ``isaac_sim`` (Isaac Lab env behind an out-of-process py3.11 sidecar; ADR-0045).
+  via MjSpec), ``maniskill3``, ``openarm_robosuite``, ``simpler_env``,
+  ``isaac_sim`` (Isaac Lab env behind an out-of-process py3.11 sidecar).
 * **Single-robot (fixed)** — registered WITH ``fixed_robot="<id>"``. The robot
   is baked into the scene (its own MJCF / a benchmark world); the CLI rejects
   ``--robot``. These reproduce a specific embodiment + reward. Today:
   ``libero`` (franka), ``metaworld`` (sawyer),
   ``robocasa`` (panda_mobile), ``aloha``, ``pusht``, ``so101_box`` (so101 — the
-  box/tube task is coupled to the so_arm101 MJCF schema; ADR-0033 finding),
+  box/tube task is coupled to the so_arm101 MJCF schema),
   ``rlbench`` (franka_panda — CoppeliaSim/PyRep tasks behind an out-of-process
-  py3.10 sidecar; ADR-0062), ``robotwin`` (aloha_agilex — the RoboTwin 2.0
-  SAPIEN dual-arm benchmark behind a py3.10 sidecar; ADR-0061).
+  py3.10 sidecar), ``robotwin`` (aloha_agilex — the RoboTwin 2.0
+  SAPIEN dual-arm benchmark behind a py3.10 sidecar).
 """
 
 from __future__ import annotations

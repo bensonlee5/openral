@@ -1,7 +1,7 @@
 """Sim-tier test: in-process GR00T N1.7 (NF4) on a LIBERO franka observation.
 
 Replaces the retired Python-3.10 ZMQ sidecar with the native lerobot
-``GrootPolicy`` backend (ADR-0046). This exercises the **real** path end to end
+``GrootPolicy`` backend. This exercises the **real** path end to end
 — real ``rskills/gr00t-n17-libero`` manifest, real ``@POLICIES.register("gr00t")``
 factory, real NF4 quantized GR00T checkpoint, real lerobot GR00T pre/post
 processors — and asserts the backend emits a valid 7-D LIBERO action on a real

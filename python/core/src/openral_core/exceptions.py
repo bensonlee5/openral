@@ -95,7 +95,7 @@ class ROSForceLimitExceeded(ROSSafetyViolation):
 class ROSCollisionImminent(ROSSafetyViolation):
     """A proposed motion would self-collide or strike a world obstacle.
 
-    Raised on the safety path when geometric checking (ADR-0030) finds a
+    Raised on the safety path when geometric checking finds a
     chunk whose forward-kinematic sweep brings a robot link within its
     clearance of another link or a world primitive. Like every
     :class:`ROSSafetyViolation`, it is caught only at the safety supervisor
@@ -117,7 +117,7 @@ class ROSPerceptionStale(ROSError):
 class ROSObjectNotInMemory(ROSPerceptionStale):
     """A spatial-memory query matched no node, or only nodes that are stale.
 
-    Raised by the ADR-0038 scene-graph query surface when a ``RecallObjectQuery``
+    Raised by the scene-graph query surface when a ``RecallObjectQuery``
     / ``ResolvePlaceQuery`` cannot be satisfied. The caller degrades by treating
     the target as unknown (and may trigger active search) — it never fabricates
     a pose (CLAUDE.md §1.2, §1.4).

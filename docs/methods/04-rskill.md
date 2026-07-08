@@ -16,7 +16,7 @@ _rSkillBase — abstract base class with lifecycle state machine._
   - `shutdown() -> None` — Any state → `finalized`. (L213)
   - `step(world_state) -> Action` — One inference step (hot path). (L237)
   - `on_load_weights() -> None` — Hook: load weights. (L283)
-  - `on_unload_weights() -> None` — Hook: release weights, called by `shutdown()` (ADR-0050 VRAM eviction). (L290)
+  - `on_unload_weights() -> None` — Hook: release weights, called by `shutdown()` (VRAM eviction). (L290)
   - `on_quantize() -> None` — Hook: apply quantization. (L300)
   - `on_warmup() -> None` — Hook: dummy forward pass. (L307)
   - `_configure_impl/_activate_impl/_deactivate_impl/_shutdown_impl/_step_impl()` [@abstractmethod] (L317)
@@ -43,12 +43,12 @@ _Runtime Protocol and NullRuntime — inference backend contract._
   - same surface as `Runtime`. `quantize(config)` always raises — ONNX quantization is pre-applied.
 
 ### `python/rskill/src/openral_rskill/backend_registry.py`
-_ADR-0083 extraction seam: entry-point-based runtime-backend + policy-attach-hook registry._
+_Extraction seam: entry-point-based runtime-backend + policy-attach-hook registry._
 
 - `resolve_runtime_backend(kind: str) -> type[Runtime]` — built-in dict (`pytorch`→`PyTorchRuntime`, `onnx`→`ONNXRuntime`, `null`→`NullRuntime`) first, else looked up via the `openral.runtime_backends` entry-point group (e.g. `openral-pro-trt` registering `tensorrt`). Miss → `ROSConfigError` naming `openral-pro-trt`.
 - `maybe_attach_pro_hooks(policy_name: str, skill, **kwargs) -> bool` — generic policy-attach-hook lookup via the `openral.policy_attach_hooks` entry-point group (name = `policy_name`, e.g. `"smolvla"`/`"act"`). No hook installed → debug log + `False` (not a silent skip, CLAUDE.md §1.4); hook found → invoked as `hook(skill, **kwargs)`, `True`/info-log iff it reports attaching. Replaces the old hardcoded `try: from openral_rskill.smolvla_trt import ...` / `act_trt` call sites in `smolvla.py` / `openral_sim.policies.act`.
 
-> **Moved to OpenRAL Pro (ADR-0083):** `runtime_tensorrt.py` (`TensorRTRuntime`), `smolvla_export.py`, `smolvla_trt.py`, and `act_trt.py` now live in the private `openral-pro-trt` package as `openral_pro_trt.*`, plugging in via the `openral.runtime_backends` / `openral.policy_attach_hooks` entry-point groups above.
+> **Moved to OpenRAL Pro:** `runtime_tensorrt.py` (`TensorRTRuntime`), `smolvla_export.py`, `smolvla_trt.py`, and `act_trt.py` now live in the private `openral-pro-trt` package as `openral_pro_trt.*`, plugging in via the `openral.runtime_backends` / `openral.policy_attach_hooks` entry-point groups above.
 
 ### `python/rskill/src/openral_rskill/engine_cache.py`
 _Filesystem-based per-host engine cache for compiled skill runtimes._
@@ -120,7 +120,7 @@ _Shared load-phase instrumentation seam — generalises the inline `_heartbeat` 
 - `_gpu_mb() -> float | None` — Cheap helper. (L46)
 
 ### `python/rskill/src/openral_rskill/executor.py`
-_Action-chunk executor — promoted from `smolvla` so every chunked VLA family reuses one implementation (ADR-0010, PR B)._
+_Action-chunk executor — promoted from `smolvla` so every chunked VLA family reuses one implementation._
 
 - `class ChunkedExecutor` — Overlaps GPU chunk inference with robot execution via a background daemon thread. Policy-agnostic; works with any lerobot-style policy exposing `select_action(batch)` + `config.n_action_steps`. (L61)
   - `__init__(policy, *, prefetch_at=5)` — Stash refs, no threads. (L86)
@@ -131,11 +131,11 @@ _Action-chunk executor — promoted from `smolvla` so every chunked VLA family r
   - private: `_launch_prefetch(batch)` (L207)
 
 ### `python/rskill/src/openral_rskill/ros_action_rskill.py`
-_ROS-wrapping rSkill adapter — bridges arbitrary ROS 2 action / service servers (MoveIt, Nav2, …) into the `rSkillBase` lifecycle (ADR-0024). Selected by `make_default_skill_resolver` when `manifest.kind in {"ros_action", "ros_service"}`._
+_ROS-wrapping rSkill adapter — bridges arbitrary ROS 2 action / service servers (MoveIt, Nav2, …) into the `rSkillBase` lifecycle. Selected by `make_default_skill_resolver` when `manifest.kind in {"ros_action", "ros_service"}`._
 
 - `build_joint_permutation_from_names(*, source_names, target_names) -> list[int]` — Build the permutation that reorders a wrapped server's `JointTrajectory.positions` into the host `RobotDescription.joints` order. Raises `ROSConfigError` on set-inequality so a joint mismatch surfaces loudly instead of silently swapping bytes. (L172)
-- `CUMOTION_PIPELINE_ID = "isaac_ros_cumotion"` — the cuMotion MoveIt planning-pipeline id (ADR-0065 D1).
-- `maybe_inject_cumotion_pipeline(goal_dict, *, interface_type, capabilities) -> dict` (ADR-0065 D1) — On a host that clears the cuMotion GPU floor (`RobotCapabilities.supports_cumotion()`), set `request.pipeline_id = CUMOTION_PIPELINE_ID` on a `MoveGroup` goal so MoveIt plans with cuMotion; no-op for non-MoveGroup actions, CPU/low-VRAM hosts (→ OMPL default), an already-set `pipeline_id`, or a goal with no `request` block. Pure; never mutates the input. Called by `_configure_impl` after the ADR-0026 goal-merge.
+- `CUMOTION_PIPELINE_ID = "isaac_ros_cumotion"` — the cuMotion MoveIt planning-pipeline id.
+- `maybe_inject_cumotion_pipeline(goal_dict, *, interface_type, capabilities) -> dict` — On a host that clears the cuMotion GPU floor (`RobotCapabilities.supports_cumotion()`), set `request.pipeline_id = CUMOTION_PIPELINE_ID` on a `MoveGroup` goal so MoveIt plans with cuMotion; no-op for non-MoveGroup actions, CPU/low-VRAM hosts (→ OMPL default), an already-set `pipeline_id`, or a goal with no `request` block. Pure; never mutates the input. Called by `_configure_impl` after the goal-merge.
 - `class ROSActionRskill(rSkillBase)` — `rSkillBase` shim wrapping a ROS 2 ActionClient (or service client). Two modes selected by `manifest.ros_integration.result_trajectory_field`: trajectory mode replays one waypoint per `step()` and raises `ROSRskillGoalSatisfied` after the last; result-only mode awaits the wrapped result and raises `ROSRskillGoalSatisfied` on success without emitting any `Action`. ROS imports are deferred to `_configure_impl` so the module imports cleanly without ROS sourced. (L301)
   - `__init__(*, manifest, ros_node, robot_description, prompt, prompt_metadata_json)` (L334)
   - `_configure_impl()` — Lazy-import IDL, build ActionClient/service client, parse `default_goal_json`. (L405)
@@ -144,21 +144,21 @@ _ROS-wrapping rSkill adapter — bridges arbitrary ROS 2 action / service server
   - `_step_impl(world_state) -> Action` — First call sends goal and caches result; subsequent calls dequeue waypoints. (L515)
 
 ### `python/rskill/src/openral_rskill/look_at_rskill.py`
-_ADR-0044 Phase 3 — camera-aiming MoveGroup skill. Selected by `make_default_skill_resolver` when `manifest.ros_integration.goal_builder == "look_at"` (new `RosIntegration.goal_builder` field; `RSkillAction` gains `LOOK = "look"`)._
+_Camera-aiming MoveGroup skill. Selected by `make_default_skill_resolver` when `manifest.ros_integration.goal_builder == "look_at"` (new `RosIntegration.goal_builder` field; `RSkillAction` gains `LOOK = "look"`)._
 
-- `resolve_camera_sensor(description, camera) -> SensorSpec` — Find the named camera in `RobotDescription.sensors`; `ROSConfigError` listing the available sensor names on a miss (explicit beats implicit — default camera is `"wrist"`). (ADR-0044)
-- `build_look_at_constraints(*, camera_goal: Pose6D, link_name, link_t_cam=None, position_tolerance_m=0.02, orientation_tolerance_rad=0.15) -> dict` — Lower a camera gaze pose into one MoveGroup `goal_constraints` entry. ADR-0054: **delegates to `pose_goal_rskill.build_pose_constraints`** with the optical (z) axis tolerance set to π (roll free); the position/offset math lives there now. With `link_t_cam` the goal is re-expressed for the mount link; without it the camera frame is the constrained link.
+- `resolve_camera_sensor(description, camera) -> SensorSpec` — Find the named camera in `RobotDescription.sensors`; `ROSConfigError` listing the available sensor names on a miss (explicit beats implicit — default camera is `"wrist"`).
+- `build_look_at_constraints(*, camera_goal: Pose6D, link_name, link_t_cam=None, position_tolerance_m=0.02, orientation_tolerance_rad=0.15) -> dict` — Lower a camera gaze pose into one MoveGroup `goal_constraints` entry — **delegates to `pose_goal_rskill.build_pose_constraints`** with the optical (z) axis tolerance set to π (roll free); the position/offset math lives there now. With `link_t_cam` the goal is re-expressed for the mount link; without it the camera frame is the constrained link.
 - `class LookAtRskill(ROSActionRskill)` — Consumes the merged goal's `look_at` block (`target_xyz` required; `frame_id`, `camera`, `standoff_m`, tolerances) instead of raw constraints. `_configure_impl` pops/validates the block, resolves the camera, builds a TF2 listener; the lowering runs lazily on the first `step()` (needs the camera's *current* TF pose): re-aim in place, or place the camera at `standoff_m` from the target along its current line of approach, then `compute_gaze_pose` (+z optical) → `build_pose_constraints` → constraints injected into `request.goal_constraints` before the parent dispatches. Trajectory replays waypoint-per-chunk through the safety supervisor; the manifest ships `plan_only: true` so MoveIt-side execution never bypasses the kernel.
 
 ### `python/rskill/src/openral_rskill/pose_goal_rskill.py`
-_ADR-0054 — generic Cartesian end-effector pose MoveGroup skill. Selected by `make_default_skill_resolver` when `ros_integration.goal_builder == "pose"`. Home of the shared pose→constraints lowering `LookAtRskill` reuses._
+_Generic Cartesian end-effector pose MoveGroup skill. Selected by `make_default_skill_resolver` when `ros_integration.goal_builder == "pose"`. Home of the shared pose→constraints lowering `LookAtRskill` reuses._
 
 - `build_pose_constraints(*, pose: Pose6D, link_name, link_t_target=None, position_tolerance_m=0.01, orientation_axis_tolerances_rad=(0.05, 0.05, 0.05)) -> dict` — Lower a target pose into one MoveGroup `goal_constraints` entry (sphere position region + per-axis orientation constraint). `link_t_target` re-expresses the goal for the constrained link (`goal_link = goal_target @ inv(link_t_target)`); the per-axis tolerance tuple lets a generic pose constrain all three axes while look-at frees the optical (z) axis at π. **Reuse watch:** the one place pose→MoveGroup-constraint math lives — do not re-implement.
-- `pose_from_block(block) -> tuple[Pose6D, str, float, float]` — Parse a `pose` goal block → `(pose, link_name, pos_tol, orient_tol)`. Orientation is a 4-float quaternion array; component order from `block["quaternion_order"]` (`"xyzw"` default / `"wxyz"`, ADR-0054 Q2). `ROSConfigError` on missing/ill-typed fields or an unknown order.
-- `class PoseGoalRskill(ROSActionRskill)` — Consumes the merged goal's `pose` block; lowers it via `build_pose_constraints` (full orientation) on the first `step()`, then dispatches/replays like the parent. `link_t_target` is identity in v1 (the RobotDescription tool-frame offset is ADR-0054 phase 6).
+- `pose_from_block(block) -> tuple[Pose6D, str, float, float]` — Parse a `pose` goal block → `(pose, link_name, pos_tol, orient_tol)`. Orientation is a 4-float quaternion array; component order from `block["quaternion_order"]` (`"xyzw"` default / `"wxyz"`). `ROSConfigError` on missing/ill-typed fields or an unknown order.
+- `class PoseGoalRskill(ROSActionRskill)` — Consumes the merged goal's `pose` block; lowers it via `build_pose_constraints` (full orientation) on the first `step()`, then dispatches/replays like the parent. `link_t_target` is identity in v1 (the RobotDescription tool-frame offset is a later phase).
 
 ### `python/rskill/src/openral_rskill/joint_goal_rskill.py`
-_ADR-0054 — joint-space MoveGroup skill. Selected when `ros_integration.goal_builder == "joint"`. The LLM-facing replacement for hand-written `joint_constraints` JSON._
+_Joint-space MoveGroup skill. Selected when `ros_integration.goal_builder == "joint"`. The LLM-facing replacement for hand-written `joint_constraints` JSON._
 
 - `joint_constraints_from_block(block) -> dict` — Lower a `joint` block (`joint_names`, `positions`, optional `position_tolerance_rad`) into one `goal_constraints` entry (`{"joint_constraints": [{joint_name, position, tolerance_above, tolerance_below, weight}, …]}`). `ROSConfigError` on missing/ill-typed fields or a name/position length mismatch.
 - `class JointGoalRskill(ROSActionRskill)` — Consumes the merged goal's `joint` block; lowers it into a `joint_constraints` goal at `_configure_impl`, then dispatches/replays like the parent.
@@ -166,7 +166,7 @@ _ADR-0054 — joint-space MoveGroup skill. Selected when `ros_integration.goal_b
 ### `python/rskill/src/openral_rskill/smolvla.py`
 _SmolVLA adapter — rSkillBase implementation for the SmolVLA family of VLAs._
 
-- `from openral_rskill.executor import ChunkedExecutor` — re-exported via `__all__` for back-compat (`from openral_rskill.smolvla import ChunkedExecutor` still works post-ADR-0010 PR B). (L91)
+- `from openral_rskill.executor import ChunkedExecutor` — re-exported via `__all__` for back-compat (`from openral_rskill.smolvla import ChunkedExecutor` still works after the move). (L91)
 - `class SmolVLAAdapter(rSkillBase)` — Drives any SmolVLA-family policy. (L114)
   - `__init__(repo_id, obs_fn, prompt, *, device='cuda:0', n_dof=6, n_cameras=None, prefetch_at=5, name='smolvla', version='0.1.0', embodiment_tags=None, latency_budget_ms=None)` — `n_cameras` (default `len(config.image_features)`) truncates warmup to the cameras the deploy feeds and threads to the TRT export (phantom-camera fix). (L159)
   - `on_load_weights() -> None` — Fetch checkpoint from HF Hub. (L197)

@@ -1,4 +1,4 @@
-"""SimSensorBridge /scan gate — manifest lidar_2d signal is correct (ADR-0034 Phase 2).
+"""SimSensorBridge /scan gate — manifest lidar_2d signal is correct.
 
 These tests verify that the gate predicate driving ``_setup_scan()`` reads
 the right signal from each robot manifest:

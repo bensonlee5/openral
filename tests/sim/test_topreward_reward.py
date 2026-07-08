@@ -1,4 +1,4 @@
-"""Live TOPReward reward-monitor backend on a real clip (ADR-0057, lerobot 0.6.0).
+"""Live TOPReward reward-monitor backend on a real clip (lerobot 0.6.0).
 
 Exercises the deploy path end-to-end: `build_reward_monitor` dispatches the
 `reward.backend: "topreward"` manifest to the in-process `TOPRewardMonitor`,

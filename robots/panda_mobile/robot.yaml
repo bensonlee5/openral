@@ -10,7 +10,7 @@
 # physics, which lives in robosuite.
 #
 # Sim-only today; the matching sim adapter is
-# python/sim/src/openral_sim/adapters/robocasa.py (ADR-0011).
+# python/sim/src/openral_sim/adapters/robocasa.py (the RoboCasa sim-backend adapter).
 # There is no `openral_hal.panda_mobile` adapter yet (real
 # Panda-on-mobile-base hardware is an integration target, not a near
 # product) -- `sdk_kind: open` and `hal.real` is null because the only
@@ -19,7 +19,7 @@
 name: "panda_mobile"
 embodiment_kind: "mobile_manipulator"
 base_frame: "base_link"
-# ADR-0025 / Nav2 — mobile-base properties consumed generically by the
+# Per the Nav2 generic mobile-base properties convention — mobile-base properties consumed generically by the
 # Nav2 bringup (instead of a hand-vendored per-robot param file):
 # `footprint_radius` -> Nav2 `robot_radius` (chassis collision
 # envelope); `base_kinematics: omni` -> MPPI `motion_model: Omni` +
@@ -31,7 +31,7 @@ footprint_radius: 0.35
 footprint_polygon: [[0.35, 0.25], [-0.35, 0.25], [-0.35, -0.25], [0.35, -0.25]]
 base_kinematics: "omni"
 
-# ADR-0027 — robot_state_publisher wiring. sim_e2e.launch.py reads
+# robot_state_publisher wiring. sim_e2e.launch.py reads
 # `assets.urdf.ref` (the `rd:panda_description` form below resolved via
 # the `robot_descriptions` Python package so we don't ship a 500-line
 # URDF into the repo) and the launch starts robot_state_publisher with
@@ -39,11 +39,11 @@ base_kinematics: "omni"
 # base_link → panda_link0.
 # Once active the per-link arm TF (panda_link0 → … → panda_hand) is
 # on /tf for openral_state_adapter's human300_16d assembler.
-# Self-collision ACM source for the offline lowering tool (ADR-0030). Vendored
+# Self-collision ACM source for the offline lowering tool. Vendored
 # Franka MoveIt SRDF; regenerate `allowed_collision_pairs` via
 # `openral collision lower --robot robots/panda_mobile/robot.yaml --acm-only`.
 #
-# ADR-0058 — unified asset block (URDF / SRDF). ``base_to_root_xyz_rpy``:
+# Unified asset block (URDF / SRDF). ``base_to_root_xyz_rpy``:
 # Franka mount offset on robocasa's OmronMobileBase. Identity in
 # both translation and rotation: post-6DoF-base-publish fix in
 # ``openral_hal.SimAttachedHAL.base_pose_6dof``, the HAL publishes
@@ -62,7 +62,7 @@ assets:
     base_to_root_xyz_rpy: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
   srdf: "file:panda_mobile.srdf"
 
-# ADR-0025 — declare which joints constitute the planar mobile base.
+# Per the Nav2 generic mobile-base properties convention — declare which joints constitute the planar mobile base.
 # The generic ray-cast helper in
 # `openral_sim.backends.robocasa.synthesize_laser_scan_2d` reads these
 # names + each joint's `sim_joint_name` override to resolve MJCF
@@ -88,7 +88,7 @@ joints:
   # in `python/sim/src/openral_sim/backends/robocasa.py`, and
   # `_PandaMobileLifecycleNode._compute_scan_ranges` in
   # `packages/openral_hal_panda_mobile/`.
-  # ADR-0028d note on base velocity_limit:
+  # Per the hybrid mobile-base composite convention — note on base velocity_limit:
   # When a JOINT_VELOCITY rSkill (rldx-rc365, pi05-human300) targets
   # these joints, the policy emits NORMALIZED values in [-1, +1]; the
   # robosuite ``HybridMobileBase`` controller does the physical scaling
@@ -137,7 +137,7 @@ joints:
     joint_type: "revolute"
     parent_link: "base_link"
     child_link: "panda_link1"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.0, 0.0, 1.033]
     origin_rpy: [0.0, 0.0, 0.0]
     position_limits: [-2.8973, 2.8973]
@@ -150,7 +150,7 @@ joints:
     joint_type: "revolute"
     parent_link: "panda_link1"
     child_link: "panda_link2"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.0, 0.0, 0.0]
     origin_rpy: [-1.5708, 0.0, 0.0]
     position_limits: [-1.7628, 1.7628]
@@ -163,7 +163,7 @@ joints:
     joint_type: "revolute"
     parent_link: "panda_link2"
     child_link: "panda_link3"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.0, -0.316, 0.0]
     origin_rpy: [1.5708, 0.0, 0.0]
     position_limits: [-2.8973, 2.8973]
@@ -176,7 +176,7 @@ joints:
     joint_type: "revolute"
     parent_link: "panda_link3"
     child_link: "panda_link4"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.0825, 0.0, 0.0]
     origin_rpy: [1.5708, 0.0, 0.0]
     position_limits: [-3.0718, -0.0698]
@@ -189,7 +189,7 @@ joints:
     joint_type: "revolute"
     parent_link: "panda_link4"
     child_link: "panda_link5"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [-0.0825, 0.384, 0.0]
     origin_rpy: [-1.5708, 0.0, 0.0]
     position_limits: [-2.8973, 2.8973]
@@ -202,7 +202,7 @@ joints:
     joint_type: "revolute"
     parent_link: "panda_link5"
     child_link: "panda_link6"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.0, 0.0, 0.0]
     origin_rpy: [1.5708, 0.0, 0.0]
     position_limits: [-0.0175, 3.7525]
@@ -215,7 +215,7 @@ joints:
     joint_type: "revolute"
     parent_link: "panda_link6"
     child_link: "panda_link7"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.088, 0.0, 0.0]
     origin_rpy: [1.5708, 0.0, 0.0]
     position_limits: [-2.8973, 2.8973]
@@ -224,7 +224,7 @@ joints:
     actuator_kind: "bldc"
     role: "arm"
     sim_joint_name: "robot0_joint7"
-  # ADR-0028a — single 1-DoF abstraction over the franka two-finger
+  # Per the single-DoF gripper abstraction convention — single 1-DoF abstraction over the franka two-finger
   # MJCF mimic. The MJCF expands this into ``gripper0_finger_joint{1,2}``
   # at the simulator layer; the safety kernel + rskill action contract
   # see one width DoF. Matches ``robots/franka_panda/robot.yaml`` so the
@@ -233,7 +233,7 @@ joints:
     joint_type: "prismatic"
     parent_link: "panda_link7"
     child_link: "panda_finger_pair"
-    # ADR-0030 — fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
+    # Fixed parent->joint transform (from Franka URDF; joint1 absorbs the 0.7 m arm-base mount). Lets the kernel FK place the collision capsules.
     origin_xyz: [0.0, 0.0, 0.107]
     origin_rpy: [0.0, 0.0, 0.0]
     position_limits: [0.0, 1.0]
@@ -268,7 +268,7 @@ capabilities:
   has_tactile: false
   has_force_control: true
   has_vision: true
-  # ADR-0025 — declared true because the panda_mobile HAL stub emits a
+  # Per the Nav2 generic mobile-base properties convention — declared true because the panda_mobile HAL stub emits a
   # synthetic `sensor_msgs/LaserScan` from MuJoCo ray-casts at base
   # height (Nav2 + slam_toolbox both consume the standard `/scan`
   # topic). The actual ray-cast wiring lives in
@@ -276,11 +276,11 @@ capabilities:
   # flag enables capability matching for SLAM rSkills today.
   has_lidar: true
   has_humanoid_balance: false
-  # ADR-0025 — body_twist for the holonomic base (cmd_vel from Nav2),
+  # Per the Nav2 generic mobile-base properties convention — body_twist for the holonomic base (cmd_vel from Nav2),
   # joint_position for the seven-DoF Franka arm. The dual declaration
   # is how mobile-manipulator embodiments advertise both surfaces in
   # one robot.yaml; the HAL routes by Action.control_mode.
-  # ADR-0028d — joint_velocity exposes the HybridMobileBase composite's
+  # Per the hybrid mobile-base composite convention — joint_velocity exposes the HybridMobileBase composite's
   # 'base' part (3-D forward/side/yaw velocity) for rldx/pi05 mobile-
   # manipulation skills that emit JOINT_VELOCITY chunks on slot 7-9 of
   # their 12-D action vector.
@@ -288,9 +288,9 @@ capabilities:
     - "body_twist"
     - "joint_position"
     - "joint_velocity"
-    # ADR-0028d — sim-only HybridMobileBase composite mux flag.
+    # Per the hybrid mobile-base composite convention — sim-only HybridMobileBase composite mux flag.
     - "composite_mode"
-    # ADR-0071 — the panda_gripper EE accepts position commands (the rc365
+    # Per the gripper/task-space joint-role convention — the panda_gripper EE accepts position commands (the rc365
     # skills already drive a gripper_position slot on it).
     - "gripper_position"
   embodiment_tags:
@@ -310,7 +310,7 @@ safety:
   max_force_n: 100.0
   max_torque_nm: 87.0
   deadman_required: true
-  # ADR-0028b — per-control-mode bounds the safety supervisor enforces
+  # Per the per-control-mode safety-bounds convention — per-control-mode bounds the safety supervisor enforces
   # on RoboCasa pi0.5 / rldx1 chunks (cartesian_delta arm + body_twist
   # base + gripper width). All bounds derive from RoboCasa's training
   # config: 5 cm / 0.2 rad max OSC step (the policy emits per-step
@@ -330,7 +330,8 @@ safety:
 # the `robot0_agentview_left_image` / `robot0_agentview_right_image` /
 # `robot0_eye_in_hand_image` observation keys; the
 # openral_sim.adapters.robocasa adapter surfaces them with the canonical
-# HAL-facing names `shoulder_left` / `shoulder_right` / `wrist` (ADR-0070).
+# HAL-facing names `shoulder_left` / `shoulder_right` / `wrist`, per the
+# canonical HAL-facing sensor-naming convention.
 # Their `vla_feature_key` stays camera1/2/3 (checkpoint-frozen). The
 # RC365 rSkill (rldx1-ft-rc365-nf4) consumes all three; single-camera
 # rSkills (pi05, smolvla) just bind `shoulder_left`.
@@ -348,7 +349,7 @@ safety:
 sensors:
   - name: "shoulder_left"
     modality: "rgb"
-    # ADR-0035 cross-frame object-lift — a dedicated optical frame (NOT the
+    # Per the cross-frame object-lift convention — a dedicated optical frame (NOT the
     # world origin) so the SimSensorBridge broadcasts base_link -> this frame
     # from the live MuJoCo camera pose, letting the world-state lifter project
     # the world voxel map into this camera. metadata.mjcf_camera names the
@@ -400,14 +401,14 @@ sensors:
     vla_feature_key: "observation.images.camera3"
     vendor: "sim"
     model: "robocasa_eye_in_hand"
-  # ADR-0025 — single source of truth for the synthetic 2-D LaserScan
+  # Per the Nav2 generic mobile-base properties convention — single source of truth for the synthetic 2-D LaserScan
   # the panda_mobile HAL ray-casts from MuJoCo. Both ``openral deploy sim``
   # (which injects these as HAL ROS params) and the HAL lifecycle node
   # (which seeds its ``scan_*`` parameter defaults) read these values
   # via ``RobotDescription.lidar_sensor`` instead of hardcoding them.
   # ``range_min_m`` filters near-field self-hits on the robot chassis in
   # composed kitchen MJCFs; it is the primary SLAM-quality tuning knob
-  # (see ADR-0025 known limitations) — retune in sim if the map is noisy.
+  # (see the Nav2 generic mobile-base properties convention's known limitations) — retune in sim if the map is noisy.
   - name: "base_scan"
     modality: "lidar_2d"
     frame_id: "base_link"
@@ -417,7 +418,7 @@ sensors:
     range_max_m: 12.0
     vendor: "sim"
     model: "robocasa_mj_multiray"
-  # ADR-0030 — depth camera the panda_mobile HAL ray-casts from MuJoCo
+  # Depth camera the panda_mobile HAL ray-casts from MuJoCo
   # (``openral_sim.backends.depth_camera.synthesize_depth_pointcloud``)
   # and publishes as ``sensor_msgs/PointCloud2`` on
   # ``/openral/cameras/front_depth/points`` for octomap_server → the C++
@@ -448,7 +449,7 @@ sensors:
     metadata:
       mjcf_camera: "robot0_agentview_left"
 
-# ADR-0030 — geometric safety. Conservative capsule/sphere bounds per link so
+# Geometric safety. Conservative capsule/sphere bounds per link so
 # the C++ safety kernel can forward-kinematic the arm from the manifest's
 # ``joints`` (origin_xyz/rpy + axis_xyz) and check it for self-collision AND
 # against the OctoMap world voxels (/openral/world_voxels). Capsules run along
@@ -461,7 +462,7 @@ collision_geometry:
   # environment. Deliberately EXCLUDED, so the world-voxel check is usable for
   # real picks in a cluttered kitchen:
   #   * base_link — the mobile base parks ~1 cm from cabinets; base-vs-world is
-  #     Nav2's 2-D costmap job (ADR-0030), so a base capsule here only
+  #     Nav2's 2-D costmap job, so a base capsule here only
   #     false-positives on furniture beside the parked base.
   #   * panda_finger_pair — the gripper is the intended-contact part (it grasps
   #     the target); checking it against the world would veto every grasp.
@@ -510,9 +511,10 @@ allowed_collision_pairs:
 
 # No real-HW HAL adapter (yet) -- robosuite owns the physics.
 sdk_kind: "open"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # No `sim:` block (the in-process PandaMobileHAL twin owns its own MuJoCo model),
-# so sim is named explicitly rather than derived. Real path: ADR-0025 Stage 3.
+# so sim is named explicitly rather than derived. Real path: Stage 3 of the
+# Nav2 generic mobile-base properties rollout.
 hal:
   sim: "openral_hal.panda_mobile:PandaMobileHAL"
   real: null

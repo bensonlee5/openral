@@ -1,4 +1,4 @@
-r"""ADR-0018 — generic end-to-end ROS graph for ``openral deploy sim``.
+r"""Generic end-to-end ROS graph for ``openral deploy sim``.
 
 One launch file for every robot. Every robot-specific bit is a launch
 argument resolved inside an ``OpaqueFunction`` so concrete strings
@@ -125,7 +125,7 @@ def _autostart_lifecycle(node: LifecycleNode, node_name: str) -> list:
     (``start_state="configuring"``) so it fires exactly once at boot, after
     ``on_configure`` lands the node in ``inactive``. A bare ``goal_state=
     "inactive"`` matcher would also re-fire on a *runtime* deactivate
-    (``active → deactivating → inactive``), which fights ADR-0050 VRAM eviction:
+    (``active → deactivating → inactive``), which fights VRAM eviction:
     the reasoner deactivates the object detector to free its VRAM before a VLA,
     and an auto-reactivate immediately reloads the model and OOMs an 8 GB card.
     Other autostarted nodes (safety kernel, reasoner, prompt_router) are never
@@ -184,7 +184,7 @@ def _resolve_clock_origin(value: str) -> str:
 def _build_nav2_include(
     robot_yaml: str, *, use_sim_time: bool, slam_backend: str = "lidar"
 ) -> object:
-    """Construct the IncludeLaunchDescription for upstream Nav2 (ADR-0025).
+    """Construct the IncludeLaunchDescription for upstream Nav2.
 
     Pulled out of :func:`compose_runtime_graph` for line-count
     hygiene. Unlike slam_toolbox (which idles until activate), Nav2
@@ -214,12 +214,12 @@ def _build_nav2_include(
     return IncludeLaunchDescription(
         PythonLaunchDescriptionSource(nav2_launch_path),
         # ``robot_yaml`` lets nav2.launch.py rewrite the base params with
-        # this robot's footprint_radius / base_kinematics (ADR-0025) —
+        # this robot's footprint_radius / base_kinematics —
         # generic across mobile bases, no hand-vendored per-robot file.
         launch_arguments={
             "use_sim_time": "true" if use_sim_time else "false",
             "robot_yaml": robot_yaml,
-            # ADR-0085 — visual robots get the `/map`-consuming costmap profile
+            # visual robots get the `/map`-consuming costmap profile
             # (nav2_visual.yaml); lidar robots keep the `/scan` base config.
             "slam_backend": slam_backend,
         }.items(),
@@ -229,7 +229,7 @@ def _build_nav2_include(
 def _resolve_urdf_path(ref: str, manifest_dir: pathlib.Path) -> str | None:
     """Resolve a ``RobotDescription.assets.urdf.ref`` to a concrete URDF path.
 
-    Thin wrapper over ``openral_core.assets.resolve_asset`` (ADR-0058). Returns
+    Thin wrapper over ``openral_core.assets.resolve_asset``. Returns
     ``None`` for the ``ros2://robot_description`` dynamic marker (the URDF is on
     the ``/robot_description`` topic at runtime — no file to read). ``file:`` refs
     resolve against the robot's manifest dir, then the repo root.
@@ -275,7 +275,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     hal_params_file = LaunchConfiguration("hal_params_file").perform(context)
     reset_to_pose_service = LaunchConfiguration("reset_to_pose_service").perform(context)
     approach_skill_id = LaunchConfiguration("approach_skill_id").perform(context)
-    # ADR-0019 — record the deploy session to a rosbag2 mcap.
+    # Record the deploy session to a rosbag2 mcap.
     dataset_out = LaunchConfiguration("dataset_out").perform(context)
     dataset_repo_id = LaunchConfiguration("dataset_repo_id").perform(context)
     dataset_license = LaunchConfiguration("dataset_license").perform(context)
@@ -290,13 +290,13 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     spatial_memory_ingest = LaunchConfiguration("spatial_memory_ingest").perform(
         context
     ).lower() in ("1", "true", "yes")
-    # ADR-0072 Decision 3 / 3b — the deploy memory bundle. `memory_md_path` loads the
+    # The deploy memory bundle. `memory_md_path` loads the
     # self-maintained MEMORY.md (+ enables the memory_write / memory_search tools);
     # `map_path` seeds a static 2D occupancy grid into nav2 map_server. Both are the
     # bundle's text/grid modalities alongside spatial_memory_path's scene graph.
     memory_md_path = LaunchConfiguration("memory_md_path").perform(context)
     map_path = LaunchConfiguration("map_path").perform(context)
-    # ADR-0036 — deploy-path selector for the reasoner's action-mode
+    # Deploy-path selector for the reasoner's action-mode
     # palette gate. ``openral deploy sim`` shells this launch with
     # ``hal_mode:=sim`` (digital-twin path: the scene's robosuite OSC
     # controller synthesises cartesian/OSC action modes, so cartesian
@@ -310,10 +310,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         "true",
         "yes",
     )
-    # ADR-0085 — which SLAM backend to compose when enable_slam: "lidar"
+    # Which SLAM backend to compose when enable_slam: "lidar"
     # (slam_toolbox), "visual" (cuVSLAM, camera-based, lidar-less robots),
     # or "none". Resolved upstream in deploy_sim.py from capabilities;
-    # default "lidar" preserves the pre-ADR-0085 behaviour for any caller
+    # default "lidar" preserves the legacy lidar-only behaviour for any caller
     # that sets enable_slam without forwarding slam_backend.
     slam_backend = LaunchConfiguration("slam_backend").perform(context).strip().lower()
     enable_nav2 = LaunchConfiguration("enable_nav2").perform(context).lower() in (
@@ -326,10 +326,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         "true",
         "yes",
     )
-    # ADR-0030/0035 — decouple the octomap PERCEPTION leg (publishing
+    # Decouple the octomap PERCEPTION leg (publishing
     # /openral/world_voxels for the world-state object-lift) from the SAFETY
     # KERNEL's capsule-vs-voxel check. Default True preserves the bundled
-    # ADR-0030 behaviour; set False to publish the voxel map for object-lift
+    # world-collision-check behaviour; set False to publish the voxel map for object-lift
     # while keeping the kernel voxel check OFF (its posture under
     # --no-enable-octomap: envelope + self-collision only). Lets perception use
     # the world map without the kitchen false-positive E-stop. Never weakens the
@@ -338,7 +338,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         context
     ).lower() in ("1", "true", "yes")
     octomap_cloud_topic = LaunchConfiguration("octomap_cloud_topic").perform(context)
-    # ADR-0035 — object-detection perception leg. Off by default; when on,
+    # Object-detection perception leg. Off by default; when on,
     # the ROS-Image detector node runs RT-DETR over the agentview RGB tee and
     # publishes ObjectsMetadata to /openral/perception/objects, which the
     # world-state node's object-lift (enabled by default) raises into voxels.
@@ -352,7 +352,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     object_detector_onnx = LaunchConfiguration("object_detector_onnx").perform(context)
     object_detector_manifest = LaunchConfiguration("object_detector_manifest").perform(context)
     object_detector_query = LaunchConfiguration("object_detector_query").perform(context)
-    # ADR-0057 — reward-monitor leg. Off by default; when on, a reward_monitor_node
+    # Reward-monitor leg. Off by default; when on, a reward_monitor_node
     # runs PARALLEL to the VLA, buffering the agentview RGB stream, and the reasoner
     # is told task_progress_available=True so its LLM may poll
     # /openral/perception/query_task_progress (the query_task_progress tool) whenever
@@ -362,7 +362,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     ).lower() in ("1", "true", "yes")
     reward_monitor_manifest = LaunchConfiguration("reward_monitor_manifest").perform(context)
     reward_monitor_task = LaunchConfiguration("reward_monitor_task").perform(context)
-    # ADR-0064 — Tier-C critic-producer leg. Off by default; when on, a
+    # Tier-C critic-producer leg. Off by default; when on, a
     # critic_producer_node watches the generic /openral/critic/score topic and
     # turns a critic stall into a Tier-C FailureTrigger on /openral/failure/critic
     # (the reasoner already subscribes it). Advisory-only — never actuates.
@@ -372,7 +372,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         "yes",
     )
     critic_stall_patience = LaunchConfiguration("critic_stall_patience").perform(context)
-    # ADR-0056 — comma-separated on-demand locator manifest paths. Each becomes a
+    # Comma-separated on-demand locator manifest paths. Each becomes a
     # namespaced locate_in_view lifecycle node (/openral/perception/<alias>/...) so
     # the reasoner can choose a model via LocateInViewTool.detector. Alias/segment
     # derivation is the single source of truth in openral_reasoner.palette. The
@@ -404,7 +404,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         "true",
         "yes",
     )
-    # ADR-0059 — read-only Foxglove live-scene bridge. Off by default;
+    # Read-only Foxglove live-scene bridge. Off by default;
     # ``openral deploy sim --foxglove`` opts in.
     enable_foxglove = LaunchConfiguration("enable_foxglove").perform(context).lower() in (
         "1",
@@ -437,7 +437,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     envelope = compute_intersection(
         description, skill=None, deploy=workcell.safety if workcell is not None else None
     )
-    # ADR-0030 — self-collision model. Prefer lowering from the robot's MJCF
+    # Self-collision model. Prefer lowering from the robot's MJCF
     # (the full kinematic tree, incl. fixed mounts + floating base, that the
     # manifest's actuated-only ``joints`` can't express); fall back to the
     # manifest geometry otherwise. Returns ``{"self_collision_enabled": False}``
@@ -460,7 +460,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             # self-collision model. MJCFs whose collision geoms are meshes (e.g.
             # bimanual openarm) lower to {"self_collision_enabled": False}; using
             # that would silently DISABLE self-collision, so keep the manifest's
-            # hand-authored capsules + ACM instead (ADR-0030, safety §3).
+            # hand-authored capsules + ACM instead.
             if mjcf_params.get("self_collision_enabled"):
                 collision_params = mjcf_params
             else:
@@ -484,7 +484,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             for a, b in workcell.extra_allowed_collision_pairs:
                 print(f"[sim_e2e] ACM +pair {a}<->{b} (deploy override)", flush=True)
     kernel_params = {**kernel_params_from_envelope(envelope), **collision_params}
-    # ADR-0040 — the actuated joint order (length n_dof) so the kernel can map
+    # The actuated joint order (length n_dof) so the kernel can map
     # /joint_states (named) into q_meas in the action's dof index space, the seed
     # the geometric check needs to reconstruct non-position chunks. Same order as
     # the per-joint envelope arrays + collision_dof_index. `collision_seed_dt_s`
@@ -492,11 +492,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     # reactive (measured-config) check only. This is deliberate: the only
     # JOINT_VELOCITY emitter in-tree is the robocasa BASE chunk, whose dofs are
     # listed in collision_base_dofs and zeroed before FK — so integrating them is
-    # a no-op (ADR-0040 audit). Enabling dt>0 helps only a future fixed-base
+    # a no-op. Enabling dt>0 helps only a future fixed-base
     # velocity arm AND requires validating that the chunk's velocity units match
     # this dt; integrating with the wrong dt would mispredict and could
-    # under-report, so it stays off (fail-safe) until that validation lands
-    # (ADR-0040 Phase 2b).
+    # under-report, so it stays off (fail-safe) until that validation lands.
     kernel_params["collision_joint_names"] = [j.name for j in description.joints]
     kernel_params["collision_seed_dt_s"] = 0.0
     # deploy-sim publishes /joint_states only as fast as the sim steps, which
@@ -506,7 +505,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     # also moves slowly in sim-time, so a wall-stale seed is still spatially
     # accurate. Real hardware (30 Hz+ /joint_states) never approaches this bound.
     kernel_params["collision_state_deadline_ms"] = 1000.0
-    # ADR-0040 — dof indices of the planar mobile-base joints (manifest
+    # Dof indices of the planar mobile-base joints (manifest
     # base_joints). The kernel zeroes these before the base-relative collision FK
     # so a mobile manipulator's arm is checked in the base_link frame the
     # world/voxel grid lives in. Empty for fixed-base arms.
@@ -527,12 +526,12 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     ]
     if _collision_base_dofs:
         kernel_params["collision_base_dofs"] = _collision_base_dofs
-    # ADR-0040 Phase 3 — predictive Cartesian: the EE control link for the
+    # Predictive Cartesian: the EE control link for the
     # Jacobian look-ahead (deepest collision link = wrist/tip). -1 (no collision
     # model) leaves predictive Cartesian off; the reactive measured-config check
     # is the floor regardless. Base dofs above are blocked from the arm Jacobian.
     kernel_params["collision_ee_link_index"] = ee_link_index_from_collision_params(collision_params)
-    # ADR-0030 — when octomap is enabled, turn on the kernel's
+    # When octomap is enabled, turn on the kernel's
     # allocation-free capsule-vs-voxel world-collision check and have it
     # subscribe /openral/world_voxels (published by the octomap bridge
     # below). max_cells covers the bridge's default 2×2×2 m @ 0.05 grid
@@ -561,7 +560,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             "world_voxel_deadline_ms": 1000.0,
         }
 
-    # ADR-0017 — run identity for the dashboard's Identity card. These
+    # Run identity for the dashboard's Identity card. These
     # ride as OTLP resource attributes on every node so run mode / id /
     # git sha populate regardless of which span family the operator is
     # looking at.
@@ -611,18 +610,18 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         additional_env=otel_env,
         output="screen",
     )
-    # ADR-0025 — lifecycle peer node ids the Reasoner should surface to
+    # Lifecycle peer node ids the Reasoner should surface to
     # the LLM via `LifecycleTransitionTool`. Today only slam_toolbox is
     # opt-in; future managed services (RTAB-Map, perception trees) will
     # append themselves here under their own `enable_<svc>` launch args.
     lifecycle_peer_node_ids: list[str] = []
-    # ADR-0050 — GPU peers the reasoner AUTO-deactivates before a VLA dispatch
+    # GPU peers the reasoner AUTO-deactivates before a VLA dispatch
     # and reactivates after (distinct from the LLM-facing palette peers above).
     vram_lifecycle_peers: list[str] = []
     if enable_slam:
         lifecycle_peer_node_ids.append("openral_slam_toolbox")
     if enable_object_detector:
-        # ADR-0050 — expose the detector as a lifecycle peer so the reasoner can
+        # Expose the detector as a lifecycle peer so the reasoner can
         # DEACTIVATE it (freeing the detector's VRAM) before dispatching a
         # co-resident grab policy on a memory-constrained GPU.
         lifecycle_peer_node_ids.append("openral_ros_image_detector")
@@ -630,7 +629,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         # execute_rskill and reactivates it on completion, so an 8 GB card does
         # not OOM with the detector (~1.3 GB) co-resident with the VLA (~4.5 GB).
         vram_lifecycle_peers.append("openral_ros_image_detector")
-        # ADR-0056 — each on-demand locator is its own lifecycle node, so it is an
+        # Each on-demand locator is its own lifecycle node, so it is an
         # independent LLM-facing peer (toggle) and VRAM peer (evict before a VLA;
         # LocateAnything is 5 GB so this matters on an 8 GB card).
         for _spec in locator_specs:
@@ -647,39 +646,39 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     reasoner_params: dict[str, object] = {
         "robot_yaml": robot_yaml,
         "rskill_search_paths": [_RSKILLS_DIR],
-        # ADR-0036 — tell the reasoner which deploy path it is on so its
+        # Tell the reasoner which deploy path it is on so its
         # action-mode palette gate matches the HAL this launch brings up.
         "hal_mode": hal_mode,
     }
     if lifecycle_peer_node_ids:
         reasoner_params["lifecycle_peer_node_ids"] = lifecycle_peer_node_ids
-    # ADR-0050 — same empty-list-omission rule as lifecycle_peer_node_ids
+    # Same empty-list-omission rule as lifecycle_peer_node_ids
     # (launch_ros rejects an empty typed array); the reasoner defaults to [].
     if vram_lifecycle_peers:
         reasoner_params["vram_lifecycle_peers"] = vram_lifecycle_peers
-    # ADR-0039 — preload a persisted scene graph as the reasoner's read-only
+    # Preload a persisted scene graph as the reasoner's read-only
     # spatial-memory query backend when a path is provided.
     if spatial_memory_path:
         reasoner_params["spatial_memory_path"] = spatial_memory_path
-    # ADR-0072 §3 — load the self-maintained MEMORY.md (read path) and enable the
+    # Load the self-maintained MEMORY.md (read path) and enable the
     # memory_write / memory_search tools when a bundle path is provided.
     if memory_md_path:
         reasoner_params["memory_md_path"] = memory_md_path
-    # ADR-0038 — accumulate the durable scene graph live from the ADR-0035
+    # Accumulate the durable scene graph live from the object-detection
     # producer's WorldState.detected_objects (auto-creates an empty backend when
     # no path is preloaded).
     reasoner_params["spatial_memory_ingest"] = spatial_memory_ingest
-    # ADR-0043 — offer the read-only locate_in_view tool to the LLM when an object
+    # Offer the read-only locate_in_view tool to the LLM when an object
     # detector is in the graph (it exposes /openral/perception/locate_in_view).
     # locate_in_view is served by BOTH the continuous detector AND any on-demand
     # locator (each exposes /openral/perception/<alias>/locate_in_view), so offer
     # the tool when either is present — a lean ``--no-object-detector`` deploy still
     # grounds via the locator (otherwise the reasoner can never see objects).
     reasoner_params["detector_available"] = enable_object_detector or bool(locator_specs)
-    # ADR-0057 — offer the read-only query_task_progress tool only when a reward
+    # Offer the read-only query_task_progress tool only when a reward
     # monitor is co-active (otherwise the tool would dispatch to a dead service).
     reasoner_params["task_progress_available"] = enable_reward_monitor
-    # ADR-0074 §1/§3 — give the reasoner the SAME reward-model manifest the
+    # Give the reasoner the SAME reward-model manifest the
     # monitor loads (incl. the robometer default when the arg is empty — mirrors
     # the monitor's resolution below) so it reads the active RewardContract
     # calibration (three-tier band edges + default patience) instead of the
@@ -688,11 +687,11 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         reasoner_params["reward_manifest_path"] = reward_monitor_manifest or str(
             pathlib.Path(_RSKILLS_DIR) / "robometer-4b" / "rskill.yaml"
         )
-    # ADR-0056 — the default on-demand locator the reasoner routes to when a
+    # The default on-demand locator the reasoner routes to when a
     # locate_in_view call leaves ``detector`` empty (the first locator brought up).
     if locator_specs:
         reasoner_params["default_on_demand_detector"] = locator_specs[0]["alias"]
-    # ADR-0074 §5 — the completion-camera topic is raw (bottom-up for LIBERO/MuJoCo);
+    # The completion-camera topic is raw (bottom-up for LIBERO/MuJoCo);
     # mirror OPENRAL_DASHBOARD_FLIP_180 so the VLM judges an upright frame (the topic
     # itself is not flipped — sim_sensor_bridge flips only the dashboard thumbnail).
     reasoner_params["completion_camera_flip_180"] = os.environ.get(
@@ -767,17 +766,17 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                 "rskill_search_paths": [_RSKILLS_DIR],
                 "reset_to_pose_service": reset_to_pose_service,
                 "approach_skill_id": approach_skill_id,
-                # ADR-0030 — when octomap is on the centers topic exists, so
+                # When octomap is on the centers topic exists, so
                 # attach the WorldCloudBridge → dashboard world.pointcloud.
                 "enable_world_cloud_bridge": enable_octomap,
-                # ADR-0048 Phase 2 — the runtime node (WorldState aggregator +
+                # The runtime node (WorldState aggregator +
                 # the GStreamer/runner sensor readers + skill_runner) must share
                 # the graph-wide clock domain. Under a simulation clock origin the HAL
                 # stamps camera/state data on sim time; a wall-clock runtime
                 # would see it as ~1.78e9 s stale and drop every frame at the
                 # WorldState staleness gate. Default false keeps it wall-clock.
                 "use_sim_time": use_sim_time,
-                # ADR-0019 — when set, compose_runtime attaches the
+                # When set, compose_runtime attaches the
                 # DatasetRecorderBridge and records the session to this mcap.
                 "dataset_out": dataset_out,
                 "dataset_repo_id": dataset_repo_id,
@@ -829,7 +828,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     # for /openral_reasoner/change_state"; the whole deploy then never reaches the tick
     # loop). The script polls the node's state and drives CONFIGURE→ACTIVATE with a
     # generous timeout, immune to the race. The reasoner is never runtime-deactivated
-    # (ADR-0050 evicts the detectors, not the reasoner), so a one-shot drive to active is
+    # (VRAM eviction only evicts the detectors, not the reasoner), so a one-shot drive to active is
     # behaviour-preserving — exactly as for the HAL block below.
     _reasoner_autostart_path = str(_REPO_ROOT / "tools" / "lifecycle_autostart.py")
     autostart.append(
@@ -888,7 +887,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         )
     )
 
-    # ADR-0027/0057 — robot_state_publisher: when the robot.yaml carries an
+    # robot_state_publisher: when the robot.yaml carries an
     # ``assets.urdf`` ref, launch ``robot_state_publisher`` so the per-link
     # arm + sensor TF chain lands on ``/tf`` (consumed by the
     # ``openral_state_adapter`` registry at step time; also by
@@ -924,7 +923,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                             # odom→base_link on wall-clock — the split that
                             # broke Nav2's TF lookups into the costmap frame.
                             "use_sim_time": use_sim_time,
-                            # ADR-0027 — publish_frequency at 30 Hz matches
+                            # publish_frequency at 30 Hz matches
                             # the runner's tick rate. Higher rates are
                             # wasted (TF buffer interpolates); lower rates
                             # add latency to the state-vector assembly.
@@ -939,7 +938,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             # and the URDF root (e.g. ``base_link → panda_link0`` when
             # the Franka URDF's root differs from the robot.yaml's
             # ``base_frame``). When ``assets.urdf`` declares
-            # ``base_to_root_xyz_rpy`` + ``root_frame`` (ADR-0058), spawn a
+            # ``base_to_root_xyz_rpy`` + ``root_frame``, spawn a
             # ``static_transform_publisher`` to bridge.
             static_xform = urdf_asset.base_to_root_xyz_rpy
             static_root_frame = urdf_asset.root_frame
@@ -972,7 +971,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     ),
                 )
 
-    # ADR-0025 / ADR-0085 — opt-in SLAM. The backend is selected by
+    # Opt-in SLAM. The backend is selected by
     # ``slam_backend`` (resolved from capabilities in deploy_sim.py):
     # ``visual`` composes cuVSLAM (camera-based, lidar-less robots);
     # anything else composes slam_toolbox (2D lidar). ``enable_slam`` is
@@ -984,7 +983,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         from ament_index_python.packages import get_package_share_directory
 
         if slam_backend == "visual":
-            # ADR-0085 — cuVSLAM is the camera-based backend for lidar-less
+            # cuVSLAM is the camera-based backend for lidar-less
             # robots; it fills the same ``map→odom`` TF edge slam_toolbox
             # fills on lidar robots. It is a *composable node*, not a ROS
             # lifecycle node, so there is no Reasoner-driven CONFIGURE/
@@ -992,7 +991,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             # We include the package's own ``cuvslam.launch.py`` so the node
             # spec stays single-sourced (and hermetically tested). The
             # cuVSLAM/nvblox engines are NVIDIA binaries the operator installs
-            # on the GPU host behind the ADR-0085 license guard (not bundled).
+            # on the GPU host behind a license guard (not bundled).
             from launch.actions import IncludeLaunchDescription
             from launch.launch_description_sources import PythonLaunchDescriptionSource
 
@@ -1006,7 +1005,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     launch_arguments={"use_sim_time": sim_time_arg}.items(),
                 )
             )
-            # ADR-0085 Phase 2 — cuVSLAM gives pose, NOT an occupancy grid.
+            # cuVSLAM gives pose, NOT an occupancy grid.
             # When navigating (enable_nav2), also bring up nvblox to fuse depth
             # + cuVSLAM pose into the ESDF cost map Nav2's planner needs. The
             # depth stream feeding nvblox comes from the monocular metric-depth
@@ -1027,7 +1026,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     )
                 )
         else:
-            # ADR-0025 — slam_toolbox lidar backend, Reasoner-managed
+            # slam_toolbox lidar backend, Reasoner-managed
             # background service. Auto-transitions UNCONFIGURED → INACTIVE
             # only; activation is the Reasoner's job (LifecycleTransitionTool).
             slam_params_path = os.path.join(
@@ -1106,7 +1105,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                 ),
             ),
         )
-        # ADR-0026 follow-up — the reasoner_node seeds its rSkill
+        # The reasoner_node seeds its rSkill
         # palette at on_configure (~5 s after launch), long before
         # Nav2 finishes its 15-30 s lifecycle bringup. The graph-
         # availability filter drops the
@@ -1136,7 +1135,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         )
 
     if enable_octomap:
-        # ADR-0030 — the world-collision perception leg. octomap_server
+        # The world-collision perception leg. octomap_server
         # builds a 3-D OcTree from the HAL's depth PointCloud2
         # (``synthesize_depth_pointcloud`` → ``octomap_cloud_topic``), and
         # the openral_octomap_bridge lowers that octree into the dense
@@ -1204,12 +1203,12 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         extra_nodes.extend([octomap_server, octomap_bridge])
 
     if enable_object_detector or locator_specs:
-        # ADR-0056 — the perception leg runs when EITHER the continuous detector
+        # The perception leg runs when EITHER the continuous detector
         # is on OR an on-demand locator was requested (a lean ``--no-object-detector``
         # deploy grounds via the locator alone). The continuous-detector node itself
         # stays gated on ``enable_object_detector`` below; the camera resolution and
         # the locator loop run for both.
-        # ADR-0035 — the object-detection perception leg. The ROS-Image
+        # The object-detection perception leg. The ROS-Image
         # detector runs RT-DETR over the agentview RGB tee and publishes
         # ObjectsMetadata to /openral/perception/objects. The world-state
         # node's object-lift (object_lift_enabled defaults True) subscribes
@@ -1225,7 +1224,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         # byte-for-byte unchanged. Do NOT hoist this import to the module top.
         import yaml
 
-        # ADR-0035 cross-frame lift — detect on (and stamp the detection with)
+        # Cross-frame lift — detect on (and stamp the detection with)
         # the robot's first *liftable* RGB camera: one whose frame_id is a
         # dedicated ``*_optical_frame`` (the SimSensorBridge broadcasts its live
         # extrinsics, so the world-state lifter can project the world voxel map
@@ -1233,7 +1232,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         # depth sensor — so the lifter resolves the right intrinsics/extrinsics.
         # Generic over robots; prefer an optical-frame RGB camera but fall back
         # to the robot's first RGB camera so the detector still gets frames.
-        # (Post-ADR-0069 camera rename, franka_panda publishes ``top``/``wrist``,
+        # (Post canonical-camera-slot rename, franka_panda publishes ``top``/``wrist``,
         # neither optical-framed; the old hardcoded ``agentview_left`` fallback
         # was a dead topic — the detector cached no frame and every
         # ``locate_in_view`` returned found=False, looping the reasoner.)
@@ -1263,7 +1262,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         # wall-clock — use_sim_time=True would pin get_clock().now() at 0 and
         # every frame is dropped at the rate gate → the detector never publishes.
         if object_detector_manifest:
-            # ADR-0037 2026-06-09 — manifest-driven backend (RT-DETR ONNX or the
+            # 2026-06-09 — manifest-driven backend (RT-DETR ONNX or the
             # open-vocab LocateAnything VLM sidecar). The node loads labels /
             # model_id / contract from the manifest; we only forward the manifest
             # path, the (VLM-ignored) onnx override, and the query.
@@ -1272,7 +1271,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             # Throttle by the detector engine so the single-threaded callback never
             # backs up: the VLM sidecar (LocateAnything) is slow (~1-2 s / frame),
             # the in-process OmDet-Turbo zero-shot backend is ~hundreds of ms, and
-            # the RT-DETR ONNX path is fast. ADR-0037 DetectorEngine.
+            # the RT-DETR ONNX path is fast. See the manifest's DetectorEngine.
             engine = (man.get("detector") or {}).get("engine")
             max_rate_hz = {"vlm_sidecar": 0.5, "zeroshot_hf": 2.0}.get(engine, 5.0)
             det_params = {
@@ -1319,7 +1318,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         # this the frame caches under "default" and every locate misses with
         # "no frame for camera 'top'" (found=False) regardless of the query.
         det_params["primary_camera"] = det_camera
-        # ADR-0050 — managed lifecycle node: autostarted to ACTIVE (detector
+        # Managed lifecycle node: autostarted to ACTIVE (detector
         # loaded) like the rest of the graph, but the reasoner can DEACTIVATE it
         # via LifecycleTransitionTool to free the detector's VRAM before a
         # co-resident grab policy loads on an 8 GB GPU.
@@ -1339,10 +1338,11 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             extra_nodes.append(object_detector)
             autostart += _autostart_lifecycle(object_detector, "openral_ros_image_detector")
 
-        # ADR-0056 — on-demand locator nodes: one per --object-detector-locator,
+        # On-demand locator nodes: one per --object-detector-locator,
         # each serving its own namespaced /openral/perception/<alias>/locate_in_view
         # (the reasoner picks one via LocateInViewTool.detector). They share the
-        # continuous detector's camera/topic; the node's mode wiring (ADR-0051)
+        # continuous detector's camera/topic; the node's mode wiring (detector
+        # invocation mode)
         # makes them serve-only (no continuous publish leg). Throttle by engine.
         for spec in locator_specs:
             locator_rate_hz = {"vlm_sidecar": 0.5, "zeroshot_hf": 2.0}.get(spec["engine"], 5.0)
@@ -1374,7 +1374,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             autostart += _autostart_lifecycle(locator_node, spec["node"])
 
     if enable_reward_monitor:
-        # ADR-0057 — reward monitor runs PARALLEL to the VLA (not a lifecycle/VRAM
+        # Reward monitor runs PARALLEL to the VLA (not a lifecycle/VRAM
         # peer the reasoner frees before a policy; it stays co-active). Plain Node:
         # subscribes the agentview RGB stream, buffers a rolling window, loads
         # the reward backend from the manifest, and serves
@@ -1411,7 +1411,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     "manifest_path": reward_manifest,
                     "image_topic": reward_image_topic,
                     "task": reward_monitor_task,
-                    # ADR-0064 — when the critic producer is also up, feed it real
+                    # When the critic producer is also up, feed it real
                     # Robometer progress as a CriticScore stream (else stay query-only).
                     "enable_critic_score": enable_critic,
                     # 2026-06-29 — only score while a VLA is executing (the reasoner
@@ -1428,7 +1428,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         extra_nodes.append(reward_monitor)
 
     if enable_critic:
-        # ADR-0064 — Tier-C critic producer. Plain Node co-active with the graph:
+        # Tier-C critic producer. Plain Node co-active with the graph:
         # subscribes /openral/critic/score (any reward model — Robometer, a future
         # SARM — publishes there), routes each sample through a CriticWatchdogGroup,
         # and emits a Tier-C FailureTrigger on /openral/failure/critic on a stall.
@@ -1448,14 +1448,14 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         )
         extra_nodes.append(critic_producer)
 
-    # ADR-0072 Decision 3b — deploy memory bundle: seed the saved 2D occupancy grid.
+    # Deploy memory bundle: seed the saved 2D occupancy grid.
     # When ``map_path`` points at a nav2 ``map.yaml`` AND live SLAM isn't already
     # owning ``/map``, bring up a standalone nav2 ``map_server`` that latches ``/map``
     # (TRANSIENT_LOCAL) from the first tick, so the nav costmap + the reasoner's
-    # ADR-0044 approach-refinement grid have the saved prior immediately. With SLAM on,
-    # slam_toolbox / cuVSLAM owns ``/map`` and we skip the seed to avoid two publishers.
-    # The grid stays advisory (ADR-0072 §1.1): the C++ kernel keeps its own ephemeral
-    # ADR-0030 collision grid; this map never feeds it.
+    # occupancy-grid-refined approach-pose grid have the saved prior immediately. With
+    # SLAM on, slam_toolbox / cuVSLAM owns ``/map`` and we skip the seed to avoid two
+    # publishers. The grid stays advisory: the C++ kernel keeps its own ephemeral
+    # collision grid; this map never feeds it.
     if map_path and not enable_slam:
         map_server = LifecycleNode(
             package="nav2_map_server",
@@ -1491,10 +1491,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
     if enable_dashboard:
         nodes.insert(0, dashboard)
 
-    # ADR-0059 — read-only Foxglove live-scene bridge. Off by default;
+    # Read-only Foxglove live-scene bridge. Off by default;
     # ``openral deploy sim --foxglove`` opts in.
     #
-    # STALE-BRIDGE ORDERING (ADR-0059 decision 3, VERIFICATION.md "Stale-bridge
+    # STALE-BRIDGE ORDERING (VERIFICATION.md "Stale-bridge
     # gotcha"): foxglove-sdk-cpp v0.18.0 advertises channels when a topic is
     # first seen, but if the publisher disappears and reappears (e.g. because the
     # bridge starts before the topic producer) the channel is re-advertised but
@@ -1573,7 +1573,7 @@ def generate_launch_description() -> LaunchDescription:
             "approach_skill_id",
             default_value="",
             description=(
-                "ADR-0053 — MoveIt approach rSkill URI (e.g. "
+                "MoveIt approach rSkill URI (e.g. "
                 "rskills/rskill-moveit-joints) the skill_runner dispatches to "
                 "plan a collision-free motion to each skill's starting_pose. "
                 "Empty = legacy ResetToPose snap."
@@ -1583,7 +1583,7 @@ def generate_launch_description() -> LaunchDescription:
             "dataset_out",
             default_value="",
             description=(
-                "ADR-0019 — when set, record the deploy session (proprio + "
+                "When set, record the deploy session (proprio + "
                 "action + camera frames + episode markers) to this rosbag2 "
                 "mcap path. Convert offline with `openral dataset from-bag`. "
                 "Empty disables recording."
@@ -1606,12 +1606,12 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             "dataset_repo_id",
             default_value="",
-            description="ADR-0019 — repo_id for the recorded dataset.",
+            description="repo_id for the recorded dataset.",
         ),
         DeclareLaunchArgument(
             "dataset_license",
             default_value="CC-BY-4.0",
-            description="ADR-0019 — SPDX license carried into `openral dataset from-bag`.",
+            description="SPDX license carried into `openral dataset from-bag`.",
         ),
         DeclareLaunchArgument(
             "dashboard_port",
@@ -1642,7 +1642,7 @@ def generate_launch_description() -> LaunchDescription:
             "spatial_memory_path",
             default_value="",
             description=(
-                "ADR-0039 — absolute path to a persisted ADR-0038 scene graph "
+                "Absolute path to a persisted, hierarchical scene graph "
                 "(SceneGraph JSON). When set, the reasoner loads it into a "
                 "SpatialMemory and offers the read-only recall_object / "
                 "resolve_place query tools against the preloaded map. Empty = "
@@ -1653,8 +1653,8 @@ def generate_launch_description() -> LaunchDescription:
             "spatial_memory_ingest",
             default_value="false",
             description=(
-                "ADR-0038 — when true, the reasoner accumulates a durable "
-                "SpatialMemory live from the ADR-0035 producer's "
+                "When true, the reasoner accumulates a durable "
+                "SpatialMemory live from the object-detection producer's "
                 "WorldState.detected_objects (auto-creating an empty backend "
                 "if no spatial_memory_path was preloaded), so recall_object "
                 "recalls what the robot has actually seen. Default false."
@@ -1664,7 +1664,7 @@ def generate_launch_description() -> LaunchDescription:
             "memory_md_path",
             default_value="",
             description=(
-                "ADR-0072 §3 — absolute path to the self-maintained MEMORY.md "
+                "Absolute path to the self-maintained MEMORY.md "
                 "(the deploy memory bundle's narrative/semantic modality). When "
                 "set, the reasoner loads it as the ## MEMORY context block and "
                 "offers the memory_write / memory_search tools. Empty = disabled."
@@ -1674,10 +1674,10 @@ def generate_launch_description() -> LaunchDescription:
             "map_path",
             default_value="",
             description=(
-                "ADR-0072 Decision 3b — absolute path to a saved nav2 map.yaml "
+                "Absolute path to a saved nav2 map.yaml "
                 "(the bundle's 2D occupancy-grid modality). When set and SLAM is "
                 "off, a standalone nav2 map_server latches /map from the saved "
-                "map so the costmap + ADR-0044 approach grid have the prior at "
+                "map so the costmap + the occupancy-grid-refined approach grid have the prior at "
                 "boot. With SLAM on it is ignored (SLAM owns /map). Empty = "
                 "disabled."
             ),
@@ -1686,7 +1686,7 @@ def generate_launch_description() -> LaunchDescription:
             "hal_mode",
             default_value="sim",
             description=(
-                "ADR-0036 — deploy path the reasoner's action-mode palette "
+                "Deploy path the reasoner's action-mode palette "
                 "gate matches against: ``sim`` (digital-twin; the scene's "
                 "robosuite OSC controller synthesises cartesian/OSC modes) "
                 "admits cartesian skills, ``real`` admits only the robot's "
@@ -1710,7 +1710,7 @@ def generate_launch_description() -> LaunchDescription:
             "enable_slam",
             default_value="false",
             description=(
-                "ADR-0025 — bring up SLAM as a background service. The "
+                "Bring up SLAM as a background service. The "
                 "backend is chosen by ``slam_backend``. Auto-transitions to "
                 "INACTIVE (lidar backend); the Reasoner promotes to ACTIVE "
                 "via LifecycleTransitionTool. Requires the openral_slam_bringup "
@@ -1723,19 +1723,19 @@ def generate_launch_description() -> LaunchDescription:
             "slam_backend",
             default_value="lidar",
             description=(
-                "ADR-0085 — SLAM backend composed when ``enable_slam`` is "
+                "SLAM backend composed when ``enable_slam`` is "
                 "true: ``lidar`` (slam_toolbox, needs /scan), ``visual`` "
                 "(cuVSLAM, camera-based, for lidar-less robots), or ``none``. "
                 "Normally resolved upstream by deploy_sim.py from "
                 "``RobotCapabilities`` (``has_lidar`` / ``has_vision_slam``); "
-                "defaults to ``lidar`` to preserve pre-ADR-0085 behaviour."
+                "defaults to ``lidar`` to preserve the legacy lidar-only behaviour."
             ),
         ),
         DeclareLaunchArgument(
             "enable_nav2",
             default_value="false",
             description=(
-                "ADR-0025 — bring up the Nav2 navigation stack so the "
+                "Bring up the Nav2 navigation stack so the "
                 "``OpenRAL/rskill-nav2-navigate-to-pose`` wrapped-action "
                 "rSkill has a ``/navigate_to_pose`` server to dispatch "
                 "to. Nav2 auto-activates (lifecycle_manager_navigation "
@@ -1749,7 +1749,7 @@ def generate_launch_description() -> LaunchDescription:
             "enable_octomap",
             default_value="false",
             description=(
-                "ADR-0030 — bring up the world-collision perception leg: "
+                "Bring up the world-collision perception leg: "
                 "octomap_server (3-D OcTree from the HAL's depth "
                 "PointCloud2) + the openral_octomap_bridge "
                 "(octree → /openral/world_voxels), and enable the C++ "
@@ -1763,12 +1763,12 @@ def generate_launch_description() -> LaunchDescription:
             "enable_octomap_kernel_check",
             default_value="true",
             description=(
-                "ADR-0030/0035 — when False, the octomap perception leg still "
+                "When False, the octomap perception leg still "
                 "publishes /openral/world_voxels (so the world-state object-lift "
                 "works), but the C++ safety kernel's capsule-vs-voxel check stays "
                 "OFF (its --no-enable-octomap posture: envelope + self-collision "
                 "only). Lets perception use the world map without the dense-scene "
-                "false-positive E-stop. Default True preserves bundled ADR-0030. "
+                "false-positive E-stop. Default True preserves the bundled behaviour. "
                 "Never weakens the kernel below the --no-enable-octomap baseline."
             ),
         ),
@@ -1785,7 +1785,7 @@ def generate_launch_description() -> LaunchDescription:
             "enable_object_detector",
             default_value="false",
             description=(
-                "ADR-0035 — bring up the ROS-Image object detector "
+                "Bring up the ROS-Image object detector "
                 "(openral_perception_ros/ros_image_detector_node): runs "
                 "RT-DETR over the agentview RGB tee and publishes "
                 "ObjectsMetadata to /openral/perception/objects, which the "
@@ -1800,7 +1800,7 @@ def generate_launch_description() -> LaunchDescription:
             "object_detector_onnx",
             default_value=str(pathlib.Path(_RSKILLS_DIR) / "rtdetr-coco-r18" / "model.onnx"),
             description=(
-                "ADR-0035 — absolute path to the RT-DETR ONNX weights the "
+                "Absolute path to the RT-DETR ONNX weights the "
                 "object detector loads. Defaults to the in-tree "
                 "rskills/rtdetr-coco-r18/model.onnx. Ignored unless "
                 "enable_object_detector is true."
@@ -1810,7 +1810,7 @@ def generate_launch_description() -> LaunchDescription:
             "object_detector_manifest",
             default_value="",
             description=(
-                "ADR-0037 2026-06-09 — path to a kind:detector rSkill manifest. "
+                "Path to a kind:detector rSkill manifest. "
                 "When set, the detector node builds its backend from the manifest "
                 "(runtime:onnx -> RT-DETR ONNX; runtime:pytorch -> the open-vocab "
                 "LocateAnything VLM sidecar) instead of the hardcoded RT-DETR path. "
@@ -1821,7 +1821,7 @@ def generate_launch_description() -> LaunchDescription:
             "object_detector_query",
             default_value="",
             description=(
-                "ADR-0037 2026-06-09 — initial open-vocabulary query for a VLM "
+                "Initial open-vocabulary query for a VLM "
                 "detector (e.g. 'red mug'). Empty = the manifest's detector.labels "
                 "default. Retarget live by publishing a std_msgs/String to "
                 "/openral/perception/detector_query. Ignored by ONNX detectors."
@@ -1831,7 +1831,7 @@ def generate_launch_description() -> LaunchDescription:
             "enable_reward_monitor",
             default_value="false",
             description=(
-                "ADR-0057 — bring up the Robometer reward monitor "
+                "Bring up the Robometer reward monitor "
                 "(openral_perception_ros/reward_monitor_node) PARALLEL to the VLA. "
                 "It buffers the agentview RGB stream and serves "
                 "/openral/perception/query_task_progress; the reasoner is told "
@@ -1847,10 +1847,10 @@ def generate_launch_description() -> LaunchDescription:
             "enable_critic",
             default_value="false",
             description=(
-                "ADR-0064 — bring up the Tier-C critic producer "
+                "Bring up the Tier-C critic producer "
                 "(openral_reasoner_ros/critic_producer_node). It watches the generic "
-                "/openral/critic/score topic that reward models publish (Robometer "
-                "ADR-0057, a future SARM, success classifiers), and emits a Tier-C "
+                "/openral/critic/score topic that reward models publish (Robometer, "
+                "a future SARM, success classifiers), and emits a Tier-C "
                 "FailureTrigger on /openral/failure/critic when a critic stalls — the "
                 "reasoner already maps that to a forced Tier-C tick. Advisory-only — "
                 "never actuates. Default off."
@@ -1860,7 +1860,7 @@ def generate_launch_description() -> LaunchDescription:
             "critic_stall_patience",
             default_value="5",
             description=(
-                "ADR-0064 — consecutive below-threshold, non-improving critic-score "
+                "Consecutive below-threshold, non-improving critic-score "
                 "samples (per critic_id) before the producer fires. Ignored unless "
                 "enable_critic."
             ),
@@ -1869,7 +1869,7 @@ def generate_launch_description() -> LaunchDescription:
             "reward_monitor_manifest",
             default_value="",
             description=(
-                "ADR-0057 — path to a kind:reward rSkill manifest. Empty defaults to "
+                "Path to a kind:reward rSkill manifest. Empty defaults to "
                 "the in-tree rskills/robometer-4b/rskill.yaml. weights_uri may be "
                 "hf://org/repo or local:///abs/path (a pre-quantized NF4 checkpoint "
                 "loaded directly as 4-bit). Ignored unless enable_reward_monitor."
@@ -1879,7 +1879,7 @@ def generate_launch_description() -> LaunchDescription:
             "reward_monitor_task",
             default_value="",
             description=(
-                "ADR-0057 — default task instruction the reward monitor scores when "
+                "Default task instruction the reward monitor scores when "
                 "a query leaves task empty (e.g. the operator's task goal). The "
                 "reasoner normally passes the active task per query. Ignored unless "
                 "enable_reward_monitor."
@@ -1889,7 +1889,7 @@ def generate_launch_description() -> LaunchDescription:
             "object_detector_locators",
             default_value="",
             description=(
-                "ADR-0056 — comma-separated kind:detector manifest paths for the "
+                "Comma-separated kind:detector manifest paths for the "
                 "on-demand open-vocab locators to bring up alongside the continuous "
                 "detector. Each becomes a namespaced lifecycle node serving "
                 "/openral/perception/<alias>/locate_in_view, selectable by the "
@@ -1911,7 +1911,7 @@ def generate_launch_description() -> LaunchDescription:
             "enable_foxglove",
             default_value="false",
             description=(
-                "ADR-0059 — spawn the read-only foxglove_bridge as part of "
+                "Spawn the read-only foxglove_bridge as part of "
                 "the deploy-sim runtime graph. Default off. The bridge binds "
                 "to 127.0.0.1:<foxglove_port> and exposes only the Bucket-1 "
                 "topic allowlist (no safety/e-stop/action topics). View-only: "
@@ -1923,7 +1923,7 @@ def generate_launch_description() -> LaunchDescription:
             "foxglove_port",
             default_value="8765",
             description=(
-                "ADR-0059 — Foxglove WebSocket port "
+                "Foxglove WebSocket port "
                 "(ws://127.0.0.1:<foxglove_port>). Default 8765. "
                 "Ignored unless enable_foxglove is true."
             ),

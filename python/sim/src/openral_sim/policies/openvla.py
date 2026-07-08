@@ -6,7 +6,8 @@ action head — and its OFT fine-tuning recipe (arXiv:2502.19645). The first
 in-tree checkpoint is ``RLinf/RLinf-OpenVLAOFT-PPO-ManiSkill3-25ood``: an
 OpenVLA-OFT bridge policy RL-tuned (PPO) on ManiSkill3 ``PutOnPlateInScene25``,
 run here on the SimplerEnv WidowX put-on-plate tasks it actually solves
-(``unnorm_key=bridge_orig``) — see ADR-0063 for the WidowX-vs-Panda rationale.
+(``unnorm_key=bridge_orig``), since the bridge_orig norm stats are WidowX-specific
+and do not transfer to the Panda embodiment.
 
 Like MolmoAct2 (and unlike the lerobot adapters), OpenVLA is **not** a lerobot
 policy. It ships as a transformers *custom-code* model (``trust_remote_code``,
@@ -509,7 +510,7 @@ def _require_remote_code_ack(source_repo: str, revision: str | None) -> None:
 
     OpenVLA's ``from_pretrained`` executes ``modeling_prismatic.py`` shipped in
     the repo. The repo id is manifest/operator-supplied and rSkill signature
-    verification is not yet implemented (ADR-0006), so this is a remote-code
+    verification is not yet implemented, so this is a remote-code
     execution sink. Require ``OPENRAL_ALLOW_REMOTE_CODE=1``, mirroring the
     MolmoAct2 gate and ``OPENRAL_ALLOW_UNSAFE_PICKLE``.
 
@@ -521,7 +522,7 @@ def _require_remote_code_ack(source_repo: str, revision: str | None) -> None:
             f"OpenVLA loads custom code from '{source_repo}' via "
             "trust_remote_code=True, which executes arbitrary Python from the repo "
             "(remote-code-execution risk for untrusted or unverified weights). rSkill "
-            "signature verification is not yet implemented (ADR-0006), so this is "
+            "signature verification is not yet implemented, so this is "
             f"blocked by default. To load a TRUSTED repo, set: export {_ALLOW_REMOTE_CODE_ENV}=1 "
             "(pin a revision SHA in the manifest's weights_uri for reproducibility)."
         )

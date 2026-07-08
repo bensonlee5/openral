@@ -1,10 +1,10 @@
-"""ADR-0018 F1 — `openral_rskill_ros` lifecycle node package.
+"""`openral_rskill_ros` lifecycle node package.
 
 Exports the public symbols (``RskillRunnerNode``, ``compose_runtime``,
 ``compose_so100_runtime``, ``main``) the rest of the OpenRAL graph
 uses to bring up the in-process runner that consumes the shared
-``WorldStateAggregator`` (single subscriber of ``/joint_states`` per
-ADR-0018 §3) and publishes ``openral_msgs/ActionChunk`` on
+``WorldStateAggregator`` (single subscriber of ``/joint_states``)
+and publishes ``openral_msgs/ActionChunk`` on
 ``/openral/candidate_action``.
 """
 

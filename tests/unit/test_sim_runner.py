@@ -1,4 +1,4 @@
-"""Unit tests for :class:`openral_sim.SimRunner` (ADR-0010 amendment 1).
+"""Unit tests for :class:`openral_sim.SimRunner` (amendment 1).
 
 Exercises the per-step tick model against the real built-in ``mock``
 scene and ``zero`` / ``random`` policies — no mocks, no stubs, no
@@ -40,7 +40,7 @@ def _mock_env(
     vla_id: str = "zero",
     vla_seed: int = 0,
 ) -> SimEnvironment:
-    """Build a real ``mock`` SimEnvironment — same shape as ADR-0009 unit fixtures."""
+    """Build a real ``mock`` SimEnvironment — same shape as the standard unit fixtures."""
     return SimEnvironment(
         robot_id="so100_follower",
         scene=SceneSpec(

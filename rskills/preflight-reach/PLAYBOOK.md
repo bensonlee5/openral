@@ -3,7 +3,7 @@
 > **Hand-authored decision procedure (SOP).** Unlike the generated `SKILL.md`
 > discovery view, this file is the *content the S2 Reasoner reads and follows*.
 > It is injected into the reasoner's system prompt when this playbook is
-> installed. The `rskill.yaml` `playbook.body_uri` points here. ADR-0072.
+> installed. The `rskill.yaml` `playbook.body_uri` points here.
 
 ## Trigger
 About to grasp or place an object (e.g. "pick up the mug", "put the can on the
@@ -53,6 +53,6 @@ manipulation skill allowed to dispatch.
 
 ## Safety
 This playbook only *decides* and *sequences*. Every motion it triggers is an
-`execute_rskill` → Action chunk that still crosses the C++ safety kernel
-(ADR-0030); a wrong reach estimate yields a bad plan the kernel still vetoes,
-never a relaxed check (CLAUDE.md §1.1).
+`execute_rskill` → Action chunk that still crosses the C++ safety kernel; a wrong
+reach estimate yields a bad plan the kernel still vetoes, never a relaxed check
+(CLAUDE.md §1.1).

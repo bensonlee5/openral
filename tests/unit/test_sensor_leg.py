@@ -123,7 +123,7 @@ spec = SensorSpec(
         backend_params={"source": "testsrc", "width": 320, "height": 240, "fps": 10},
     ),
 )
-# ADR-0082 Phase 3: the shared aggregator receives frames straight from
+# Phase 3: the shared aggregator receives frames straight from
 # the reader (no ROS hop). Subclass the REAL aggregator only to observe
 # the write (super() still runs) — no behaviour is faked.
 from openral_core import RobotDescription

@@ -1,7 +1,7 @@
 ---
 name: preflight-reach
 description: >-
-  S2 decision-procedure playbook (weightless). Capabilities: plan on manipulation target. S2 decision procedure: before dispatching a manipulation skill, check the target is within the robot's reachable workspace (using the robot self-model + object pose) and stage the base or hand off if it is not. Composes recall_object, resolve_place, query_scene and NAVIGATE skills. ADR-0072. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S2 decision-procedure playbook (weightless). Capabilities: plan on manipulation target. S2 decision procedure: before dispatching a manipulation skill, check the target is within the robot's reachable workspace (using the robot self-model + object pose) and stage the base or hand off if it is not. Composes recall_object, resolve_place, query_scene and NAVIGATE skills. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -30,7 +30,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **decision-procedure playbook (weightless)** (`role: s2`, `kind: playbook`). S2 decision procedure: before dispatching a manipulation skill, check the target is within the robot's reachable workspace (using the robot self-model + object pose) and stage the base or hand off if it is not. Composes recall_object, resolve_place, query_scene and NAVIGATE skills. ADR-0072.
+An OpenRAL **decision-procedure playbook (weightless)** (`role: s2`, `kind: playbook`). S2 decision procedure: before dispatching a manipulation skill, check the target is within the robot's reachable workspace (using the robot self-model + object pose) and stage the base or hand off if it is not. Composes recall_object, resolve_place, query_scene and NAVIGATE skills.
 
 ## Capabilities
 

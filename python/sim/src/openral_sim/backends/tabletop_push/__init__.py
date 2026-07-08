@@ -1,4 +1,4 @@
-"""Robot-agnostic ``tabletop_push`` native scene (ADR-0033).
+"""Robot-agnostic ``tabletop_push`` native scene.
 
 Importing this package registers the ``tabletop_push`` scene factory on
 :data:`openral_sim.SCENES`. See :mod:`openral_sim.backends.tabletop_push.env`

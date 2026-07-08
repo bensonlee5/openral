@@ -1,4 +1,4 @@
-r"""Run the OctoMap → OccupancyVoxels bridge for the safety kernel (ADR-0030).
+r"""Run the OctoMap → OccupancyVoxels bridge for the safety kernel.
 
 Wire it alongside your OctoMap producer (e.g. octomap_server) and the safety
 kernel launched with ``world_voxel_enabled:=true``::

@@ -205,7 +205,7 @@ class _SmolVLAAdapter:
     # Last image fed to the policy, post-flip — populated by step() for the
     # eval-layer video helper. Not part of the public API.
     _last_input_frame: NDArray[np.uint8] | None = None
-    # Zero-copy NVMM vision leg (ADR-0082 Phase 3) — lazily built on the first
+    # Zero-copy NVMM vision leg — lazily built on the first
     # observation carrying image_handles; shares the TRT runtime's cached
     # vision engine.
     _nvmm_encoder: Any = None
@@ -265,7 +265,7 @@ class _SmolVLAAdapter:
     def _maybe_encode_image_handles(self, observation: Observation) -> bool:
         """Run the zero-copy NVMM vision leg when the observation carries it.
 
-        ADR-0082 Phase 3: the co-located sensor leg delivers frames as NVMM
+        The co-located sensor leg delivers frames as NVMM
         descriptors in ``observation["image_handles"]``. When the TRT runtime
         is attached and every camera slot has a handle, encode them with
         :class:`NvmmVisionEncoder` (same cached vision engine, straight on the
@@ -360,7 +360,7 @@ class _SmolVLAAdapter:
             observation: Eval-layer observation (``images`` dict + ``state``).
             instruction: Task instruction string.
             gpu_frames: ``True`` when the NVMM vision leg already stashed the
-                image embeddings (ADR-0082) — the image tensors emitted here
+                image embeddings — the image tensors emitted here
                 are then device-resident placeholders that only keep lerobot's
                 ``prepare_images``/tokenizer plumbing satisfied; the sampler
                 ignores them.
@@ -594,11 +594,11 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     scene_cameras = getattr(env_cfg.scene, "cameras", None)
     cam_keys = resolve_camera_keys(manifest, spec.extra, scene_cameras=scene_cameras)
 
-    # Opt-in TensorRT runtime (ADR-0037 follow-up): swaps sample_actions for the
+    # Opt-in TensorRT runtime: swaps sample_actions for the
     # split-ONNX TRT engines. Mutually exclusive with torch.compile (both target
     # the same forward) — TRT fully replaces the flow-matching call, so skip the
     # compile pass when it engages. The hook itself ships in the private
-    # openral-pro-trt package (ADR-0083) and is looked up by name — a host
+    # openral-pro-trt package and is looked up by name — a host
     # without it falls straight through to torch.compile (logged, not
     # silently skipped).
     if maybe_attach_pro_hooks(

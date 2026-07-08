@@ -1,14 +1,14 @@
 # openral_safety
 
-> ADR-0018 §5 F5 — Day-1 Python pass-through + Python helpers the
+> Day-1 Python pass-through + Python helpers the
 > C++ safety kernel uses at configure time. The real-time enforcer is
-> `cpp/openral_safety_kernel/` (ADR-0020); this package is the Python
+> `cpp/openral_safety_kernel/`; this package is the Python
 > seam that wraps it.
 
 ## What's here
 
 * **`SafetyPassthroughNode`** (`openral_safety/supervisor_node.py`) —
-  Day-1 lifecycle node that locks the topic contract from ADR-0018 §1.
+  Day-1 lifecycle node that locks the topic contract.
   Subscribes `/openral/candidate_action`, gates to
   `/openral/safe_action`, fires `/openral/estop` on stub envelope
   violation (n_dof + per-joint position), and serves
@@ -20,18 +20,19 @@
   Python helper that intersects a `RobotDescription.safety` ceiling
   with an optional `RSkillManifest.envelope` floor and writes the flat
   YAML the C++ safety kernel reads at `on_configure()`. Rejects
-  loosening with `ROSConfigError` (ADR-0018 §5).
+  loosening with `ROSConfigError`.
 
 Per CLAUDE.md §7.7 / §1.1, any PR that **extends** enforcement here
 requires:
 
 1. Explicit reviewer assignment to the safety working group.
-2. A hazard-log update.
+2. An update to the safety hazard log in the private OpenRAL/management
+   repo (`safety/hazard-log.md`).
 3. Tests proving the new behaviour is at least as conservative as
    the old.
 
-ADR-0018 §F5 is the normative spec; this package is its Day-1
-implementation.
+This package is the Day-1 implementation of the locked topic-boundary
+contract.
 
 ## Layer
 
@@ -41,7 +42,7 @@ Protocol stays at `python/runner/src/openral_runner/safety.py`
 `DeployRunner` calls. This package is the **chunk-rate topic
 boundary** the `rskill_runner_node` and `<robot>_hal_node` peer with.
 The C++ kernel that ultimately replaces this node's internals lives
-at `cpp/openral_safety_kernel/` (ADR-0020).
+at `cpp/openral_safety_kernel/`.
 
 ## Topic surface (locked)
 
@@ -80,7 +81,7 @@ On envelope violation:
 
 ## Production vs Day-1
 
-ADR-0020 ships the C++ kernel as a **process swap** behind the same
+The C++ safety kernel ships as a **process swap** behind the same
 topic contract — same publishers, same subscribers, same
 `/openral/estop_reset` service. Production deployments choose between
 the Python pass-through (here) and the C++ kernel via launch-file
@@ -107,19 +108,18 @@ CLAUDE.md operating principles forbid (§1.1, §1.5):
   be C++ to meet the real-time guarantees.
 
 The Day-1 Python pass-through exists so the topic contract is locked
-end-to-end *before* the kernel lands. Once ADR-0020's kernel is on disk
-the Python node remains for digital-twin runs / pre-hardware tests; the
-kernel runs in production.
+end-to-end *before* the kernel lands. Once the C++ safety kernel is on
+disk the Python node remains for digital-twin runs / pre-hardware tests;
+the kernel runs in production.
 
 ## Related
 
-* ADR-0018 §F5 / §5 — normative spec.
-* `cpp/openral_safety_kernel/` — the real-time C++ enforcer
-  (ADR-0020).
+* The ROS 2 reasoner + supervisor graph spec §F5 / §5 — normative spec.
+* `cpp/openral_safety_kernel/` — the real-time C++ enforcer.
 * `packages/openral_safety_watchdog/` — deadman + hardware-estop
-  watchdog nodes (ADR-0018 §5 bullets 3 & 4).
+  watchdog nodes (reasoner + supervisor graph spec §5 bullets 3 & 4).
 * `packages/openral_human_estop/` — human estop forwarder
-  (ADR-0018 §5 bullet 2).
+  (reasoner + supervisor graph spec §5 bullet 2).
 * `python/runner/src/openral_runner/safety.py` — in-process
   `SafetyClient` Protocol + `NullSafetyClient` (the in-process seam
   the runner calls every tick). Independent of the topic boundary

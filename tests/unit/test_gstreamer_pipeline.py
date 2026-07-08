@@ -201,8 +201,8 @@ def test_build_pipeline_string_usb_tegra_uses_nvvidconv_and_nvmm() -> None:
 def test_build_pipeline_string_usb_desktop_nvidia_uses_videoconvert_no_nvmm() -> None:
     """USB on desktop NVIDIA: v4l2src → videoconvert → system-memory caps → appsink.
 
-    The open-core image does not bundle NVIDIA DeepStream (ADR-0010
-    Amendment 2026-05-12), so ``nvvideoconvert`` is unavailable and
+    The open-core image does not bundle NVIDIA DeepStream, so
+    ``nvvideoconvert`` is unavailable and
     no element produces NVMM caps after the convert step. The
     pipeline must therefore stay on system-memory BGR / videoconvert
     on this branch; ``nvh264dec`` etc. still GPU-accelerate the
@@ -270,7 +270,7 @@ def test_build_pipeline_string_ros_tee_emits_tee_with_two_branches() -> None:
     """``enable_ros_tee=True`` inserts the named bus tee with two branches."""
     spec = PipelineSpec(source=Source.TESTSRC, fps=30, enable_ros_tee=True, enable_nvmm=False)
     result = build_pipeline_string(spec, platform=Platform.CPU_ONLY)
-    # The single per-camera tee is the named perception-bus attach point (ADR-0037).
+    # The single per-camera tee is the named perception-bus attach point.
     assert f"tee name={TEE_NAME}" in result
     # ral appsink and ros appsink are both present
     assert "appsink name=bh_sink" in result
@@ -285,7 +285,7 @@ def test_leaky_branch_builds_isolated_tee_branch() -> None:
     """``leaky_branch`` prefixes a branch body with the named tee + leaky queue.
 
     This is the single isolation primitive shared by the static builder and the
-    runtime TeeManager (ADR-0037), so a dynamically attached consumer carries
+    runtime TeeManager, so a dynamically attached consumer carries
     the same backpressure isolation as the static legs.
     """
     branch = leaky_branch("appsink name=det_sink")
@@ -331,7 +331,7 @@ def test_build_pipeline_string_is_parseable_by_gst_parse_launch_smoke() -> None:
     assert pipeline.get_by_name("bh_sink") is not None
 
 
-# ── NVIDIA_DEEPSTREAM tier + MJPG source (ADR-0082) ──────────────────────────
+# ── NVIDIA_DEEPSTREAM tier + MJPG source ──────────────────────────────────────
 
 
 def test_detect_platform_deepstream_when_nvjpegdec_and_nvvideoconvert(
@@ -384,7 +384,7 @@ def test_pipeline_spec_jpeg_and_encoded_mutually_exclusive() -> None:
 
 def test_build_pipeline_string_usb_jpeg_deepstream_is_nvmm_rgba() -> None:
     """MJPG USB on the DeepStream tier: nvjpegdec decodes straight into NVMM;
-    nvvideoconvert stays on-GPU; the appsink negotiates NVMM RGBA (ADR-0082)."""
+    nvvideoconvert stays on-GPU; the appsink negotiates NVMM RGBA."""
     spec = PipelineSpec(source=Source.USB, device="/dev/video4", width=640, height=480, jpeg=True)
     result = build_pipeline_string(spec, platform=Platform.NVIDIA_DEEPSTREAM)
     assert "v4l2src device=/dev/video4" in result

@@ -30,7 +30,7 @@ gstreamer = [
 ]
 # The NVMM zero-copy path (PyCUDA-backed shared CUDA context, the
 # NvBufSurface ctypes wrapper, the TensorRT NVMM executors) is an
-# OpenRAL Pro plugin (ADR-0083) — it is no longer declared here. The
+# OpenRAL Pro plugin — it is no longer declared here. The
 # open-core ``reader.py`` NVMM buffer latch degrades to a logged bus
 # error when that plugin is absent.
 

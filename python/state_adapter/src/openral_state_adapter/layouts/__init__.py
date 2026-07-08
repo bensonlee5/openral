@@ -1,4 +1,4 @@
-"""Layout assemblers (ADR-0027).
+"""Layout assemblers.
 
 Each module here implements one :data:`openral_core.StateLayout` value
 and calls :func:`openral_state_adapter._registry.register` at module

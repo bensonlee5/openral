@@ -4,7 +4,7 @@ Both the UR (PR #60, ``ur_real.py``) and the Franka / Sawyer / ALOHA (issues
 #56, #57, #58) real-HW HALs need to publish a :class:`RobotDescription`
 that shares kinematics + safety envelope + capabilities + HAL entrypoints
 with a "sim baseline" but flips the ``sdk_kind`` to a closed-with-api license
-posture. Since ADR-0031 the sim and real HAL import strings both live in the
+posture. The sim and real HAL import strings both live in the
 shared ``hal: HalEntrypoints`` block (``hal.sim`` / ``hal.real``), so the real
 description inherits the same ``hal`` from *base* and only ``sdk_kind`` differs.
 
@@ -55,7 +55,7 @@ def make_real_description(
     The returned :class:`RobotDescription` shares every other field with
     *base* — joint specs, end-effectors, safety envelope, capabilities,
     sensors, ``onboard_compute``, ``observation_spec`` / ``action_spec``, and
-    the ``hal`` entrypoints (``hal.sim`` / ``hal.real``, ADR-0031). Only
+    the ``hal`` entrypoints (``hal.sim`` / ``hal.real``). Only
     ``sdk_kind`` is overridden.
 
     Implementation is :meth:`pydantic.BaseModel.model_copy` with an

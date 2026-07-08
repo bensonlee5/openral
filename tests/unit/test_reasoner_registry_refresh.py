@@ -1,4 +1,4 @@
-"""Unit tests for the ADR-0018 F4 ``/openral/skill_registry_changed`` refresh path.
+"""Unit tests for the ``/openral/skill_registry_changed`` refresh path.
 
 Covers the in-process pieces of the refresh — ``set_palette`` /
 ``_rebuild_palette_from_registry`` — by mocking the on-disk registry

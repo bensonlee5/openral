@@ -2,7 +2,7 @@
 # only differences are the suite name and the per-task scene_id. Same
 # Franka, same protocol, same paper.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename
+# Shape: bare list of BenchmarkScenes; suite id = filename
 # stem ("libero_object"). See libero_spatial.yaml for the canonical
 # commentary on the anchor pattern and suite invariants.
 #

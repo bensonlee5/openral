@@ -1,8 +1,7 @@
-# ADR-0018 F3 — typed FailureTrigger event on the namespaced
+# Typed FailureTrigger event on the namespaced
 # /openral/failure/{hal,sensor,rskill,safety,wam,critic} bus.
 # (The rskill suffix replaced the original "skill" on 2026-05-25 for
-# consistency with the carried ``rskill_id`` field; see ADR-0018
-# amendment 2026-05-25 §5.)
+# consistency with the carried ``rskill_id`` field.)
 #
 # `kind` and `severity` are uint8 enum constants (typo-proof at build
 # time). `evidence_json` carries a serialized Pydantic ``FailureEvidence``
