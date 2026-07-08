@@ -75,7 +75,7 @@ class ConfigSpec:
     ``run_mode`` is ``"sim"`` for ``scenes/sim/*.yaml`` (driven by
     ``openral sim run``), ``"benchmark"`` for ``scenes/benchmark/*.yaml``
     (driven by ``openral benchmark scene --no-update-manifest --n-episodes 1``;
-    a demo-grade run, not a paper-comparable claim — see ADR-0041), or
+    a demo-grade run, not a paper-comparable claim), or
     ``"deploy"`` for ``scenes/deploy/*.yaml`` (driven by ``openral deploy sim``
     + ``--alive-grace`` seconds of soak + SIGINT graceful teardown).
 
@@ -93,15 +93,14 @@ class ConfigSpec:
 
 
 # Explicit mapping. The YAML names + rSkill names are not regular enough to
-# derive via a rule (e.g. `scenes/sim/robocasa_pnp.yaml` →
-# `rskills/pi05-robocasa365-human300-nf4`), so we list them. Each row is
+# derive via a rule, so we list them. Each row is
 # one (scene, rSkill) combination — the same scene may appear multiple
 # times paired with different rSkills (LIBERO is the obvious example).
 CATALOGUE: Final[tuple[ConfigSpec, ...]] = (
     # ---- SimScene tier (openral sim run) ----
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/smolvla-libero", "libero", "sim"),
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/xvla-libero", "libero", "sim"),
-    ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/pi05-libero-nf4", "libero", "sim"),
+    ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/pi05-libero-int8", "libero", "sim"),
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/act-libero", "libero", "sim"),
     ConfigSpec("scenes/sim/libero_spatial.yaml", "rskills/rldx1-ft-libero-nf4", "libero", "sim"),
     ConfigSpec(
@@ -112,14 +111,8 @@ CATALOGUE: Final[tuple[ConfigSpec, ...]] = (
     ),
     ConfigSpec(
         "scenes/sim/franka_libero_pnp.yaml",
-        "rskills/pi05-libero-nf4",
+        "rskills/pi05-libero-int8",
         "libero",
-        "sim",
-    ),
-    ConfigSpec(
-        "scenes/sim/robocasa_pnp.yaml",
-        "rskills/pi05-robocasa365-human300-nf4",
-        "robocasa",
         "sim",
     ),
     ConfigSpec(
@@ -335,8 +328,8 @@ def _check_compat(spec: ConfigSpec) -> AuditRow:
     """Cheap in-process compatibility gate (``--check-compatibility``).
 
     For sim/benchmark rows: load the YAML via
-    :func:`openral_core.load_scene_strict` (covers the ADR-0042 bare-list
-    contract for benchmark rows and the ADR-0041 SimScene contract for
+    :func:`openral_core.load_scene_strict` (covers the bare-list
+    contract for benchmark rows and the SimScene contract for
     sim rows), then validate the rSkill manifest via
     :class:`openral_core.RSkillManifest` so a missing or schema-busted
     ``rskill.yaml`` is caught before paying for env build.
@@ -457,7 +450,7 @@ def _build_run_cmd(spec: ConfigSpec) -> list[str]:
     # --config scenes/benchmark/<scene>.yaml --no-update-manifest
     # --n-episodes 1`. `--no-update-manifest` keeps the rSkill's
     # recorded benchmark numbers untouched on an audit row (a
-    # 1-episode demo, not a paper-comparable claim — see ADR-0041).
+    # 1-episode demo, not a paper-comparable claim).
     return [
         "uv",
         "run",
@@ -726,7 +719,7 @@ def _run_one(spec: ConfigSpec, timeout_s: int) -> AuditRow:
     # and the audit reports fail-other instead of the real failure reason
     # (fail-oom on 8 GiB GPUs, or pass on 16+ GiB). The audit acknowledges
     # this risk because it runs against rSkills in the local tree whose
-    # source_repo is pinned in rskill.yaml (§3 / ADR-0006).
+    # source_repo is pinned in rskill.yaml (§3).
     env.setdefault("OPENRAL_ALLOW_REMOTE_CODE", "1")
 
     # `--no-view` is incompatible with `MUJOCO_GL=egl` (cli.py rejects the

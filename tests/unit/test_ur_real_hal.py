@@ -45,7 +45,7 @@ class TestRealDescriptions:
     def test_ur5e_real_inherits_kinematics_from_sim(self) -> None:
         """Real and sim manifests must share kinematics and safety envelope.
 
-        The only difference is ``sdk_kind`` (ADR-0031: ``hal`` is shared) — the
+        The only difference is ``sdk_kind`` (``hal`` is shared) — the
         production path is ``ros2_control`` + ``ur_robot_driver`` and the sim
         path is MuJoCo, but the robot itself is the same.
         """

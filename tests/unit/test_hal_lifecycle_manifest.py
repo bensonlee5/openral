@@ -1,4 +1,4 @@
-"""Unit tests for the manifest-driven HAL lifecycle node (ADR-0032).
+"""Unit tests for the manifest-driven HAL lifecycle node.
 
 `make_lifecycle_main_from_manifest` builds a node whose `_create_hal()` reads
 the `robot_yaml` + `hal_mode` ROS params and routes through the single resolver

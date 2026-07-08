@@ -1,7 +1,7 @@
 """Tier-C critic progress-stall / success watchdog for ``/openral/failure/critic`` (R3).
 
 The OpenRAL failure bus reserves ``/openral/failure/critic`` for **Tier-C**
-triggers (ADR-0018 §F3 + the 2026-05-25 amendment failure-tier taxonomy:
+triggers (per the 2026-05-25 amendment failure-tier taxonomy:
 ``safety→A``, ``hal/sensor/rskill/wam→B``, ``critic→C``). Until now that topic
 had no default producer, so a robot whose task progress silently *stalls* —
 the policy keeps emitting action chunks but the scene stops moving toward the
@@ -16,7 +16,7 @@ schema) so a thin ROS node can publish it on the bus unchanged.
 
 The score source is intentionally **abstract**: any reward model that emits a
 higher-is-better scalar drives the same watchdog — the Robometer reward rSkill
-today (ADR-0057), a future SARM (self-assessment reward model), a success
+today, a future SARM (self-assessment reward model), a success
 classifier, or a hand-rolled heuristic. None of them is special-cased; a critic
 is just a ``(critic_id, score, threshold)`` stream. :class:`CriticWatchdogGroup`
 multiplexes one :class:`CriticWatchdog` per ``critic_id`` so several critics
@@ -42,7 +42,7 @@ Stall semantics (deterministic, fully covered by ``tests/test_critic_watchdog.py
   return ``None`` to avoid spamming the bus. The stall latch clears on progress
   or recovery (above threshold), or on :meth:`reset`.
 
-Success semantics (ADR-0074 — reward-watcher wakes the reasoner promptly):
+Success semantics (reward-watcher wakes the reasoner promptly):
 
 - When ``score >= threshold`` and the **success latch** is not set, :meth:`observe`
   returns one :class:`CriticEvidence` and sets the success latch.
@@ -273,7 +273,7 @@ class CriticWatchdogGroup:
     """Multiplex one :class:`CriticWatchdog` per ``critic_id``.
 
     The Tier-C ``/openral/failure/critic`` source is shared by every reward
-    model in the graph — the Robometer reward rSkill today (ADR-0057), a future
+    model in the graph — the Robometer reward rSkill today, a future
     SARM, a success classifier, and so on. Each publishes self-describing score
     samples ``(critic_id, score, threshold)``; this group keys an **independent**
     :class:`CriticWatchdog` per ``critic_id`` so one critic stalling fires its

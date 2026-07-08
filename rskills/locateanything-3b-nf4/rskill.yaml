@@ -7,9 +7,9 @@ kind: "detector"
 
 # embodiment-agnostic: a perception rSkill (detector/vlm) needs only an RGB
 # camera, not a specific robot. The rSkill<->robot gate exempts these kinds
-# (loader._EMBODIMENT_AGNOSTIC_KINDS, ADR-0037), so the tag list is empty —
+# (loader._EMBODIMENT_AGNOSTIC_KINDS), so the tag list is empty —
 # it matches any robot/scene.
-embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard (ADR-0072)
+embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard
 
 sensors_required:
   - modality: "rgb"
@@ -41,8 +41,8 @@ latency_budget:
   per_chunk_ms: 1000.0
 
 detector:
-  # ADR-0051: on-demand prompted locator. The reasoner invokes this open-vocab
-  # detector via the read-only locate_in_view tool (ADR-0043) when it needs to
+  # On-demand prompted locator. The reasoner invokes this open-vocab
+  # detector via the read-only locate_in_view tool when it needs to
   # find a specific object NOT covered by the continuous detector bank (RT-DETR /
   # OmDet-Turbo) — e.g. an attribute-qualified or novel object. It is not the
   # always-on world-state producer.
@@ -53,9 +53,9 @@ detector:
   max_side: 512
   # LocateAnything is open-vocabulary: `labels` is the STATIC DEFAULT query set
   # the detector grounds every frame when no runtime override is supplied. The
-  # reasoner can override it live via set_query (ADR-0037 2026-06-09 amendment,
-  # Phase 3). These defaults mirror the common manipulation/scene objects the
-  # rtdetr detector rSkills list.
+  # reasoner can override it live via set_query (added in the 2026-06-09
+  # detector-runner amendment, Phase 3). These defaults mirror the common
+  # manipulation/scene objects the rtdetr detector rSkills list.
   labels:
     - "person"
     - "cup"

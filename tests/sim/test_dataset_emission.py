@@ -1,4 +1,4 @@
-"""ADR-0019 end-to-end sim test: openral sim run --dataset-out with a real VLA.
+"""Dataset-bridge end-to-end sim test: openral sim run --dataset-out with a real VLA.
 
 Drives ``openral_sim.SimRunner`` against
 ``scenes/sim/aloha_transfer_cube.yaml`` with a real
@@ -94,7 +94,7 @@ def test_sim_run_with_dataset_out_produces_reloadable_v3(env_cfg, tmp_path: Path
     fps = float(robot.action_spec.control_freq_hz) if robot.action_spec.control_freq_hz else 30.0
 
     ds_root = tmp_path / "ds"
-    # ADR-0019: pass the camera shape from the scene config (sim renders
+    # Pass the camera shape from the scene config (sim renders
     # all cameras at one resolution) and the action dim from the rSkill
     # manifest's action_contract.
     from openral_rskill.loader import load_rskill_manifest

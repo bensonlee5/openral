@@ -2,18 +2,20 @@
 
 The Anvil OpenARM 2.0 (https://docs.anvil.bot/introduction/openarm-2.0)
 is the standard OpenArm v2 with two documented range deltas (J1 clamped
-to +/-135 deg, J6 radial deviation widened to -45..+70 deg) plus the red
-wrist bracket that enables the extra deviation.  No upstream package
+to +/-135 deg, J6 radial deviation widened to -45..+70 deg) plus the
+wrist support bracket that enables the extra deviation.  No upstream
+package
 ships that variant: ``robot_descriptions`` carries only the stock
 enactic assets, so this module maintains a pinned clone of the
 ``anvil-openarm-mujoco`` workspace, whose generated
 ``models/anvil_openarm_bimanual.xml`` applies the Anvil deltas (and the
-stylised visual-only bracket meshes) on top of the upstream
+visual-only CAD bracket meshes) on top of the upstream
 ``enactic/openarm_mujoco`` v2 files.  The pattern mirrors
 :mod:`openral_hal._openarm_v2_assets` (the enactic v2 out-pin), with one
-extra step: the generated MJCF references its meshes from the
-``upstream/openarm_mujoco`` git submodule, so the clone must also
-initialise that submodule.
+extra step: the generated MJCF references the stock link meshes from the
+``upstream/openarm_mujoco`` git submodule (the bracket STL lives in the
+anvil repo's own ``models/assets/``), so the clone must also initialise
+that submodule.
 """
 
 from __future__ import annotations
@@ -27,12 +29,15 @@ from openral_core.exceptions import ROSConfigError
 
 __all__ = ["ensure_anvil_openarm_v2_mjcf"]
 
-# Pinned to anvil-openarm-mujoco main — PR #4 (redesigned wrist
-# bracket that attaches to the J6 hub face and the J7 motor housing,
-# plus pedestal keyframe ctrl).  Bump when the generator or the local
-# Anvil spec changes; keep pinned (not a branch head) so the sim
-# contract is reproducible.
-_ANVIL_PINNED_SHA: str = "de6dffe74b1a96a44b4d453e7acdfee52e3e4a24"
+# Pinned to anvil-openarm-mujoco `fix/bracket-attachment-and-keyframe-ctrl`
+# — manual-CAD wrist bracket (real STL from the user hardware CAD in
+# `models/assets/`, aluminum + fastener materials, geoms hosted on the
+# link5 forearm bodies) on top of main's URDF-generation work.  Bump
+# when the generator or the local Anvil spec changes; keep a pinned SHA
+# (never a branch name) so the sim contract is reproducible — but note
+# a squash-merge of the source branch would orphan this commit, so
+# re-pin to the main merge commit once the PR lands.
+_ANVIL_PINNED_SHA: str = "1ea898f7a849e9621b834d2dfa4139c552ab14bb"
 _ANVIL_REPO_URL: str = "https://github.com/bensonlee5/anvil-openarm-mujoco.git"
 _ANVIL_MJCF_REL: str = "models/anvil_openarm_bimanual.xml"
 # The generated MJCF's meshdir points into this submodule (the pristine

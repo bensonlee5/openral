@@ -32,7 +32,7 @@ This differs from ``foxglove_bridge``'s ``topic_whitelist``, which applies
 pattern ``r"/map"`` will also accidentally match ``/something/map_thing``.
 Operators reviewing the recorded bag should confirm no unexpected topics are
 captured; the patterns deliberately avoid wildcards on security-sensitive
-prefixes.  ADR-0059 decision 5 documents this constraint.
+prefixes.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ def generate_launch_description() -> LaunchDescription:
             "use_sim_time",
             default_value="false",
             description=(
-                "Set true when a /clock is published (deploy-sim, ADR-0048) so "
+                "Set true when a /clock is published (deploy-sim) so "
                 "bag timestamps align with sim time and the replay scrubber "
                 "matches the original session."
             ),

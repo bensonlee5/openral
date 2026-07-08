@@ -7,8 +7,8 @@
 # two 7-DoF arms, and the two 6-DoF Fourier dex hands are controlled.
 #
 # Sim-only today; the matching sim adapter is
-# python/sim/src/openral_sim/backends/robocasa.py (ADR-0011 / GR1
-# extension). There is no real-HW HAL adapter -- the consumer right now
+# python/sim/src/openral_sim/backends/robocasa.py (GR1
+# extension of the RoboCasa sim-backend adapter). There is no real-HW HAL adapter -- the consumer right now
 # is `openral benchmark run --suite gr1_tabletop`. `sdk_kind: open` and
 # `hal` (sim+real) is null for the same reason as panda_mobile.
 
@@ -16,11 +16,11 @@ name: "gr1"
 embodiment_kind: "humanoid"
 base_frame: "base_link"
 
-# ADR-0027 — robot_state_publisher wiring. The Wiki-GRx-Models GR1
+# robot_state_publisher wiring. The Wiki-GRx-Models GR1
 # URDF declares ``base_link`` as the root (verified
 # /home/<user>/.cache/robot_descriptions/Wiki-GRx-Models/GRX/GR1/
 # GR1T1/urdf/GR1T1_nohand.urdf), matching our base_frame.
-# ADR-0058 — unified asset block (URDF only).
+# Unified asset block (URDF only).
 assets:
   urdf:
     ref: "rd:gr1_description"
@@ -174,7 +174,8 @@ end_effectors:
   # 29-D whole-body action = 3 waist + 7+7 arms + 6+6 hands). The individual
   # finger joints are owned by the gripper model (see the joints: header note)
   # and surfaced here as the EE's n_dof — the eval-layer / dataset-bridge
-  # contract addresses them as a DEX_HAND_JOINT slice on this EE (ADR-0071).
+  # contract addresses them as a DEX_HAND_JOINT slice on this EE, per the
+# gripper/task-space joint-role convention.
   - name: "right_hand"
     kind: "dexterous_hand"
     n_dof: 6
@@ -207,7 +208,8 @@ capabilities:
   # The body is joint-position control; the 12 hand DoF are EE-owned (modelled
   # as the two dexterous-hand end-effectors below, n_dof=6 each) rather than
   # enumerated joints. Was empty — that dropped the GR1 embodiment from the
-  # ADR-0071 task-space gate / reasoner palette entirely (ADR-0036).
+  # gripper/task-space joint-role gate and the reasoner tool-palette /
+  # composite-mode dispatch convention entirely.
   supported_control_modes:
     - "joint_position"
   supported_vla_embodiments:
@@ -248,6 +250,6 @@ sensors:
 
 # No real-HW HAL adapter -- robosuite owns the physics.
 sdk_kind: "open"
-# ADR-0031 — no HAL: gr1 is scene-only (benchmark/sim run), so hal.sim and
+# Per the HAL entrypoint-resolution convention — no HAL: gr1 is scene-only (benchmark/sim run), so hal.sim and
 # hal.real both default to null. build_hal raises ROSCapabilityMismatch if called.
 schema_version: '0.2'

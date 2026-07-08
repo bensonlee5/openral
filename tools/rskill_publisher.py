@@ -54,7 +54,7 @@ sys.path.insert(0, str(_REPO_ROOT / "python" / "cli" / "src"))
 
 import structlog  # noqa: E402 — after sys.path fixup
 
-# De-duped per CLAUDE.md §1.13 — ADR-0019 PR5 lifted these helpers into
+# De-duped per CLAUDE.md §1.13 — the dataset-bridge work (PR5) lifted these helpers into
 # the openral_cli._hf_publish module so `openral dataset push` and this
 # tool share one canonical token/scope/ignore-patterns surface.
 from openral_cli._hf_publish import IGNORE_PATTERNS as _IGNORE_PATTERNS  # noqa: E402
@@ -65,6 +65,7 @@ from openral_cli._rskill_doc_validator import (  # noqa: E402
     format_report,
     validate_rskill_docs,
 )
+from openral_cli._rskill_readme import build_rskill_readme  # noqa: E402
 from openral_core.exceptions import ROSConfigError  # noqa: E402
 
 log = structlog.get_logger(__name__)
@@ -174,14 +175,14 @@ def _validate_manifest(skill_dir: Path) -> RSkillManifest:  # type: ignore[name-
 
 
 def _validate_task_space(manifest: RSkillManifest, skill_dir: Path) -> None:  # type: ignore[name-defined]  # noqa: F821
-    """ADR-0071 Phase 2 — warn-only cross-layer task-space check at publish time.
+    """TaskSpace-contract Phase 2 — warn-only cross-layer task-space check at publish time.
 
     For an actuating rSkill (one carrying an ``action_contract``), build its
     :class:`openral_core.TaskSpace` and run :func:`task_space_compatible`
     (``hal_mode="sim"``) against every in-tree ``robots/<id>/robot.yaml`` whose
     ``embodiment_tags`` the skill targets. Emits a warning per incompatible
     (skill, robot) pair — catching slot end-effector-name mismatches and
-    joint-width overruns (the class of bug ADR-0071's sweep surfaced) before the
+    joint-width overruns (the class of bug the TaskSpace-contract sweep surfaced) before the
     manifest reaches the Hub. **Never fails the publish** — Phase 4 makes this
     gate blocking.
 
@@ -216,7 +217,7 @@ def _validate_task_space(manifest: RSkillManifest, skill_dir: Path) -> None:  # 
                 skill=manifest.name,
                 robot=robot.name,
                 reasons=match.reasons,
-                note="ADR-0071 Phase 2 — warn-only, not yet blocking",
+                note="TaskSpace-contract Phase 2 — warn-only, not yet blocking",
             )
     if matched == 0:
         log.info(
@@ -386,14 +387,28 @@ def _publish(
         _ensure_private(api, repo_id)
 
     # ── 3. Upload files ────────────────────────────────────────────────────────
+    # README.md is excluded from the folder upload and rebuilt below: the HF
+    # model-card front-matter is DERIVED from the manifest so every published repo
+    # — private OR public — carries a consistent, discoverable card, regardless of
+    # whatever front-matter the in-tree README happens to have.
     log.info("rskill_publisher.uploading", skill_dir=str(skill_dir), repo_id=repo_id)
     try:
         api.upload_folder(
             folder_path=str(skill_dir),
             repo_id=repo_id,
             repo_type="model",
-            ignore_patterns=_IGNORE_PATTERNS,
+            ignore_patterns=[*_IGNORE_PATTERNS, "README.md"],
             commit_message=f"chore: publish rSkill {manifest.name} v{manifest.version}",
+        )
+        readme_path = skill_dir / "README.md"
+        body = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
+        card = build_rskill_readme(manifest, body)
+        api.upload_file(
+            path_or_fileobj=card.encode("utf-8"),
+            path_in_repo="README.md",
+            repo_id=repo_id,
+            repo_type="model",
+            commit_message=f"docs: HF model card for {manifest.name} v{manifest.version}",
         )
     except Exception as exc:
         log.error("rskill_publisher.upload_failed", error=str(exc))
@@ -460,7 +475,7 @@ def main() -> None:
     # ── Validate manifest ──────────────────────────────────────────────────────
     manifest = _validate_manifest(skill_dir)
 
-    # ── Cross-layer task-space check (ADR-0071 Phase 2, warn-only) ──────────────
+    # ── Cross-layer task-space check (TaskSpace-contract Phase 2, warn-only) ────
     _validate_task_space(manifest, skill_dir)
 
     # ── Validate README + manifest documentation (CLAUDE.md §6.4) ──────────────

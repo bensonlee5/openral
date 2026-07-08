@@ -23,7 +23,7 @@ from openral_core.exceptions import ROSConfigError
 from openral_sim.cli import _load_or_build_env, _resolve_view
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-# SimScene-tier LIBERO fixture (ADR-0041). The BenchmarkScene sibling at
+# SimScene-tier LIBERO fixture. The BenchmarkScene sibling at
 # scenes/benchmark/libero_spatial.yaml carries metadata + n_episodes + seed and
 # is rejected by `openral sim run` on the tier guard, so these CLI-mechanics
 # tests use the slim SimScene fixture instead.

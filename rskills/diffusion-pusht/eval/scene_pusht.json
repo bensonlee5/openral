@@ -7,7 +7,7 @@
     "evaluated_by": "OpenRAL:openral benchmark scene",
     "reproduced_locally": true,
     "reproduction_planned": null,
-    "reproduction_cli": "openral benchmark scene --config scenes/benchmark/pusht.yaml --rskill rskills/diffusion-pusht",
+    "reproduction_cli": "openral benchmark scene --config scenes/benchmark/pusht.yaml --rskill rskill://rskills/diffusion-pusht",
     "table": null,
     "status": "reproduced"
   },
@@ -26,16 +26,16 @@
     "success_key": "is_success",
     "max_steps": 300,
     "vla_id": "diffusion",
-    "weights_uri": "rskills/diffusion-pusht"
+    "weights_uri": "rskill://rskills/diffusion-pusht"
   },
   "results": {
-    "pusht/0_success_rate": 0.0,
-    "avg_success_rate": 0.0,
+    "pusht/0_success_rate": 1.0,
+    "avg_success_rate": 1.0,
     "n_tasks": 1,
     "n_episodes_per_task": 1,
     "n_episodes_total": 1,
-    "mean_step_latency_ms_avg": 227.90637141656285,
-    "mean_coverage_iou": 0.9863256559332937
+    "mean_step_latency_ms_avg": 246.9849692727758,
+    "mean_coverage_iou": 1.0
   },
   "baselines": {},
   "trace_id": null

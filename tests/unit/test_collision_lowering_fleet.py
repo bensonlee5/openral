@@ -2,7 +2,7 @@
 
 `openral collision lower` owns each robot's `collision_geometry` /
 `allowed_collision_pairs`; this asserts the committed manifests have not drifted
-from what the tool would regenerate (ADR-0030). Replaces the single hand-pinned
+from what the tool would regenerate. Replaces the single hand-pinned
 panda test with a parametrized fleet check. Real manifests, no mocks (§1.11);
 robots whose URDF/SRDF is unavailable on this host SKIP rather than fake.
 

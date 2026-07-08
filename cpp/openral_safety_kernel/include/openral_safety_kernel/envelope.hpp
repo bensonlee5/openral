@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — robot ceiling ∩ skill envelope. Loaded ONCE at
+// Robot ceiling ∩ skill envelope. Loaded ONCE at
 // on_configure() into an `EnvelopeIntersection` via ROS parameters
-// populated by the Python launch from `robots/<id>/robot.yaml`
-// (ADR-0020 PR-K). The hot path then consults the struct without
+// populated by the Python launch from `robots/<id>/robot.yaml`.
+// The hot path then consults the struct without
 // further parsing. There is exactly one transport: ROS parameters.
 // The flat-YAML envelope-file path the kernel had pre-PR-K is gone —
 // `openral_safety.envelope_loader.kernel_params_from_envelope` is the

@@ -16,7 +16,7 @@
 # rollouts per task. gym-aloha's TimeLimit default is 300; the scene adapter
 # honours task.max_steps to lift it to the paper's 400.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes. Per-scene metadata is uniform
+# Shape: bare list of BenchmarkScenes. Per-scene metadata is uniform
 # via the &meta anchor so raise_on_invalid_suite's metadata-equality check passes.
 
 - scene:

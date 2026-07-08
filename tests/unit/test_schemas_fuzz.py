@@ -23,6 +23,7 @@ from openral_core.schemas import (
     ActuatorRequirement,
     ApproachViewpoint,
     BenchmarkName,
+    BoxShape,
     CameraSimPlacement,
     CapsuleShape,
     ClockAuthority,
@@ -31,6 +32,7 @@ from openral_core.schemas import (
     ComputeSpec,
     ControlMode,
     ControlModeSemantics,
+    DeployRuntime,
     DetectedObject,
     DeviceInfo,
     EmbodimentKind,
@@ -250,7 +252,7 @@ _action_st = st.builds(
     stamp_ns=_ns,
 )
 
-# ─── Collision geometry (ADR-0030) ──────────────────────────────────────────────
+# ─── Collision geometry ──────────────────────────────────────────────────────────
 
 _radius = st.floats(allow_nan=False, allow_infinity=False, min_value=1e-3, max_value=1.0)
 _capsule_shape_st = st.builds(
@@ -259,7 +261,11 @@ _capsule_shape_st = st.builds(
     length_m=st.floats(allow_nan=False, allow_infinity=False, min_value=0.0, max_value=2.0),
 )
 _sphere_shape_st = st.builds(SphereShape, radius_m=_radius)
-_collision_shape_st = st.one_of(_capsule_shape_st, _sphere_shape_st)
+_box_shape_st = st.builds(
+    BoxShape,
+    half_extents_m=st.tuples(*([_radius] * 3)),
+)
+_collision_shape_st = st.one_of(_capsule_shape_st, _sphere_shape_st, _box_shape_st)
 
 _link_collision_geometry_st = st.builds(
     LinkCollisionGeometry,
@@ -301,6 +307,26 @@ _clock_authority_st = st.one_of(
         clock_id=_name,
         epoch=st.sampled_from([ClockEpoch.UNIX, ClockEpoch.HARDWARE]),
     ),
+)
+
+_opt_bool = st.none() | st.booleans()
+_deploy_runtime_st = st.builds(
+    DeployRuntime,
+    enable_slam=_opt_bool,
+    enable_nav2=_opt_bool,
+    enable_octomap=_opt_bool,
+    enable_octomap_kernel_check=_opt_bool,
+    enable_object_detector=_opt_bool,
+    object_detector_onnx=st.none() | _name,
+    object_detector_manifest=st.none() | _name,
+    object_detector_query=st.none() | _name,
+    object_detector_locators=st.none() | st.lists(_name, max_size=3),
+    enable_reward_monitor=_opt_bool,
+    reward_monitor_manifest=st.none() | _name,
+    reward_monitor_task=st.none() | _name,
+    enable_critic=_opt_bool,
+    spatial_memory_ingest=_opt_bool,
+    approach_skill_id=st.none() | _name,
 )
 
 _collision_evidence_st = st.builds(
@@ -567,7 +593,7 @@ _semver = st.builds(
 # V1/V2: closed Literal sets — sample directly from get_args. Exclude
 # "custom" from the embodiment-tag fuzz: it triggers the
 # embodiment_extra cross-validator + per-actuator n_dof / vla_action_key
-# requirement (ADR-0013), which has its own coverage in
+# requirement, which has its own coverage in
 # test_rskill_manifest.py. Fuzzing it here would degenerate into a
 # filter against the cross-validator.
 _NON_CUSTOM_EMBODIMENT_TAGS = [t for t in get_args(EmbodimentTag) if t != "custom"]
@@ -824,7 +850,7 @@ def test_fuzz_sim_environment(instance: SimEnvironment) -> None:
     assert instance.task.scene_id == instance.scene.id
 
 
-# ─── Inference runner schemas (ADR-0010) ─────────────────────────────────────
+# ─── Inference runner schemas ─────────────────────────────────────────────────
 #
 # SensorFrame has a mutual-exclusion invariant on (data | topic | handle), so
 # the strategy below splits across the three valid carry-modes.
@@ -978,7 +1004,7 @@ def test_fuzz_run_result(instance: RunResult) -> None:
     _round_trip_and_validate(RunResult, instance)
 
 
-# ─── Spatial memory — scene graph (ADR-0038) ─────────────────────────────────────
+# ─── Spatial memory — scene graph ─────────────────────────────────────────────────
 
 
 @st.composite
@@ -1148,7 +1174,7 @@ def test_fuzz_resolve_place_result(instance: ResolvePlaceResult) -> None:
     _round_trip_and_validate(ResolvePlaceResult, instance)
 
 
-# ─── Reasoner read-only query tools (ADR-0039) ───────────────────────────────────
+# ─── Reasoner read-only query tools ───────────────────────────────────────────────
 
 _recall_object_tool_st = st.builds(
     RecallObjectTool,
@@ -1176,3 +1202,10 @@ def test_fuzz_recall_object_tool(instance: RecallObjectTool) -> None:
 def test_fuzz_resolve_place_tool(instance: ResolvePlaceTool) -> None:
     """ResolvePlaceTool round-trips through JSON and validates against its schema."""
     _round_trip_and_validate(ResolvePlaceTool, instance)
+
+
+@_FUZZ_SETTINGS
+@given(_deploy_runtime_st)
+def test_fuzz_deploy_runtime(instance: DeployRuntime) -> None:
+    """DeployRuntime round-trips through JSON and validates against its schema."""
+    _round_trip_and_validate(DeployRuntime, instance)

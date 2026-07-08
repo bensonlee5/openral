@@ -4,14 +4,14 @@ These tests drive the real
 ``openral_world_state_ros.lifecycle_node._WorldStateLifecycleNode``
 through ``rclpy`` (the ``launch_testing``-equivalent in-process pattern
 that ``test_lifecycle_node_launch`` established) and verify the
-ADR-0018 F2 contract at the integration boundary: the typed
+F2 typed-topic contract at the integration boundary: the typed
 ``WorldStateStamped`` publication on the fast (30 Hz) and slow (5 Hz)
 topics, QoS profiles, lifecycle transitions, and the ``/joint_states``
 → aggregator → typed message round-trip.
 
 The five scenarios below mirror the structure of the older JSON-based
-integration tests (the JSON ``/world_state`` topic is removed by ADR-0018
-F2 — typed is the only path now):
+integration tests (the JSON ``/world_state`` topic is removed by the
+F2 typed-topic contract — typed is the only path now):
 
 1. **Fast/slow rate ratio** — drive ``/joint_states`` at 30 Hz; assert
    the fast topic publishes ≥6× as often as the slow topic over a 2 s
@@ -70,7 +70,7 @@ def _lifecycle_harness(
 
     Yields ``(executor, helper_node, joint_pub, fast_msgs, slow_msgs)``.
     The ``fast_msgs`` / ``slow_msgs`` lists are appended to by
-    subscriptions on the two ADR-0018 F2 topics. Cleanly tears down on
+    subscriptions on the two F2 typed topics. Cleanly tears down on
     exit.
     """
     import rclpy  # type: ignore[import-untyped]
@@ -156,7 +156,7 @@ def _joint_diag_status(msg: Any) -> int | None:
     return None
 
 
-# ── Scenario 1: Fast/slow rate ratio (ADR-0018 F2) ───────────────────────────
+# ── Scenario 1: Fast/slow rate ratio (F2 typed topics) ───────────────────────
 
 
 def test_fast_topic_publishes_six_times_per_slow_topic() -> None:

@@ -1,6 +1,6 @@
 r"""RLBench scene sidecar — drives a CoppeliaSim/PyRep RLBench task over ZMQ.
 
-ADR-0062. RLBench (James et al., 2020, arXiv:1909.12271) runs on CoppeliaSim +
+RLBench (James et al., 2020, arXiv:1909.12271) runs on CoppeliaSim +
 PyRep, a heavy, externally-provisioned, ~py3.10 stack that cannot be loaded into
 the openral py3.12 workspace (PyRep builds a Cython extension against a specific
 CoppeliaSim 4.1.0 install; the released 3D keyframe policies pin the
@@ -264,8 +264,8 @@ class _RLBenchScene:
             # EndEffectorPoseViaPlanning could not reach the predicted keypose
             # (unreachable target / collision). End the episode as a failure —
             # matching the reference 3DDA evaluator — so a single stochastic
-            # planner miss can't abort a whole multi-episode benchmark run
-            # (ADR-0062). No fresh obs exists; return the last wrapped one.
+            # planner miss can't abort a whole multi-episode benchmark run.
+            # No fresh obs exists; return the last wrapped one.
             reply = {
                 "observation": self._last_wrapped_obs,
                 "reward": 0.0,

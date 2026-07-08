@@ -1,6 +1,6 @@
 """Sim test: SimAttachedHAL drives the Isaac panda_mobile base via BODY_TWIST.
 
-ADR-0045 amendment — the deploy-sim HAL generalization. ``SimAttachedHAL`` was
+The deploy-sim HAL generalization amendment. ``SimAttachedHAL`` was
 MuJoCo-coupled for the mobile base (``base_pose`` read qpos; a BODY_TWIST raised
 without MuJoCo handles). This verifies the obs-fallback path on a real
 non-MuJoCo backend (Isaac kinematic base), through the SAME ``SimAttachedHAL``

@@ -1,4 +1,4 @@
-"""Gate-driven cuMotion pipeline selection for MoveGroup goals (ADR-0065 D1).
+"""Gate-driven cuMotion pipeline selection for MoveGroup goals.
 
 cuMotion is a MoveIt planning-pipeline plugin selected per request via
 ``MotionPlanRequest.pipeline_id``. When the host clears the cuMotion GPU floor

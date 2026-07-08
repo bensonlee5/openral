@@ -21,9 +21,8 @@ Two deliberate safety choices distinguish this from the upstream
 
 The ``topic_whitelist`` is an explicit allowlist: anything not matched —
 including ``/openral/estop``, ``/openral/safe_action``, the failure bus —
-is invisible to the bridge. This is the feasibility spike for ADR-0059
-(``docs/adr/0059-foxglove-live-scene-visualization.md``); graduating it
-past prototype requires that ADR's sign-offs.
+is invisible to the bridge. This is a feasibility spike; graduating it
+past prototype requires safety-WG sign-off.
 
 Run:
     ros2 launch openral_foxglove_bringup foxglove.launch.py
@@ -69,7 +68,7 @@ def generate_launch_description() -> LaunchDescription:
             "use_sim_time",
             default_value="false",
             description=(
-                "Set true when a /clock is published (deploy-sim, ADR-0048) "
+                "Set true when a /clock is published (deploy-sim) "
                 "so Foxglove timestamps align with sim time."
             ),
         ),
@@ -117,10 +116,10 @@ def generate_launch_description() -> LaunchDescription:
                 "openral_core.urdf_resolve import resolve_urdf_path; "
                 'print(resolve_urdf_path(open("robots/<id>/robot.yaml")...))\'`` '
                 "or directly via robot_descriptions (e.g. panda_description). "
-                "NOTE: openarm has no local URDF (ADR-0027)."
+                "NOTE: openarm has no local URDF."
             ),
         ),
-        # --- Compressed-image transport (ADR-0059 decision 4) ---------------
+        # --- Compressed-image transport ---------------------------------
         # Raw sensor_msgs/Image is ~9 MB/s per camera; a multi-camera arm can
         # saturate a laptop link and Foxglove's send buffer. The republisher
         # below converts selected raw camera topics to sensor_msgs/CompressedImage
@@ -133,7 +132,7 @@ def generate_launch_description() -> LaunchDescription:
                 "When true, spawn one image_transport republisher per topic in "
                 "``compressed_camera_topics`` to convert raw→compressed. "
                 "Compressed topics (/…/image/compressed) are already Bucket-1 "
-                "whitelisted (ADR-0059 decision 4). Default false — raw path stays "
+                "whitelisted. Default false — raw path stays "
                 "available for fidelity-sensitive use."
             ),
         ),
@@ -222,7 +221,7 @@ def generate_launch_description() -> LaunchDescription:
         parameters=[robot_description],
     )
 
-    # ADR-0059 decision 4: opt-in compressed-image republishers.
+    # Opt-in compressed-image republishers.
     # ``compressed_camera_topics`` is a runtime LaunchConfiguration string —
     # we can't branch on it at module load, so it is resolved inside an
     # OpaqueFunction that runs after all args are substituted.

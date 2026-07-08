@@ -1,4 +1,4 @@
-# rSkill manifest — RT-DETR COCO detector (kind: detector, ADR-0037)
+# rSkill manifest — RT-DETR COCO detector (kind: detector)
 #
 # Packages a PaddlePaddle RT-DETR-L model exported to ONNX for use as
 # an OpenRAL perception producer. The skill runs on the camera tee and
@@ -16,14 +16,14 @@ name: "OpenRAL/rskill-rtdetr-coco-r18"
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
-kind: "detector"  # ADR-0037: perception producer; emits ObjectsMetadata, no Action
+kind: "detector"  # Perception producer; emits ObjectsMetadata, no Action
 
 # ── Compatibility contract ──────────────────────────────────────────────────
 # embodiment-agnostic: a perception rSkill (detector/vlm) needs only an RGB
 # camera, not a specific robot. The rSkill<->robot gate exempts these kinds
-# (loader._EMBODIMENT_AGNOSTIC_KINDS, ADR-0037), so the tag list is empty —
+# (loader._EMBODIMENT_AGNOSTIC_KINDS), so the tag list is empty —
 # it matches any robot/scene.
-embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard (ADR-0072)
+embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard
 
 # The detector reads any RGB camera stream. vla_feature_key is omitted so
 # the loader accepts any camera key, not just "camera1".
@@ -55,11 +55,11 @@ latency_budget:
   # to cover CPU fallback on smaller hosts.
   per_chunk_ms: 50.0
 
-# ── Detector contract (ADR-0037) ────────────────────────────────────────────
+# ── Detector contract ────────────────────────────────────────────────────
 # 80 COCO labels (subset shown for readability — full list matches the
 # 0-indexed COCO category order used by the exported model).
 detector:
-  # ADR-0051: always-on background producer (publishes ObjectsMetadata to
+  # Always-on background producer (publishes ObjectsMetadata to
   # WorldState; not the on-demand locate_in_view locator).
   mode: "continuous"
   labels:
@@ -155,9 +155,9 @@ description: >
   COCO and exported to ONNX. Runs on the camera tee and publishes
   ObjectsMetadata to /openral/perception/objects. 80 COCO categories.
   Apache-2.0 weights. Reference latency ~20 ms on GPU, ~45 ms on CPU.
-  See ADR-0037 for the detector rSkill kind contract.
+  This is the detector rSkill kind contract.
 
-# ADR-0022 — action vocabulary for the reasoner LLM tool palette.
+# Action vocabulary for the reasoner LLM tool palette.
 # DETECT signals that this skill is a perception producer.
 actions:
   - "detect"

@@ -1,20 +1,20 @@
-"""ADR-0073 — typed mission state for sequential multi-task deploy goals.
+"""Typed mission state for sequential multi-task deploy goals.
 
 An operator goal may carry several ordered subtasks supplied via ``--initial-task``
-(or a live ``/openral/prompt``). Prior to the ADR-0073 amendment the deploy CLI
+(or a live ``/openral/prompt``). Prior to this module's fix the deploy CLI
 joined ``DeployScene.tasks`` with ``" | "`` into a single opaque prompt that was
 **drained pull-once** (``ContextRenderer.drain_prompts``), so the reasoner forgot
 the goal after the first tick and never advanced to subsequent subtasks (removed).
 
-This module is the deterministic fix (ADR-0073 §1): the goal is parsed into an
+This module is the deterministic fix: the goal is parsed into an
 ordered list of :class:`TaskState`, of which at most one is ``active`` (or
 ``verifying``) at a time. The reasoner advances the queue only when the active
-task is verified complete (§2), so a multi-task goal is *sequenced* by
+task is verified complete, so a multi-task goal is *sequenced* by
 bookkeeping rather than by hoping the LLM remembers it. Splitting is intentionally
 simple and deterministic; richer decomposition (the ``decompose-mission``
-playbook, ADR-0072) layers on top via :meth:`MissionState.subdivide_active`.
+playbook) layers on top via :meth:`MissionState.subdivide_active`.
 
-The ADR-0073 amendment (#123) adds **hierarchical subdivision on replan**: when
+This module (#123) adds **hierarchical subdivision on replan**: when
 the active task is blocked (reward gate ``abandon``, ladder exhausted) the
 reasoner may decompose it into finer subtasks instead of only handing off. The
 data model stays **flat** — :meth:`MissionState.subdivide_active` *splices* the
@@ -48,8 +48,8 @@ __all__ = [
 ]
 
 VerdictAction = Literal["complete", "abandon", "retry", "vlm_check"]
-"""What the reward gate decides for the active task after a skill returns
-(ADR-0073 §2 / ADR-0074 Decision 5): ``complete`` (auto-pass, score ≥
+"""What the reward gate decides for the active task after a skill returns:
+``complete`` (auto-pass, score ≥
 success_threshold), ``vlm_check`` (ambiguous band — caller must adjudicate via
 ``describe_image``), ``abandon`` (ladder exhausted), or ``retry`` (try again —
 keep the task active)."""
@@ -58,7 +58,7 @@ DEFAULT_MAX_ATTEMPTS: int = 3
 """Default per-task attempt cap before the reward gate abandons + hands off."""
 
 DEFAULT_MAX_SUBDIVIDE_DEPTH: int = 2
-"""Max re-decomposition depth (ADR-0073 amendment / #123).
+"""Max re-decomposition depth (#123).
 
 A task at the queue root has ``depth == 0``; its children from one
 :meth:`MissionState.subdivide_active` are ``depth == 1``; their children
@@ -69,7 +69,7 @@ subdivide forever."""
 
 
 DEFAULT_MAX_TASK_LOCATE_ATTEMPTS: int = 3
-"""Default per-task ``locate_in_view`` cycle budget (ADR-0074 amendment).
+"""Default per-task ``locate_in_view`` cycle budget.
 
 Max locate cycles the reasoner may spend on a single active mission (sub)task
 *without* reaching an ``execute_rskill`` dispatch before the subtask is
@@ -81,7 +81,7 @@ never terminates. This budget counts every locate cycle regardless of hit/miss."
 
 @dataclasses.dataclass(slots=True)
 class TaskLocateBudget:
-    """Per-task ``locate_in_view`` cycle budget (ADR-0074 amendment).
+    """Per-task ``locate_in_view`` cycle budget.
 
     The S2 locate-loop persists in deploy because ``locate_in_view`` repeatedly
     HITS (``found=True``) — the existing :class:`SearchProgress` bound only counts
@@ -155,16 +155,16 @@ def evaluate_task_verdict(
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     success_now: float | None = None,
 ) -> tuple[VerdictAction, str]:
-    """Pure reward-gate decision for the active task (ADR-0073 §2 / ADR-0074 Decision 5).
+    """Pure reward-gate decision for the active task.
 
-    **Gate on the PROGRESS head, not the success head (ADR-0074 amendment).**
+    **Gate on the PROGRESS head, not the success head.**
     Robometer-4B emits two heads: ``progress`` (task *closeness*, which reaches
     ~0.80-0.86 on a genuine physical success and separates success from failure
     cleanly) and ``success`` (a done-probability that is empirically *compressed*
     — only ~0.56-0.79 even on a real success, so a 0.8 auto-pass bar over it is
     effectively dead). The ``success_threshold`` / ``check_floor`` bars (0.8 /
-    0.5) were calibrated against the *progress* head (ADR-0074's own narrative
-    cites progress≈0.78 on a physical success), so the band logic gates on
+    0.5) were calibrated against the *progress* head (internal calibration notes
+    cite progress≈0.78 on a physical success), so the band logic gates on
     ``progress_now``. ``success_now`` is kept as a **secondary corroborating
     signal** surfaced in the verdict text (and available to the caller's
     ``vlm_check`` adjudication) — it never overrides the progress band.
@@ -175,8 +175,8 @@ def evaluate_task_verdict(
     1. ``progress_now >= success_threshold`` → ``"complete"`` — high-confidence
        auto-pass; no VLM call needed.
     2. ``check_floor <= progress_now < success_threshold`` → ``"vlm_check"`` — the
-       ambiguous band; the **caller** must adjudicate by calling ``describe_image``
-       (ADR-0074), optionally weighing ``success_now`` as corroboration. This
+       ambiguous band; the **caller** must adjudicate by calling ``describe_image``,
+       optionally weighing ``success_now`` as corroboration. This
        function only signals the need — it never performs the call.
     3. ``progress_now < check_floor`` → falls to the existing attempts ladder:
        ``"abandon"`` once ``attempts >= max_attempts``, else ``"retry"``.
@@ -243,7 +243,7 @@ _TERMINAL_STATES: frozenset[TaskStatus] = frozenset({"done", "abandoned"})
 
 @dataclasses.dataclass(slots=True)
 class TaskState:
-    """One ordered subtask and its lifecycle (ADR-0073 §1).
+    """One ordered subtask and its lifecycle.
 
     Attributes:
         task_id: Stable id within the mission (``"t1"``, ``"t2"``, …).
@@ -255,7 +255,7 @@ class TaskState:
         last_trace_id: Trace id of the most recent attempt, or ``None``.
         last_verdict: Short human-readable verdict of the last verification
             (e.g. ``"success=0.91"``, ``"stalled@0.73"``, ``"unverified"``).
-        depth: Re-decomposition depth (ADR-0073 amendment / #123). A task split
+        depth: Re-decomposition depth (see #123). A task split
             from the operator goal is ``0``; a child spliced in by
             :meth:`MissionState.subdivide_active` is ``parent.depth + 1``. Bounds
             the subdivision ladder against :data:`DEFAULT_MAX_SUBDIVIDE_DEPTH`.
@@ -272,7 +272,7 @@ class TaskState:
 
 
 class MissionState:
-    """Ordered task queue with at most one active task (ADR-0073 §1).
+    """Ordered task queue with at most one active task.
 
     Owns the deterministic sequencing the LLM is no longer trusted to do: the
     active task is the only goal injected each tick; the queue advances only when
@@ -306,9 +306,9 @@ class MissionState:
     def from_prompt(cls, text: str) -> MissionState:
         """Seed a mission from an operator goal as a SINGLE task.
 
-        ADR-0073 amendment — the regex ``split_mission`` floor is removed: the
-        operator goal is one task and the LLM owns decomposition via
-        ``decompose_mission``. A blank goal yields an empty mission.
+        The regex ``split_mission`` floor is removed: the operator goal is one
+        task and the LLM owns decomposition via ``decompose_mission``. A blank
+        goal yields an empty mission.
         """
         goal = text.strip()
         return cls([goal] if goal else [])
@@ -424,7 +424,7 @@ class MissionState:
     ) -> TaskState | None:
         """Splice the active task in place with finer child subtasks (#123).
 
-        Hierarchical subdivision on replan (ADR-0073 amendment): when the active
+        Hierarchical subdivision on replan: when the active
         task is blocked, replace it in the queue with ``subtasks`` — flat child
         tasks ``t<n>.1, t<n>.2, …`` at ``depth + 1`` — and activate the first
         child. The data model stays flat (Option 1 "flat splice"): the parent is

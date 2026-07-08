@@ -1,4 +1,4 @@
-"""ADR-0044 Phase 3 — LookAtRskill goal lowering, camera resolution, manifest.
+"""LookAtRskill goal lowering, camera resolution, manifest.
 
 The constraint-lowering math is tested against the real franka robot.yaml
 (LIBERO eye-in-hand on ``panda_hand``) and against a synthetic so101-style

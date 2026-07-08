@@ -9,7 +9,7 @@
 # LIBERO-Long is the 10 long-horizon multi-step tasks (the "libero_10"
 # suite name in the LiberoEnv backend). Same LiberoEnv + Franka panda as
 # libero_spatial; the eval horizon is much longer. The rSkill must declare
-# evaluated_tasks=["libero_10"] (ADR-0060).
+# evaluated_tasks=["libero_10"].
 
 robot_id: franka_panda
 

@@ -11,8 +11,8 @@ The same ASGI app serves three things on one port:
   ``OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`` will stream live into
   the dashboard.
 * ``POST /api/prompt`` — operator-driven write endpoint that shells
-  out to ``openral prompt`` (ADR-0018 F10) targeting the prompt-router's
-  ``dashboard`` source.
+  out to ``openral prompt`` (the operator-prompt dispatch path) targeting
+  the prompt-router's ``dashboard`` source.
 * ``POST /api/estop_reset`` — operator recovery: clears a latched safety
   e-stop by calling the kernel's ``/openral/estop_reset`` (std_srvs/Trigger)
   service via ``ros2 service call``, so the robot can be re-tasked after an
@@ -24,7 +24,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import contextlib
 import gzip
+import http
 import io
 import json
 import mimetypes
@@ -63,7 +65,7 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 
 def _write_controls_enabled() -> bool:
-    """Whether guarded write-controls are on (default OFF; ADR-0064)."""
+    """Whether guarded write-controls are on (default OFF)."""
     return os.environ.get("OPENRAL_DASHBOARD_WRITE_CONTROLS", "") == "1"
 
 
@@ -143,7 +145,8 @@ async def _drain_skill_goal_stdout(
 
     Runs as a background ``asyncio.Task`` — must catch all exceptions and log
     them (never crash the event loop). Called by ``_skill_execute_response``
-    after the action server accepts the goal (ADR-0064 §4).
+    after the action server accepts the goal, so the eventual outcome is
+    still audit-logged.
     """
     remaining: list[str] = list(captured_lines)
     try:
@@ -254,12 +257,13 @@ async def _transcribe_response(audio: bytes) -> JSONResponse:
 
 
 async def _prompt_response(text: str) -> JSONResponse:
-    """Publish an operator prompt via ``openral prompt`` (ADR-0018 F10).
+    """Publish an operator prompt via ``openral prompt``.
 
     Shells out so the wire shape (PromptStamped on
     ``/openral/prompt_in/dashboard``, fanned out by ``prompt_router_node`` at
-    priority 100) matches the CLI exactly. The console script is ``openral``
-    (ADR-0021). Body lives here to keep ``create_app`` under the statement cap.
+    priority 100) matches the CLI exactly. The console script is ``openral``,
+    the single entry point. Body lives here to keep ``create_app`` under the
+    statement cap.
     """
     openral = shutil.which("openral")
     if openral is None:
@@ -292,16 +296,18 @@ async def _prompt_response(text: str) -> JSONResponse:
     return JSONResponse({"status": "ok", "stdout": stdout, "stderr": stderr})
 
 
-async def _estop_reset_response() -> JSONResponse:
+async def _estop_reset_response(estop: Any = None) -> JSONResponse:
     """Clear a latched safety e-stop via the kernel's ``/openral/estop_reset``.
 
     The C++ safety kernel latches on a violation and drops every candidate chunk
     until this ``std_srvs/Trigger`` service is called — so after an e-stop NO
-    prompt does anything until the latch is cleared. The dashboard has no rclpy
-    node of its own, so (like ``POST /api/prompt``'s ``openral prompt``
-    shell-out) we call ``ros2 service call``. The kernel enforces a post-estop
-    cooldown; an early call returns ``success=false`` (HTTP 409) so the operator
-    can retry. Re-prompt via ``/api/prompt`` once this succeeds.
+    prompt does anything until the latch is cleared. The reset itself is a
+    ``ros2 service call`` (a service is request/response, so no discovery race).
+    The kernel enforces a post-estop cooldown; an early call returns
+    ``success=false`` (HTTP 409) so the operator can retry. On success we also
+    broadcast ``/openral/estop_cleared`` so the HAL + runner un-latch too —
+    instantly via ``estop`` (the persistent publisher) when present, else the
+    shell-out fallback. Re-prompt via ``/api/prompt`` once this succeeds.
     """
     ros2 = shutil.which("ros2")
     if ros2 is None:
@@ -341,25 +347,133 @@ async def _estop_reset_response() -> JSONResponse:
         )
     # Trigger response renders as `success=True/False, message='…'`.
     accepted = "success=True" in stdout
+    if accepted:
+        # The kernel service only clears the KERNEL latch; the HAL + runner latch
+        # independently on /openral/estop and had no reset path (they stayed
+        # latched until a node restart, so the robot never resumed). Now that the
+        # kernel's cooldown-gated reset has succeeded, broadcast
+        # /openral/estop_cleared so those nodes clear too — instantly via the
+        # persistent publisher when present, else the shell-out fallback. Best
+        # effort: a publish failure doesn't undo the kernel reset.
+        if estop is not None and estop.available:
+            estop.clear()
+        else:
+            await _publish_estop_cleared()
     return JSONResponse(
         {"status": "ok" if accepted else "rejected", "accepted": accepted, "stdout": stdout},
         status_code=200 if accepted else 409,
     )
 
 
+async def _publish_estop_cleared() -> None:
+    """Broadcast /openral/estop_cleared so latching nodes (HAL, runner) resume.
+
+    Symmetric to the /openral/estop trigger. Best-effort + swallowed errors:
+    the kernel reset has already succeeded by the time we get here, so a failed
+    broadcast must not turn a successful reset into an error response.
+    """
+    ros2 = shutil.which("ros2")
+    if ros2 is None:
+        return
+    with contextlib.suppress(Exception):
+        proc = await asyncio.create_subprocess_exec(
+            ros2,
+            "topic",
+            "pub",
+            "-w",
+            "1",
+            "--times",
+            "3",
+            "--rate",
+            "10",
+            "/openral/estop_cleared",
+            "std_msgs/msg/Empty",
+            "{}",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=10.0)
+
+
+async def _estop_trigger_response() -> JSONResponse:
+    """Trigger a graph-wide safety e-stop by publishing to ``/openral/estop``.
+
+    The C++ safety kernel AND every HAL subscribe to this ``std_msgs/Empty``
+    topic and latch immediately — dropping every in-flight and future chunk
+    until ``/openral/estop_reset``. This is the operator's "stop the robot NOW"
+    control; it mirrors the physical deadman / hardware-estop publishers. Like
+    the reset path the dashboard has no rclpy node, so it shells out to ``ros2
+    topic pub``. Published a few times because a freshly-spawned publisher must
+    first discover the already-running subscribers; e-stop is idempotent (a
+    latch), so repeats are harmless and this beats the discovery race.
+    """
+    ros2 = shutil.which("ros2")
+    if ros2 is None:
+        return JSONResponse(
+            {"error": "`ros2` not on PATH; source the workspace install first"},
+            status_code=503,
+        )
+    proc = await asyncio.create_subprocess_exec(
+        ros2,
+        "topic",
+        "pub",
+        # CRITICAL: a fresh publisher must WAIT for the subscribers to be
+        # discovered before publishing, or the e-stop message is silently lost
+        # to the discovery race and the robot never stops (observed live). -w 1
+        # blocks until >=1 of the HAL/kernel/runner subscriptions is matched.
+        "-w",
+        "1",
+        "--times",
+        "3",
+        "--rate",
+        "10",
+        "/openral/estop",
+        "std_msgs/msg/Empty",
+        "{}",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        _stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+    except TimeoutError:
+        proc.kill()
+        await proc.wait()
+        return JSONResponse(
+            {"error": "estop publish timed out after 10 s — is the graph running?"},
+            status_code=504,
+        )
+    if proc.returncode != 0:
+        return JSONResponse(
+            {
+                "error": "ros2 topic pub /openral/estop failed",
+                "returncode": proc.returncode,
+                "stderr": stderr_b.decode("utf-8", errors="replace").strip(),
+            },
+            status_code=502,
+        )
+    return JSONResponse({"status": "ok", "accepted": True}, status_code=200)
+
+
 def _config_response() -> JSONResponse:
     """Dashboard-level config (Jaeger UI url, write-controls flag, …) sourced from env.
 
     The UI fetches this once on load to decide whether to enable the
-    "open in jaeger" link and whether to reveal the operator write-controls
-    panel (ADR-0064). Returning ``""`` (the default) leaves the Jaeger link
-    disabled with a helpful tooltip — the previous behaviour of
-    unconditionally linking to ``localhost:16686`` produced a
-    broken-link click for every user who doesn't run Jaeger locally.
+    "open in jaeger" link, whether to reveal the guarded operator
+    write-controls panel, and whether the mic button's voice prompt is usable.
+    Returning ``""`` (the default) leaves the Jaeger link disabled with a
+    helpful tooltip — the previous behaviour of unconditionally linking to
+    ``localhost:16686`` produced a broken-link click for every user who
+    doesn't run Jaeger locally.
     """
+    from openral_observability.dashboard.vad_assets import vad_assets_available
+
     jaeger_url = os.environ.get("OPENRAL_JAEGER_UI_URL", "").rstrip("/")
     return JSONResponse(
-        {"jaeger_ui_url": jaeger_url, "write_controls_enabled": _write_controls_enabled()}
+        {
+            "jaeger_ui_url": jaeger_url,
+            "write_controls_enabled": _write_controls_enabled(),
+            "voice_prompt_enabled": vad_assets_available(),
+        }
     )
 
 
@@ -368,7 +482,7 @@ async def _skill_execute_from_request(request: Request) -> JSONResponse:
 
     Handles the flag check, JSON decode, field validation, and dispatch in one
     place so the route closure stays under the statement cap (PLR0915).
-    Every attempt — permitted or denied — is audit-logged (ADR-0064 §4).
+    Every attempt — permitted or denied — is audit-logged.
     """
     operator_ip = request.client.host if request.client else "unknown"
     if not _write_controls_enabled():
@@ -376,14 +490,13 @@ async def _skill_execute_from_request(request: Request) -> JSONResponse:
             "dashboard_write_attempt",
             operation="skill_execute",
             outcome="denied_flag_off",
-            adr="ADR-0064",
             operator_ip=operator_ip,
         )
         return JSONResponse(
             {
                 "error": (
                     "write-controls disabled; set OPENRAL_DASHBOARD_WRITE_CONTROLS=1 "
-                    "(pending safety-WG review, ADR-0064)"
+                    "(pending safety-WG review)"
                 )
             },
             status_code=403,
@@ -407,7 +520,7 @@ async def _skill_execute_from_request(request: Request) -> JSONResponse:
 async def _skill_execute_response(
     skill_id: str, revision: str, prompt: str, goal_params_json: str, operator_ip: str
 ) -> JSONResponse:
-    """Dispatch an ExecuteRskill action goal (ADR-0064; safety kernel disposes).
+    """Dispatch an ExecuteRskill action goal (guarded write-control; safety kernel disposes).
 
     Async accept-then-track: the endpoint returns as soon as the action server
     **accepts** the goal (HTTP 202) rather than blocking on full completion.
@@ -422,12 +535,12 @@ async def _skill_execute_response(
     - Returns **HTTP 503** if ``ros2`` is not on PATH.
 
     On 202 a background ``asyncio.Task`` drains the remaining stdout, awaits
-    process exit, and audit-logs the eventual outcome (ADR-0064 §4). The task
-    reference is kept in ``_BACKGROUND_DRAIN_TASKS`` so the event loop cannot
-    GC it before completion.
+    process exit, and audit-logs the eventual outcome. The task reference is
+    kept in ``_BACKGROUND_DRAIN_TASKS`` so the event loop cannot GC it before
+    completion.
 
     Every call is audit-logged at WARNING level before the subprocess is
-    spawned (ADR-0064 §4). ``prompt`` and ``goal_params_json`` are never logged.
+    spawned. ``prompt`` and ``goal_params_json`` are never logged.
     """
     ros2 = shutil.which("ros2")
     if ros2 is None:
@@ -456,7 +569,6 @@ async def _skill_execute_response(
         "dashboard_write_attempt",
         operation="skill_execute",
         outcome="sent",
-        adr="ADR-0064",
         skill_id=skill_id,
         revision=revision,
         operator_ip=operator_ip,
@@ -502,7 +614,6 @@ async def _skill_execute_response(
             "dashboard_write_attempt",
             operation="skill_execute",
             outcome="rejected",
-            adr="ADR-0064",
             skill_id=skill_id,
             operator_ip=operator_ip,
         )
@@ -528,7 +639,6 @@ async def _skill_execute_response(
         "dashboard_write_attempt",
         operation="skill_execute",
         outcome="accepted",
-        adr="ADR-0064",
         skill_id=skill_id,
         goal_id=accepted_goal_id,
         operator_ip=operator_ip,
@@ -555,7 +665,7 @@ async def _param_set_from_request(request: Request) -> JSONResponse:
 
     Handles the flag check, JSON decode, field validation, denylist check, and
     dispatch in one place so the route closure stays under the statement cap
-    (PLR0915). Every attempt — permitted or denied — is audit-logged (ADR-0064 §4).
+    (PLR0915). Every attempt — permitted or denied — is audit-logged.
     """
     operator_ip = request.client.host if request.client else "unknown"
     if not _write_controls_enabled():
@@ -563,14 +673,13 @@ async def _param_set_from_request(request: Request) -> JSONResponse:
             "dashboard_write_attempt",
             operation="param_set",
             outcome="denied_flag_off",
-            adr="ADR-0064",
             operator_ip=operator_ip,
         )
         return JSONResponse(
             {
                 "error": (
                     "write-controls disabled; set OPENRAL_DASHBOARD_WRITE_CONTROLS=1 "
-                    "(pending safety-WG review, ADR-0064)"
+                    "(pending safety-WG review)"
                 )
             },
             status_code=403,
@@ -598,7 +707,7 @@ async def _param_set_from_request(request: Request) -> JSONResponse:
 
 
 async def _param_set_response(node: str, name: str, value: str, operator_ip: str) -> JSONResponse:
-    """Set a NON-safety ROS param via ``ros2 param set`` (ADR-0064).
+    """Set a NON-safety ROS param via ``ros2 param set`` (guarded write-control).
 
     Checks ``name`` case-insensitively against ``_SAFETY_PARAM_DENYLIST`` before
     any shell-out. A matching name is refused with 403 and a paper-trail audit
@@ -612,7 +721,6 @@ async def _param_set_response(node: str, name: str, value: str, operator_ip: str
             "dashboard_write_attempt",
             operation="param_set",
             outcome="denied_denylist",
-            adr="ADR-0064",
             operator_ip=operator_ip,
             node=node,
             name=name,
@@ -638,7 +746,6 @@ async def _param_set_response(node: str, name: str, value: str, operator_ip: str
         "dashboard_write_attempt",
         operation="param_set",
         outcome="sent",
-        adr="ADR-0064",
         operator_ip=operator_ip,
         node=node,
         name=name,
@@ -670,7 +777,7 @@ async def _param_set_response(node: str, name: str, value: str, operator_ip: str
     return JSONResponse({"status": "ok", "stdout": out})
 
 
-def create_app(store: TelemetryStore | None = None) -> FastAPI:
+def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915  # reason: flat FastAPI route-registration table; each endpoint is one statement
     """Build the FastAPI app bound to ``store`` (a fresh one if ``None``).
 
     The returned app is a normal ASGI application; mount it under any
@@ -683,6 +790,9 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:
     # Set by run_dashboard when mDNS discovery is wired; None in tests / when
     # the 'mdns' extra is absent. The /api/robots endpoint tolerates both.
     app.state.discovery = None
+    # Persistent e-stop publisher (set by run_dashboard). None here so tests /
+    # standalone use fall back to the shell-out path in the estop endpoints.
+    app.state.estop = None
 
     @app.post(
         "/v1/traces",
@@ -732,8 +842,8 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:
 
     @app.get("/api/traces")
     async def get_traces(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # ADR-0018 F7 — list of indexed trace_ids so `openral replay` can
-        # pick a trace when the user omits `--trace`. Bounded; see
+        # List of indexed trace_ids so `openral replay` can pick a trace
+        # when the user omits `--trace`. Bounded; see
         # _TRACE_INDEX_MAX_TRACES in store.py.
         return JSONResponse({"traces": request.app.state.store.list_traces()})
 
@@ -741,8 +851,8 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:
     async def get_spans(  # pyright: ignore[reportUnusedFunction]
         trace_id: str, request: Request
     ) -> JSONResponse:
-        # ADR-0018 F7 — full span list for one trace. 404 when the trace
-        # has not been ingested (or evicted from the bounded index).
+        # Full span list for one trace. 404 when the trace has not been
+        # ingested (or evicted from the bounded index).
         spans = request.app.state.store.lookup_trace(trace_id)
         if spans is None:
             return JSONResponse({"error": "trace not indexed"}, status_code=404)
@@ -806,11 +916,11 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:
 
     @app.post("/api/prompt")
     async def post_prompt(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # ADR-0018 F10 — operator prompt entry point from the dashboard.
-        # Shells out to `openral prompt` so the wire shape (PromptStamped on
+        # Operator prompt entry point from the dashboard. Shells out to
+        # `openral prompt` so the wire shape (PromptStamped on
         # /openral/prompt_in/dashboard, fanned out by prompt_router_node
         # at priority 100) matches the CLI exactly. The console script is
-        # named `openral` (ADR-0021), not `ral`.
+        # named `openral`, not `ral`.
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
@@ -832,22 +942,43 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:
         audio = await _read_body(request)
         return await _transcribe_response(audio)
 
+    @app.post("/api/estop")
+    async def post_estop(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+        # Operator "stop the robot NOW". The persistent publisher (discovered at
+        # launch) fires INSTANTLY; only when it's unavailable (standalone / no
+        # ROS) do we fall back to the slow, discovery-racing shell-out.
+        # Mark the latch authoritatively: the e-stop aborts the skill, so the
+        # kernel stops emitting safety.check spans and the telemetry-driven flag
+        # would never flip — the Reset control would never appear (observed live).
+        request.app.state.store.set_estopped(True)
+        est = getattr(request.app.state, "estop", None)
+        if est is not None and est.available:
+            est.trigger()
+            return JSONResponse({"status": "ok", "accepted": True}, status_code=200)
+        return await _estop_trigger_response()
+
     @app.post("/api/estop_reset")
-    async def post_estop_reset(_request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+    async def post_estop_reset(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
         # Operator recovery from a latched safety e-stop. Body lives in a
         # module-level helper to keep create_app() under the statement cap.
-        return await _estop_reset_response()
+        resp = await _estop_reset_response(getattr(request.app.state, "estop", None))
+        # Clear the latch flag only when the kernel actually accepted the reset
+        # (200); a cooldown rejection (409) leaves the robot latched, so the
+        # Reset control must stay.
+        if resp.status_code == http.HTTPStatus.OK:
+            request.app.state.store.set_estopped(False)
+        return resp
 
     @app.post("/api/skill/execute")
     async def post_skill_execute(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # issue #75c / ADR-0064 — guarded skill switch. Default OFF.
+        # issue #75c — guarded skill switch. Default OFF.
         # Full logic lives in _skill_execute_from_request to keep create_app
         # under the statement cap (PLR0915).
         return await _skill_execute_from_request(request)
 
     @app.post("/api/param/set")
     async def post_param_set(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # issue #75c / ADR-0064 — guarded param tune. Default OFF; safety params
+        # issue #75c — guarded param tune. Default OFF; safety params
         # refused via denylist. Full logic in _param_set_from_request to keep
         # create_app under the statement cap (PLR0915).
         return await _param_set_from_request(request)

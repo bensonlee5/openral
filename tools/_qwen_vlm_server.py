@@ -70,7 +70,7 @@ def _load(model_id: str) -> tuple[object, object]:
     * **Raw upstream** (e.g. ``Qwen/Qwen3.5-4B``): quantize NF4 at load.
       transformers 5.x materializes weights in bf16 on-GPU before bitsandbytes
       quantizes; the 4-way-concurrent transient OOMs a tight card, so force
-      serial materialization (ADR-0047).
+      serial materialization.
     """
     cfg = AutoConfig.from_pretrained(model_id)
     processor = AutoProcessor.from_pretrained(model_id)

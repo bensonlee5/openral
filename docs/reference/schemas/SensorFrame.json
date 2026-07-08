@@ -1,7 +1,7 @@
 {
   "$defs": {
     "FrameEncoding": {
-      "description": "How the bytes inside a :class:`SensorFrame` are interpreted.\n\nThe first four values are raw per-pixel layouts. ``JPEG`` / ``PNG`` are\ncompressed forms; the runner decodes lazily. ``CUDA_NV12`` and ``RAW``\nmark frames whose payload is an opaque handle (NVMM pointer, DMA-BUF fd)\n\u2014 the ``data`` field is empty and the consumer must read via ``handle``.",
+      "description": "How the bytes inside a :class:`SensorFrame` are interpreted.\n\nThe first four values are raw per-pixel layouts. ``JPEG`` / ``PNG`` are\ncompressed forms; the runner decodes lazily. ``CUDA_NV12`` /\n``CUDA_RGBA`` and ``RAW`` mark frames whose payload is an opaque handle\n(NVMM pointer, DMA-BUF fd) \u2014 the ``data`` field is empty and the consumer\nmust read via ``handle``. ``CUDA_NV12`` is the Tegra NVMM default;\n``CUDA_RGBA`` is the x86 DeepStream NVMM layout.",
       "enum": [
         "bgr8",
         "rgb8",
@@ -10,6 +10,7 @@
         "jpeg",
         "png",
         "cuda_nv12",
+        "cuda_rgba",
         "raw"
       ],
       "title": "FrameEncoding",

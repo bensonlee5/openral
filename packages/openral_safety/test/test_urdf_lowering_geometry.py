@@ -1,6 +1,7 @@
 """Capsule/sphere fitting from a vertex cloud — the conservative-containment law.
 
-The geometry half of the offline lowering tool (ADR-0030): a fitted capsule MUST
+The geometry half of the offline lowering tool (part of the geometric
+safety collision-checking system): a fitted capsule MUST
 contain every source vertex so the safety check is a conservative
 over-approximation (never under-covers). Tests use real geometry (the panda URDF
 and tiny inline URDFs), no mocks (CLAUDE.md §1.11).

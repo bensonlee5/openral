@@ -29,7 +29,7 @@ and SensorReader open/close as part of its own
 In-process image frames flow through the inference hot path
 unchanged (``SensorReader.read_latest()`` → ``WorldState.image_frames``
 via the aggregator). When a host needs the same frames on a ROS topic
-— for the rosbag2 recorder (PR3 of ADR-0019), Foxglove, or
+— for the rosbag2 recorder, Foxglove, or
 ``rqt_image_view`` — :class:`openral_sensors.ros_publisher.SensorRosPublisher`
 runs as a *parallel* consumer of the same reader from its own thread.
 The GStreamer backend additionally provides a zero-copy tee via
@@ -135,7 +135,7 @@ class DeployRunner(InferenceRunnerBase):
         """Initialise the runner; does not open any I/O until :meth:`activate`.
 
         ``recorder`` is an optional
-        :class:`openral_dataset.RolloutRecorder` (ADR-0019 PR3). When set,
+        :class:`openral_dataset.RolloutRecorder`. When set,
         :meth:`episode_start` / :meth:`episode_end` drive the recorder's
         lifecycle and (PR3 follow-up wiring inside ``_tick_impl``) every
         per-tick state + frame + action lands on the attached sinks.
@@ -178,7 +178,7 @@ class DeployRunner(InferenceRunnerBase):
         # tick throughput under load.
         self._thumbnail_clock: Callable[[], float] = time.monotonic
 
-    # ── ADR-0019 PR3 — episode boundary API ────────────────────────────────
+    # ── Episode boundary API ────────────────────────────────────────────────
 
     def episode_start(self, task_string: str) -> int:
         """Open a new episode on the attached :class:`RolloutRecorder`.
@@ -277,7 +277,7 @@ class DeployRunner(InferenceRunnerBase):
                 runner=self._runner_name,
                 exc=str(exc),
             )
-        # ADR-0019 PR3 — finalize the recorder. Close any still-open
+        # Finalize the recorder. Close any still-open
         # episode as a failure (matches the SimRunner contract) so
         # sinks see a complete lifecycle.
         if self._recorder is not None:
@@ -455,17 +455,17 @@ class DeployRunner(InferenceRunnerBase):
         inf_t0 = time.perf_counter()
         step_result = self._skill.step(snapshot)
         inference_ms = (time.perf_counter() - inf_t0) * 1e3
-        # ADR-0028b — ``step()`` may return ``Action | list[Action]``.
+        # ``step()`` may return ``Action | list[Action]``.
         # DeployRunner is the live-hardware path; today its safety
         # + HAL dispatch + observability code assumes a single Action.
-        # Until ADR-0028c lands per-mode HAL handlers on real hardware,
+        # Until per-mode HAL handlers land on real hardware,
         # surface list returns as a typed config error instead of
         # silently picking the first one.
         if isinstance(step_result, list):
             raise ROSConfigError(
                 f"DeployRunner: skill {self._skill.name!r} returned "
-                f"{len(step_result)} Actions (ADR-0028b multi-surface). "
-                "Real-hardware HALs gain per-mode dispatch in ADR-0028c; "
+                f"{len(step_result)} Actions (multi-surface dispatch). "
+                "Real-hardware HALs gain per-mode dispatch in a future release; "
                 "run this skill via rskill_runner_node (sim path) until then."
             )
         action = step_result
@@ -576,7 +576,7 @@ class DeployRunner(InferenceRunnerBase):
             safety_violations=safety_violations,
             action_applied=action_applied,
         )
-        # ADR-0019 PR3 — fan out to the attached RolloutRecorder. Only
+        # Fan out to the attached RolloutRecorder. Only
         # when a recorder is attached AND an episode is open; otherwise
         # this is a no-op and the hot path stays unchanged.
         if self._recorder is not None and self._recorder_episode_open:

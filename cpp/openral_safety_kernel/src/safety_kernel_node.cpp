@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — safety_kernel_node main(). Single-threaded executor; the
+// safety_kernel_node main(). Single-threaded executor; the
 // validator must complete inside the chunk-deadline so multi-threaded
 // dispatch would only add latency.
 

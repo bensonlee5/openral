@@ -2,7 +2,6 @@
 
 One grammar replaces ``resolve_urdf_path``, ``resolve_mjcf_uri``, the
 plain-path SRDF handling, and ``openral_safety.urdf_lowering._load_urdf_model``.
-See ``docs/adr/0058-standardized-description-assets.md``.
 
 Grammar (``resolve_asset(ref, kind)``):
 
@@ -156,7 +155,7 @@ def _resolve_openarm(variant: str, kind: AssetKind) -> Path:
       past the ``robot_descriptions`` commit by
       :func:`openral_hal._openarm_v2_assets.ensure_openarm_v2_mjcf`.
     * ``anvil_v2_bimanual`` — the Anvil OpenARM 2.0 bimanual MJCF (v2 plus
-      Anvil's J1/J6 range deltas and the red wrist bracket), fetched by
+      Anvil's J1/J6 range deltas and the wrist support bracket), fetched by
       :func:`openral_hal._anvil_openarm_v2_assets.ensure_anvil_openarm_v2_mjcf`.
     """
     if kind != "mjcf":

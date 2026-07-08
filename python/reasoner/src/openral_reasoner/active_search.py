@@ -1,8 +1,8 @@
-"""Bounded active object search over the scene graph (ADR-0039 §3, Phase 4).
+"""Bounded active object search over the scene graph.
 
 When a spatial-memory recall misses (``ROSObjectNotInMemory`` / empty
 ``RecallObjectResult``), a useful robot does not give up — it searches *likely*
-places. This module turns an ADR-0038 :class:`~openral_core.SceneGraph` into a
+places. This module turns a :class:`~openral_core.SceneGraph` into a
 **bounded, ranked frontier** of places to check, so the S2 Reasoner can drive a
 search loop that terminates instead of running forever.
 
@@ -15,7 +15,7 @@ Two responsibilities, both pure-Python (``openral_core`` only):
   its commonsense priors; this supplies the bounded set it chooses from.
 - **The bound** — :class:`SearchBudget` caps the frontier (and, via
   :class:`SearchProgress`, the number of attempts). Exhausting the budget is the
-  terminal *human-handoff* rung of the ADR-0018 replanning ladder, not an
+  terminal *human-handoff* rung of the replanning ladder, not an
   unbounded loop.
 """
 
@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchBudget(BaseModel):
-    """Bounds an active object search (ADR-0039 §3).
+    """Bounds an active object search.
 
     Attributes:
         max_candidates: Max places offered in the frontier per search.
@@ -40,7 +40,7 @@ class SearchBudget(BaseModel):
 
 
 class SearchCandidate(BaseModel):
-    """One place worth checking for a missing object (ADR-0039 §3).
+    """One place worth checking for a missing object.
 
     Attributes:
         place_node_id: The place/container node to go to.
@@ -119,7 +119,7 @@ class SearchProgress:
 
     The reasoner increments this on each search step; once attempts reach
     ``budget.max_attempts`` the search is **exhausted** and the caller hands off
-    to a human (ADR-0018 ladder terminal rung) instead of looping forever.
+    to a human (replanning-ladder terminal rung) instead of looping forever.
     """
 
     def __init__(self, budget: SearchBudget) -> None:

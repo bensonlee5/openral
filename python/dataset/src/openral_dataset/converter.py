@@ -1,6 +1,6 @@
 """Rosbag2ToLeRobotConverter — offline mcap rosbag2 → LeRobotDataset v3.
 
-ADR-0019 PR4. Reads back the mcap file written by :class:`Rosbag2Sink`
+Reads back the mcap file written by :class:`Rosbag2Sink`
 (PR3) and produces a :class:`lerobot.datasets.LeRobotDataset` v3.0 via
 the same :class:`LeRobotDatasetSink` the online sim path uses. Closes
 the bidirectional bridge: hardware execution → mcap bag → on-disk
@@ -110,7 +110,7 @@ class Rosbag2ToLeRobotConverter:
     :class:`LeRobotDatasetSink` so the on-disk format is identical to
     what the online sim path produces. ``next.success`` for every frame
     in an episode is set from the episode's PHASE_END marker
-    (episode-level success, broadcast per-frame; PR0/ADR-0019 §3
+    (episode-level success, broadcast per-frame; PR0
     discusses why the per-frame field is uniform across the episode).
     """
 
@@ -387,7 +387,7 @@ class Rosbag2ToLeRobotConverter:
         bags still convert. reward / terminated / truncated round-trip
         from the Tick payload verbatim.
         """
-        # ADR-0019: shapes MUST match the sink's declared feature shapes
+        # Shapes MUST match the sink's declared feature shapes
         # (state from RobotDescription / rSkill manifest contract;
         # cameras from SensorSpec.intrinsics). The sink's strict per-frame
         # shape validation catches any drift between the bag records and

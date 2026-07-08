@@ -1,8 +1,8 @@
-"""ADR-0018 F7 + F9 — ``openral replay`` / ``openral record`` / ``openral profile session``.
+"""``openral replay`` / ``openral record`` / ``openral profile session``.
 
 These tests exercise the typer surface with real options against real
-mcap fixtures (F7) and the real LTTng module's gate-off path (F9). No
-ROS 2 install, no ``lttng`` binary required.
+mcap fixtures (replay/record) and the real LTTng module's gate-off path
+(profile session). No ROS 2 install, no ``lttng`` binary required.
 """
 
 from __future__ import annotations
@@ -86,7 +86,17 @@ def test_ral_replay_frame_pivots_into_dataset_trace(tmp_path: Path) -> None:
 
     pytest.importorskip(
         "lerobot",
-        reason="lerobot>=0.5.1 not installed; install via `uv pip install lerobot>=0.5.1`",
+        reason=(
+            "lerobot>=0.6.0 not installed; install via `uv pip install 'openral-dataset[lerobot]'`"
+        ),
+    )
+    pytest.importorskip(
+        "lerobot.datasets",
+        reason=(
+            "lerobot dataset extra not installed; install via "
+            "`uv pip install 'openral-dataset[lerobot]'`"
+        ),
+        exc_type=ImportError,
     )
     from openral_core import RobotDescription
     from openral_dataset import LeRobotDatasetSink, RolloutRecorder, Rosbag2Sink

@@ -4,7 +4,7 @@
   <name>openral_slam_bringup</name>
   <version>0.1.0</version>
   <description>
-    ADR-0025 — bringup wrapper for upstream slam_toolbox as an OpenRAL
+    Bringup wrapper for upstream slam_toolbox as an OpenRAL
     Reasoner-managed background service. Ships a per-deployment launch
     file + a default 2D mapping parameter set + an opt-in hook into
     `sim_e2e.launch.py`. The slam_toolbox node runs as a LifecycleNode

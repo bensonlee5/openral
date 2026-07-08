@@ -27,7 +27,7 @@ Once filled in, the contract follows the SO-100 package (see
 | --- | --- |
 | Lifecycle states | `configure → activate → deactivate → cleanup` |
 | Pub topics | `/joint_states`, `~/joint_states` (`sensor_msgs/JointState`) |
-| Sub topics | `/openral/safe_action` (`openral_msgs/ActionChunk`), `/openral/estop` (`std_msgs/Empty`) per ADR-0018 F1/F5 |
+| Sub topics | `/openral/safe_action` (`openral_msgs/ActionChunk`), `/openral/estop` (`std_msgs/Empty`) |
 | QoS | RELIABLE / VOLATILE / KEEP_LAST=10 (control-class) |
 | HAL backend | `openral_hal.ur.UR5eHAL` |
 

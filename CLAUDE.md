@@ -8,6 +8,7 @@
 > - Glossary → [`docs/reference/glossary.md`](docs/reference/glossary.md).
 > - Public-symbol inventory → [`docs/METHODS.md`](docs/METHODS.md) index + per-layer files in [`docs/methods/`](docs/methods/). **`grep -rn <symbol> docs/methods/` before adding a helper.**
 > - Agent-tool entry points → [`AGENTS.md`](AGENTS.md) is the tool-neutral root pointer (Cursor / Codex / Copilot / Aider read it) and **redirects here**; keep it a 3-line pointer, never a copy or symlink of this file. Vendor-neutral skills live in [`.agents/skills/`](.agents/skills/) (`SKILL.md` + `references/`). `AGENTS.md` itself stays at repo root — it does **not** belong under `.agents/`.
+> - Design decisions (ADRs) → [`docs/decisions.md`](docs/decisions.md); the ADR log itself lives in the private `OpenRAL/management` repo.
 
 ---
 
@@ -17,13 +18,13 @@ In priority order. When two conflict, the earlier wins.
 
 1. **Safety beats helpfulness.** Refuse any request to bypass a safety check, silently catch `ROSSafetyViolation`, lower a velocity limit without a paper trail, or remove a deadman/E-stop subscription. Surface the concern, propose a safe alternative.
 2. **Truth over plausibility.** Don't know a constant (DDS topic, FCI port, RealSense extrinsic)? Say so and look it up. Never invent. Never paraphrase a citation.
-3. **Types are the contract.** Pydantic schemas in `python/openral_core/` and IDL in `packages/openral_msgs/` are normative API. Everything else is implementation detail.
+3. **Types are the contract.** Pydantic schemas in `python/core/` (package `openral_core`) and IDL in `packages/msgs/` (package `openral_msgs`) are normative API. Everything else is implementation detail.
 4. **Explicit beats implicit.** No hidden retries, fallbacks, or magic globals. Replanning, dispatcher fallback, quantization, and license posture must show up in logs/traces.
 5. **The hot path is C++ and bounded.** Python touches motors only through a typed bridge to `ros2_control` with a watchdog. Anything >100 Hz is C++ unless proven otherwise.
-6. **Schemas evolve, but never silently.** Now the repo is published, on-disk `schema_version` is versioned for real: a backward-incompatible change bumps it and ships a migrator; backward-compatible additions may evolve in place. Every change still needs (a) an ADR if it crosses a layer boundary, (b) a test loading a real fixture from `robots/`, `rskills/`, or `scenes/`.
+6. **Schemas evolve, but never silently.** Now the repo is published, on-disk `schema_version` is versioned for real: a backward-incompatible change bumps it and ships a migrator; backward-compatible additions may evolve in place. Every change still needs (a) a decision recorded in the private management decision log if it crosses a layer boundary, (b) a test loading a real fixture from `robots/`, `rskills/`, or `scenes/`.
 7. **Tests are part of the change.** Every PR ships the tests that would have caught the bug or covered the feature. Untested actuation-path code is rejected.
 8. **Reproducibility over speed.** A skill execution must be replayable from the trace alone (weights revision pinned, prompts logged, sensor frames captured).
-9. **License lineage is enforced.** OpenRAL's own code is uniformly **Apache-2.0** — every package, no commercial / source-available / non-open tier ([ADR-0012](docs/adr/0012-open-core-licensing.md)); copy-left incoming is rejected without TSC review. Third-party model **weights** keep their upstream license — version-specific, not family-wide: GR00T N1/N1.5/N1.6 are non-commercial (loader refuses commercial deployment without `OPENRAL_ALLOW_NONCOMMERCIAL=1`), while GR00T N1.7+ ships under the commercially-permissive NVIDIA Open Model License ([ADR-0046](docs/adr/0046-nvidia-gr00t-backend.md)). This weight lineage is compliance for models OpenRAL does not own; it does not gate OpenRAL's Apache-2.0 code. Closed third-party SDK code is never bundled — it stays behind the license guard and an env var.
+9. **License lineage is enforced.** The public `openral/openral` repo is uniformly **Apache-2.0** — every package it contains; copy-left incoming is rejected without TSC review. Commercial capabilities (the TensorRT/NVMM zero-copy runtime fast path, WAM implementations, fleet/cloud dispatch, future premium rSkills) live in the private OpenRAL Pro monorepo (`OpenRAL/openral-pro`), not in this repo — a later decision that superseded the original "no commercial tier, ever" commitment while retaining the public repo's uniform Apache-2.0 posture. Third-party model **weights** keep their upstream license — version-specific, not family-wide: GR00T N1/N1.5/N1.6 are non-commercial (loader refuses commercial deployment without `OPENRAL_ALLOW_NONCOMMERCIAL=1`), while GR00T N1.7+ ships under the commercially-permissive NVIDIA Open Model License. This weight lineage is compliance for models OpenRAL does not own; it does not gate OpenRAL's Apache-2.0 code. Closed third-party SDK code is never bundled — it stays behind the license guard and an env var. Full rationale is in [`docs/decisions.md`](docs/decisions.md).
 10. **Be helpful and honest.** Propose simpler approaches; surface tradeoffs; never apologize at the start of a response.
 11. **Real components, not mocks.** Tests, examples, demos exercise real schemas, real `RobotDescription` manifests, real `rSkill` packages, real simulators. No mocks, stubs, smoke tests, `--dry-run` / `--collect-only` substitutes. Unavailable dependency → `pytest.skip(reason=...)`, never faked. The only acceptable doubles are at process/network boundaries (fake OTLP collector, recorded HF Hub response) under `tests/<tier>/fakes/`. Pydantic models validate against fixtures in `robots/` / `rskills/` / `scenes/` — never `"foo"` / `"test"` placeholders.
 12. **Prefer the local GPU when available.** Before CPU fallback or `pytest.skip`, check `nvidia-smi`. GPU present → install the right `uv sync --group …` and run for real. CI runners without GPUs are the legitimate skip path; a dev host with a GPU is not.
@@ -47,27 +48,27 @@ In priority order. When two conflict, the earlier wins.
 
 ## 3. Architecture Discipline
 
-**The eight layers** (do not cross without an ADR in `docs/adr/`):
+**The eight layers** (do not cross without recording a decision in the private management decision log — `OpenRAL/management` repo, `adr/`, see [`docs/decisions.md`](docs/decisions.md)):
 
 ```
-0 HAL  ← packages/openral_hal_*/                3 rSkill (S1)  ← python/rskill/, packages/openral_skill/
-1 Sensors  ← packages/openral_sensors/          4 Reasoning (S2)  ← python/openral_reasoner/
-2 World State  ← packages/openral_world_state/  5 World Action Model  ← python/openral_wam/
-                                                6 Safety  ← packages/openral_safety/, cpp/openral_safety_kernel/
-                                                7 Observability  ← python/openral_observability/
+0 HAL  ← packages/openral_hal_*/  3 rSkill (S1)  ← python/rskill/, packages/openral_rskill_ros/
+1 Sensors  ← python/sensors/      4 Reasoning (S2)  ← python/reasoner/
+2 World State  ← packages/world_state/  5 World Action Model  ← python/wam/
+                                        6 Safety  ← packages/openral_safety/, cpp/openral_safety_kernel/
+                                        7 Observability  ← python/observability/
 ```
 
-Adding, removing, renaming, or moving a responsibility between layers → ADR required. A non-adjacent-layer dependency (Skill calling HAL directly, etc.) is rejected.
+Adding, removing, renaming, or moving a responsibility between layers requires recording a decision in the private management decision log (`OpenRAL/management`, `adr/`) before crossing the boundary. A non-adjacent-layer dependency (Skill calling HAL directly, etc.) is rejected.
 
-**Dual-system pattern.** **S1** fast policy (30–200 Hz, action chunks) as a `Skill`. **S2** slow reasoning (event-driven; ~0.2 Hz heartbeat) as the `Reasoner` — emits typed tool calls (`ExecuteSkill`, `ReloadGstPipeline`, `LifecycleTransition`, `EmitPrompt`) via the `ReasonerToolCall` discriminated union (ADR-0018 §9 direct-dispatch surface). **S0** cerebellar layer (500–1000 Hz, C++ only) in `ros2_control` controllers, for humanoids. Skill manifest declares `role: s1 | s2 | s0`; loader enforces.
+**Dual-system pattern.** **S1** fast policy (30–200 Hz, action chunks) as a `Skill`. **S2** slow reasoning (event-driven; ~0.2 Hz heartbeat) as the `Reasoner` — emits typed tool calls (`ExecuteSkill`, `ReloadGstPipeline`, `LifecycleTransition`, `EmitPrompt`) via the `ReasonerToolCall` discriminated union (the direct-dispatch surface). **S0** cerebellar layer (500–1000 Hz, C++ only) in `ros2_control` controllers, for humanoids. Skill manifest declares `role: s1 | s2 | s0`; loader enforces.
 
-**rSkill packaging.** One HF Hub repo per skill: `rskill.yaml` (name, version, license, embodiment_tags, capabilities_required, runtime, quantization, latency budgets, fallback_skill_id; plus `state_contract.dim` + `action_contract.dim` for ADR-0019 dataset bridge users), weights (`model.safetensors`), optional `engine.plan`/`Dockerfile`, `README.md` per [`rskills/template/README.md`](rskills/template/README.md) (publish gate enforced by `rskill_publisher` validator), `eval/<benchmark>.json` validating against `openral_core.SkillEvalResult`. Canonical eval producer: `openral benchmark run --suite <id> --vla <vla_id>:rskills/<this_skill>` (ADR-0009 PR D). Paper-cited numbers allowed with `reproduced_locally: false` + `reproduction_cli`. **Provenance:** sigstore signing/verification is the planned control but is **not yet implemented** (ADR-0006 — no manifest `signature` field, no verification in the loader). Until it lands, `rSkill.from_pretrained`/`from_yaml` emit an `rskill.unverified_provenance` warning and honor `OPENRAL_REQUIRE_SIGNED_SKILLS=1` to fail closed; `*.pt` weights are treated as untrusted code and require `OPENRAL_ALLOW_UNSAFE_PICKLE=1` to load (prefer `model.safetensors`); `trust_remote_code` models (e.g. MolmoAct2) execute repo-shipped code and require `OPENRAL_ALLOW_REMOTE_CODE=1`. Do not describe skills as "signed/verified" until the control exists (§1.2).
+**rSkill packaging.** One HF Hub repo per skill: `rskill.yaml` (name, version, license, embodiment_tags, capabilities_required, runtime, quantization, latency budgets, fallback_skill_id; plus `state_contract.dim` + `action_contract.dim` for dataset bridge users), weights (`model.safetensors`), optional `engine.plan`/`Dockerfile`, `README.md` per [`rskills/template/README.md`](rskills/template/README.md) (publish gate enforced by `rskill_publisher` validator), `eval/<benchmark>.json` validating against `openral_core.SkillEvalResult`. Canonical eval producer: `openral benchmark run --suite <id> --vla <vla_id>:rskills/<this_skill>`. Paper-cited numbers allowed with `reproduced_locally: false` + `reproduction_cli`. **Provenance:** sigstore signing/verification is the planned control but is **not yet implemented** (no manifest `signature` field, no verification in the loader). Until it lands, `rSkill.from_pretrained`/`from_yaml` emit an `rskill.unverified_provenance` warning and honor `OPENRAL_REQUIRE_SIGNED_SKILLS=1` to fail closed; `*.pt` weights are treated as untrusted code and require `OPENRAL_ALLOW_UNSAFE_PICKLE=1` to load (prefer `model.safetensors`); `trust_remote_code` models (e.g. MolmoAct2) execute repo-shipped code and require `OPENRAL_ALLOW_REMOTE_CODE=1`. Do not describe skills as "signed/verified" until the control exists (§1.2).
 
-**VLA license matrix.** SmolVLA, OpenVLA/OFT, Octo, ACT, DP/DP3, UnifoLM-VLA-0/WMA-0 — Apache-2.0 / MIT (free). π0 / π0.5 / π0.6 / π0.7 — code Apache-2.0; weights permissive research (flag in manifest). GR00T N1 / N1.5 / N1.6 — NVIDIA OneWay **Noncommercial** (install-time guard); GR00T **N1.7+** — NVIDIA Open Model License, **commercial OK** (`nvidia_open_model` posture); N2 announced, unreleased. GR00T runs out-of-process via a ZMQ sidecar (Py3.10), reusing the `rldx` adapter ([ADR-0046](docs/adr/0046-nvidia-gr00t-backend.md)). Helix / Gemini Robotics / Skild Brain — closed, API-only. Quantize for target; action chunks not single actions; embodiment tags must match `RobotCapabilities.embodiment_tags`; latency budget is contractual.
+**VLA license matrix.** SmolVLA, OpenVLA/OFT, Octo, ACT, DP/DP3, UnifoLM-VLA-0/WMA-0 — Apache-2.0 / MIT (free). π0 / π0.5 / π0.6 / π0.7 — code Apache-2.0; weights permissive research (flag in manifest). GR00T N1 / N1.5 / N1.6 — NVIDIA OneWay **Noncommercial** (install-time guard); GR00T **N1.7+** — NVIDIA Open Model License, **commercial OK** (`nvidia_open_model` posture); N2 announced, unreleased. GR00T runs out-of-process via a ZMQ sidecar (Py3.10), reusing the `rldx` adapter. Helix / Gemini Robotics / Skild Brain — closed, API-only. Quantize for target; action chunks not single actions; embodiment tags must match `RobotCapabilities.embodiment_tags`; latency budget is contractual.
 
-**Safety.** Touching `packages/openral_safety/` or `cpp/openral_safety_kernel/` requires (a) safety-WG reviewer, (b) hazard-log update, (c) tests proving the new behavior is at least as conservative. **Never** add a flag that disables safety. **Never** add a debug mode that bypasses E-stop. **Never** add a path where a Python crash leaves motors energized. Python proposes; C++ disposes.
+**Safety.** Touching `packages/openral_safety/` or `cpp/openral_safety_kernel/` requires (a) safety-WG reviewer, (b) an update to the safety hazard log (private `OpenRAL/management` repo), (c) tests proving the new behavior is at least as conservative. **Never** add a flag that disables safety. **Never** add a debug mode that bypasses E-stop. **Never** add a path where a Python crash leaves motors energized. Python proposes; C++ disposes.
 
-**Reasoner & dispatch.** LLM tool calls are Pydantic structured output via the provider's tool-use API — no free-form JSON. Tool palette generated from the local skill registry, rebuilt on `/openral/skill_registry_changed`. Bounded replanning ladder (per-kind cap in `ReasonerCore`): retry → param-tweak → substitute-skill → goal-replan → human-handoff. LLM selected at activate-time via `OPENRAL_REASONER_LLM_*` env (`PROVIDER` ∈ {`anthropic`, `openai-compatible`, `openrouter`}); see [`packages/openral_reasoner_ros/README.md`](packages/openral_reasoner_ros/README.md). No hidden default. The dispatcher (edge/cloud/split), like every OpenRAL package, is Apache-2.0. Deadline fallback mandatory. No PII in cloud logs without consent.
+**Reasoner & dispatch.** LLM tool calls are Pydantic structured output via the provider's tool-use API — no free-form JSON. Tool palette generated from the local skill registry, rebuilt on `/openral/skill_registry_changed`. Bounded replanning ladder (per-kind cap in `ReasonerCore`): retry → param-tweak → substitute-skill → goal-replan → human-handoff. LLM selected at activate-time via `OPENRAL_REASONER_LLM_*` env (`PROVIDER` ∈ {`anthropic`, `openai-compatible`, `openrouter`}); see [`packages/openral_reasoner_ros/README.md`](packages/openral_reasoner_ros/README.md). No hidden default. Local/edge dispatch ships in the open reasoner (Apache-2.0); fleet/cloud dispatch is OpenRAL Pro. Deadline fallback mandatory. No PII in cloud logs without consent.
 
 **WAMs** are optional planning-layer components — mental-simulation gating, failure anticipation, replanning subgoals. Thor-class compute or cloud dispatch; deadline fallback applies. See [docs/roadmap/index.md](docs/roadmap/index.md).
 
@@ -77,11 +78,11 @@ Adding, removing, renaming, or moving a responsibility between layers → ADR re
 
 ### 4.1 Before you change anything
 
-Re-read this file if >1 day or >1 PR since last; read relevant RFC/ADR sections; `just bootstrap && just test` once for a clean baseline; skim the last 20 commits on `master`.
+Re-read this file if >1 day or >1 PR since last; check [`docs/decisions.md`](docs/decisions.md) for relevant background; `just bootstrap && just test` once for a clean baseline; skim the last 20 commits on `master`.
 
 ### 4.2 Implementing a feature
 
-1. **Plan** in 3–10 bullets in the PR description before coding. Layer boundary → write the ADR first.
+1. **Plan** in 3–10 bullets in the PR description before coding. Layer boundary → record the decision in the private management decision log first.
 2. **`grep -rn <symbol> docs/methods/`** for the helper you're about to write.
 3. **Schemas first** if a typed contract is touched; validate against a real fixture.
 4. **Tests first** for actuation-path code; TDD required for safety-touching code.
@@ -99,7 +100,7 @@ Re-read this file if >1 day or >1 PR since last; read relevant RFC/ADR sections;
 
 - [ ] Conventional commit title; description has "What changed", "Why", "How tested".
 - [ ] Schemas: real fixture validates; on-disk `schema_version` bumped + migrator shipped for any backward-incompatible change (post-publish — no longer frozen at `"0.1"`).
-- [ ] Layer boundary crossed → ADR added.
+- [ ] Layer boundary crossed → decision recorded in the private management decision log.
 - [ ] Tests: unit + integration + sim where applicable; HIL if a HAL changed. No new mocks/stubs/smoke tests (§1.11).
 - [ ] The matching `docs/methods/` file updated for every added/renamed/removed/moved public symbol (signature + line number + layer section); `tools/refresh_methods_linenos.py --check` clean. Searched first.
 - [ ] Docs updated in the same PR (READMEs, `docs/`, ADRs) — no follow-up deferrals.
@@ -129,7 +130,7 @@ ROSError                            # base
 
 ## 6. When in doubt
 
-Default to **safer → more typed → more observable → smaller → closer to convention**. Propose deviations from this file as an ADR or discussion, not a commit. STOP if you are about to disable a safety check, fake a benchmark number, bundle closed-source weights, add a new top-level package without an ADR, refactor across all 8 layers in one PR, or ship code you haven't run.
+Default to **safer → more typed → more observable → smaller → closer to convention**. Propose deviations from this file as a recorded decision or discussion, not a commit. STOP if you are about to disable a safety check, fake a benchmark number, bundle closed-source weights, add a new top-level package without recording the decision, refactor across all 8 layers in one PR, or ship code you haven't run.
 
 ---
 

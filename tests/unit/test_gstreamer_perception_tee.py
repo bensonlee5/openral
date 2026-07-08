@@ -1,4 +1,4 @@
-"""Unit + integration tests for the GStreamer perception event tee (ADR-0018 F6).
+"""Unit + integration tests for the GStreamer perception event tee.
 
 Exercises the real :class:`PerceptionEventPublisher` against a real
 GStreamer pipeline. The live publish/subscribe round-trip is gated on
@@ -250,7 +250,7 @@ def test_publisher_rejects_non_positive_rate() -> None:
 
 
 def test_topic_prefix_locked_to_adr_path() -> None:
-    """The constant must match the contract in ADR-0018 §1."""
+    """The constant must match the perception-bus topic-naming contract."""
     assert TOPIC_PREFIX == "/openral/perception"
 
 

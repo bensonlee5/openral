@@ -1,4 +1,4 @@
-"""Unit tests for ``openral deploy run`` (ADR-0032)."""
+"""Unit tests for ``openral deploy run``."""
 
 from __future__ import annotations
 
@@ -76,3 +76,62 @@ def test_real_mode_dry_run_prints_launch_without_shelling(
     assert "hal_mode=real" in result.output
     assert "hal_params:" in result.output
     assert "argv:" in result.output
+
+
+def test_real_mode_forwards_deploy_config_for_sensor_leg(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`deploy run` forwards its --config path as the `deploy_config` launch arg.
+
+    The runtime node opens the deploy config's `sensors:` readers from that
+    path and publishes the physical cameras onto
+    /openral/cameras/<sensor_id>/image — without it a real deploy has no
+    camera publisher at all (the sim HAL bridge only exists in sim mode).
+    """
+    captured: dict[str, LaunchInvocation] = {}
+
+    def _fake_run(invocation: LaunchInvocation, *, run_preflight: bool = True) -> int:
+        captured["inv"] = invocation
+        return 0
+
+    monkeypatch.setattr(_deploy_sim, "run_launch_invocation", _fake_run)
+
+    config = _write_deploy_scene_yaml(tmp_path, robot_id="so101_follower")
+    result = CliRunner().invoke(app, ["deploy", "run", "--config", str(config)])
+
+    assert result.exit_code == 0, result.output
+    inv = captured["inv"]
+    assert f"deploy_config:={config.resolve()}" in inv.argv_template
+
+
+def test_deploy_validate_flags_missing_calibration(tmp_path: Path) -> None:
+    """`deploy validate` errors when a serial HAL has no calibration (the exact
+    gap that fails at runtime with 'has no calibration registered')."""
+    config = tmp_path / "scene.yaml"
+    config.write_text(
+        "scene:\n  id: so101_bench\n"
+        "robot_id: so101_follower\n"
+        "hal:\n  defaults:\n    port: /dev/ttyACM0\n    calibrate_on_connect: false\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["deploy", "validate", "--config", str(config)])
+    assert result.exit_code != 0, result.output
+    assert "calibration" in result.output.lower()
+
+
+def test_deploy_validate_ready_with_committed_calibration(tmp_path: Path) -> None:
+    """A scene `hal:` binding with a committed calibration passes validation
+    (no --hal needed); a not-attached device is a warning, not an error."""
+    (tmp_path / "calibration").mkdir()
+    (tmp_path / "calibration" / "so_follower.json").write_text("{}", encoding="utf-8")
+    config = tmp_path / "scene.yaml"
+    config.write_text(
+        "scene:\n  id: so101_bench\n"
+        "robot_id: so101_follower\n"
+        "hal:\n  defaults:\n    port: /dev/ttyACM0\n    id: so_follower\n"
+        "    calibration_dir: calibration\n    calibrate_on_connect: false\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["deploy", "validate", "--config", str(config)])
+    assert result.exit_code == 0, result.output
+    assert "ready" in result.output.lower()

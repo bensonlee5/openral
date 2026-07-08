@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — SafetyKernelLifecycleNode: the rclcpp_lifecycle::LifecycleNode
+// SafetyKernelLifecycleNode: the rclcpp_lifecycle::LifecycleNode
 // that owns /openral/{candidate_action,safe_action,estop,failure/safety}
 // and the /openral/estop_reset service. Replaces the F5 Python pass-
 // through behind the same topic contract.
@@ -84,7 +84,7 @@ private:
   void publish_failure_trigger(const openral_msgs::msg::ActionChunk& chunk,
                                const Violation& violation);
 
-  // ADR-0030 — load the self-collision model from ROS parameters (configure
+  // Load the self-collision model from ROS parameters (configure
   // time; allocation OK). Returns false with `error` set on a malformed model.
   bool load_collision_model(std::string& error);
 
@@ -95,14 +95,14 @@ private:
                                  const char* collision_kind, const std::string& link_a,
                                  const std::string& link_b, int horizon_step, double min_distance);
 
-  // ADR-0030 world phase — ingest bounded world obstacles into a pre-sized
+  // World phase — ingest bounded world obstacles into a pre-sized
   // buffer (single-threaded executor → no lock needed).
   void on_world_collision(const openral_msgs::msg::WorldCollision::SharedPtr msg);
 
-  // ADR-0030 voxel phase — ingest a dense occupancy grid into a pre-sized buffer.
+  // Voxel phase — ingest a dense occupancy grid into a pre-sized buffer.
   void on_world_voxels(const openral_msgs::msg::OccupancyVoxels::SharedPtr msg);
 
-  // ADR-0040 — measured joint-state seed for non-position-mode collision checks.
+  // Measured joint-state seed for non-position-mode collision checks.
   // /joint_states feeds q_meas_ (in the action's dof order, mapped by joint
   // name) so a velocity chunk can be reconstructed into the configurations FK
   // can place. Single-threaded executor → direct write, no lock.
@@ -131,7 +131,7 @@ private:
   EnvelopeIntersection envelope_;
   bool envelope_loaded_{false};
 
-  // ADR-0030 — self-collision model (populated on_configure; disabled by
+  // Self-collision model (populated on_configure; disabled by
   // default so manifests without collision geometry behave exactly as before).
   CollisionModel collision_model_;
   CollisionScratch collision_scratch_;
@@ -140,7 +140,7 @@ private:
   double self_collision_margin_m_{0.0};
   std::size_t collision_required_dof_{0};
 
-  // ADR-0030 world phase — bounded world-obstacle buffer + freshness tracking.
+  // World phase — bounded world-obstacle buffer + freshness tracking.
   WorldModel world_model_;
   std::vector<std::string> world_labels_;
   bool world_collision_enabled_{false};
@@ -151,7 +151,7 @@ private:
   bool world_overflow_{false};
   rclcpp::Time world_stamp_{};
 
-  // ADR-0030 voxel phase — dense occupancy grid (octomap path). `voxel_grid_`
+  // Voxel phase — dense occupancy grid (octomap path). `voxel_grid_`
   // is a view into the pre-sized `voxel_occupancy_` buffer.
   VoxelGrid voxel_grid_;
   std::vector<std::uint8_t> voxel_occupancy_;
@@ -163,7 +163,7 @@ private:
   bool voxel_overflow_{false};
   rclcpp::Time voxel_stamp_{};
 
-  // ADR-0040 — measured joint-state seed (Phase 1) + velocity-mode reconstruction
+  // Measured joint-state seed (Phase 1) + velocity-mode reconstruction
   // (Phase 2). All sized to n_dof at configure; the hot path never allocates.
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
   std::vector<std::string> collision_joint_names_;  ///< action-dof-order joint names
@@ -179,7 +179,7 @@ private:
   double collision_seed_dt_s_{0.0};         ///< velocity-integration step (s); 0 → reactive only
   double collision_state_deadline_s_{0.2};  ///< max measured-state age for seed-modes
 
-  // ADR-0040 Phase 3 — predictive Cartesian (CARTESIAN_DELTA) look-ahead via the
+  // Phase 3 — predictive Cartesian (CARTESIAN_DELTA) look-ahead via the
   // damped-least-squares Jacobian. Reconstructs the per-step joint config the EE
   // deltas drive toward and checks the full capsule boundary at each step (last
   // step always; intermediate steps up to the budget). Reactive measured-config

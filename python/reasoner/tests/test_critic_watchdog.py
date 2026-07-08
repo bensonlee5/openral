@@ -41,7 +41,7 @@ def test_rejects_negative_min_delta() -> None:
 
 def test_no_fire_while_above_threshold() -> None:
     wd = _watchdog(threshold=0.5, stall_patience=2)
-    # First above-threshold observation fires success (one-shot, ADR-0074).
+    # First above-threshold observation fires success (one-shot).
     assert isinstance(wd.observe(0.7), CriticEvidence)
     # Subsequent flat above-threshold samples → success-latched, no spam.
     for _ in range(9):
@@ -83,7 +83,7 @@ def test_recovery_above_threshold_unlatches_and_allows_refire() -> None:
     assert wd.observe(0.3) is None
     assert isinstance(wd.observe(0.3), CriticEvidence)  # stall fire
     assert wd.observe(0.3) is None  # stall-latched
-    # Recovery above threshold: fires success (ADR-0074) AND clears the stall latch.
+    # Recovery above threshold: fires success AND clears the stall latch.
     assert isinstance(wd.observe(0.95), CriticEvidence)  # success fire
     # Sub-threshold dip clears the success latch; a fresh stall must be able to fire.
     assert wd.observe(0.3) is None  # stall 1
@@ -150,7 +150,7 @@ def test_group_watches_critics_independently() -> None:
     g = CriticWatchdogGroup(stall_patience=2)
     # robometer stalls below its bar; sarm is above its own bar on first sample.
     assert g.observe(critic_id="robometer", score=0.3, threshold=0.8) is None
-    # sarm's first above-threshold sample fires success (ADR-0074).
+    # sarm's first above-threshold sample fires success.
     sarm_ev = g.observe(critic_id="sarm", score=0.95, threshold=0.9)
     assert isinstance(sarm_ev, CriticEvidence)
     assert sarm_ev.critic_id == "sarm"
@@ -179,7 +179,7 @@ def test_group_binds_threshold_on_first_sample() -> None:
     # After reset the watchdog is recreated with the new threshold from the call.
     g.reset("robometer")
     again = g.observe(critic_id="robometer", score=0.5, threshold=0.2)
-    # reset rebinds → threshold 0.2 applies; 0.5 >= 0.2 → success fire (ADR-0074).
+    # reset rebinds → threshold 0.2 applies; 0.5 >= 0.2 → success fire.
     assert isinstance(again, CriticEvidence)
     assert again.threshold == pytest.approx(0.2)
 

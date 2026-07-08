@@ -1,6 +1,6 @@
 """RoboCasa scene adapter -- MuJoCo kitchen tasks via robosuite + robocasa.
 
-ADR-0015. The RoboCasa backend is opt-in via the ``robocasa`` dependency
+The RoboCasa backend is opt-in via the ``robocasa`` dependency
 group (`just sync --all-packages --group robocasa` + a manual ``uv pip install
 "robocasa @ git+https://github.com/robocasa/robocasa.git"`` per
 ``pyproject.toml`` comments). Without it this module still imports
@@ -56,7 +56,7 @@ def _canonicalize_quat_xyzw_np(q: NDArray[np.float32]) -> NDArray[np.float32]:
     it fits straight into the obs-assembly path here. Apply at every
     site that materialises a quaternion into the state vector the
     policy sees (sim_run via this module AND deploy_sim via the
-    ADR-0027 assembler) so both paths emit byte-identical bytes for the
+    state assembler) so both paths emit byte-identical bytes for the
     same physical rotation -- ``q`` and ``-q`` represent the same
     rotation but encode differently, and the two paths were landing
     on opposite hemispheres for ~half of the per-step quats.
@@ -198,9 +198,9 @@ class _RoboCasaSim:
 
     robosuite's env returns a flat dict observation keyed by topic
     (e.g. ``robot0_agentview_left_image``); we map each camera in
-    declaration order to the scene's canonical camera names (per
-    ADR-0070 — e.g. ``shoulder_left`` / ``shoulder_right`` / ``wrist`` on
-    panda_mobile, falling back to ``camera{i+1}``) and concatenate
+    declaration order to the scene's canonical camera names (e.g.
+    ``shoulder_left`` / ``shoulder_right`` / ``wrist`` on panda_mobile,
+    falling back to ``camera{i+1}``) and concatenate
     robot proprioception into ``state`` so the eval-layer contract
     matches the other adapters.
     """
@@ -274,9 +274,11 @@ class _RoboCasaSim:
             env_dim = int(getattr(self._env, "action_dim", action_arr.shape[-1]))
             if action_arr.shape[-1] != env_dim:
                 if action_arr.shape[-1] == env_dim + 1:
-                    # 12-D dataset, 11-D env: drop the trailing torso slot
-                    # (the dataset always recorded it as -1; verified from
-                    # the pi0.5 RoboCasa-MG_300 unnormalizer per-dim stats).
+                    # 12-D dataset, 11-D env: drop the trailing control_mode
+                    # flag. The live raw robosuite BASIC composite is
+                    # right(6) + gripper(1) + base(3) + torso(1); the policy's
+                    # dim10 torso slot is constant 0, dim11 is the active
+                    # manipulate/nav mode flag that this env does not consume.
                     action_arr = np.ascontiguousarray(action_arr[:env_dim])
                 elif action_arr.shape[-1] == env_dim - 1:
                     # Inverse skew: re-append the torso slot at -1 (lowest).
@@ -513,7 +515,7 @@ class _RoboCasaSim:
         return model, data
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed MuJoCo sim time in ns (ADR-0048 Phase 1), or None.
+        """Elapsed MuJoCo sim time in ns, or None.
 
         Reads ``MjData.time`` off :meth:`mujoco_handles`. RoboCasa rewinds the
         clock to 0 on ``reset``, so the value is monotonic only within an
@@ -537,7 +539,7 @@ class _RoboCasaSim:
         # its native robosuite name (so a lerobot pi0.5 / pi0 checkpoint
         # that consumes ``observation.images.robot0_agentview_left_image``
         # works without an alias map) and under the canonical scene
-        # camera names (per ADR-0070: e.g. ``shoulder_left`` / ``shoulder_right``
+        # camera names (e.g. ``shoulder_left`` / ``shoulder_right``
         # / ``wrist`` on panda_mobile; falls back to ``camera{i+1}`` when
         # the scene leaves ``cameras`` empty).
         images: dict[str, NDArray[np.uint8]] = {}
@@ -618,7 +620,7 @@ class _RoboCasaSim:
             # shape when base-to-eef keys are absent (non-mobile bases).
             keys = state_keys_human300 if "robot0_base_to_eef_pos" in raw else state_keys_smolvla
         # Quaternion keys whose sign we canonicalise so both this
-        # path AND the deploy_sim ADR-0027 state assembler (which
+        # path AND the deploy_sim state assembler (which
         # canonicalises in ``human300_16d._quat_to_layout``) feed the
         # policy the same hemisphere. ``q`` and ``-q`` are the same
         # rotation but different bytes; without canonicalisation the
@@ -794,7 +796,7 @@ class _RoboCasaSim:
 
         We pluck those, concatenate the five state arrays into the
         openral 29-D order, and expose the camera under the scene's
-        first canonical camera name (per ADR-0070 — e.g. ``head`` on
+        first canonical camera name (e.g. ``head`` on
         the GR1 tabletop scene; falls back to ``camera1``) plus
         ``video.ego_view`` (the short canonical key the rldx adapter
         sends to the FT-GR1 sidecar).
@@ -879,8 +881,6 @@ def _load_robot_description_by_id(robot_id: str) -> Any:
 
 # ── PandaMobile base-velocity + synthetic 2D LaserScan helpers ─────────────
 #
-# ADR-0025.
-#
 # The robosuite ``OmronMobileBase`` MJCF declares three planar joints
 # named below — robosuite tracks their qpos / qvel automatically. The
 # adapter does not surface them via the `obs` dict by default, so a
@@ -937,7 +937,7 @@ def _resolve_base_joint_qvel_addrs(
             should read names from the per-joint
             :attr:`~openral_core.JointSpec.sim_joint_name` field and
             pass them here so the helper never depends on hardcoded
-            robosuite / robocasa naming conventions. ADR-0025.
+            robosuite / robocasa naming conventions.
     """
     name_to_addr: dict[str, int] = {}
     import mujoco  # reason: defer optional dep
@@ -986,7 +986,7 @@ def read_panda_mobile_base_velocity(
         model: Live ``mujoco.MjModel``.
         data: Live ``mujoco.MjData``.
         base_joint_names: Optional MJCF names override — see
-            :func:`_resolve_base_joint_qvel_addrs`. ADR-0025.
+            :func:`_resolve_base_joint_qvel_addrs`.
 
     Raises:
         ROSConfigError: when the MJCF declares the base joints but one
@@ -1066,7 +1066,7 @@ def synthesize_laser_scan_2d(  # noqa: PLR0915  # reason: the body-name + joint-
             looks up ``"base"`` (OmronMobileBase root); when that's also
             absent every beam is a no-op-exclude.
         base_joint_names: Optional MJCF joint-name triple override — see
-            :func:`_resolve_base_joint_qvel_addrs`. ADR-0025.
+            :func:`_resolve_base_joint_qvel_addrs`.
         n_beams: Number of rays. 360 ≈ 1 deg resolution.
         max_range_m: Max sensor range. Beams with no hit return this
             value (NOT NaN, NOT inf).
@@ -1174,7 +1174,7 @@ def synthesize_laser_scan_2d(  # noqa: PLR0915  # reason: the body-name + joint-
     # ``mobilebase0_base`` root that the prefix lookup resolves. A lone
     # exclude therefore let every beam terminate on the wheeled base at
     # ~0.13-0.54 m (below ``range_min``), starving slam_toolbox so it only
-    # ever published an empty 0x0 ``/map`` (ADR-0025 live-sim finding).
+    # ever published an empty 0x0 ``/map``.
     #
     # Fix: cast per-beam and skip any hit whose body shares the base
     # body's kinematic-tree root (``model.body_rootid``), re-casting from
@@ -1436,7 +1436,7 @@ def _build_robocasa_sim(  # noqa: PLR0915  # reason: the controller-config / cam
         # GR1 humanoid uses a single head-mounted "egoview" camera.
         # robocasa's GR1*KeyConverter.get_camera_config() pins exactly
         # this one; the bot-harness scene contract exposes it under the
-        # scene's first canonical camera name (per ADR-0070 — typically
+        # scene's first canonical camera name (typically
         # ``head`` on the gr1 tabletop scene).
         camera_names: list[str] = ["egoview"]
         camera_keys: tuple[str, ...] = ("egoview_image",)

@@ -1,4 +1,4 @@
-"""Open-vocabulary CLIP matching for SpatialMemory (ADR-0038 §5, Phase 4).
+"""Open-vocabulary CLIP matching for SpatialMemory (Phase 4).
 
 Exercises the real OpenCLIP ViT-B/32 embedder (CLAUDE.md §1.11 — no mocks;
 §1.12 — uses the local GPU when present). Skips cleanly when the ``clip`` group

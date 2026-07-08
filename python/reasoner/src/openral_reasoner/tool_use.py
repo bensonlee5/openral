@@ -1,4 +1,4 @@
-"""ADR-0018 F4 — typed LLM tool-use client + concrete provider implementations.
+"""Typed tool-call dispatch — typed LLM tool-use client + concrete provider implementations.
 
 Every reasoner tick the LLM picks exactly one of the four
 :data:`~openral_core.ReasonerToolCall` variants (ExecuteSkill,
@@ -118,7 +118,7 @@ DEFAULT_SYSTEM_PROMPT: str = (
     "steps (navigate to the kitchen, open the fridge, pick up the wine "
     "bottle, …), each naming a concrete object, never a vague category. "
     # ── Ground (confirm) before you decompose a collective goal ────────
-    # ADR-0075/0076 — the continuous detector's `in_view` line is a FIXED
+    # The continuous detector's `in_view` line is a FIXED
     # vocabulary that mislabels goal nouns (teapot→bottle, basket→box). A
     # direct probe (glm-5.2, .goals/.../probe_reasoner_decompose_gate.py)
     # showed the LLM building a mission straight from those raw clutter
@@ -228,7 +228,7 @@ DEFAULT_SYSTEM_PROMPT: str = (
     "with a better ordered decomposition (only before any task has been "
     "attempted). decompose_mission only edits the task ledger — it never moves "
     "the robot. "
-    # ── Poll the reward monitor to judge a running skill (ADR-0057) ────
+    # ── Poll the reward monitor to judge a running skill ────
     "When the read-only query_task_progress tool is in the palette, a "
     "reward monitor is running IN PARALLEL with the executing skill (e.g. a "
     "VLA), scoring the live camera against the task. Use it to judge HOW a "
@@ -788,7 +788,7 @@ def _format_skill_tool_description(entry: RSkillToolEntry) -> str:
 def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, object]]:  # noqa: PLR0912  # reason: a flat one-branch-per-optional-tool-group table is clearer than nesting
     """Render the palette as Anthropic ``tools`` schemas.
 
-    ADR-0022: when ``palette.skills`` is populated, the LLM gets one
+    When ``palette.skills`` is populated, the LLM gets one
     ``execute_rskill__<slug>`` tool per skill — each with the skill's NL
     description + action verbs + objects + scenes. The ``rskill_id``
     field is dropped from the per-skill ``input_schema`` because the
@@ -815,7 +815,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
         execute_schema = ExecuteRskillTool.model_json_schema()
         per_skill_schema = _drop_property(execute_schema, "rskill_id")
         for entry in palette.skills:
-            # ADR-0026 — when the manifest declares ``goal_params_schema``,
+            # When the manifest declares ``goal_params_schema``,
             # replace the per-skill tool's ``goal_params_json`` property
             # (default ``{"type": "string"}``) with the skill's actual
             # JSON Schema. The provider's structured-output / tool-use
@@ -877,9 +877,9 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
             {"name": kind, "description": description, "input_schema": cls.model_json_schema()},
         )
 
-    # ADR-0039 — the two read-only spatial-memory query tools are surfaced only
+    # The two read-only spatial-memory query tools are surfaced only
     # when the reasoner_node has a SpatialMemory query backend wired (Phase 2);
-    # they read the ADR-0038 scene graph and hold no actuation authority.
+    # they read the spatial-memory scene-graph and hold no actuation authority.
     if palette.spatial_memory_available:
         from openral_core import RecallObjectTool, ResolvePlaceTool  # noqa: PLC0415
 
@@ -908,7 +908,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
                 },
             )
 
-    # ADR-0043 — the read-only live-detector query tool is surfaced only when a
+    # The read-only live-detector query tool is surfaced only when a
     # detector exposes the /openral/perception/locate_in_view service. Unlike
     # recall_object (which recalls *remembered* objects from spatial memory), this
     # asks a live VLM detector to look at the current frame now. No actuation.
@@ -922,7 +922,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
             "verify what the robot can see this instant. Optionally name a 'camera' to "
             "pick a viewpoint; empty uses the default camera. No actuation."
         )
-        # ADR-0056 — when several on-demand locators are in the graph, let the LLM
+        # When several on-demand locators are in the graph, let the LLM
         # choose one by alias via the 'detector' field (empty = the default).
         if palette.on_demand_detectors:
             options = "; ".join(
@@ -934,7 +934,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
                 f"{options}. Prefer a light real-time locator for simple 'find X' and a "
                 "grounding VLM for complex / attribute-qualified referring expressions."
             )
-        # ADR-0051 — when continuous background detectors are running, tell the LLM
+        # When continuous background detectors are running, tell the LLM
         # what they already cover so it reserves this on-demand locator for the long
         # tail (novel / attribute-qualified objects outside the always-on bank).
         if palette.continuous_detectors:
@@ -959,7 +959,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
             },
         )
 
-    # ADR-0047 — the read-only scene-VLM query tool is surfaced only when a scene
+    # The read-only scene-VLM query tool is surfaced only when a scene
     # VLM exposes the /openral/perception/query_scene service. Unlike
     # locate_in_view (which localizes an object and returns boxes), this answers
     # open-ended questions about the scene's state — task progress and
@@ -983,7 +983,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
             },
         )
 
-    # ADR-0057 — the read-only reward-monitor tool is surfaced only when a reward
+    # The read-only reward-monitor tool is surfaced only when a reward
     # rSkill (Robometer-4B NF4) exposes the /openral/perception/query_task_progress
     # service. Where query_scene returns free text, this returns a quantitative
     # windowed progress/success assessment of the current task. No actuation.
@@ -1006,7 +1006,7 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
             },
         )
 
-    # ADR-0072 §3 — the self-maintained MEMORY.md tools are surfaced only when the
+    # The self-maintained MEMORY.md tools are surfaced only when the
     # reasoner_node has a MEMORY.md wired (memory_md_path param). The reasoner
     # already READS current memory every tick (the ## MEMORY context block); these
     # add the WRITE path (memory_write — the reasoner's first actuation-free
@@ -1047,8 +1047,8 @@ def _tool_palette_to_anthropic_tools(palette: ToolPalette) -> list[dict[str, obj
             },
         )
 
-    # ADR-0073 amendment (#123) — the typed path for the decompose-mission
-    # playbook to write the ## MISSION task queue. Always available: it is a core
+    # The typed path for the decompose-mission
+    # playbook to write the ## MISSION task queue (see #123). Always available: it is a core
     # reasoner capability with no resident-resource dependency (unlike the
     # reward/scene/memory tools above). Edits the S2 ledger only — no actuation.
     from openral_core import DecomposeMissionTool  # noqa: PLC0415
@@ -1092,7 +1092,7 @@ def _replace_property_schema(
 ) -> dict[str, object]:
     """Return a copy of ``schema`` with ``properties[name]`` swapped for ``replacement``.
 
-    ADR-0026 — used to splice each rSkill's manifest-declared
+    Used to splice each rSkill's manifest-declared
     ``goal_params_schema`` into the per-skill LLM tool's
     ``goal_params_json`` slot. When the rSkill's manifest carries no
     schema (the common case for VLAs), this helper is not called and
@@ -1118,7 +1118,7 @@ def _decode_tool_payload(
 ) -> ReasonerToolCall:
     """Validate a provider's tool-call payload against the union + palette.
 
-    ADR-0022: per-skill tool names (``execute_rskill__<slug>``) are
+    Per-skill tool names (``execute_rskill__<slug>``) are
     resolved back to the canonical ``execute_rskill`` discriminator
     here, with ``rskill_id`` looked up from
     :attr:`ToolPalette.skills`. The LLM's own ``rskill_id`` (if any) is
@@ -1136,7 +1136,7 @@ def _decode_tool_payload(
         resolved_args["rskill_id"] = slug_lookup[tool_name]
         resolved_name = "execute_rskill"
 
-    # ADR-0026 — when the manifest declared ``goal_params_schema``, the
+    # When the manifest declared ``goal_params_schema``, the
     # per-skill LLM tool's ``goal_params_json`` slot carries a structured
     # JSON Schema and the provider returns a parsed object (dict). The
     # Pydantic field is typed as ``str`` so the wire payload stays JSON;
@@ -1165,7 +1165,7 @@ def _decode_tool_payload(
 
 
 class AnthropicToolUseClient:
-    """Anthropic SDK-backed :class:`ToolUseClient` (ADR-0018 F4).
+    """Anthropic SDK-backed :class:`ToolUseClient` (typed tool-call dispatch).
 
     Lazy-imports the ``anthropic`` Python SDK at first use so this
     module is importable on hosts without the SDK installed. Pulls

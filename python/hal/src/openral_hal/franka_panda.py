@@ -63,14 +63,14 @@ _PANDA_GRIPPER_JOINT_NAME = "panda_gripper"
 
 _PANDA_JOINT_NAMES: list[str] = [*_PANDA_ARM_JOINT_NAMES, _PANDA_GRIPPER_JOINT_NAME]
 
-# MJCF qpos / actuator wiring lives in FRANKA_PANDA_DESCRIPTION.sim
-# (ADR-0023); the Python constants previously defined here have moved
+# MJCF qpos / actuator wiring lives in FRANKA_PANDA_DESCRIPTION.sim;
+# the Python constants previously defined here have moved
 # into the manifest.
 
 # Native MuJoCo MJCF joint names (mujoco_menagerie franka_emika_panda/panda.xml).
 # Used by SimAttachedHAL.read_state to resolve joints by name in both the
 # native MjSpec scene (joint1..joint7) and robosuite/LIBERO scenes where the
-# prefix-strip fallback maps robot0_joint1 → joint1 (ADR-0034).
+# prefix-strip fallback maps robot0_joint1 → joint1.
 _PANDA_SIM_JOINT_NAMES: dict[str, str] = {
     "panda_joint1": "joint1",
     "panda_joint2": "joint2",
@@ -202,7 +202,7 @@ FRANKA_PANDA_DESCRIPTION = RobotDescription(
         max_torque_nm=87.0,
         deadman_required=True,
     ),
-    # ADR-0031 — the shared ``hal`` block names both the sim HAL
+    # The shared ``hal`` block names both the sim HAL
     # (``FrankaPandaHAL``) and the real-HW HAL (``FrankaPandaRealHAL``);
     # ``build_hal(mode=...)`` picks one. ``FRANKA_PANDA_REAL_DESCRIPTION`` in
     # ``franka_panda_real.py`` derives from this baseline via
@@ -303,7 +303,7 @@ class FrankaPandaHAL(MujocoArmHAL):
         """Initialise the Panda HAL; no MuJoCo state is created until ``connect()``.
 
         All wiring (MJCF URI, joint indices, gripper config) lives in
-        :data:`FRANKA_PANDA_DESCRIPTION.sim` (ADR-0023).
+        :data:`FRANKA_PANDA_DESCRIPTION.sim`.
         """
         self._init_from_description(
             FRANKA_PANDA_DESCRIPTION,

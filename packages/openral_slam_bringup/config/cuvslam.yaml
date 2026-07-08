@@ -1,8 +1,8 @@
-# ADR-0064 — default parameter set for NVIDIA Isaac ROS Visual SLAM
+# Default parameter set for NVIDIA Isaac ROS Visual SLAM
 # (cuVSLAM) running under OpenRAL's `/openral/visual_slam` namespace as
 # the camera-based SLAM backend for lidar-less robots.
 #
-# Unlike slam_toolbox (ADR-0025), cuVSLAM's `VisualSlamNode` is a
+# Unlike slam_toolbox, cuVSLAM's `VisualSlamNode` is a
 # *composable node*, not a ROS 2 lifecycle node — it is enabled by
 # composing it into the graph when `slam_backend:=visual` (see
 # sim_e2e.launch.py), not driven through CONFIGURE/ACTIVATE by the
@@ -14,8 +14,8 @@
 # else falls back to the upstream `isaac_ros_visual_slam` defaults. The
 # IMU / tracking-mode block is operator-tunable and version-sensitive —
 # confirm names against the installed Isaac ROS release before relying
-# on them (this package does NOT bundle the cuVSLAM engine; see ADR-0064
-# on the NVIDIA license guard).
+# on them (this package does NOT bundle the cuVSLAM engine — see the
+# NVIDIA license guard note below).
 
 /**:
   ros__parameters:
@@ -42,7 +42,7 @@
     #           model (plumb_bob / rational_polynomial / fisheye). Verified live
     #           against the Isaac ROS quickstart bag (raw, rational_polynomial):
     #           rectified_images:false + camera_optical_frames produced a real
-    #           VO trajectory (ADR-0064). A real RealSense rectified stream uses
+    #           VO trajectory. A real RealSense rectified stream uses
     #           true. Pass an override params file or per-robot config to flip it.
     rectified_images: true
     # camera_optical_frames: optional explicit [left_optical, right_optical, …]

@@ -20,7 +20,6 @@ from openral_rskill.loader import rSkill
 from openral_sim.policies.molmoact2 import (
     _enable_expandable_segments,
     _hf_offline_if_cached,
-    _require_remote_code_ack,
     _resolve_max_crops,
     _split_repo_revision,
 )
@@ -56,29 +55,6 @@ class TestEnableExpandableSegments:
         import os
 
         assert os.environ[self._VAR] == "max_split_size_mb:64"
-
-
-class TestRequireRemoteCodeAck:
-    """trust_remote_code executes custom code from the repo; it must be refused
-    unless the operator explicitly acknowledges it (security audit 2026-06, C3)."""
-
-    def test_refused_without_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("OPENRAL_ALLOW_REMOTE_CODE", raising=False)
-        with pytest.raises(ROSConfigError, match="remote-code-execution"):
-            _require_remote_code_ack("allenai/MolmoAct2-LIBERO", "abc123")
-
-    def test_allowed_with_env_pinned(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("OPENRAL_ALLOW_REMOTE_CODE", "1")
-        _require_remote_code_ack("allenai/MolmoAct2-LIBERO", "abc123")  # must not raise
-
-    def test_allowed_with_env_unpinned(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("OPENRAL_ALLOW_REMOTE_CODE", "1")
-        _require_remote_code_ack("allenai/MolmoAct2-LIBERO", None)  # must not raise
-
-    def test_non_one_value_refused(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("OPENRAL_ALLOW_REMOTE_CODE", "true")
-        with pytest.raises(ROSConfigError):
-            _require_remote_code_ack("allenai/MolmoAct2-LIBERO", "abc123")
 
 
 class TestSplitRepoRevision:

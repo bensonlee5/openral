@@ -1,4 +1,4 @@
-"""ADR-0030 world phase — world-obstacle collision rejection through the real kernel.
+"""Collision-lowering world phase — world-obstacle collision rejection through the real kernel.
 
 A synthetic 1-link arm is lowered to kernel collision params and driven through
 the **real safety_kernel_node** while world obstacles are published on

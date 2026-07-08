@@ -1,6 +1,6 @@
 # RobotDescription — PushT 2-D scene-pseudo-robot (sim-only).
 #
-# Per ADR-0007 (robot/sim split), every robot.yaml is supposed to
+# Per the robot/sim split convention, every robot.yaml is supposed to
 # describe a *physical* embodiment. PushT is the exception: gym_pusht is
 # a 2-D pymunk rigid-body benchmark with no real-robot counterpart at
 # all. This manifest exists so SimEnvironment configs targeting PushT
@@ -12,14 +12,14 @@
 # gym_pusht/PushT-v0 actually exposes; the (state_dim=2, action_dim=2,
 # 96x96 RGB) IO contract lives in
 # openral_sim.adapters.pusht (the matching scene adapter), not
-# here. See docs/adr/0007-robot-sim-split.md.
+# here. This follows the robot/sim split convention.
 
 name: "pusht_2d"
 embodiment_kind: "manipulator"
 
 base_frame: "world"
 
-# ADR-0027 — robot_state_publisher: not applicable. pusht_2d has no
+# robot_state_publisher: not applicable. pusht_2d has no
 # 3D kinematic chain (synthetic 2-D toy env); no URDF exists and none
 # is useful. `assets.urdf` stays unset; the launch's RSP block is
 # skipped for this embodiment.
@@ -75,7 +75,7 @@ capabilities:
   has_lidar: false
   has_audio: false
   bimanual: false
-  # ADR-0071 — the gym-pusht env commands the absolute position of the two
+  # Per the gripper/task-space joint-role convention — the gym-pusht env commands the absolute position of the two
   # synthetic prismatic tip_x/tip_y joints (the pusher tip), so the control
   # mode is joint_position over those 2 DoF. (Was "cartesian_pose", which
   # contradicted the joint-space action the pymunk backend actually drives and
@@ -94,7 +94,7 @@ safety:
 
 sdk_kind: "open"
 
-# observation_spec / action_spec deliberately omitted (ADR-0007).
+# observation_spec / action_spec deliberately omitted, per the robot/sim split convention.
 # The IO contract (2-D state, 2-D action, 96x96 RGB at 10 Hz) is the
 # scene's, not the robot's, and lives in
 # openral_sim.adapters.pusht.

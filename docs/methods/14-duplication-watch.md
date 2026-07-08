@@ -89,16 +89,16 @@ contributor should look at before adding similar code.
 
 ### Already correctly DRY (do not flag)
 
-- **SimSensorBridge (ADR-0034)** — the single source for RGB camera publishing + MuJoCo viewer
+- **SimSensorBridge** — the single source for RGB camera publishing + MuJoCo viewer
   under `deploy sim`. All manifest-driven arms route through `openral_hal.sim_sensor_bridge.SimSensorBridge`
   via `_ManifestHALLifecycleNode`. The `panda_mobile` package retains its own wiring until
-  Phase 2 of ADR-0034 (the planned dedup refactor). **Do NOT add per-arm camera or viewer
+  the planned dedup refactor lands. **Do NOT add per-arm camera or viewer
   timers in lifecycle subclasses; extend `SimSensorBridge` instead.**
 
 - **HAL adapters (sim)** — `FrankaPandaHAL`, `UR5eHAL`, `UR10eHAL`,
   `SO100MujocoHAL`, `Rizon4MujocoHAL`, `G1MujocoHAL`, `H1MujocoHAL`,
   `AlohaMujocoHAL`, `OpenArmMujocoHAL` all extend `MujocoArmHAL`.
-  Post-ADR-0023 (including the bimanual amendment + the 2026-05
+  Following the bimanual amendment and the 2026-05
   cleanup that collapsed each subclass `__init__` into a single
   forward to `MujocoArmHAL._init_from_description(<DESCRIPTION>, …)`),
   each subclass is now **one line of meaningful code** — the typed
@@ -115,7 +115,7 @@ contributor should look at before adding similar code.
   no per-subclass `# type: ignore`). Per-robot `_<robot>_mjcf_path`
   helpers were also retired in the same cleanup — every MJCF ref resolves
   through the central `openral_core.assets.resolve_asset` grammar (`rd:`
-  / `gym_aloha:` / `openarm:` / `menagerie:` / `file:` schemes; ADR-0058). New
+  / `gym_aloha:` / `openarm:` / `menagerie:` / `file:` schemes). New
   MuJoCo HALs — single-arm, floating-base humanoid, **or** bimanual —
   should declare an `assets.mjcf` ref (plus an optional `sim:` joint-wiring
   block) in `robots/<id>/robot.yaml` and call
@@ -176,7 +176,7 @@ contributor should look at before adding similar code.
   `*_REAL_DESCRIPTION` constant derived from a sim-side baseline via
   `openral_hal._real_description.make_real_description(base, sdk_kind=...)`.
   The helper centralises the `model_copy` + `sdk_kind` override pattern
-  (the `hal` entrypoints are shared, ADR-0031), so kinematics + safety
+  (the `hal` entrypoints are shared), so kinematics + safety
   envelope + capabilities + HAL entrypoints never
   drift between the sim and real-HW siblings of the same robot. New
   real-HW adapters MUST go through this helper rather than re-typing the
@@ -234,7 +234,8 @@ contributor should look at before adding similar code.
   prototyping a torch.cuda-based Skill that consumes a CPU
   `SensorFrame.data: bytes` and needs to be explicit about device
   placement (raises on missing CUDA rather than silently falling back).
-- **Runtime backends** — `NullRuntime`, `PyTorchRuntime`, `ONNXRuntime`, `TensorRTRuntime`
+- **Runtime backends** — `NullRuntime`, `PyTorchRuntime`, `ONNXRuntime` (plus
+  `TensorRTRuntime` in the private `openral-pro-trt` package)
   all implement the `Runtime` Protocol surface
   (`load/infer/quantize/warmup/unload`). Same situation as Skill.
 - **`backends/so100_robosuite/`** — `_So100Lift` extends
@@ -290,7 +291,7 @@ contributor should look at before adding similar code.
     upstream WidowXBridgeEnv" — a calibration surface, not a duplicate.
   - rpy→matrix/euler in `openral_safety/…/{mjcf,urdf}_lowering.py` is
     safety-kernel lowering; touching it needs safety-WG review + a
-    hazard-log update (CLAUDE.md §3), so it does not move on a cleanup PR.
+    recorded safety-impact update (CLAUDE.md §3), so it does not move on a cleanup PR.
   - the remaining `_quat_to_matrix` (`world_cloud_bridge.py`, float32) and
     `_rpy_to_*` (`bucket2_markers.py`, `depth_height_filter_node.py`) are
     single-caller and return package-specific types; consolidating them

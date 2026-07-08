@@ -1,4 +1,4 @@
-"""ADR-0025 — :class:`PandaMobileHAL` body_twist + joint_position contract.
+""":class:`PandaMobileHAL` body_twist + joint_position contract.
 
 Exercises the HAL Protocol surface against in-memory state — no
 robosuite, no MuJoCo. Pinning the two-mode routing (BODY_TWIST for
@@ -26,7 +26,7 @@ def test_connect_disconnect_state_round_trip() -> None:
     hal.connect()
     state = hal.read_state()
     assert state.name == PANDA_MOBILE_JOINT_NAMES
-    # ADR-0028a — 11 joints: 3 base + 7 arm + 1 panda_gripper.
+    # 11 joints: 3 base + 7 arm + 1 panda_gripper.
     assert len(state.position) == 11
     assert all(v == 0.0 for v in state.position)
     hal.disconnect()
@@ -147,8 +147,8 @@ def test_joint_position_arm_only_sets_seven_arm_joints() -> None:
 def test_joint_position_full_state_replay_accepted() -> None:
     """10-DoF replay sets every base+arm slot (used by MoveIt trajectory replay).
 
-    The 10-wide form is preserved alongside the new 11-wide
-    (base+arm+gripper) form per ADR-0028c — gripper stays where it
+    The 10-wide form is preserved alongside the 11-wide
+    (base+arm+gripper) form — gripper stays where it
     was when the chunk's row is 10 floats.
     """
     hal = PandaMobileHAL()
@@ -169,7 +169,7 @@ def test_joint_position_full_state_replay_accepted() -> None:
 def test_joint_position_rejects_wrong_width() -> None:
     hal = PandaMobileHAL()
     hal.connect()
-    # ADR-0028a — error message now lists three accepted widths
+    # Error message lists three accepted widths
     # (arm-only / base+arm / base+arm+gripper).
     with pytest.raises(ROSConfigError, match=r"arm-only.*base\+arm.*gripper"):
         hal.send_action(
@@ -182,7 +182,7 @@ def test_joint_position_rejects_wrong_width() -> None:
 
 
 def test_cartesian_delta_tracks_latest_command() -> None:
-    """ADR-0028c — CARTESIAN_DELTA is recorded for dashboard observability.
+    """CARTESIAN_DELTA is recorded for dashboard observability.
 
     The digital-twin HAL has no Jacobian; cartesian deltas don't move
     the qpos. They DO get stamped onto ``_last_cartesian_delta`` so
@@ -230,7 +230,7 @@ def test_cartesian_delta_rejects_wrong_width() -> None:
 
 
 def test_gripper_position_writes_qpos() -> None:
-    """ADR-0028c — GRIPPER_POSITION sets the trailing qpos slot directly."""
+    """GRIPPER_POSITION sets the trailing qpos slot directly."""
     hal = PandaMobileHAL()
     hal.connect()
     hal.send_action(
@@ -249,7 +249,7 @@ def test_gripper_position_writes_qpos() -> None:
 
 
 def test_joint_position_11_wide_sets_all_including_gripper() -> None:
-    """ADR-0028a + 0028c — full chain replay (base + arm + gripper) works."""
+    """Full chain replay (base + arm + gripper) works."""
     hal = PandaMobileHAL()
     hal.connect()
     target = [1.0, 2.0, 0.5, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]  # 11 wide
@@ -303,7 +303,7 @@ def test_estop_latch_blocks_actions_until_reset() -> None:
 
 
 def test_panda_mobile_robot_yaml_declares_body_twist() -> None:
-    """ADR-0025 — robot.yaml must advertise body_twist + joint_position
+    """robot.yaml must advertise body_twist + joint_position
     + has_lidar so the rSkill compat checks for Nav2 / SLAM accept it.
     """
     import pathlib
@@ -321,7 +321,7 @@ def test_panda_mobile_robot_yaml_declares_body_twist() -> None:
 
 
 def test_base_sim_joint_names_returns_canonical_mjcf_triple() -> None:
-    """ADR-0025 — `extract_base_sim_joint_names` returns the OmronMobileBase triple.
+    """`extract_base_sim_joint_names` returns the OmronMobileBase triple.
 
     Robocasa's `PandaMobile` composition exposes the base joints as
     `mobilebase0_joint_mobile_{forward,side,yaw}`; the description's
@@ -387,11 +387,11 @@ def test_base_sim_joint_names_returns_none_when_missing() -> None:
 def test_panda_mobile_robot_yaml_carries_sim_joint_names() -> None:
     """Every joint in the canonical description has a populated `sim_joint_name`.
 
-    ADR-0025 contract — the on-disk `robots/panda_mobile/robot.yaml`
+    Contract — the on-disk `robots/panda_mobile/robot.yaml`
     declares the MJCF override for every joint, so consumers can
     rely on it being present for the full chain.
 
-    ADR-0028a — the chain is now 11 joints (3 base + 7 arm + 1
+    The chain is 11 joints (3 base + 7 arm + 1
     parallel-gripper width DoF). The trailing gripper carries the
     canonical robosuite ``gripper0_right_finger_joint1`` override so a sim
     backend can resolve it via the same ``mj_name2id`` path the base
@@ -402,7 +402,7 @@ def test_panda_mobile_robot_yaml_carries_sim_joint_names() -> None:
     for spec in PANDA_MOBILE_DESCRIPTION.joints:
         assert spec.sim_joint_name is not None, (
             f"joint {spec.name!r} has no sim_joint_name in robots/panda_mobile/robot.yaml; "
-            "ADR-0025 requires every panda_mobile joint to encode its MJCF override."
+            "every panda_mobile joint must encode its MJCF override."
         )
     base_names = [j.sim_joint_name for j in PANDA_MOBILE_DESCRIPTION.joints[:3]]
     assert base_names == [

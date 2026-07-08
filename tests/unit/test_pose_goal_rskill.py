@@ -1,4 +1,4 @@
-"""ADR-0054 — the generic Cartesian-pose MoveGroup builder (`goal_builder: "pose"`).
+"""The generic Cartesian-pose MoveGroup builder (`goal_builder: "pose"`).
 
 Pins the pure pieces of :mod:`openral_rskill.pose_goal_rskill`:
 
@@ -90,7 +90,7 @@ def test_pose_from_block_xyzw_default() -> None:
 
 
 def test_pose_from_block_tool_frame_is_parsed() -> None:
-    # ADR-0054 Q3 — an explicit tool/TCP frame is carried for TF-lookup.
+    # An explicit tool/TCP frame is carried for TF-lookup.
     _, link_name, tool_frame, _, _ = pose_from_block(
         {
             "frame_id": "panda_link0",

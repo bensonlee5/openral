@@ -1,14 +1,19 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - diffusion-policy
-  - lerobot
-  - pusht
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- diffusion
+- lerobot
+- vision-language-action
+- pusht
+- diffusion-policy
+- manipulation
+inference: false
 ---
 
 # rskill-diffusion-pusht

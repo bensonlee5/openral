@@ -1,7 +1,7 @@
 """Tests for ``openral_safety.envelope_loader``.
 
 Exercises the robot ⨯ skill envelope intersection algebra, the
-loosening-rejection contract (ADR-0018 §5), and the flat-YAML kernel
+loosening-rejection contract, and the flat-YAML kernel
 bridge format. No mocks (CLAUDE.md §1.11): every fixture is a real
 :class:`openral_core.RobotDescription` / :class:`RSkillManifest`
 constructed from real in-tree YAMLs.
@@ -352,7 +352,7 @@ class TestLooseningRejected:
 
 
 class TestKernelParamsFromEnvelope:
-    """The Python → C++-kernel-ROS-params converter (ADR-0020 PR-K).
+    """The Python → C++-kernel-ROS-params converter.
 
     The legacy ``write_envelope_file`` / ``load_envelope_files`` helpers
     that flattened the envelope to a YAML file the kernel slurped were

@@ -84,6 +84,7 @@ _BENCHMARK_STEMS: list[str] = [
     "robotwin_lift_pot",
     "robotwin_place_empty_cup",
     "robotwin_stack_blocks_two",
+    "vlabench_select_fruit",
     "widowx_carrot_on_plate",
 ]
 
@@ -111,6 +112,7 @@ _DEPLOY_STEMS: list[str] = [
     "robocasa_baguette",
     "robocasa_navigate",
     "robocasa_pnp",
+    "so101_bench",
     "so101_box",
 ]
 

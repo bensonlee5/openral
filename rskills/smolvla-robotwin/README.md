@@ -1,17 +1,23 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - smolvla
-  - lerobot
-  - vla
-  - aloha_agilex
-  - robotwin
-  - bimanual
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+library_name: lerobot
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- smolvla
+- lerobot
+- vision-language-action
+- aloha_agilex
+- vla
+- robotwin
+- bimanual
+- manipulation
+datasets:
+- lerobot/robotwin_unified
+inference: false
 ---
 
 # rskill-smolvla-robotwin
@@ -78,9 +84,9 @@ position commands.
 
 ## How to run it
 
-RoboTwin runs on **SAPIEN** out-of-process via a Python 3.10 sidecar
-([ADR-0061](../../docs/adr/0061-robotwin-dual-arm-benchmark-backend.md)) — its stack is
-incompatible with the openral 3.12 venv. Provision the sidecar venv, then:
+RoboTwin runs on **SAPIEN** out-of-process via a Python 3.10 sidecar —
+its stack is incompatible with the openral 3.12 venv. Provision the
+sidecar venv, then:
 
 ```bash
 # openral-side wire (pyzmq + msgpack)
@@ -95,8 +101,8 @@ openral benchmark scene \
 openral benchmark run --suite robotwin --vla smolvla:rskills/smolvla-robotwin
 ```
 
-See ADR-0061 for the SAPIEN+RoboTwin sidecar provisioning recipe
-(`OPENRAL_ROBOTWIN_AUTO_PROVISION=1` or the manual conda recipe).
+The SAPIEN+RoboTwin sidecar provisioning recipe uses
+`OPENRAL_ROBOTWIN_AUTO_PROVISION=1` or the manual conda recipe.
 
 ## Provenance
 
@@ -113,7 +119,7 @@ See ADR-0061 for the SAPIEN+RoboTwin sidecar provisioning recipe
 > **STATE NOTE:** the live RoboTwin sidecar returns a 14-D aloha-agilex state, and the
 > official `policy_preprocessor.json` normalization stats expect `observation.state`
 > shape `(14,)`; `rskill.yaml` pins `state_contract.dim: 14` accordingly
-> (ADR-0061 §Live verification).
+> (confirmed via live verification).
 
 ## License
 

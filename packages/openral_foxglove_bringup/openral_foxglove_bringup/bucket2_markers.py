@@ -3,7 +3,7 @@
 
 Subscribes to two ``openral_msgs`` topics and re-publishes them as
 standard ROS visualization types that Foxglove renders natively without
-any TypeScript extension (ADR-0059 §Decision 5):
+any TypeScript extension:
 
 - ``/openral/world_collisions`` (``openral_msgs/WorldCollision``)
   → ``/openral/world_collisions_markers`` (``visualization_msgs/MarkerArray``)

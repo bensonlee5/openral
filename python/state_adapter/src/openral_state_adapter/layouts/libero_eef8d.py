@@ -1,4 +1,4 @@
-"""``libero_eef8d`` layout assembler (ADR-0027).
+"""``libero_eef8d`` layout assembler.
 
 Mirrors the LIBERO training-time 8-D **task-space** proprio state verbatim —
 verified against ``python/sim/src/openral_sim/backends/libero.py:219`` (the
@@ -11,7 +11,7 @@ benchmark ``LiberoBackend._wrap_obs``)::
 The LIBERO-finetuned checkpoints distributed at e.g.
 
 * ``hf://lerobot/smolvla_libero``      (``rskill-smolvla-libero``)
-* ``hf://OpenRAL/rskill-pi05-libero-nf4``
+* ``hf://OpenRAL/rskill-pi05-libero-int8``
 * ``hf://OpenRAL/rskill-xvla-libero``
 
 consume this layout. In the **benchmark** path (``openral sim run``) the LIBERO

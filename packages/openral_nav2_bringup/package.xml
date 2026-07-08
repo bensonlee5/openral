@@ -4,7 +4,7 @@
   <name>openral_nav2_bringup</name>
   <version>0.1.0</version>
   <description>
-    ADR-0025 — bringup wrapper for upstream Nav2 as the second OpenRAL
+    Bringup wrapper for upstream Nav2 as the second OpenRAL
     Reasoner-managed background service (after slam_toolbox). Ships a
     minimal Nav2 parameter set tuned for the panda_mobile holonomic
     base + a stand-alone launch file the deploy CLI includes when the

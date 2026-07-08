@@ -1,10 +1,10 @@
-"""TaskSpace cross-layer contract (ADR-0071).
+"""TaskSpace cross-layer contract.
 
 Exercises the layer-neutral ``TaskSpace`` view + ``task_space_compatible``
 against **real** ``robots/`` and ``rskills/`` fixtures — no mocks (CLAUDE.md
 §1.11). The motivating task-space audit found the three asset layers do not
 share a contract today; these tests pin the new shared object's behavior so the
-staged migration in ADR-0071 can build on it.
+staged migration can build on it.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ def test_task_space_rejects_empty_segments() -> None:
 def test_libero_skill_expands_via_representation() -> None:
     """act-libero declares representation=delta_ee_6d_plus_gripper, no slots.
 
-    from_action_contract must expand it (ADR-0036) into a 6-D cartesian-delta
+    from_action_contract must expand it into a 6-D cartesian-delta
     segment + a 1-D gripper segment addressed at the Franka's EE — total 7.
     """
     robot = _robot("franka_panda")
@@ -122,7 +122,7 @@ def test_libero_skill_compatible_in_sim_via_osc() -> None:
     The robosuite OSC packer synthesises cartesian_delta + gripper_position from
     joint commands (SIM_EXECUTABLE_CONTROL_MODES) — matching how it actually runs
     under `openral deploy sim`. The sim/real split mirrors the reasoner gate's
-    `_action_executable` (ADR-0036).
+    `_action_executable`.
     """
     robot = _robot("franka_panda")
     skill = _rskill("act-libero")

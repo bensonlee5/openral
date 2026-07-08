@@ -1,4 +1,4 @@
-"""Tests for reasoner execution feedback + reflection (ADR-0072 Decision 2.2/2.3).
+"""Tests for reasoner execution feedback + reflection.
 
 Covers:
 - :func:`~openral_reasoner.context.reflect_on_failure` /
@@ -32,7 +32,7 @@ def test_reflect_on_failure_branches() -> None:
 
 
 def test_reflect_on_reward_plateau_says_change_approach_not_shorten() -> None:
-    """ADR-0074 — a reward-plateau (policy ran, reward says not done) must nudge a
+    """A reward-plateau (policy ran, reward says not done) must nudge a
     DIFFERENT approach, not a shorter-horizon subdivide (the timeout hint) or a
     blind repeat. A direct replanning probe showed those two wrong signals produce
     repeat/subdivide; this one produces a genuine replan."""

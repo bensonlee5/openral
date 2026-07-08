@@ -1,4 +1,4 @@
-"""Runtime tee-branch manager for the GStreamer perception bus (ADR-0037).
+"""Runtime tee-branch manager for the GStreamer perception bus.
 
 A :class:`TeeManager` owns the named ``tee`` of a *running* camera pipeline
 (:data:`~openral_runner.backends.gstreamer.pipeline.TEE_NAME`) and attaches /
@@ -8,7 +8,7 @@ a detector rSkill attaches a branch; deactivating it detaches the branch.
 
 Each branch is built as ``<leaky queue> ! <caller elements>`` so a stalled or
 crashing consumer drops its own frames instead of backpressuring the policy leg
-(ADR-0018 §3) — the same isolation policy the static pipeline builder applies
+— the same leaky-branch isolation policy the static pipeline builder applies
 via :func:`~openral_runner.backends.gstreamer.pipeline.leaky_branch`, shared here
 through :data:`~openral_runner.backends.gstreamer.pipeline.LEAKY_BRANCH_QUEUE`.
 

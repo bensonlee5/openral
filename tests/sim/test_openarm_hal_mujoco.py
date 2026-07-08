@@ -287,7 +287,7 @@ class TestOpenArmLifecycle:
         # connect() pre-loads ctrl with the current qpos so the v2
         # position actuators hold the rest pose on the first mj_step
         # rather than yanking toward ctrl=0.  Same pattern the
-        # upstream ``mujoco_launch.py`` uses.  Post-ADR-0023 this is
+        # upstream ``mujoco_launch.py`` uses.  Under the manifest-driven HAL this is
         # driven by ``OPENARM_DESCRIPTION.sim.seed_ctrl_from_qpos=True``
         # — see openral_hal._mujoco_arm.MujocoArmHAL.connect.
         hal.connect()

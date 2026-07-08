@@ -1,10 +1,10 @@
 # openral_rskill_ros
 
-> **ADR-0018 F1 — `rskill_runner_node` lifecycle node + `ExecuteRskill`
+> **`rskill_runner_node` lifecycle node + `ExecuteRskill`
 > action server.**
 
-This package owns Layer 3 (rSkill) of the ROS 2 graph mandated by
-ADR-0018. One node per robot.
+This package owns Layer 3 (rSkill) of the ROS 2 reasoner + supervisor
+graph. One node per robot.
 
 ## Layer
 
@@ -25,7 +25,7 @@ chunks to the safety boundary.
 
 ## Composition (one shared `WorldStateAggregator`)
 
-Per ADR-0018 §3 the world_state node is the **only** subscriber of
+Per the single-aggregator contract the world_state node is the **only** subscriber of
 `/joint_states`. The compose factory in this package builds a single
 `WorldStateAggregator`, hands the same reference to a colocated
 `_WorldStateLifecycleNode`, and lets `RskillRunnerNode` call
@@ -42,7 +42,7 @@ runtime = compose_so100_runtime(robot_name="so100")
 
 One generic launch file ships with this package:
 
-* `launch/sim_e2e.launch.py` — ADR-0018 F1+F4+F5+F10 robot-agnostic
+* `launch/sim_e2e.launch.py` — the robot-agnostic
   graph: `runtime_node` (composed `world_state` + `skill_runner`) +
   C++ `safety_kernel_node` + reasoner + prompt router + HAL. Every
   robot-specific bit is a launch argument resolved at startup by an
@@ -64,8 +64,8 @@ One generic launch file ships with this package:
   `openral_safety.envelope_loader.compute_intersection(robot, None)`,
   and forwards each `EnvelopeIntersection` field as a ROS parameter
   on the C++ safety_kernel node. **No envelope YAML file is written
-  or read** — the C++ kernel grew a parameter-based loader in
-  ADR-0020 PR-K alongside the legacy `envelope_file:=PATH` path
+  or read** — the C++ safety kernel grew a parameter-based loader
+  alongside the legacy `envelope_file:=PATH` path
   (kept for HIL safety tests + `kernel_only.launch.py`).
 
   Direct invocation (for debugging the launch itself):
@@ -83,14 +83,14 @@ One generic launch file ships with this package:
 The launch keeps each piece in its own OS process — CLAUDE.md §1.5
 forbids collapsing the safety boundary into the runner. A
 composable-node container that runs the compose factory inside a
-single OS process is a small follow-up — see ADR-0018 §3 for the
-constraint and the integration test
+single OS process is a small follow-up — see the single-aggregator
+contract for the constraint and the integration test
 (`test/test_rskill_runner_node.py::test_compose_factory_shares_one_aggregator`)
 for the assertion that the production path satisfies it.
 
 ## License gating
 
-ADR-0018 §F1 mandates two gates:
+The rSkill lifecycle-node contract mandates two gates:
 
 1. **Install-time** — `ral skill install` refuses non-commercial weights
    in a commercial deployment.
@@ -106,7 +106,7 @@ integration test (CLAUDE.md §1.11 / §5.4: no mocks). It composes the
 runtime via `compose_so100_runtime`, brings up a real
 `SafetyPassthroughNode`, and asserts:
 
-1. ADR-0018 §3 single-aggregator contract (identity check).
+1. Single-aggregator contract (identity check).
 2. End-to-end `ExecuteRskill` goal → `/openral/candidate_action` →
    `safety_node` → `/openral/safe_action` round trip with the right
    `rskill_id` / `flat` / `n_dof` fields.
@@ -119,7 +119,6 @@ calls `openral_rskill.rSkill.from_pretrained` (HF Hub fetch).
 
 ## Related
 
-- ADR-0018 §F1 — normative spec.
 - `python/runner/src/openral_runner/ros_publishing_hal.py` —
   `ROSPublishingHAL` HAL adapter that turns `Action` into
   `openral_msgs/ActionChunk` published on `/openral/candidate_action`.

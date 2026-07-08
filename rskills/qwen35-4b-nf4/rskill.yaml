@@ -7,9 +7,9 @@ kind: "vlm"
 
 # embodiment-agnostic: a perception rSkill (detector/vlm) needs only an RGB
 # camera, not a specific robot. The rSkill<->robot gate exempts these kinds
-# (loader._EMBODIMENT_AGNOSTIC_KINDS, ADR-0037), so the tag list is empty —
+# (loader._EMBODIMENT_AGNOSTIC_KINDS), so the tag list is empty —
 # it matches any robot/scene.
-embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard (ADR-0072)
+embodiment_tags: ["any"]  # explicit embodiment-agnostic wildcard
 
 sensors_required:
   - modality: "rgb"
@@ -51,7 +51,7 @@ description: >
   Qwen3.5-4B natively-multimodal video-language model packaged as an NF4
   bitsandbytes vlm rSkill. Accepts RGB image or video frames plus a
   natural-language query; returns a text answer. Embodiment-agnostic. No
-  actuators. Apache-2.0. ADR-0047.
+  actuators. Apache-2.0.
 
 actions:
   - "query"

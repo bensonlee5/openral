@@ -1,4 +1,4 @@
-"""ADR-0024 — schema-side cross-validators on ``RSkillManifest.kind``.
+"""Schema-side cross-validators on ``RSkillManifest.kind``.
 
 Pins the per-kind shape of the manifest so a regression that loosens any
 of these rules surfaces here instead of as a silent VLA-on-wrapper /
@@ -130,7 +130,7 @@ def test_non_perception_kind_requires_embodiment_tag() -> None:
 
 def test_perception_kinds_use_any_wildcard() -> None:
     """Detector / vlm rSkills are embodiment-agnostic — they declare the explicit
-    ``["any"]`` wildcard (ADR-0072), never an empty list.
+    ``["any"]`` wildcard, never an empty list.
 
     Uses the real in-tree perception manifests (no synthetic placeholders,
     CLAUDE.md §1.11): they ship ``embodiment_tags: ["any"]`` and must load.
@@ -143,7 +143,7 @@ def test_perception_kinds_use_any_wildcard() -> None:
 
 
 def test_empty_embodiment_tags_rejected_for_all_kinds() -> None:
-    """An empty ``embodiment_tags`` is rejected for every kind (ADR-0072) —
+    """An empty ``embodiment_tags`` is rejected for every kind —
     agnosticism is declared with ``["any"]``, not derived from emptiness.
     """
     for kwargs in (_vla_kwargs, _ros_action_kwargs):
@@ -248,7 +248,7 @@ def test_ros_integration_default_goal_json_must_be_json_dict() -> None:
 
 
 def test_every_intree_rskill_manifest_declares_kind() -> None:
-    """ADR-0024 migration: no manifest may rely on a default for ``kind``.
+    """Migration: no manifest may rely on a default for ``kind``.
 
     The schema field is required (no default) so this also doubles as
     proof that the migration script ran on every in-tree rskill. The

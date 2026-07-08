@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — closed-loop Flexiv Rizon 4 twin + C++ safety kernel.
+"""PR-H — closed-loop Flexiv Rizon 4 twin + C++ safety kernel.
 
 The Rizon 4 is a 7-DoF cobot with whole-body force sensitivity (0.1 N).
 This test wires the real ``Rizon4MujocoHAL`` (PR #124 / #129) through
@@ -68,7 +68,7 @@ def test_rizon4_twin_through_safety_kernel() -> None:
         assert len(state0.position) == n_dof
         assert state0.name == [j.name for j in RIZON4_DESCRIPTION.joints]
 
-        with tempfile.TemporaryDirectory():  # ADR-0020 PR-K: no temp envelope file needed
+        with tempfile.TemporaryDirectory():  # PR-K: no temp envelope file needed
             node_name = f"safety_kernel_rizon4_{uuid.uuid4().hex[:8]}"
             domain_id = isolated_domain_id()
             proc = start_kernel(RIZON4_DESCRIPTION, node_name, domain_id)

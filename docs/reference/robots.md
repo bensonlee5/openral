@@ -8,13 +8,13 @@ Every embodiment is a typed `RobotDescription` manifest under `robots/<robot_id>
 |---|---|---|---|
 | SO-100 (LeRobot follower arm) | [`robots/so100_follower/`](https://github.com/OpenRAL/openral/tree/master/robots/so100_follower/) | `SO100FollowerHAL` (real) + `SO100MujocoHAL` (sim) + `openral_hal_so100` lifecycle node | ✓ HW + sim |
 | SO-101 (LeRobot follower arm) | [`robots/so101_follower/`](https://github.com/OpenRAL/openral/tree/master/robots/so101_follower/) | shares SO-100 family — `SO100FollowerHAL` (real) + `SO100MujocoHAL` (sim) + `openral_hal_so100` lifecycle node | ✓ HW + sim |
-| Franka Panda | [`robots/franka_panda/`](https://github.com/OpenRAL/openral/tree/master/robots/franka_panda/) | `FrankaPandaHAL` (`MujocoArmHAL`, ADR-0023) + `openral_hal_franka` | ✓ sim · HW bring-up M3 (#56) |
+| Franka Panda | [`robots/franka_panda/`](https://github.com/OpenRAL/openral/tree/master/robots/franka_panda/) | `FrankaPandaHAL` (`MujocoArmHAL`) + `openral_hal_franka` | ✓ sim · HW bring-up M3 (#56) |
 | UR5e | [`robots/ur5e/`](https://github.com/OpenRAL/openral/tree/master/robots/ur5e/) | `UR5eHAL` (`MujocoArmHAL`) + `openral_hal_ur5e` | ✓ sim · HW bring-up M3 |
 | UR10e | [`robots/ur10e/`](https://github.com/OpenRAL/openral/tree/master/robots/ur10e/) | `UR10eHAL` (`MujocoArmHAL`) + `openral_hal_ur10e` | ✓ sim · HW bring-up M3 |
 | Flexiv Rizon 4 | [`robots/rizon4/`](https://github.com/OpenRAL/openral/tree/master/robots/rizon4/) | `Rizon4MujocoHAL` (`MujocoArmHAL`) | ✓ sim |
 | ALOHA bimanual (gym-aloha) | [`robots/aloha_bimanual/`](https://github.com/OpenRAL/openral/tree/master/robots/aloha_bimanual/) | `AlohaMujocoHAL` (`MujocoArmHAL`, bimanual) + real-HW `AlohaHAL` over Interbotix XS | ✓ sim · ✓ HW |
 | Enactic OpenArm v2 bimanual | [`robots/openarm/`](https://github.com/OpenRAL/openral/tree/master/robots/openarm/) | `OpenArmMujocoHAL` (`MujocoArmHAL`, 16-DoF bimanual) | ✓ sim |
-| Anvil OpenARM 2.0 bimanual | [`robots/anvil_openarm_v2/`](https://github.com/OpenRAL/openral/tree/master/robots/anvil_openarm_v2/) | `AnvilOpenArmV2MujocoHAL` (`MujocoArmHAL`, 16-DoF bimanual; v2 + Anvil J1/J6 range deltas + red wrist bracket) | ✓ sim |
+| Anvil OpenARM 2.0 bimanual | [`robots/anvil_openarm_v2/`](https://github.com/OpenRAL/openral/tree/master/robots/anvil_openarm_v2/) | `AnvilOpenArmV2MujocoHAL` (`MujocoArmHAL`, 16-DoF bimanual; v2 + Anvil J1/J6 range deltas + wrist support bracket) | ✓ sim |
 | Unitree H1 humanoid | [`robots/h1/`](https://github.com/OpenRAL/openral/tree/master/robots/h1/) | `H1MujocoHAL` (software PD loop, no S0 cerebellum) | ✓ sim |
 | Unitree G1 humanoid | [`robots/g1/`](https://github.com/OpenRAL/openral/tree/master/robots/g1/) | `G1MujocoHAL` (Menagerie MJCF) | ✓ sim |
 | Rethink Sawyer | [`robots/sawyer/`](https://github.com/OpenRAL/openral/tree/master/robots/sawyer/) | eval-only · real-HW HAL planned (#57) | ✓ sim |

@@ -239,7 +239,7 @@ def test_real_sdk_pointer_resolves_to_franka_panda_real_hal() -> None:
 
     Kinematics + safety envelope + capabilities + ``hal`` entrypoints are
     inherited from the sim baseline via ``model_copy``; only ``sdk_kind``
-    differs (ADR-0031).
+    differs.
     """
     from openral_hal.franka_panda_real import FRANKA_PANDA_REAL_DESCRIPTION
 

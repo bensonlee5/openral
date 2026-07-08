@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wait for a ROS 2 action server to appear, then fire skill_registry_changed.
 
-ADR-0026 follow-up. Background:
+This is a follow-up fix for skill-palette re-seeding. Background:
 
 The reasoner_node seeds its rSkill palette at ``on_configure``, which
 runs as part of the early launch autostart (a few seconds after

@@ -51,7 +51,8 @@ Public surface:
   variant of the standard OpenArm v2 (same 16-DoF surface).  Differs
   from the Enactic v2 arm in exactly two documented ranges (J1 clamped
   to +/-135 deg; J6 radial deviation widened to -45..+70 deg) plus the
-  red wrist bracket that enables it (visual-only meshes in the MJCF).
+  wrist support bracket that enables it (visual-only CAD meshes in the
+  MJCF).
   Thin manifest-driven subclass like ``OpenArmMujocoHAL``; the MJCF is
   fetched at a pinned SHA from ``bensonlee5/anvil-openarm-mujoco`` by
   ``openral_hal._anvil_openarm_v2_assets`` (``openarm:anvil_v2_bimanual``).
@@ -59,7 +60,7 @@ Public surface:
 
 All ``*_REAL_DESCRIPTION`` constants are derived from their sim siblings via
 ``openral_hal._real_description.make_real_description``; they share the same
-``hal`` entrypoints (``hal.sim`` / ``hal.real``, ADR-0031) and differ only in
+``hal`` entrypoints (``hal.sim`` / ``hal.real``) and differ only in
 ``sdk_kind``.
 """
 

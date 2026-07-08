@@ -1,7 +1,7 @@
-"""ADR-0072 §3 / Phase 4b — the self-maintained ``MEMORY.md`` file model.
+"""The self-maintained ``MEMORY.md`` file model.
 
 A persistent, human-readable **semantic** memory for the S2 reasoner —
-complementary to the ADR-0038 *geometric* scene graph. Holds preferences,
+complementary to the *geometric* scene graph. Holds preferences,
 corrections/lessons, durable home facts, an object-location log, and open
 tasks. The reasoner reads it as the ``## MEMORY`` context block and edits it
 through the :class:`~openral_core.MemoryWriteTool` op (never a free-form
@@ -118,7 +118,7 @@ class MemoryStore:
         return f"{header}{self._render_sections()}"
 
     def _render_sections_capped(self, keep: set[int]) -> str:
-        """Render only the entries whose index is in ``keep`` (ADR-0072 Phase 5 cap)."""
+        """Render only the entries whose index is in ``keep`` (retrieval-under-cap)."""
         blocks: list[str] = []
         for section, title in _SECTION_TITLES.items():
             blocks.append(f"## {title}")
@@ -134,7 +134,7 @@ class MemoryStore:
     def to_context_block(self, *, cap: int | None = None) -> str:
         """The ``## MEMORY`` block the reasoner injects into its context.
 
-        ADR-0072 Phase 5 — *retrieval under cap*: when ``cap`` is set and the store
+        *Retrieval under cap*: when ``cap`` is set and the store
         holds more entries than ``cap``, only the top-``cap`` by **importance then
         recency** (current entries rank above ``stale`` ones) are rendered, with a
         footer telling the LLM the rest are recallable via ``memory_search``. This
@@ -159,7 +159,7 @@ class MemoryStore:
     def consolidate(self) -> list[MemoryEntry]:
         """Merge exact-duplicate facts, keeping the best; return the removed entries.
 
-        ADR-0072 Phase 5 — *consolidation* (Mem0 ADD-merge): when the same
+        *Consolidation* (Mem0 ADD-merge): when the same
         ``(section, content)`` appears more than once (e.g. the LLM re-added a fact
         it had already stored), keep only the highest-ranked copy (current over
         ``stale``, then higher importance, then more recent) and remove the rest.

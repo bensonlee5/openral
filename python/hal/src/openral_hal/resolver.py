@@ -1,4 +1,4 @@
-"""Single sim/real HAL construction seam (ADR-0031).
+"""Single sim/real HAL construction seam.
 
 :func:`build_hal` is the one place that turns a :class:`RobotDescription` +
 a ``mode`` into a constructed :class:`~openral_hal.protocol.HAL`. Every
@@ -10,11 +10,11 @@ environment config or runtime parameters.
 Routing:
 
 * ``mode="sim"`` + ``sim_env_yaml`` → a :class:`~openral_hal.sim_attached.SimAttachedHAL`
-  wrapping the scene's :class:`~openral_sim.rollout.SimRollout` (ADR-0034). The scene
+  wrapping the scene's :class:`~openral_sim.rollout.SimRollout`. The scene
   owns physics + pixels; the bare-twin / ``hal.sim`` class is bypassed entirely.
 * ``mode="sim"`` → the manifest's ``hal.sim`` import string, or — when that
   is ``None`` and a ``sim:`` block is present — the derived
-  :meth:`MujocoArmHAL.from_description` (ADR-0023). No sim HAL and no ``sim:``
+  :meth:`MujocoArmHAL.from_description`. No sim HAL and no ``sim:``
   block → :class:`ROSCapabilityMismatch`.
 * ``mode="real"`` → the manifest's ``hal.real`` import string, constructed
   with the supplied ``transport`` kwargs (real HALs take transport-specific
@@ -64,10 +64,10 @@ def build_hal(
         transport: Constructor kwargs for the real HAL (serial ``port``,
             ``robot_ip``, ``fci_ip``, …). Keys the target constructor does not
             accept are dropped. Ignored by the derived sim path. Merged
-            **over** the manifest's ``hal.parameters.defaults`` (ADR-0029), so
+            **over** the manifest's ``hal.parameters.defaults``, so
             an explicit ``deploy run`` transport override wins.
-        sim_env_yaml: Path to a SimScene YAML (ADR-0034; renamed from
-            SceneEnvironment in ADR-0041). When
+        sim_env_yaml: Path to a SimScene YAML (renamed from
+            SceneEnvironment). When
             provided with ``mode="sim"``, returns a
             :class:`~openral_hal.sim_attached.SimAttachedHAL` wrapping the
             scene's :class:`~openral_sim.rollout.SimRollout`; bypasses the
@@ -91,7 +91,7 @@ def build_hal(
         >>> desc = RobotDescription.from_yaml("robots/so100_follower/robot.yaml")  # doctest: +SKIP
         >>> hal = build_hal(desc, mode="sim")  # doctest: +SKIP
     """
-    # ADR-0029 — the manifest's hal.parameters.defaults supply the HAL's
+    # The manifest's hal.parameters.defaults supply the HAL's
     # construction kwargs (serial port, robot_ip, …) so a parameterised robot
     # needs no bespoke lifecycle subclass. Explicit ``transport`` overrides
     # them; _construct() then drops any key the constructor does not accept.
@@ -103,7 +103,7 @@ def build_hal(
         )
     if mode == "sim":
         if sim_env_yaml is not None:
-            # ADR-0034 — deploy sim attaches the scene's SimRollout behind a
+            # Deploy sim attaches the scene's SimRollout behind a
             # SimAttachedHAL (the scene owns physics + pixels). Bypasses the
             # bare twin / hal.sim class. openral_sim imported lazily so
             # openral_hal stays import-safe without the sim group.

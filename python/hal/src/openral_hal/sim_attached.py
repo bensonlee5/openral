@@ -1,6 +1,6 @@
 """SimAttachedHAL — wrap any ``openral_sim.SimRollout`` as a HAL adapter.
 
-ADR-0025 Stage 3 — the generic, robot-agnostic bridge between the
+The generic, robot-agnostic bridge between the
 :class:`openral_sim.SimRollout` simulator interface and the
 :class:`openral_hal.HAL` Protocol the ROS lifecycle nodes consume.
 
@@ -74,7 +74,7 @@ _log = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from openral_sim.rollout import SimRollout
 
-# ADR-0036 — the sim packers below (``pack_action_for_env`` and
+# The sim packers below (``pack_action_for_env`` and
 # ``SimAttachedHAL._pack_with_composite_split``) collectively implement
 # exactly this canonical set, plus the BODY_TWIST direct-qpos path in
 # ``SimAttachedHAL.send_action``. Re-exported here so the provenance of the
@@ -96,7 +96,7 @@ _ROBOSUITE_GROUP_PREFIX = re.compile(r"^[a-z]+[0-9]+_")  # robot0_ / gripper0_ /
 # called after the episode ended and ``ignore_done=False`` — the configuration
 # raw robosuite-backed adapters can use.
 # Matched by message substring (stable across robosuite releases) so
-# ``_step_and_cache`` can recover by resetting; see ADR-0036.
+# ``_step_and_cache`` can recover by resetting.
 _TERMINATED_EPISODE_MARKER = "terminated episode"
 
 
@@ -121,7 +121,7 @@ def is_terminated_episode_error(exc: BaseException) -> bool:
 def normalized_joint_index(model_joint_names: list[str]) -> dict[str, int]:
     """Map MJCF joint names (exact + robosuite-prefix-stripped) to model index.
 
-    ADR-0034 §3.6 — robosuite prefixes every joint with ``<class>N_``
+    Robosuite prefixes every joint with ``<class>N_``
     (``robot0_joint1``); native MJCFs do not. Exact names always win; a
     stripped name (``robot0_joint1`` -> ``joint1``) is added only when it
     neither shadows an exact name nor collides with another stripped name
@@ -246,12 +246,12 @@ def pack_action_for_env(  # noqa: PLR0912  # reason: one branch per supported co
             the supported modes or its row width doesn't match the
             implied slot layout.
     """
-    # ADR-0028c — payload field depends on control_mode. The pre-0028c
-    # code path lifted ``joint_targets[0]`` for every mode, which was
+    # The payload field depends on control_mode. The legacy code path
+    # lifted ``joint_targets[0]`` for every mode, which was
     # the lie that conflated cartesian / gripper bytes into a
     # joint-targets row. Now each mode reads from its own field.
     #
-    # ADR-0036 — the modes this packer handles (CARTESIAN_DELTA,
+    # The modes this packer handles (CARTESIAN_DELTA,
     # GRIPPER_POSITION, BODY_TWIST, JOINT_POSITION) are a subset of
     # ``openral_core.SIM_EXECUTABLE_CONTROL_MODES``; the union of this
     # packer + ``_pack_with_composite_split`` + the BODY_TWIST direct-qpos
@@ -318,7 +318,7 @@ def pack_action_for_env(  # noqa: PLR0912  # reason: one branch per supported co
         out[-1] = float(action.gripper[0])
         return out
     if action.control_mode is ControlMode.BODY_TWIST:
-        # ADR-0028c — body_twist now comes through the typed
+        # body_twist now comes through the typed
         # ``Action.body_twist`` field, not joint_targets. The Nav2
         # cmd_vel bridge + the slot dispatcher both publish through
         # this field.
@@ -433,7 +433,7 @@ class SimAttachedHAL:
                 deadlines share one timestep definition.
         """
         self._env = env
-        # ADR-0036 — episodic backends (LIBERO) re-randomise the scene the instant
+        # Episodic backends (LIBERO) re-randomise the scene the instant
         # a task succeeds (lerobot's LiberoEnv.step resets inline). In a continuous
         # deploy twin the reasoner/mission own episode boundaries, not the env, so
         # ask the env to run continuously when it supports the hook (no-op for
@@ -448,7 +448,7 @@ class SimAttachedHAL:
         self._connected: bool = False
         self._estop_latched: bool = False
         self._last_state_ns: int = 0
-        # ADR-0034 (2026-06-04 idle-stepper amendment) — monotonic timestamp
+        # Monotonic timestamp (added by the 2026-06-04 idle-stepper amendment)
         # of the last real actuation that passed through ``send_action`` (the
         # single choke point both ``_on_safe_action`` and ``_on_cmd_vel``
         # reach). The sim-only free-running idle stepper reads this to yield
@@ -462,9 +462,9 @@ class SimAttachedHAL:
         # re-stepping the simulator. ``None`` until :meth:`connect`.
         self._last_obs: dict[str, Any] | None = None
         self._body_twist_dt_s: float = body_twist_dt_s
-        # ADR-0034 §3.6 — built once per env on first read_state; reset on connect.
+        # Built once per env on first read_state; reset on connect.
         self._joint_index: dict[str, int] | None = None
-        # ADR-0028c — last action vector applied via composite-split
+        # Last action vector applied via composite-split
         # packing. Held across send_action calls so a per-mode chunk
         # that only fills one slot (e.g. CARTESIAN_DELTA arm) doesn't
         # silently zero out the other slots (e.g. gripper position),
@@ -473,7 +473,7 @@ class SimAttachedHAL:
         # arm's OSC-delta slot is RE-ZEROED right before each step so
         # the policy's per-step delta is applied once, not accumulated.
         self._last_env_action: NDArray[np.float32] | None = None
-        # ADR-0036 — latched when the last env.step reported terminal
+        # Latched when the last env.step reported terminal
         # (terminated/truncated). The next send_action resets the env
         # before stepping so episodic backends (LIBERO) never step a
         # terminated episode; robocasa runs ignore_done and never latches.
@@ -494,7 +494,7 @@ class SimAttachedHAL:
             0.0,
             0.0,
         )
-        # ADR-0048 Phase 1 — cross-reset sim-time offset. The wrapped
+        # Cross-reset sim-time offset. The wrapped
         # SimRollout's ``sim_time_ns`` reports time *within the current
         # episode*, and backends like robocasa rewind ``MjData.time`` to 0 on
         # every ``env.reset``. A ``/clock`` publisher must never see time go
@@ -515,7 +515,7 @@ class SimAttachedHAL:
         (the lifecycle node calls `connect` on each `configure` → `cleanup`
         cycle, so the contract must tolerate repeated calls).
         """
-        # ADR-0048 Phase 1 — fold any elapsed sim-time into the cross-reset
+        # Fold any elapsed sim-time into the cross-reset
         # offset BEFORE the reset rewinds the backend clock, so a re-connect
         # (the lifecycle node re-resets on each configure→cleanup cycle) never
         # makes the published ``/clock`` jump backwards. On the very first
@@ -542,7 +542,7 @@ class SimAttachedHAL:
            exposes (robosuite/robocasa carry it natively; the native MuJoCo
            backends — ``so101_box``, ``tabletop_push``, ``openarm_tabletop_pnp``
            — expose it as a property reporting their true ``step`` width per
-           ADR-0034's probe-gap fix).
+           the probe-gap fix).
         2. ``self._env._env.action_dim`` — robocasa wraps the raw robosuite
            env on ``_env`` for gymnasium-shaped envs and on a sibling
            attribute on the kitchen path; the inner env is what carries
@@ -607,7 +607,7 @@ class SimAttachedHAL:
             # SimRollout surfaces as obs["joint_positions"] (in description-joint
             # order) so /joint_states carries live values; fall back to zeros
             # (shape-correct) when the backend provides none. Never reached on
-            # the MuJoCo path. ADR-0034 amendment (non-MuJoCo joint-state).
+            # the MuJoCo path (non-MuJoCo joint-state handling).
             names = [j.name for j in self.description.joints]
             njoints = len(names)
 
@@ -701,7 +701,7 @@ class SimAttachedHAL:
         # JOINT_POSITION continues to flow through ``env.step()`` so
         # robosuite's per-joint controllers run as before.
         if action.control_mode is ControlMode.BODY_TWIST:
-            # ADR-0028c — body_twist payload moved from joint_targets
+            # The body_twist payload moved from joint_targets
             # (legacy lie) to the typed Action.body_twist field.
             if not action.body_twist:
                 raise ROSConfigError(
@@ -709,8 +709,8 @@ class SimAttachedHAL:
                 )
             row = list(action.body_twist[0])
             # MuJoCo integrates the base by direct qpos write (skips env.step so the
-            # arm dynamics don't churn). A non-MuJoCo backend (Isaac kinematic base,
-            # ADR-0045) has no qpos handle — it integrates the base inside env.step,
+            # arm dynamics don't churn). A non-MuJoCo backend (Isaac kinematic base)
+            # has no qpos handle — it integrates the base inside env.step,
             # so route the twist through the env action vector instead.
             if self._mujoco_handles() is not None:
                 self._apply_body_twist_to_qpos(row)
@@ -721,7 +721,7 @@ class SimAttachedHAL:
         # velocity-commanded — clear the latched twist so /odom doesn't
         # report a stale base velocity through an arm-only step.
         self._last_body_twist = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-        # ADR-0028c — robosuite composite controllers expose part-name
+        # Robosuite composite controllers expose part-name
         # → action-slot mapping via ``cc._action_split_indexes``. The
         # legacy ``pack_action_for_env`` hardcoded the PandaMobile+BASIC
         # layout (action_dim=11, arm at slots [3:9]); switching the
@@ -739,7 +739,7 @@ class SimAttachedHAL:
             # latch the result here. This carries the gripper across the arm
             # step the way the composite path does — without it the arm and
             # gripper zero each other out across the two typed Actions a
-            # single policy step splits into (ADR-0036).
+            # single policy step splits into.
             env_action = self._action_packer(
                 action, self.description, self._env_action_dim, self._last_env_action
             )
@@ -775,10 +775,10 @@ class SimAttachedHAL:
     def _step_and_cache(self, env_action: NDArray[np.float32], *, source: str) -> bool:
         """Deferred-reset → ``env.step`` → re-cache ``_last_obs`` → re-latch terminal.
 
-        The shared core of :meth:`send_action` and :meth:`idle_step` (ADR-0036)
+        The shared core of :meth:`send_action` and :meth:`idle_step`
         so the subtle terminal-reset path cannot drift between the two callers.
 
-        ADR-0036 — auto-reset on episode termination. Native episodic backends
+        Auto-reset on episode termination. Native episodic backends
         (LIBERO) set ``StepResult.terminated`` / ``truncated`` when the task
         ends (success / failure / horizon); robocasa runs with ``ignore_done``
         and never does. Without a reset the next ``env.step`` raises "executing
@@ -812,7 +812,7 @@ class SimAttachedHAL:
         try:
             step_result = self._env.step(env_action)
         except Exception as exc:
-            # ADR-0036 (amended) — raw robosuite-backed adapters can HARD-RAISE
+            # Raw robosuite-backed adapters can HARD-RAISE
             # "executing action in terminated episode" on a post-terminal step instead of
             # returning a terminal ``StepResult``, so the returned-flag latch
             # above never fired and ``_episode_done`` is still False. Treat a
@@ -849,7 +849,7 @@ class SimAttachedHAL:
     def _reset_terminated_episode(self, source: str, *, trigger: str) -> None:
         """Reset the env after an episode terminal and clear the terminal latch.
 
-        Shared by both terminal paths in :meth:`_step_and_cache` (ADR-0036):
+        Shared by both terminal paths in :meth:`_step_and_cache`:
         the *returned*-terminal latch (``_episode_done`` set by the prior step's
         ``StepResult``) and the *raised*-terminal recovery (raw-robosuite
         ``ignore_done=False`` backends that throw
@@ -862,12 +862,12 @@ class SimAttachedHAL:
                 diagnostic log + the wrapped ``ROSRuntimeError`` message.
             trigger: ``"returned-terminal"`` or ``"raised-terminal"`` — surfaced
                 in the log so the two paths are distinguishable in deploy-sim
-                output (ADR-0034 §1.4 observability).
+                output (observability).
 
         Raises:
             ROSRuntimeError: when ``env.reset`` itself fails.
         """
-        # ADR-0048 Phase 1 — accumulate the finished episode's elapsed sim-time
+        # Accumulate the finished episode's elapsed sim-time
         # into the cross-reset offset BEFORE the backend rewinds its clock, so
         # ``sim_time_ns`` (and the ``/clock`` publisher reading it) stays
         # monotonic non-decreasing across the auto-reset. Covers BOTH terminal
@@ -885,7 +885,7 @@ class SimAttachedHAL:
         self._joint_index = None  # rebuilt on next read_state
         print(
             f"[sim_attached.{source}] episode terminated ({trigger}); auto-reset "
-            f"(robot={self.description.name}) — continuous deploy-sim (ADR-0036)",
+            f"(robot={self.description.name}) — continuous deploy-sim ",
             flush=True,
         )
 
@@ -893,7 +893,7 @@ class SimAttachedHAL:
         """Advance the wrapped sim one tick with a zero/HOLD action when idle.
 
         SIM-ONLY. This refreshes ``_last_obs`` (camera frames + state) so the
-        ADR-0035 perception / object-detector bus sees a live scene even when
+        perception / object-detector bus sees a live scene even when
         no skill is executing — without this the env only steps on
         ``/openral/safe_action`` receipt, so an idle scene freezes physics and
         cameras go stale.
@@ -932,8 +932,8 @@ class SimAttachedHAL:
 
         Returns:
             ``True`` if the env was stepped, ``False`` if suppressed (not
-            connected, estop latched, or action dim unresolved). Backend-agnostic
-            since the ADR-0034 amendment — no MuJoCo-handle gate.
+            connected, estop latched, or action dim unresolved). Backend-agnostic —
+            no MuJoCo-handle gate.
         """
         if not self._connected:
             return False
@@ -948,8 +948,8 @@ class SimAttachedHAL:
         # controllers, and the method-only-on-SimAttachedHAL exclusion (real HALs
         # never define idle_step) is the real safety guarantee. Non-MuJoCo
         # backends (Isaac Sim sidecar, ManiSkill3) step via env.step(zeros) the
-        # same as MJCF ones. ADR-0034 amendment.
-        # Zero-action step — the same env.step(zeros) idiom as ADR-0036's
+        # same as MJCF ones.
+        # Zero-action step — the same env.step(zeros) idiom as the
         # deferred-reset path / send_action's tail (NOT robocasa.refresh_obs,
         # which re-renders WITHOUT stepping). The shared ``_step_and_cache``
         # does the deferred reset → step → obs re-cache → terminal re-latch so
@@ -959,7 +959,7 @@ class SimAttachedHAL:
         zero_action = np.zeros(self._env_action_dim, dtype=np.float32)
         return self._step_and_cache(zero_action, source="idle_step")
 
-    # ── ADR-0028c per-mode → composite-controller slot mapping ──────────
+    # ── Per-mode → composite-controller slot mapping ──────────
     def _composite_controller(self) -> Any:  # noqa: ANN401  # reason: robosuite composite controller is an untyped third-party object
         """Return the (single) robot's composite controller, or None.
 
@@ -1022,7 +1022,7 @@ class SimAttachedHAL:
         the arm's OSC-delta slot is RE-ZEROED on every call so the
         per-step delta is applied once, not accumulated.
 
-        ADR-0036 — handles CARTESIAN_DELTA, GRIPPER_POSITION,
+        Handles CARTESIAN_DELTA, GRIPPER_POSITION,
         JOINT_VELOCITY, COMPOSITE_MODE, and delegates JOINT_POSITION to
         ``pack_action_for_env``; all members of
         ``openral_core.SIM_EXECUTABLE_CONTROL_MODES``. Any other mode hits
@@ -1073,7 +1073,7 @@ class SimAttachedHAL:
             lo, _hi = slot
             out[lo] = float(action.gripper[0])
         elif action.control_mode is ControlMode.JOINT_VELOCITY:
-            # ADR-0028d — route a JOINT_VELOCITY chunk to the
+            # Route a JOINT_VELOCITY chunk to the
             # HybridMobileBase composite's 'base' part. The chunk
             # arrives padded to the robot's full n_dof (so the C++
             # safety kernel's n_dof check passes); we extract the
@@ -1114,7 +1114,7 @@ class SimAttachedHAL:
             for i, v in enumerate(base_vels):
                 out[lo + i] = float(v)
         elif action.control_mode is ControlMode.COMPOSITE_MODE:
-            # ADR-0028d — sim-only multiplexer flag. Write the policy's
+            # Sim-only multiplexer flag. Write the policy's
             # raw value to the env_action vector's LAST slot, which
             # HybridMobileBase.set_goal reads as ``all_action[-1]`` to
             # select arm-active ("desired" goal_update_mode, value > 0)
@@ -1144,7 +1144,7 @@ class SimAttachedHAL:
         # HybridMobileBase reserves the LAST slot for the composite
         # multiplexer flag (``action[-1] > 0`` = arm OSC tracks the
         # commanded delta; ``<= 0`` = arm OSC tracks the achieved pose
-        # i.e. arm is frozen). ADR-0028d promotes this to a first-class
+        # i.e. arm is frozen). This is promoted to a first-class
         # ``COMPOSITE_MODE`` ControlMode handled in the branch above;
         # when the manifest doesn't declare a COMPOSITE_MODE slot, the
         # persisted value from the previous tick stays in place (so the
@@ -1260,7 +1260,7 @@ class SimAttachedHAL:
     def _apply_body_twist_via_env_step(self, row: list[float]) -> None:
         """Integrate a BODY_TWIST through ``env.step`` (non-MuJoCo planar base).
 
-        For a backend without a qpos handle (the Isaac kinematic base, ADR-0045)
+        For a backend without a qpos handle (the Isaac kinematic base)
         the planar base lives inside the env: the scene integrates ``(vx, vy, wz)``
         and teleports its root each ``env.step``. We pack the body-frame twist into
         the **final three** slots of the env action vector — the convention the
@@ -1344,7 +1344,7 @@ class SimAttachedHAL:
         """Read the wrapped rollout's per-episode sim time, or ``None``.
 
         ``sim_time_ns`` is an OPTIONAL duck-typed extension of the
-        :class:`~openral_sim.rollout.SimRollout` protocol (ADR-0048 Phase 1) —
+        :class:`~openral_sim.rollout.SimRollout` protocol —
         clock-less adapters (PushT, the Isaac Sim sidecar) do not implement it.
         ``getattr`` narrows the missing-attribute case to ``None`` without
         catching exceptions; a backend that DOES implement it is trusted to
@@ -1374,11 +1374,11 @@ class SimAttachedHAL:
     def sim_time_ns(self) -> int | None:
         """Cross-reset-monotonic elapsed simulation time in ns, or ``None``.
 
-        ADR-0048 Phase 1 — the value a sim ``/clock`` publisher reads so the
+        The value a sim ``/clock`` publisher reads so the
         deploy-sim ROS graph runs on simulation time. Returns the wrapped
         :class:`~openral_sim.rollout.SimRollout`'s per-episode sim time plus the
         accumulated offset from all prior episodes (:meth:`connect` and the
-        ADR-0036 auto-resets fold each finished episode's elapsed time into the
+        auto-resets fold each finished episode's elapsed time into the
         offset before the backend rewinds its clock). The result is therefore
         **monotonic non-decreasing across ``env.reset``**, unlike the raw
         backend clock (robocasa rewinds ``MjData.time`` to 0 on reset).
@@ -1481,8 +1481,8 @@ class SimAttachedHAL:
     def read_depth_clouds(self) -> dict[str, NDArray[np.float32]]:
         """Return per-depth-sensor point clouds ``{name: (N, 3) base_link}``.
 
-        A non-MuJoCo backend that renders depth (the Isaac manifest scene,
-        ADR-0045) surfaces clouds already deprojected to ``base_link`` under the
+        A non-MuJoCo backend that renders depth (the Isaac manifest scene)
+        surfaces clouds already deprojected to ``base_link`` under the
         ``"depth_points"`` obs slot — Isaac's ``Camera.get_pointcloud`` owns the
         camera convention, so the HAL never re-derives geometry. ``SimSensorBridge``
         publishes them as ``PointCloud2`` for octomap. Empty when the backend
@@ -1499,7 +1499,7 @@ class SimAttachedHAL:
     def read_scan(self) -> NDArray[np.float32] | None:
         """Return the 2-D LaserScan range fan, or ``None``.
 
-        A non-MuJoCo backend that ray-casts a 2-D lidar (the Isaac scene, ADR-0045)
+        A non-MuJoCo backend that ray-casts a 2-D lidar (the Isaac scene)
         surfaces the per-beam ranges (``base_link`` frame, ``angle_min=-π`` →
         ``angle_max=+π``, the bridge's convention) under the ``"scan"`` obs slot.
         ``SimSensorBridge._compute_scan_ranges`` reads it for ``/scan``. ``None``
@@ -1524,7 +1524,7 @@ class SimAttachedHAL:
         ``description.joints`` if ``base_joints`` is unset.
 
         For a non-MuJoCo backend that drives a planar base (e.g. the Isaac
-        kinematic base, ADR-0045) the pose comes from ``obs["base_pose"]``
+        kinematic base) the pose comes from ``obs["base_pose"]``
         ``= (x, y, yaw)`` the SimRollout surfaces; this is what feeds the
         ``/odom`` publisher there. Falls back to ``(0.0, 0.0, 0.0)`` when the
         backend reports neither (non-mobile backends like PushT) — the same
@@ -1584,7 +1584,7 @@ class SimAttachedHAL:
         ``base_pose`` (planar ``x, y, yaw``) is what the panda_mobile
         HAL was originally designed around — Nav2 / SLAM consume that
         as a 2-D twist + yaw. But the rldx / pi05 state assemblers
-        (ADR-0027) read the base's *full* 6-DoF pose via
+         read the base's *full* 6-DoF pose via
         ``tf("odom", "base_link")``, and the planar version sets
         ``z = 0.0`` + ``roll = pitch = 0``, which silently drops the
         ~0.70 m platform height that RoboCasa proprio

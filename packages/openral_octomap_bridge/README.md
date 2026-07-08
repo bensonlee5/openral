@@ -1,6 +1,6 @@
 # openral_octomap_bridge
 
-ADR-0030 — lowers a **3-D OctoMap** into the safety kernel's dense, base-frame
+Lowers a **3-D OctoMap** into the safety kernel's dense, base-frame
 `openral_msgs/OccupancyVoxels` grid for the kernel's allocation-free
 capsule-vs-voxel world-collision check.
 

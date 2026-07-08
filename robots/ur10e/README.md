@@ -29,7 +29,7 @@ Velocity caps (rad/s): shoulder/lift = 2.094 (120°/s), elbow = 3.142
 The production manifest (`robot.yaml`) pins the **real-hardware** entry
 point — same convention as the UR5e sibling. The MuJoCo sim entry point
 (`UR10e_DESCRIPTION` / `openral_hal.ur:UR10eHAL`) shares the same
-kinematics and safety envelope; only `sdk_kind` differs (the `hal` block is shared, ADR-0031).
+kinematics and safety envelope; only `sdk_kind` differs (the `hal` block is shared between them, per the HAL entrypoint-resolution convention).
 
 ## Wiring
 

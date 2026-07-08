@@ -7,7 +7,7 @@ the manifest via Pydantic, synthesises the envelope via
 :func:`openral_safety.envelope_loader.compute_intersection` +
 :func:`openral_safety.envelope_loader.kernel_params_from_envelope`, and
 forwards each canonical field as a ROS parameter on the kernel node
-(ADR-0020 PR-K — there is no envelope-file path).
+(there is no envelope-file path).
 
 Production deployments compose this into ``sim_e2e.launch.py`` with
 the rest of the graph (rskill_runner_node, world_state_node, HAL,

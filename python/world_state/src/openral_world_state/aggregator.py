@@ -190,7 +190,7 @@ class WorldStateAggregator:
         self._base_twist: tuple[float, float, float, float, float, float] | None = None
         # battery
         self._battery_pct: float | None = None
-        # ADR-0035 — latest object-memory snapshot (already deduped/evicted by
+        # latest object-memory snapshot (already deduped/evicted by
         # ObjectMemory in the enclosing node). Stored verbatim; no staleness
         # logic here (the memory owns lifecycle and refreshes every tick).
         self._detected_objects: list[DetectedObject] = []
@@ -340,7 +340,7 @@ class WorldStateAggregator:
             self._battery_pct = pct
 
     def update_detected_objects(self, objects: list[DetectedObject]) -> None:
-        """Replace the remembered detected-object set (ADR-0035).
+        """Replace the remembered detected-object set.
 
         Called from the world-state node's memory tick with the current
         ``ObjectMemory`` output (already associated, frozen, and evicted). A

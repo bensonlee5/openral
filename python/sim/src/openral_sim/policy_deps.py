@@ -81,15 +81,14 @@ _FAMILY_INSTALL_HINTS: dict[str, str] = {
     ),
     "gr00t": (
         "Install the gr00t extras: `just sync --all-packages --group gr00t` "
-        "(adds pyzmq + msgpack for the GR00T sidecar client). The GR00T 3B "
-        "policy itself runs in tools/gr00t_sidecar.py's own Python 3.10 venv "
-        "(ADR-0046)."
+        "(adds lerobot[groot]). GR00T-N1.7 now runs in-process on lerobot 0.6.0 "
+        "under this repo's Python 3.12 — no sidecar."
     ),
     "diffuser_actor": (
         "Install the rlbench extras: `just sync --all-packages --group rlbench` "
         "(adds pyzmq + msgpack for the 3D Diffuser Actor sidecar client). The "
         "policy + the CoppeliaSim/PyRep RLBench env run in tools/rlbench_*"
-        "_sidecar.py's own externally-provisioned Python 3.10 venv (ADR-0062)."
+        "_sidecar.py's own externally-provisioned Python 3.10 venv."
     ),
     # `mock` has no external deps — included so a smoke that mentions a
     # mock-family rSkill never gets filtered out.
@@ -109,7 +108,7 @@ _FAMILY_INSTALL_GROUPS: dict[str, tuple[str, ...]] = {
     "diffusion": ("sim",),
     "xvla": ("sim",),
     "rldx": ("rldx",),
-    "gr00t": ("gr00t",),
+    "gr00t": ("sim", "gr00t"),
     "diffuser_actor": ("rlbench",),
     "mock": (),
 }
@@ -127,14 +126,14 @@ _FAMILY_REQUIRED_IMPORTS: dict[str, tuple[str, ...]] = {
     "diffusion": ("lerobot.policies.diffusion.modeling_diffusion",),
     "xvla": ("lerobot.policies.xvla.modeling_xvla",),
     "rldx": ("zmq", "msgpack"),
-    # GR00T shares the rldx out-of-process contract; the openral-side client
-    # only needs the ZMQ + msgpack wire (the 3B policy lives in the sidecar's
-    # own Py3.10 venv). See openral_sim.policies.gr00t / ADR-0046.
-    "gr00t": ("zmq", "msgpack"),
+    # GR00T-N1.7 now loads in-process via lerobot's native GrootPolicy and is
+    # NF4-quantized like pi05. Mirror the factory's first imports in
+    # openral_sim.policies.gr00t.
+    "gr00t": ("transformers", "bitsandbytes", "lerobot.policies.groot.modeling_groot"),
     # 3D Diffuser Actor shares the out-of-process sidecar contract; the
     # openral-side client only needs the ZMQ + msgpack wire (the policy + the
     # CoppeliaSim/PyRep RLBench env live in the sidecar's own py3.10 venv).
-    # See openral_sim.policies.rlbench_3dda / ADR-0062.
+    # See openral_sim.policies.rlbench_3dda.
     "diffuser_actor": ("zmq", "msgpack"),
     "mock": (),
 }

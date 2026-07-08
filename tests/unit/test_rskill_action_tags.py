@@ -1,4 +1,4 @@
-"""ADR-0022 — every in-tree rSkill manifest declares an action vocabulary.
+"""Every in-tree rSkill manifest declares an action vocabulary.
 
 Walks the real ``rskills/*/rskill.yaml`` files (no mocks, no synthetic
 manifests) and asserts:

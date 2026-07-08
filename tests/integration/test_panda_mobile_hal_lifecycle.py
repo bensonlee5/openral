@@ -1,4 +1,4 @@
-"""ADR-0024 / ADR-0025 — live exercise of ``_PandaMobileLifecycleNode``.
+"""Live exercise of ``_PandaMobileLifecycleNode``.
 
 Brings up the real panda_mobile HAL lifecycle node (built and
 installed via ``just ros2-build``), drives it through

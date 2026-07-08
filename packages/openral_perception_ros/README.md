@@ -1,7 +1,7 @@
 # `openral_perception_ros` (ROS 2)
 
-> **ADR-0035 — standalone ROS-Image object-detection producer (no
-> GStreamer).**
+> **Standalone ROS-Image object-detection producer (no
+> GStreamer) feeding the perception → spatial-memory object lift.**
 
 A single `ament_cmake` ROS 2 package (Python node) that subscribes a
 camera `sensor_msgs/Image`, runs the GStreamer-free
@@ -13,9 +13,9 @@ the open-vocabulary `omdet-turbo-indoor` continuous detector (grounds arbitrary
 indoor/kitchen objects); it falls back to the fixed-label RT-DETR COCO ONNX
 (`rtdetr-coco-r18`) when the omdet deps are not installed.
 
-It exists so the perception → spatial-memory object lift (ADR-0035) can
+It exists so the perception → spatial-memory object lift can
 run against a plain ROS image topic in `openral deploy sim`, without
-standing up the GStreamer perception tee (ADR-0018 F6 / ADR-0037) that
+standing up the GStreamer perception bus (the supervisor-graph's F6 leg) that
 the on-robot path uses. It reuses the exact same `ObjectsDetector` and
 `ObjectsMetadata` schema; only the frame source differs.
 
@@ -30,7 +30,7 @@ The detection image comes from a high-resolution RGB camera (e.g.
 `agentview_left`), but detections are attributed to `sensor_id` (default
 `front_depth`) — the co-located depth camera whose REP-103 optical frame
 the world-state lift projects through. They share the MuJoCo viewpoint,
-so the geometry is consistent (ADR-0035 §3).
+so the geometry is consistent (per the object-lift design).
 
 ### Parameters
 
@@ -45,9 +45,9 @@ so the geometry is consistent (ADR-0035 §3).
 | `input_size` | int | `640` | Square model input edge. |
 | `max_rate_hz` | double | `5.0` | Publish-rate cap. |
 | `labels` | string[] | — (required) | COCO-80 class names indexed by class-id. |
-| `query_topic` | string | `/openral/perception/detector_query` | ADR-0037 — open-vocab retarget topic (on-demand). Namespaced per locator (ADR-0056). |
-| `locate_in_view_service` | string | `/openral/perception/locate_in_view` | ADR-0056 — service name. The deploy launch sets it to `/openral/perception/<alias>/locate_in_view` per on-demand locator so several locators co-exist. |
-| `detector_id` | string | `""` | ADR-0056 — this locator's alias, echoed in the `LocateInView` response so the reasoner records which model answered. |
+| `query_topic` | string | `/openral/perception/detector_query` | GStreamer perception-bus open-vocab retarget topic (on-demand). Namespaced per on-demand locator. |
+| `locate_in_view_service` | string | `/openral/perception/locate_in_view` | On-demand-locator service name. The deploy launch sets it to `/openral/perception/<alias>/locate_in_view` per on-demand locator so several locators co-exist. |
+| `detector_id` | string | `""` | This locator's alias, echoed in the `LocateInView` response so the reasoner records which model answered. |
 
 ### Topics
 
@@ -79,14 +79,14 @@ manifest's `DetectorEngine` (`vlm_sidecar` 0.5 Hz, `zeroshot_hf` 2 Hz, ONNX 5 Hz
 resolution-consistent intrinsics so the lift scales `bbox_xyxy` to the
 intrinsics correctly.
 
-**On-demand locators (ADR-0056).** Alongside the continuous detector, the deploy
+**On-demand locators.** Alongside the continuous detector, the deploy
 launch can bring up one or more `mode: on_demand` open-vocab locators — each as
 its **own** lifecycle node serving a namespaced
 `/openral/perception/<alias>/locate_in_view`, so the reasoner picks a model via
 `LocateInViewTool.detector`. Default = `omdet-turbo-locator` (when the omdet deps
 import); add more with the repeatable `--object-detector-locator <manifest|alias>`
 (LocateAnything is opt-in — NVIDIA non-commercial, 5 GB, needs the sidecar venv).
-Each locator is an independent lifecycle + VRAM peer (ADR-0050), so the reasoner
+Each locator is an independent lifecycle + VRAM peer (per the single-resident-skill VRAM eviction policy), so the reasoner
 can evict it before a co-resident VLA.
 
 ## What's in here
@@ -95,8 +95,8 @@ can evict it before a co-resident VLA.
 | --- | --- |
 | `openral_perception_ros/ros_image_detector_node.py` | The node + its `main()` entry point. ROS imports are deferred into `main()` so the module stays import-safe on hosts without a sourced ROS env. |
 | `openral_perception_ros/image_convert.py` | `image_to_bgr_bytes(msg)` — `sensor_msgs/Image` → contiguous BGR bytes (no `cv_bridge`); raises `ImageConvertError` on an unsupported encoding or padded rows. |
-| `openral_perception_ros/depth_convert.py` | **ADR-0064** — `depth_array_to_image_msg` / `image_msg_to_depth_array` (`32FC1` metres ↔ ndarray, NaN-preserving) + `camera_info_from_intrinsics` (pinhole `CameraInfo`). Pure message-boundary helpers, no torch. Unit-tested in `tests/unit/test_depth_convert.py`. |
-| `openral_perception_ros/depth_provider_node.py` | **ADR-0064** — `depth_provider_node` (`openral_depth_provider`): subscribes a mono RGB stream, calls the DA3 metric-depth sidecar (`tools/da3_depth_sidecar.py`, default `depth-anything/DA3-SMALL` — measured 0.27 GB / ~27 Hz on an 8 GB Ada) over ZMQ, and republishes a `32FC1` depth Image + `CameraInfo` for **nvblox** (`openral_slam_bringup/nvblox.launch.py`). Gives lidar-less robots a Nav2 cost map via cuVSLAM pose + nvblox. Best-effort; a sidecar hiccup skips the frame, never crashes the graph. Live bring-up is operator-run (sidecar venv + GPU). |
+| `openral_perception_ros/depth_convert.py` | `depth_array_to_image_msg` / `image_msg_to_depth_array` (`32FC1` metres ↔ ndarray, NaN-preserving) + `camera_info_from_intrinsics` (pinhole `CameraInfo`). Pure message-boundary helpers, no torch. Unit-tested in `tests/unit/test_depth_convert.py`. |
+| `openral_perception_ros/depth_provider_node.py` | `depth_provider_node` (`openral_depth_provider`): subscribes a mono RGB stream, calls the DA3 metric-depth sidecar (`tools/da3_depth_sidecar.py`, default `depth-anything/DA3-SMALL` — measured 0.27 GB / ~27 Hz on an 8 GB Ada) over ZMQ, and republishes a `32FC1` depth Image + `CameraInfo` for **nvblox** (`openral_slam_bringup/nvblox.launch.py`). Gives lidar-less robots a Nav2 cost map via cuVSLAM pose + nvblox. Best-effort; a sidecar hiccup skips the frame, never crashes the graph. Live bring-up is operator-run (sidecar venv + GPU). |
 | `package.xml` / `CMakeLists.txt` | `ament_cmake` manifest (depends on `rclpy`, `sensor_msgs`, `openral_msgs`) + `ament_python_install_package` and `install(PROGRAMS … ros_image_detector_node.py)`. Installed as a program (not a setuptools `console_scripts` entry) so its `#!/usr/bin/env python3` shebang survives — a `console_scripts` entry is regenerated by colcon with a system-python shebang that can't see the `openral_runner` workspace package. Launch executable: `ros_image_detector_node.py`. |
 
 ## Tests
@@ -104,7 +104,7 @@ can evict it before a co-resident VLA.
 - `tests/unit/test_image_convert.py` — `rgb8`/`bgr8` → BGR byte
   conversion, channel order, and the rejection paths (bad encoding,
   padded stride).
-- `tests/unit/test_depth_convert.py` — ADR-0064 metric-depth ↔ `32FC1`
+- `tests/unit/test_depth_convert.py` — metric-depth ↔ `32FC1`
   Image round-trip (metres preserved, NaN preserved), the `CameraInfo`
   pinhole matrices, and the rejection paths (non-2D, wrong encoding,
   padded stride).
@@ -117,8 +117,7 @@ can evict it before a co-resident VLA.
 
 ## Related
 
-- [ADR-0035](../../docs/adr/0035-perception-spatial-memory-object-lift.md) —
-  perception → spatial-memory object lift; the deploy-sim integration this
+- The perception → spatial-memory object lift; the deploy-sim integration this
   node serves.
 - `packages/world_state/` — the consumer; subscribes
   `/openral/perception/objects` and lifts each 2D detection to a 3D

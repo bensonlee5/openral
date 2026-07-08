@@ -1,4 +1,4 @@
-"""ADR-0022 — :func:`build_tool_palette` carries per-skill metadata.
+""":func:`build_tool_palette` carries per-skill metadata.
 
 Drives the real :class:`RSkillManifest` loader against the in-tree
 ``rskills/*/rskill.yaml`` files (no synthetic manifests), then asserts
@@ -46,10 +46,10 @@ def test_palette_carries_per_skill_metadata_for_aloha() -> None:
 def test_palette_excludes_detector_kind_skills() -> None:
     """``kind: detector`` rSkills are perception producers, never in the ExecuteSkill palette.
 
-    The in-tree RT-DETR detectors (``rtdetr-coco-r18`` / ``rtdetr-v2-r50vd``)
-    carry ``role: s1`` and broad embodiment tags, so they pass the role +
+    The in-tree RT-DETR detector (``rtdetr-coco-r18``) carries ``role: s1``
+    and broad embodiment tags, so it passes the role +
     embodiment filters — but they are activated as the perception ROS node /
-    GStreamer tee (ADR-0035/0037), not dispatched via ExecuteSkill. They must
+    GStreamer tee, not dispatched via ExecuteSkill. They must
     not appear in any robot's palette regardless of embodiment match.
     """
     intree = _load_intree()
@@ -95,7 +95,7 @@ def test_empty_palette_when_no_skill_matches_embodiment() -> None:
 
 
 def test_palette_is_frozen() -> None:
-    """The palette and its entries must be immutable per ADR-0018."""
+    """The palette and its entries must be immutable."""
     caps = RobotCapabilities(embodiment_tags=["aloha"])
     palette = build_tool_palette(installed_skills=_load_intree(), robot_capabilities=caps)
     import pytest

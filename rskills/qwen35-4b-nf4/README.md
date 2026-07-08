@@ -1,25 +1,30 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - vlm
-  - video-language-model
-  - scene-understanding
-  - spatial-reasoning
-  - qwen
-  - nf4
-  - bitsandbytes
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- nf4
+- 4-bit
+- any
+- vlm
+- video-language-model
+- scene-understanding
+- spatial-reasoning
+- qwen
+- bitsandbytes
 base_model:
-  - Qwen/Qwen3.5-4B
+- Qwen/Qwen3.5-4B
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-qwen35-4b-nf4
 
 > **OpenRAL rSkill** — Qwen3.5-4B natively-multimodal video-language model
-> packaged as an NF4 bitsandbytes `vlm` rSkill (ADR-0047). Accepts RGB
+> packaged as an NF4 bitsandbytes `vlm` rSkill. Accepts RGB
 > image or video frames plus a natural-language query; returns a text answer.
 > **No actuators.** Apache-2.0.
 
@@ -109,7 +114,7 @@ It loads the upstream model once (forcing serial materialization so the bf16
 pass fits 8 GB), saves the NF4 weights + processor, then verifies the checkpoint
 reloads directly as 4-bit and answers a smoke query.
 
-The `kind: vlm` runtime is implemented (ADR-0047) as a read-only reasoner tool,
+The `kind: vlm` runtime is implemented as a read-only reasoner tool,
 **not** an `ExecuteSkill` (a scene VLM produces text, not actions):
 
 - **Sidecar**: `tools/qwen_vlm_sidecar.py` boots the NF4 model in its own venv

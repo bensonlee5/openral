@@ -1,4 +1,4 @@
-"""Unit tests for the ADR-0049 proprio snapshot holder.
+"""Unit tests for the proprio snapshot holder.
 
 These exercise the thread-safety contract that lets the HAL publish odom /
 joint_state from a different executor thread than the one stepping the sim:
@@ -41,7 +41,7 @@ def test_set_then_latest_returns_same_frame() -> None:
     assert got.base_pose == (7.0, 7.0, 0.0)
     assert got.base_pose_6dof == ((7.0, 7.0, 0.7), (0.0, 0.0, 0.0, 1.0))
     assert got.state.stamp_ns == 7
-    assert got.sim_time_ns == 7  # ADR-0048 Phase 2 — carried for the /clock publisher
+    assert got.sim_time_ns == 7  # carried for the /clock publisher
 
 
 def test_latest_reflects_most_recent_set() -> None:

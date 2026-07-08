@@ -3,7 +3,7 @@
 > **Hand-authored decision procedure (SOP).** Unlike the generated `SKILL.md`
 > discovery view, this file is the *content the S2 Reasoner reads and follows*.
 > It is injected into the reasoner's system prompt when this playbook is
-> installed. The `rskill.yaml` `playbook.body_uri` points here. ADR-0072.
+> installed. The `rskill.yaml` `playbook.body_uri` points here.
 
 ## Trigger
 A manipulation or navigation skill just returned and its success is **not**
@@ -53,6 +53,6 @@ failure.
 ## Safety
 This playbook only *decides* and *sequences*. It triggers no motion of its own;
 when its classification routes back to a replan, every resulting motion is an
-`execute_rskill` → Action chunk that still crosses the C++ safety kernel
-(ADR-0030). Reporting a false success would be a truth violation (CLAUDE.md
+`execute_rskill` → Action chunk that still crosses the C++ safety kernel.
+Reporting a false success would be a truth violation (CLAUDE.md
 §1.2) — when in doubt it classifies FAILURE and escalates, never the reverse.

@@ -49,11 +49,21 @@ INFERENCE_CHUNK_INDEX: Final[str] = "inference.chunk_index"
 INFERENCE_CHUNK_SIZE: Final[str] = "inference.chunk_size"
 INFERENCE_ENGINE: Final[str] = "inference.engine"
 INFERENCE_DEVICE: Final[str] = "inference.device"
+INFERENCE_DURATION_MS: Final[str] = "inference.duration_ms"
 
 SAFETY_SEVERITY: Final[str] = "safety.severity"
 SAFETY_CHECK_NAME: Final[str] = "safety.check_name"
 SAFETY_KERNEL: Final[str] = "safety.kernel"
 SAFETY_CLAMPED: Final[str] = "safety.clamped"
+
+# ── reward.* — task-progress reward monitor scores ──────────────────────────
+REWARD_PROGRESS: Final[str] = "reward.progress"
+REWARD_SUCCESS: Final[str] = "reward.success"
+REWARD_STALLED: Final[str] = "reward.stalled"
+REWARD_SUCCEEDED: Final[str] = "reward.succeeded"
+REWARD_FRAMES: Final[str] = "reward.frames"
+REWARD_TASK: Final[str] = "reward.task"
+REWARD_CAMERA: Final[str] = "reward.camera"
 
 # ── openral.run.* — CLI invocation ─────────────────────────────────────────
 
@@ -137,7 +147,7 @@ WORLD_STATE_COMPONENTS_STALE: Final[str] = "openral.world_state.components_stale
 WORLD_STATE_HAS_LATCHED_ERROR: Final[str] = "openral.world_state.has_latched_error"
 WORLD_STATE_COMPONENT: Final[str] = "openral.world_state.component"
 
-# ── openral.world_state.scene_objects.* (ADR-0038 durable spatial memory) ───
+# ── openral.world_state.scene_objects.* (durable spatial-memory scene-object graph) ──
 # Carried on the ``world.scene_objects`` span so the dashboard can show the
 # remembered object nodes (a table + map overlay). ``LIST`` is a JSON array of
 # ``{id,label,x,y,z,frame_id,confidence,last_seen_ns,observation_count,is_container}``.
@@ -151,7 +161,7 @@ WORLD_SCENE_OBJECTS_SOURCE_NODE: Final[str] = "openral.world_state.scene_objects
 DATASET_REPO_ID: Final[str] = "openral.dataset.repo_id"
 DATASET_EPISODE_IDX: Final[str] = "openral.dataset.episode_idx"
 DATASET_FRAME_IDX: Final[str] = "openral.dataset.frame_idx"
-# ADR-0019: written by Rosbag2Sink / LeRobotDatasetSink on episode_end()
+# Written by Rosbag2Sink / LeRobotDatasetSink on episode_end()
 # so the Jaeger trace can be filtered to successful vs failed rollouts
 # without correlating against the dataset filesystem.
 DATASET_EPISODE_SUCCESS: Final[str] = "openral.dataset.episode.success"
@@ -170,8 +180,10 @@ SPAN_SENSORS_READ_LATEST: Final[str] = "sensors.read_latest"
 SPAN_WORLD_STATE_SNAPSHOT: Final[str] = "world_state.snapshot"
 SPAN_WORLD_SCENE_OBJECTS: Final[str] = "world.scene_objects"
 SPAN_SAFETY_CHECK: Final[str] = "safety.check"
+SPAN_REWARD_SCORE: Final[str] = "reward.score"
+"""One span per reward-monitor assessment (service query or critic tick)."""
 SPAN_REASONER_TICK: Final[str] = "reasoner.tick"
-"""ADR-0018 F4 — one span per :meth:`openral_reasoner.ReasonerCore.tick`."""
+"""One span per :meth:`openral_reasoner.ReasonerCore.tick`."""
 
 # Reasoner span attributes (rendered with the ``reasoner.`` prefix).
 REASONER_MODEL: Final[str] = "reasoner.model"
@@ -181,16 +193,16 @@ REASONER_RSKILL_ID: Final[str] = "reasoner.rskill_id"
 REASONER_SUPPRESSED_REASON: Final[str] = "reasoner.suppressed_reason"
 REASONER_ERROR_KIND: Final[str] = "reasoner.error_kind"
 REASONER_FORCE: Final[str] = "reasoner.force"
-# ADR-0073 — the active MissionState queue, serialized as JSON
+# The active MissionState task queue, serialized as JSON
 # (``MissionState.to_summary``) so the live dashboard renders the task
 # checklist (status / attempts / verdict) rather than only the text ledger.
 REASONER_MISSION_JSON: Final[str] = "reasoner.mission_json"
-# ADR-0074/0077 — the concrete state of a skill failure carried on the
+# Skill-failure / reward-verdict reporting — the concrete state of a skill failure carried on the
 # ``EVENT_SKILL_FAILURE`` span event (e.g. ``"vram_insufficient"``,
 # ``"reward_plateau"``, ``"unavailable"``, ``"timeout"``, ``"aborted"``).
 # Nested under the ``openral.event.`` namespace alongside the event it annotates.
 SKILL_FAILURE_STATE: Final[str] = "openral.event.skill_failure.state"
-# ADR-0018 2026-05-25 amendment — trigger taxonomy. Records which
+# Trigger taxonomy (2026-05-25). Records which
 # tier drove the LLM call: "A" (safety), "B" (replan), "C" (critic),
 # "D" (operator / perception), or "heartbeat" (deadlock-insurance
 # periodic fallback).
@@ -209,16 +221,16 @@ EVENT_ERROR_LATCHED: Final[str] = "openral.event.error_latched"
 EVENT_SAFETY_VIOLATION: Final[str] = "openral.event.safety_violation"
 EVENT_ACTION_DROPPED: Final[str] = "openral.event.action_dropped"
 EVENT_DEADLINE_MISSED: Final[str] = "openral.event.deadline_missed"
-# ADR-0074/0077 — a Reasoner-published skill failure. The single
+# A Reasoner-published skill failure. The single
 # ``reasoner_node._publish_skill_failure`` chokepoint mirrors every
 # ``/openral/failure/rskill`` FailureTrigger onto the OTLP span path so the
-# dashboard can tally + surface them, including the ADR-0077
-# ``vram_insufficient`` refusal and the ADR-0074 reward-plateau abort. The
+# dashboard can tally + surface them, including the
+# ``vram_insufficient`` refusal and the reward-plateau abort. The
 # concrete failure state rides on the ``SKILL_FAILURE_STATE`` attribute.
 EVENT_SKILL_FAILURE: Final[str] = "openral.event.skill_failure"
 EVENT_CHUNK_PREFETCH_HIT: Final[str] = "openral.event.chunk_prefetch_hit"
 EVENT_CHUNK_PREFETCH_MISS: Final[str] = "openral.event.chunk_prefetch_miss"
-# ADR-0019: emitted by RolloutRecorder.episode_end() so a Jaeger query
+# Emitted by RolloutRecorder.episode_end() so a Jaeger query
 # can pivot from a successful skill execution to the produced dataset row.
 EVENT_EPISODE_CLOSED: Final[str] = "openral.event.episode_closed"
 
@@ -335,6 +347,7 @@ __all__ = [
     "INFERENCE_CHUNK_INDEX",
     "INFERENCE_CHUNK_SIZE",
     "INFERENCE_DEVICE",
+    "INFERENCE_DURATION_MS",
     "INFERENCE_ENGINE",
     "INFERENCE_KIND",
     "LABEL_CHECK_NAME",
@@ -385,6 +398,13 @@ __all__ = [
     "REASONER_TICK_IDX",
     "REASONER_TIER",
     "REASONER_TOOL",
+    "REWARD_CAMERA",
+    "REWARD_FRAMES",
+    "REWARD_PROGRESS",
+    "REWARD_STALLED",
+    "REWARD_SUCCEEDED",
+    "REWARD_SUCCESS",
+    "REWARD_TASK",
     "RSKILL_ACTION_APPLIED",
     "RSKILL_ACTION_HORIZON",
     "RSKILL_EPISODE_IDX",
@@ -430,6 +450,7 @@ __all__ = [
     "SPAN_HAL_SEND_ACTION",
     "SPAN_PHYSICS_STEP",
     "SPAN_REASONER_TICK",
+    "SPAN_REWARD_SCORE",
     "SPAN_RSKILL_ACTIVATE",
     "SPAN_RSKILL_CHUNK_INFERENCE",
     "SPAN_RSKILL_CONFIGURE",

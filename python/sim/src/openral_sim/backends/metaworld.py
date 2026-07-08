@@ -100,7 +100,7 @@ class _MetaworldSim:
         return model, data
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed MuJoCo sim time in ns (ADR-0048 Phase 1), or None.
+        """Elapsed MuJoCo sim time in ns, or None.
 
         Reads ``MjData.time`` off :meth:`mujoco_handles`. Monotonic within an
         episode; rewinds on ``reset``.

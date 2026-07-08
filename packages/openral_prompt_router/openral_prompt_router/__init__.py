@@ -1,11 +1,11 @@
-"""ADR-0018 F10 — prompt_router_node and adapter registry.
+"""prompt_router_node and adapter registry.
 
 The router is a single lifecycle node that fans in operator prompts
 from any external source (CLI, dashboard WebSocket, voice, Slack)
 into a normalised :class:`openral_msgs/PromptStamped` stream on
 ``/openral/prompt`` (consumed by the F4 reasoner).
 
-v1 adapters (per ADR-0018 §3 / capability review §3.F10):
+v1 adapters (capability review §3.F10):
 
 - CLI: ``openral prompt "do X"`` publishes a one-shot PromptStamped and
   exits. Lives in :mod:`openral_cli.prompt` — does not load through

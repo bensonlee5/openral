@@ -1,5 +1,5 @@
 # python/hal/tests/test_build_hal_scene_attach.py
-"""build_hal scene-attach path (ADR-0034): sim_env_yaml -> SimAttachedHAL."""
+"""build_hal scene-attach path: sim_env_yaml -> SimAttachedHAL."""
 
 from __future__ import annotations
 

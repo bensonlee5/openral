@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Unit coverage for the simulated depth-camera → point-cloud synth.
 
-ADR-0030 — `synthesize_depth_pointcloud` casts one `mj_multiRay` ray per
+`synthesize_depth_pointcloud` casts one `mj_multiRay` ray per
 (strided) pixel through a pinhole model and returns the hit points in the
 camera *optical* frame (REP-103: +x right, +y down, +z forward). It is the
 3-D analogue of `synthesize_laser_scan_2d` and is robot-agnostic: any named
@@ -228,7 +228,7 @@ def test_depth_cloud_unknown_camera_raises() -> None:
         )
 
 
-# ── synthesize_depth_image (ADR-0064 — dense raster for nvblox) ──────────────
+# ── synthesize_depth_image (dense raster for nvblox) ──────────────────────────
 
 
 def test_depth_image_dense_fronto_parallel_wall() -> None:

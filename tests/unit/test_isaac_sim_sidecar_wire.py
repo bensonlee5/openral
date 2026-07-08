@@ -1,4 +1,4 @@
-"""Wire round-trip tests for the Isaac Sim sidecar backend (ADR-0045).
+"""Wire round-trip tests for the Isaac Sim sidecar backend.
 
 The Isaac Sim scene adapter (:mod:`openral_sim.backends.isaac_sim`) talks to an
 out-of-process Isaac Lab sidecar over ZMQ REQ/REP framed by msgpack — the same

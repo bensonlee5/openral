@@ -1,4 +1,4 @@
-"""``JointGoalRskill`` — move the arm to a joint configuration via MoveGroup (ADR-0054).
+"""``JointGoalRskill`` — move the arm to a joint configuration via MoveGroup.
 
 A :class:`~openral_rskill.ros_action_rskill.ROSActionRskill` whose goal is a
 ``joint`` block (``joint_names`` + ``positions``), lowered at dispatch time into

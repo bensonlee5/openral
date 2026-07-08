@@ -53,7 +53,7 @@ class RSkillPatch(TypedDict, total=False):
     n_action_steps: int | None
     image_preprocessing: dict[str, Any] | None
     state_contract: dict[str, Any] | None
-    # ADR-0019: per-checkpoint action contract. Required for any rSkill
+    # Per-checkpoint action contract. Required for any rSkill
     # that wants to write through the dataset bridge — the bridge reads
     # ``action_contract.dim`` to bind the LeRobot v3 ``action`` feature
     # shape (cf. ``state_contract`` for ``observation.state``).
@@ -68,7 +68,7 @@ def family_defaults(family: RSkillFamily) -> RSkillPatch:
     """Return the manifest patch for a given family.
 
     Numbers match the published reference manifests under ``rskills/``
-    (``act-aloha``, ``smolvla-libero``, ``pi05-libero-nf4``, ``xvla-libero``,
+    (``act-aloha``, ``smolvla-libero``, ``pi05-libero-int8``, ``xvla-libero``,
     ``diffusion-pusht``). Keeping them in one place avoids drift between
     the scaffolder and the in-tree reference skills.
     """

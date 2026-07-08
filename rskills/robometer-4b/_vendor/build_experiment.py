@@ -1,5 +1,5 @@
 """Experiment: can we produce a PRE-quantized Robometer checkpoint that reloads
-directly as 4-bit (no bf16 base+ckpt read, no requantize)? (ADR-0057 load fix)
+directly as 4-bit (no bf16 base+ckpt read, no requantize)? (Robometer NF4 load fix)
 
 Measures the current load path's cost, then tries save_pretrained + reload.
 Run: /tmp/robometer-env/bin/python rskills/robometer-4b/_vendor/build_experiment.py

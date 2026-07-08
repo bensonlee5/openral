@@ -4,7 +4,7 @@
   <name>openral_prompt_router</name>
   <version>0.1.0</version>
   <description>
-    OpenRAL prompt router (ADR-0018 F10) — single lifecycle node that
+    OpenRAL prompt router — single lifecycle node that
     fans in operator prompts from any external source (CLI today;
     dashboard WebSocket / voice / Slack post-v1) into a normalised
     openral_msgs/PromptStamped stream on /openral/prompt. FIFO

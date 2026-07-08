@@ -1,18 +1,18 @@
 """Envelope loader — Python helper that bridges Pydantic to the C++ kernel.
 
-The C++ safety kernel (``cpp/openral_safety_kernel/``, ADR-0020) needs a
+The C++ safety kernel (``cpp/openral_safety_kernel/``) needs a
 robot ceiling + (optional) skill envelope intersection at ``configure()``
 time. Re-implementing Pydantic validation in C++ would duplicate the
 source-of-truth schema (CLAUDE.md §1.3) and create drift; instead, this
 Python helper reads the Pydantic manifests once, validates the
 intersection, and converts the result to a ROS-parameter dict that the
-kernel reads via :func:`load_envelope_from_ros_parameters` (ADR-0020
-PR-K, 2026-05-24).
+kernel reads via :func:`load_envelope_from_ros_parameters`
+(added 2026-05-24).
 
-The legacy flat-YAML envelope-file path the kernel used pre-PR-K is
-gone — there is exactly one transport: ROS parameters.
+The legacy flat-YAML envelope-file path the kernel used before this
+transport is gone — there is exactly one transport: ROS parameters.
 
-ADR-0018 §5 contract enforced here:
+The safety envelope contract enforced here:
 
 * The robot manifest declares the **ceiling**.
 * Each rSkill manifest may declare a **tighter envelope**.
@@ -33,6 +33,7 @@ from collections.abc import Mapping
 from typing import cast
 
 from openral_core import (
+    BoxShape,
     CapsuleShape,
     JointSpec,
     JointType,
@@ -203,7 +204,7 @@ def _check_scalar_not_loosened(
         raise ROSConfigError(
             f"{label} envelope {field}={skill_value!r} loosens robot ceiling "
             f"{field}={robot_value!r}; {label} envelope must be tighter "
-            "or equal to the robot ceiling (ADR-0018 §5)."
+            "or equal to the robot ceiling."
         )
 
 
@@ -241,7 +242,7 @@ def _validate_envelope_tightens(
     ):
         raise ROSConfigError(
             f"{label} envelope clears deadman_required while the robot ceiling "
-            "requires it; loosening rejected (ADR-0018 §5)."
+            "requires it; loosening rejected."
         )
 
 
@@ -316,7 +317,7 @@ def compute_intersection(
     Raises:
         ROSConfigError: When ``skill.envelope`` loosens the robot ceiling on
             any field. The loader refuses to honor a looser envelope
-            (CLAUDE.md §1.1, §1.4; ADR-0018 §5).
+            (CLAUDE.md §1.1, §1.4).
     """
     robot_env: SafetyEnvelope = robot.safety
     merged_env = merge_deploy_envelope(robot_env, deploy)
@@ -399,8 +400,8 @@ def kernel_params_from_envelope(envelope: EnvelopeIntersection) -> dict[str, obj
     """Translate :class:`EnvelopeIntersection` → safety_kernel ROS parameters.
 
     The C++ safety kernel (``cpp/openral_safety_kernel/``) reads its
-    envelope exclusively from per-field ROS parameters (ADR-0020 PR-K,
-    2026-05-24). This function is the canonical Python → ROS-params
+    envelope exclusively from per-field ROS parameters (added 2026-05-24).
+    This function is the canonical Python → ROS-params
     converter — used by ``openral deploy sim``'s ``sim_e2e.launch.py`` to
     feed the kernel from ``robots/<id>/robot.yaml``, by ``kernel_only``
     launches, and by every C++ / Python kernel test fixture.
@@ -506,21 +507,21 @@ def _capsules_by_link(
         if geom.link_name in capsule_of:
             msg = (
                 f"link {geom.link_name!r} has >1 collision primitive; "
-                "split it into separate links (unsupported in ADR-0030 phase 2)"
+                "split it into separate links (unsupported in this lowering phase)"
             )
             raise ROSConfigError(msg)
         capsule_of[geom.link_name] = geom
     return capsule_of
 
 
-def collision_params_from_description(
-    robot: RobotDescription, *, margin_m: float = 0.0
+def collision_params_from_description(  # noqa: PLR0912, PLR0915
+    robot: RobotDescription, *, margin_m: float | None = None
 ) -> dict[str, object]:
     """Flatten a robot's collision geometry into safety_kernel ROS parameters.
 
     Lowers :attr:`RobotDescription.collision_geometry` +
     :attr:`~RobotDescription.allowed_collision_pairs` + the kinematic chain
-    (``joints`` with their ADR-0030 ``origin_xyz`` / ``origin_rpy`` / ``axis_xyz``)
+    (``joints`` with their ``origin_xyz`` / ``origin_rpy`` / ``axis_xyz``)
     into the flat parallel arrays the C++ kernel's ``load_collision_model``
     reads. ``joints`` stays the normative kinematic source; this never parses
     URDF/MJCF — the offline lowering tool populates the joint origins + capsules
@@ -535,7 +536,7 @@ def collision_params_from_description(
     Args:
         robot: The robot manifest. No collision geometry → returns
             ``{"self_collision_enabled": False}`` (the kernel runs the scalar
-            envelope check only, exactly as before ADR-0030).
+            envelope check only, exactly as before this lowering was added).
         margin_m: Clearance margin in metres; a pair closer than this fires
             (default ``0.0`` = collide on touch).
 
@@ -550,6 +551,11 @@ def collision_params_from_description(
     """
     if not robot.collision_geometry:
         return {"self_collision_enabled": False}
+
+    # An explicit margin_m arg overrides; otherwise use the manifest's
+    # safety.self_collision_margin_m (default 0.0 = collide on touch).
+    if margin_m is None:
+        margin_m = float(getattr(robot.safety, "self_collision_margin_m", 0.0) or 0.0)
 
     ordered, index, joint_of_child = _ordered_collision_links(list(robot.joints))
     capsule_of = _capsules_by_link(robot, index)
@@ -577,29 +583,38 @@ def collision_params_from_description(
             origin_xyzrpy.extend([float(v) for v in (*j.origin_xyz, *j.origin_rpy)])
             axis.extend([float(v) for v in j.axis_xyz])
 
-    # Capsules are a flat per-capsule list tagged with their link index (a link
-    # may carry zero or — once the manifest supports it — several).
+    # Each link's primitive is routed by shape: capsules/spheres to the capsule
+    # arrays (sphere = zero-length capsule), boxes to the OBB arrays
+    # (issue #84). Both are flat per-primitive lists tagged with the link index.
     capsule_link: list[int] = []
     capsule_radius: list[float] = []
     capsule_half_length: list[float] = []
     capsule_origin_xyzrpy: list[float] = []
+    box_link: list[int] = []
+    box_half_extents: list[float] = []
+    box_origin_xyzrpy: list[float] = []
     for name in ordered:
-        cap = capsule_of.get(name)
-        if cap is None:
+        geom = capsule_of.get(name)
+        if geom is None:
             continue
-        shape = cap.shape
-        half_length = shape.length_m / 2.0 if isinstance(shape, CapsuleShape) else 0.0
-        capsule_link.append(index[name])
-        capsule_radius.append(float(shape.radius_m))
-        capsule_half_length.append(float(half_length))
-        capsule_origin_xyzrpy.extend([float(v) for v in cap.origin_xyz_rpy])
+        shape = geom.shape
+        if isinstance(shape, BoxShape):
+            box_link.append(index[name])
+            box_half_extents.extend([float(h) for h in shape.half_extents_m])
+            box_origin_xyzrpy.extend([float(v) for v in geom.origin_xyz_rpy])
+        else:
+            half_length = shape.length_m / 2.0 if isinstance(shape, CapsuleShape) else 0.0
+            capsule_link.append(index[name])
+            capsule_radius.append(float(shape.radius_m))
+            capsule_half_length.append(float(half_length))
+            capsule_origin_xyzrpy.extend([float(v) for v in geom.origin_xyz_rpy])
 
     allowed_pairs: list[int] = []
     for a, b in robot.allowed_collision_pairs:
         if a in index and b in index:
             allowed_pairs.extend([index[a], index[b]])
 
-    return {
+    params: dict[str, object] = {
         "self_collision_enabled": True,
         "self_collision_margin_m": float(margin_m),
         "collision_n_links": len(ordered),
@@ -608,13 +623,26 @@ def collision_params_from_description(
         "collision_dof_index": dof_index,
         "collision_origin_xyzrpy": origin_xyzrpy,
         "collision_axis": axis,
-        "collision_capsule_link": capsule_link,
-        "collision_capsule_radius": capsule_radius,
-        "collision_capsule_half_length": capsule_half_length,
-        "collision_capsule_origin_xyzrpy": capsule_origin_xyzrpy,
-        "collision_allowed_pairs": allowed_pairs,
         "collision_link_names": ordered,
     }
+    # Per-primitive arrays (capsules, boxes) and the allowed-pair list are omitted
+    # when empty: launch_ros collapses an empty Python list to ``()`` and
+    # ensure_argument_type rejects it. An all-box robot (SO-101) has zero
+    # capsules; a capsule-only robot has zero boxes; both are valid. The kernel
+    # declares its own ``[]`` default for each (same guard as
+    # ``collision_base_dofs`` in sim_e2e.launch.py).
+    if capsule_link:
+        params["collision_capsule_link"] = capsule_link
+        params["collision_capsule_radius"] = capsule_radius
+        params["collision_capsule_half_length"] = capsule_half_length
+        params["collision_capsule_origin_xyzrpy"] = capsule_origin_xyzrpy
+    if box_link:
+        params["collision_box_link"] = box_link
+        params["collision_box_half_extents"] = box_half_extents
+        params["collision_box_origin_xyzrpy"] = box_origin_xyzrpy
+    if allowed_pairs:
+        params["collision_allowed_pairs"] = allowed_pairs
+    return params
 
 
 def merge_extra_allowed_pairs(
@@ -662,7 +690,7 @@ def merge_extra_allowed_pairs(
 
 
 def ee_link_index_from_collision_params(params: Mapping[str, object]) -> int:
-    """Pick the predictive-Cartesian end-effector link (ADR-0040 Phase 3).
+    """Pick the predictive-Cartesian end-effector link.
 
     The C++ kernel reconstructs where a ``CARTESIAN_DELTA`` chunk's EE deltas
     drive the arm using the geometric Jacobian of one *control* link. For a

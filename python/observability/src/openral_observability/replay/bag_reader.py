@@ -1,7 +1,7 @@
-"""Iterate rosbag2 / mcap files and surface the ADR-0018 ``trace_id`` field.
+"""Iterate rosbag2 / mcap files and surface the ``trace_id`` field.
 
 The reader uses the bare ``mcap`` PyPI library (already a dependency of
-``openral_dataset`` per ADR-0019). It does **not** import ``rosbag2_py``
+``openral_dataset`` for the LeRobot dataset-bridge schema). It does **not** import ``rosbag2_py``
 so it works on developer laptops and CI runners that have not sourced
 ROS 2 — `ros2 bag record --storage mcap` writes the same on-disk format
 this reader consumes.
@@ -54,9 +54,9 @@ def _trace_id_from_json_payload(payload: dict[str, Any]) -> tuple[str, str]:
 
     Two conventions coexist on the bus:
 
-    * ADR-0018 ROS IDL messages (ActionChunk / FailureTrigger / …) pack a
+    * ROS IDL messages (ActionChunk / FailureTrigger / …) pack a
       full W3C ``traceparent`` into a single ``trace_id`` field.
-    * The ADR-0019 ``openral_msgs/Tick`` schema carries ``trace_id``
+    * The LeRobot dataset-bridge ``openral_msgs/Tick`` schema carries ``trace_id``
       (32 hex) and ``span_id`` (16 hex) as separate raw fields (ISSUE-109).
 
     Both resolve to the 32-hex trace component used for the join; the
@@ -82,7 +82,7 @@ def _trace_id_from_json_payload(payload: dict[str, Any]) -> tuple[str, str]:
 
 @dataclass(frozen=True)
 class BagMessage:
-    """One rosbag2 record surfaced to the F7 correlator.
+    """One rosbag2 record surfaced to the bag↔OTel replay correlator.
 
     Attributes:
         topic: ROS topic name (e.g. ``/openral/safe_action``).
@@ -90,7 +90,7 @@ class BagMessage:
         publish_time_ns: publisher-side stamp; ``log_time_ns`` if the
             recorder did not preserve it.
         trace_id: 32-hex-char trace_id extracted from the message body,
-            or empty if absent. ROS messages defined under ADR-0018
+            or empty if absent. ROS messages that support tracing
             carry it as a top-level ``string trace_id`` field; older
             messages may not.
         traceparent: Full W3C ``traceparent`` when extracted from a

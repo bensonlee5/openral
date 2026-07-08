@@ -1,4 +1,4 @@
-"""ADR-0027 — StateContract.bindings + the wrapped-task-space requirement.
+"""StateContract.bindings + the wrapped-task-space requirement.
 
 Pins the per-layout binding policy: task-space layouts (``human300_16d`` /
 ``rc365``) require ``bindings``; joint-space layouts
@@ -12,18 +12,12 @@ validation.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from openral_core import (
     WRAPPED_TASK_SPACE_LAYOUTS,
-    RSkillManifest,
     StateContract,
     StateContractBindings,
 )
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_PI05_MANIFEST = _REPO_ROOT / "rskills" / "pi05-robocasa365-human300-nf4" / "rskill.yaml"
 
 
 class TestStateContractBindingsValidator:
@@ -87,28 +81,13 @@ class TestStateContractBindingsDefaults:
         assert bindings.gripper_qpos_joints == []
 
 
-class TestRSkillManifestRoundTrip:
-    def test_pi05_manifest_carries_panda_mobile_bindings(self) -> None:
-        """The in-tree pi05 manifest validates AND surfaces the expected
-        per-robot bindings — guards against a future PR dropping the
-        bindings block and silently re-introducing the 10-vs-16 dim filter."""
-        manifest = RSkillManifest.from_yaml(str(_PI05_MANIFEST))
-        assert manifest.state_contract is not None
-        assert manifest.state_contract.layout == "human300_16d"
-        assert manifest.state_contract.bindings is not None
-        bindings = manifest.state_contract.bindings
-        assert bindings.eef_frame == "panda_hand_tcp"
-        assert bindings.base_frame == "base_link"
-        assert bindings.gripper_qpos_joints == ["panda_gripper"]
-
-
 def test_wrapped_set_matches_task_space_definition() -> None:
     """Pins the canonical set so a future PR that adds a new layout to
     StateLayout has to consciously choose joint-space vs task-space."""
     assert {"human300_16d", "rc365", "libero_eef8d"} == WRAPPED_TASK_SPACE_LAYOUTS
     assert "human300_16d" in WRAPPED_TASK_SPACE_LAYOUTS
     assert "rc365" in WRAPPED_TASK_SPACE_LAYOUTS
-    assert "libero_eef8d" in WRAPPED_TASK_SPACE_LAYOUTS  # ADR-0027 LIBERO task-space proprio
+    assert "libero_eef8d" in WRAPPED_TASK_SPACE_LAYOUTS  # LIBERO task-space proprio
     # pi0_16d / eef_pose_7d / base_pose_7d were robocasa sim-observation
     # layouts with no state-adapter assembler — removed (to be recreated
     # later); they must not advertise as wrapped-task-space layouts.

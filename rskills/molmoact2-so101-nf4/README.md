@@ -1,16 +1,26 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - molmoact2
-  - transformers
-  - vla
-  - so101
-  - so100
-  - manipulation
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- molmoact2
+- vision-language-action
+- nf4
+- 4-bit
+- so100_follower
+- so101_follower
+- transformers
+- vla
+- so101
+- so100
+- manipulation
+base_model:
+- allenai/MolmoAct2-SO100_101
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-molmoact2-so101-nf4

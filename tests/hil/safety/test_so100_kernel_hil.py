@@ -1,4 +1,4 @@
-"""ADR-0020 PR-I — HIL safety tests for the SO-100 follower arm.
+"""HIL safety tests for the SO-100 follower arm.
 
 Requires a physically connected SO-100 arm AND a sourced ROS 2
 environment with ``openral_safety_kernel`` built. Gated by:
@@ -46,7 +46,7 @@ pytestmark = pytest.mark.skipif(
 
 
 # Joint limits sourced from robots/so100_follower/robot.yaml; the
-# kernel reads each field as a ROS parameter (ADR-0020 PR-K). See
+# kernel reads each field as a ROS parameter. See
 # `tests/sim/safety/_kernel_subprocess.kernel_params_from_envelope`
 # for the canonical conversion path used by `openral deploy sim`.
 _ENVELOPE_PARAMS_FROM_SO100_MANIFEST: dict[str, object] = {
@@ -314,7 +314,7 @@ class TestSO100SafetyKernelHIL:
         assert ft.severity == FailureTrigger.SEVERITY_ABORT
 
 
-# ── Geometric collision (ADR-0030) on the lab SO-100 ───────────────────────────
+# ── Geometric collision on the lab SO-100 ───────────────────────────
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 _SO100_MANIFEST = os.path.join(_REPO_ROOT, "robots", "so100_follower", "robot.yaml")
@@ -425,7 +425,7 @@ def kernel_with_params() -> Any:
 
 
 class TestSO100GeometricCollisionHIL:
-    """ADR-0030 geometric collision on the real SO-100 lab rig + real C++ kernel.
+    """Geometric collision on the real SO-100 lab rig + real C++ kernel.
 
     Hardware-safe by construction: every case asserts the kernel DROPS the
     candidate chunk (no `/openral/safe_action` republish), so the colliding

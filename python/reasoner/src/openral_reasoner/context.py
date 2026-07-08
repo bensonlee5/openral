@@ -1,7 +1,7 @@
-"""ADR-0018 F4 — :class:`ContextRenderer`.
+""":class:`ContextRenderer` — renders the reasoner's per-tick prompt context.
 
 Builds the structured **text** context the reasoner LLM consumes each
-tick. Per ADR-0018 §4 "No pixels in v1": the context is a rolling text
+tick. No pixels in v1: the context is a rolling text
 digest of
 
 * the latest :class:`~openral_core.WorldState` snapshot (joint state,
@@ -56,7 +56,7 @@ __all__ = [
 DEFAULT_BUFFER_SIZE: int = 8
 
 # Default operator-prompt priority — matches the auto-cascade priority
-# in ``openral_prompt_router.DEFAULT_SOURCES`` (ADR-0018 §3.F10). Human
+# in ``openral_prompt_router.DEFAULT_SOURCES``. Human
 # sources (CLI, dashboard) get 100; cascades stay at 10.
 DEFAULT_PROMPT_PRIORITY: int = 10
 
@@ -102,7 +102,7 @@ class PromptRecord:
             "priority": <int>}`` field into this JSON; the reasoner's
             :meth:`ContextRenderer.append_prompt` reads ``priority`` to
             order the drain (human-source prompts override queued
-            auto-prompts per ADR-0018 §3.F10).
+            auto-prompts).
         stamp_ns: Arrival timestamp in nanoseconds.
         priority: Drain priority (higher = drained first). Default
             ``10`` matches the auto-cascade priority documented on
@@ -123,7 +123,7 @@ class PromptRecord:
 class ExecutionEventRecord:
     """One entry in the reasoner's rolling **execution-feedback** buffer.
 
-    ADR-0072 Decision 2.2 (Inner Monologue): a typed one-line outcome appended
+    Inner Monologue: a typed one-line outcome appended
     after every dispatched skill — on *success as well as failure*, so the LLM
     reasons on what actually happened (closed loop) instead of only seeing
     failures. On failure it also carries a :attr:`reflection` strategy hint
@@ -139,7 +139,7 @@ class ExecutionEventRecord:
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class RewardStateRecord:
-    """Latest reward-model assessment surfaced to the LLM (ADR-0074 amendment).
+    """Latest reward-model assessment surfaced to the LLM.
 
     Robometer-4B emits **two distinct heads** with different meanings, and the
     LLM must use each for the right decision:
@@ -173,7 +173,7 @@ class RewardStateRecord:
 
 
 def reflect_on_failure(outcome_state: str, detail: str) -> str:
-    """One-line strategy hint from a terminal skill outcome (ADR-0072 §2.3).
+    """One-line strategy hint from a terminal skill outcome.
 
     Reflexion-style: convert a raw failure into a *next-step* hint so the
     replanning ladder advances instead of blindly retrying. Deterministic — no
@@ -210,7 +210,7 @@ def reflect_on_failure(outcome_state: str, detail: str) -> str:
 
 
 def reflect_on_reward_plateau(progress_now: float) -> str:
-    """One-line strategy hint for a reward-plateau failure (ADR-0074).
+    """One-line strategy hint for a reward-plateau failure.
 
     Distinct from :func:`reflect_on_failure`: there the *controller* faulted
     (timeout / abort) so "shorten the horizon or substitute a skill" is right.
@@ -222,7 +222,7 @@ def reflect_on_reward_plateau(progress_now: float) -> str:
 
     Args:
         progress_now: The reward model's **progress** (closeness) score for the
-            attempt — the gated head (ADR-0074 amendment), below the contract's
+            attempt — the gated head, below the contract's
             ``check_floor`` (a genuine failure).
 
     Example:
@@ -240,7 +240,7 @@ def reflect_on_reward_plateau(progress_now: float) -> str:
 
 
 def reflect_on_invalid_plan(detail: str) -> str:
-    """Strategy hint when the model's own tool call was malformed (ADR-0072 §2.3).
+    """Strategy hint when the model's own tool call was malformed.
 
     The previous tick produced a tool call the reasoner could not decode —
     malformed JSON arguments, a non-object payload, a wrong/missing field, or an
@@ -264,7 +264,7 @@ def reflect_on_invalid_plan(detail: str) -> str:
 
 
 def reflect_on_retry_cap(tool: str, cap: int) -> str:
-    """Strategy hint when the per-kind retry ladder is exhausted (ADR-0072 §2.3).
+    """Strategy hint when the per-kind retry ladder is exhausted.
 
     Upgrades the bare retry counter into an explicit "stop repeating, change
     approach" reflection the next tick can act on.
@@ -276,7 +276,7 @@ def reflect_on_retry_cap(tool: str, cap: int) -> str:
 
 
 def render_playbooks_block(entries: list[tuple[str, str]]) -> str:
-    r"""Render the ``## PLAYBOOKS`` system-prompt block (ADR-0072 Decision 1 / Phase 3).
+    r"""Render the ``## PLAYBOOKS`` system-prompt block.
 
     Each entry is ``(header, body_markdown)`` — the playbook's ``name — trigger``
     header and its hand-authored ``PLAYBOOK.md`` SOP. The reasoner appends this to
@@ -322,8 +322,8 @@ def render_robot_self_model(description: RobotDescription) -> str:
     cameras (with field-of-view) — derived from the :class:`RobotDescription`.
     The reasoner injects this as the ``## ROBOT`` context section (computed once
     at configure time) so the LLM can judge feasibility — "is the target in
-    reach / in view?" — before dispatching a skill, instead of guessing (ADR-0072
-    Decision 2.1, the EMOS "Robot Resume" idea). Pixel-free (ADR-0018 §4).
+    reach / in view?" — before dispatching a skill, instead of guessing (the
+    EMOS "Robot Resume" idea). Pixel-free.
 
     Args:
         description: The robot manifest loaded from ``robots/<id>/robot.yaml``.
@@ -409,8 +409,8 @@ class ContextRenderer:
 
         Args:
             buffer_size: Per-category rolling-buffer retention.
-            robot_model: Pre-rendered robot self-model text (ADR-0072 Decision
-                2.1, from :func:`render_robot_self_model`), rendered as the
+            robot_model: Pre-rendered robot self-model text (from
+                :func:`render_robot_self_model`), rendered as the
                 ``## ROBOT`` section. ``None`` omits the section (e.g. before the
                 robot description is loaded).
         """
@@ -420,19 +420,19 @@ class ContextRenderer:
             )
         self._buffer_size = buffer_size
         self._robot_model = robot_model
-        # ADR-0072 §3 / Phase 4b — the rendered `## MEMORY` block (the self-
+        # The rendered `## MEMORY` block (the self-
         # maintained MEMORY.md), set via `set_memory_block`. None omits the section.
         self._memory_block: str | None = None
-        # ADR-0073 §1 — the active mission (ordered task queue). Set via
+        # The active mission (ordered task queue). Set via
         # `set_mission`, advanced via `advance_mission`; rendered as `## MISSION`.
         # None (or an empty mission) omits the section.
         self._mission: MissionState | None = None
-        # ADR-0076 — latest continuous-detector enumeration (camera-space 2D
+        # Latest continuous-detector enumeration (camera-space 2D
         # detections with stable det_ids). Set via `set_in_view`; rendered as the
         # `in_view[<camera>]` line in WORLD_STATE. None omits it. Depth-free, so it
         # populates even when the 3D lift / `scene_objects` cannot.
         self._in_view: ObjectsMetadata | None = None
-        # ADR-0076 — sticky open-vocab locate hits, keyed by lowercased label
+        # Sticky open-vocab locate hits, keyed by lowercased label
         # (latest bbox wins, insertion-ordered, capped). The continuous detector
         # overwrites `_in_view` every frame with its fixed vocabulary; a goal noun
         # the reasoner confirmed via `locate_in_view` (open-vocab) would otherwise
@@ -441,7 +441,7 @@ class ContextRenderer:
         # of re-locating it every tick. Fed via `note_located`.
         self._located: dict[str, ObjectDetection2D] = {}
         self._located_sensor: str | None = None
-        # ADR-0074 amendment — latest reward-model assessment (both heads). Set
+        # Latest reward-model assessment (both heads). Set
         # via `set_reward_state`; rendered as the `## REWARD` section. None omits
         # it. Kept as a single latest snapshot (not a buffer): the reward is a
         # current-state readout, not an event stream.
@@ -450,15 +450,15 @@ class ContextRenderer:
         self._executions: deque[ExecutionEventRecord] = deque(maxlen=buffer_size)
         self._perception: deque[PerceptionEventRecord] = deque(maxlen=buffer_size)
         # Prompt buffer is a list (not a deque) because we order it by
-        # priority on insert (ADR-0018 §3.F10 — human-source prompts
+        # priority on insert (human-source prompts
         # override queued auto-prompts). Capacity is enforced by
         # ``append_prompt`` evicting the oldest lowest-priority entry.
         self._prompts: list[PromptRecord] = []
         # Monotonic mutation counter — increments on every successful
         # append_*. ReasonerCore reads ``seq`` to decide whether a
         # heartbeat tick can be suppressed: if nothing has arrived
-        # since the last successful tick the LLM call is wasted.
-        # ADR-0018 amendment 2026-05-25 §2 ("heartbeat_idle").
+        # since the last successful tick the LLM call is wasted
+        # ("heartbeat_idle").
         self._seq: int = 0
 
     # ── static robot self-model ─────────────────────────────────────────────
@@ -466,21 +466,21 @@ class ContextRenderer:
     def set_robot_model(self, robot_model: str | None) -> None:
         """Set (or clear) the static robot self-model rendered as ``## ROBOT``.
 
-        Called once after the ``RobotDescription`` is loaded (ADR-0072 Decision
-        2.1). Static config, not an event: it does not touch the rolling buffers
-        or bump :attr:`seq`, so it is safe to call on a live renderer.
+        Called once after the ``RobotDescription`` is loaded. Static config, not
+        an event: it does not touch the rolling buffers or bump :attr:`seq`, so
+        it is safe to call on a live renderer.
         """
         self._robot_model = robot_model
 
     def set_memory_block(self, memory_block: str | None) -> None:
         """Set (or clear) the ``## MEMORY`` block — the self-maintained MEMORY.md.
 
-        ADR-0072 §3 / Phase 4b. Re-set after each ``memory_write`` so the LLM sees
+        Re-set after each ``memory_write`` so the LLM sees
         the updated memory next tick. Static config — does not bump :attr:`seq`.
         """
         self._memory_block = memory_block
 
-    # ── mission (ADR-0073 §1 — sequential task queue) ───────────────────────
+    # ── mission (sequential task queue) ───────────────────────
 
     def set_mission(self, mission: MissionState | None) -> None:
         """Set (or clear) the active mission rendered as ``## MISSION``.
@@ -495,7 +495,7 @@ class ContextRenderer:
         self._seq += 1
 
     def set_in_view(self, objects: ObjectsMetadata | None) -> None:
-        """Set (or clear) the camera-space ``in_view`` enumeration (ADR-0076).
+        """Set (or clear) the camera-space ``in_view`` enumeration.
 
         The latest continuous-detector :class:`ObjectsMetadata` — 2D detections
         with stable ``det_id``s — rendered as the ``in_view[<camera>]`` line in
@@ -507,7 +507,7 @@ class ContextRenderer:
         self._in_view = objects
         self._seq += 1
 
-    #: Max distinct labels retained in the sticky ``located`` store (ADR-0076).
+    #: Max distinct labels retained in the sticky ``located`` store.
     _LOCATED_CAP = 12
 
     def note_located(self, objects: ObjectsMetadata | None) -> None:
@@ -559,7 +559,7 @@ class ContextRenderer:
     def set_reward_state(self, reward: RewardStateRecord | None) -> None:
         """Set (or clear) the latest reward assessment rendered as ``## REWARD``.
 
-        ADR-0074 amendment — surfaces **both** reward heads (progress closeness +
+        Surfaces **both** reward heads (progress closeness +
         success done-confidence), distinctly labelled, so the LLM uses progress
         for persist-vs-replan and success for done-ness. A fresh assessment is an
         **event**, so this bumps :attr:`seq` to wake an otherwise-idle heartbeat.
@@ -623,7 +623,7 @@ class ContextRenderer:
         self._seq += 1
 
     def append_execution(self, record: ExecutionEventRecord) -> None:
-        """Push a skill execution outcome onto the rolling buffer (ADR-0072 §2.2).
+        """Push a skill execution outcome onto the rolling buffer.
 
         A completed skill is a meaningful event, so this bumps :attr:`seq` —
         the success/failure feedback should wake an otherwise-idle heartbeat.
@@ -636,10 +636,27 @@ class ContextRenderer:
         self._perception.append(record)
         self._seq += 1
 
+    def clear_failures(self) -> None:
+        """Drop accumulated failure + skill-execution records.
+
+        Called when the operator clears a safety e-stop. The e-stop aborts the
+        in-flight skill, which is recorded as a failure (``safety_estop``) and a
+        failed execution. Once the operator has reset the safety state those
+        records are stale — leaving them in context makes the LLM keep refusing
+        to retry ("the e-stop aborted the motion, I cannot proceed / please clear
+        the e-stop") instead of re-dispatching the skill. A reset is a deliberate
+        fresh start, so wipe the failure log for a clean retry. Bumps
+        :attr:`seq` so an otherwise-idle heartbeat re-evaluates.
+        """
+        if self._failures or self._executions:
+            self._failures.clear()
+            self._executions.clear()
+            self._seq += 1
+
     def append_prompt(self, record: PromptRecord) -> None:
         """Push an operator prompt onto the rolling buffer.
 
-        Priority resolution (ADR-0018 §3.F10):
+        Priority resolution:
 
         * If ``record.priority`` is anything other than the
           default sentinel (10), it wins verbatim.
@@ -721,7 +738,7 @@ class ContextRenderer:
         return "\n".join(sections).rstrip() + "\n"
 
     def _render_reward(self) -> str:
-        """Render the two-head reward assessment (ADR-0074 amendment).
+        """Render the two-head reward assessment.
 
         Both heads carry distinct meanings, so they are labelled in line: progress
         is *closeness* (the gated head, drives persist-vs-replan), success is
@@ -740,7 +757,7 @@ class ContextRenderer:
     def _render_world_state(self, world_state: WorldState | None) -> str:
         """Render the WorldState block — deterministic key order, no pixels."""
         if world_state is None:
-            # ADR-0076: the camera-space in_view enumeration is depth-free and may
+            # The camera-space in_view enumeration is depth-free and may
             # arrive before the first WorldState snapshot — surface it regardless.
             in_view = self._render_in_view()
             return f"(no snapshot yet)\n{in_view}" if in_view else "(no snapshot yet)"
@@ -769,7 +786,7 @@ class ContextRenderer:
             )
             lines.append(f"diagnostics: {diag}")
         if world_state.detected_objects:
-            # ADR-0035/0051 (#14) — surface the lifted scene objects (label +
+            # #14 — surface the lifted scene objects (label +
             # frame-centre) so the LLM can map a goal noun onto a detected label
             # with its own semantics (e.g. a "baguette" goal onto the detected
             # "bread") instead of only learning a name is "not in memory". The
@@ -790,7 +807,7 @@ class ContextRenderer:
         return "\n".join(lines)
 
     def _render_in_view(self) -> str:
-        """Render the camera-space ``in_view`` enumeration (ADR-0076), or ``""``.
+        """Render the camera-space ``in_view`` enumeration, or ``""``.
 
         ``in_view[<camera>]: #<det_id> <label> @px(<cx>,<cy>), …`` — one entry per
         live 2D detection, ``@px`` the pixel centre in the detector's frame
@@ -807,7 +824,7 @@ class ContextRenderer:
                 for d in sorted(md.detections, key=lambda d: d.det_id)
             )
             lines.append(f"in_view[{md.sensor_id}]: {items}")
-        # ADR-0076 — sticky open-vocab locate hits. These carry the goal nouns the
+        # Sticky open-vocab locate hits. These carry the goal nouns the
         # fixed-vocabulary in_view line mislabels, so they are the authoritative
         # grounding for decomposing / dispatching against the mission objects.
         if self._located:
@@ -890,7 +907,7 @@ class ContextRenderer:
         :meth:`append_perception`, or :meth:`append_prompt`. Used by
         :class:`~openral_reasoner.core.ReasonerCore` to short-circuit a
         heartbeat tick when no event has arrived since the last
-        successful tick (ADR-0018 amendment 2026-05-25 §2).
+        successful tick ("heartbeat_idle").
 
         Not reset by :meth:`drain_prompts` — the buffer is empty
         afterwards but the renderer has still "seen" the prompt.
@@ -904,8 +921,7 @@ class ContextRenderer:
         on a tick it should not see the same one again, so the
         reasoner_node calls :meth:`drain_prompts` after each
         successful :meth:`render`. Records come back ordered by
-        priority descending (then arrival ascending) per ADR-0018
-        §3.F10.
+        priority descending (then arrival ascending).
         """
         drained = tuple(self._prompts)
         self._prompts.clear()

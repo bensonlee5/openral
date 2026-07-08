@@ -10,7 +10,7 @@
     "reproduced_locally": false,
     "reproduction_planned": "Requires a CUDA host; ~hours per LIBERO suite. Paper numbers stay until a full repro run lands.",
     "reproduction_cli": {
-      "description": "Re-run this benchmark inside the OpenRAL repo. ADR-0009 PR D: openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
+      "description": "Re-run this benchmark inside the OpenRAL repo. openral benchmark run is the canonical producer of RSkillEvalResult JSONs with reproduced_locally=true.",
       "command": "openral benchmark run --suite libero_spatial --rskill molmoact2-libero",
       "status": "in-tree (libero_spatial); MolmoAct2 is ~5.5B params so a full LIBERO sweep needs a GPU host",
       "notes": [

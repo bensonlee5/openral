@@ -1,4 +1,4 @@
-"""ADR-0018 F4 — :class:`ReasonerCore`.
+""":class:`ReasonerCore`.
 
 The transport-agnostic orchestrator that closes
 context → LLM → typed tool call. The ROS-side
@@ -7,7 +7,7 @@ lifecycle, subscriptions, and dispatch plumbing; the core itself has
 no rclpy dependency so it is fully unit-testable against a
 :class:`FakeToolUseClient`.
 
-Per ADR-0018 §4 the reasoner:
+The reasoner:
 
 * Holds **no** authority over actuation (never publishes
   ``ActionChunk``).
@@ -42,7 +42,7 @@ log = structlog.get_logger(__name__)
 
 
 def _stamp_mission(span: Span, renderer: ContextRenderer) -> None:
-    """Stamp the active mission queue on the tick span (ADR-0073).
+    """Stamp the active mission queue on the tick span.
 
     Serialized as ``reasoner.mission_json`` so the live dashboard renders the
     task checklist. No-op when no mission is set (a bare operator goal).
@@ -78,7 +78,7 @@ class ReasonerTickResult:
     active. The reasoner_node stamps this onto the outbound
     ``EmitPromptTool`` ``PromptStamped.metadata_json`` so the F7
     bag↔OTel correlator can join the published prompt back to the
-    reasoner span that produced it (ADR-0018 §6). ``None`` when no
+    reasoner span that produced it. ``None`` when no
     real :class:`TracerProvider` is installed."""
 
 
@@ -96,7 +96,7 @@ class ReasonerCore:
             ``tests/integration/fakes/``); in production it is one of
             the SDK-backed clients from :mod:`openral_reasoner.tool_use`.
         min_interval_s: Hard lower bound between consecutive ticks, in
-            seconds. ADR-0018 §4 mandates 100 ms (0.1 s).
+            seconds. Mandated as 100 ms (0.1 s).
         retry_cap_per_kind: Maximum number of consecutive ticks the
             reasoner may select the same tool kind before being
             suppressed by ``retry_cap`` for one tick. Defaults to 3 —
@@ -144,7 +144,7 @@ class ReasonerCore:
         # (force=False) whose renderer hasn't budged since
         # ``_last_seen_seq`` is suppressed with ``heartbeat_idle`` —
         # the LLM call would see byte-identical context and produce
-        # the same (or no) tool call. ADR-0018 amendment 2026-05-25 §2.
+        # the same (or no) tool call.
         self._last_seen_seq: int = -1
 
     def reset_kind_streak(self) -> None:
@@ -197,7 +197,7 @@ class ReasonerCore:
             A :class:`ReasonerTickResult`.
         """
         started = self._clock()
-        # min-interval gate (ADR-0018 §4) — gate BEFORE opening the
+        # min-interval gate — gate BEFORE opening the
         # OTel span so suppressed ticks don't show up in the trace.
         if not force and started - self._last_tick_s < self._min_interval_s:
             return ReasonerTickResult(
@@ -206,7 +206,7 @@ class ReasonerCore:
                 elapsed_s=0.0,
                 suppressed_reason="min_interval",
             )
-        # heartbeat-idle gate (ADR-0018 amendment 2026-05-25 §2) — gate
+        # heartbeat-idle gate — gate
         # BEFORE the OTel span for the same reason. A non-forced tick
         # whose ContextRenderer has not received any new failure /
         # perception / prompt event since the last tick is suppressed:
@@ -221,7 +221,7 @@ class ReasonerCore:
                 elapsed_s=0.0,
                 suppressed_reason="heartbeat_idle",
             )
-        # ADR-0018 §6 / ADR-0017: every tick that reaches the LLM (or
+        # Every tick that reaches the LLM (or
         # the palette-empty short-circuit) opens a ``reasoner.tick``
         # span. The reasoner_node reads ``current_traceparent()`` from
         # inside this scope to stamp the outbound EmitPrompt's
@@ -233,7 +233,7 @@ class ReasonerCore:
             force=force,
         ) as span:
             span.set_attribute(semconv.REASONER_TIER, tier)
-            # ADR-0073 — stamp the active mission queue on every tick span so
+            # Stamp the active mission queue on every tick span so
             # the dashboard can render the task checklist. Set before the gate
             # short-circuits below so suppressed (retry_cap / error) ticks still
             # carry current mission state. The mission is unchanged within a tick.
@@ -281,7 +281,7 @@ class ReasonerCore:
                     error=exc,
                     elapsed_s=self._clock() - started,
                 )
-            # retry-cap (ADR-0018 §4 "bounded retry counter per failure kind")
+            # retry-cap ("bounded retry counter per failure kind")
             prev_kind, streak = self._kind_streak
             if call.tool == prev_kind:
                 streak += 1
@@ -333,7 +333,7 @@ class ReasonerCore:
             # Capture the active traceparent WHILE the span is still in
             # scope so reasoner_node._dispatch (which runs after this
             # function returns) can stamp it onto outbound PromptStamped
-            # metadata_json (ADR-0018 §6 "OTel context is the truth").
+            # metadata_json ("OTel context is the truth").
             traceparent = current_traceparent()
             # Drain operator prompts on a successful tick (pull-once semantics).
             renderer.drain_prompts()

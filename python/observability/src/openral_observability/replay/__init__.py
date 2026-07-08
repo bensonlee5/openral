@@ -1,7 +1,7 @@
 """Query-time joiner for rosbag2 messages ↔ OTel spans.
 
-ADR-0018 F7 — `rosbag2` stays the canonical message log; the dashboard
-receiver (ADR-0017) stays the canonical span log; this module opens both
+`rosbag2` stays the canonical message log; the observability dashboard
+receiver stays the canonical span log; this module opens both
 at view time and emits a single chronological timeline keyed by
 ``trace_id``.
 
@@ -9,7 +9,7 @@ Three pieces:
 
 * :func:`read_bag` — iterate an mcap-backed rosbag2 directory or a bare
   ``.mcap`` file and yield :class:`BagMessage` records, surfacing the
-  ``trace_id`` field that lives on every ADR-0018-typed ROS message
+  ``trace_id`` field that lives on every typed ROS message
   (``ActionChunk``, ``FailureTrigger``, ``WorldStateStamped``,
   ``PromptStamped`` and the ``ExecuteSkill`` action goal/feedback/result).
 * :class:`DashboardTraceClient` — HTTP client over the receiver's

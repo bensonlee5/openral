@@ -115,6 +115,49 @@
     el.textContent = parts.join("  ·  ");
   }
 
+  // Latest reward-monitor assessment (reward.score span) as two
+  // colour-banded bars on the rSkill card. Numeric banding (unlike the
+  // mission checklist's verdict-text banding): >=0.7 green, >=0.4 orange,
+  // else red — the value IS the signal here, no reasoner verdict to defer to.
+  function rewardValueBand(v) {
+    if (v >= 0.7) return "band-ok";
+    if (v >= 0.4) return "band-ambiguous";
+    return "band-fail";
+  }
+
+  function renderRewardScore(rw) {
+    const el = $("rskill-reward");
+    if (!el) return;
+    // Hide when nothing scored yet or the last score is stale (>60 s: reward
+    // queries are reasoner-paced, so allow long gaps before hiding).
+    if (!rw || !rw.ts_unix || (Date.now() / 1000 - rw.ts_unix) > 60) {
+      el.style.display = "none";
+      return;
+    }
+    const attrs = rw.attrs || {};
+    el.innerHTML = "";
+    for (const [label, key] of [["progress", "reward.progress"], ["success", "reward.success"]]) {
+      const v = Math.max(0, Math.min(1, Number(attrs[key] || 0)));
+      const row = document.createElement("div"); row.className = "rrow";
+      const lb = document.createElement("span"); lb.className = "rlabel"; lb.textContent = label;
+      const bar = document.createElement("span"); bar.className = "rbar " + rewardValueBand(v);
+      bar.title = "reward " + label + " " + Math.round(v * 100) + "%";
+      const fill = document.createElement("i"); fill.style.width = Math.round(v * 100) + "%";
+      bar.appendChild(fill);
+      const pct = document.createElement("span"); pct.className = "rpct";
+      pct.textContent = Math.round(v * 100) + "%";
+      row.appendChild(lb); row.appendChild(bar); row.appendChild(pct);
+      el.appendChild(row);
+    }
+    const meta = document.createElement("div"); meta.className = "rmeta";
+    meta.textContent = "reward · " + fmtAge(rw.ts_unix) +
+      (attrs["reward.camera"] ? " · cam " + attrs["reward.camera"] : "") +
+      (attrs["reward.stalled"] ? " · stalled" : "") +
+      (attrs["reward.succeeded"] ? " · succeeded" : "");
+    el.appendChild(meta);
+    el.style.display = "block";
+  }
+
   function renderRobotState(rs, cmd) {
     const el = $("joints");
     $("robot-state-age").textContent = fmtAge(rs && rs.ts_unix);
@@ -235,13 +278,13 @@
     }
   }
 
-  // ADR-0025 — render the live 2D occupancy map. Mirrors the camera-card
+  // Render the live 2D SLAM occupancy map. Mirrors the camera-card
   // pattern: empty-state when nothing has been emitted yet, switch to
   // an inline base64 PNG once the bridge sends a slam.occupancy_grid
   // span. Metadata (resolution / origin / frame_id / source node)
   // pinned below the image so operators can sanity-check what they
   // are looking at.
-  // ADR-0025 — map world (metres) → map PNG pixel coords. The bridge
+  // Map world (metres) → map PNG pixel coords. The bridge
   // rasterises the OccupancyGrid with a vertical flip (PIL top-left vs
   // grid bottom-left), so pixel-y is mirrored: py = (height-1) - row.
   function worldToPixel(wx, wy, originX, originY, resolution, height) {
@@ -250,7 +293,7 @@
     return { px: col, py: (height - 1) - row };
   }
 
-  // ADR-0025 — base-frame footprint vertices -> map pixel points. Rotate
+  // Base-frame footprint vertices -> map pixel points. Rotate
   // each (bx,by) by yaw, translate to the robot's world pose, then reuse
   // worldToPixel (which applies the PNG vertical flip).
   function footprintToPixels(polygon, robotX, robotY, yaw, originX, originY, resolution, height) {
@@ -367,7 +410,7 @@
     renderRobotMarker(slam);
   }
 
-  // ADR-0030 — render the robot-perspective octomap pointcloud. Mirrors
+  // Render the robot-perspective octomap pointcloud. Mirrors
   // renderSlamMap: empty-state until the first world.pointcloud span, then
   // an inline base64 PNG with n_points / range / frame / source pinned below.
   function renderWorldCloud(pc) {
@@ -395,7 +438,7 @@
     if (src) src.textContent = "source " + (pc.source_node || "?");
   }
 
-  // ADR-0038 — render the durable spatial-memory objects as a table. Empty
+  // Render the durable spatial-memory scene-object graph as a table. Empty
   // until the first world.scene_objects span (Reasoner preloaded map today;
   // World-State node once the perception object-lift producer lands). Rows are
   // built with textContent (labels are operator/perception controlled).
@@ -453,7 +496,7 @@
     if (srcEl) srcEl.textContent = "source " + (so.source_node || "?");
   }
 
-  // ADR-0038 — overlay remembered objects on the SLAM 2D map as labelled dots.
+  // Overlay remembered objects (durable spatial-memory scene-object graph) on the SLAM 2D map as labelled dots.
   // Reuses the SLAM card's worldToPixel transform (objects are in the same map
   // frame as the robot pose). Appends to the slam-overlay svg AFTER
   // renderRobotMarker so the robot footprint is preserved. Best-effort: a
@@ -485,10 +528,10 @@
     svg.insertAdjacentHTML("beforeend", markup);
   }
 
-  // ADR-0073 task-queue markers, mirroring MissionState.render().
+  // Mission task-queue markers, mirroring MissionState.render().
   const MISSION_MARK = { pending: "·", active: "▶", verifying: "?", done: "✓", abandoned: "✗" };
 
-  // ADR-0074 three-tier reward verdict → bar colour band. The verdict text the
+  // Reward-verdict reporting: three-tier reward verdict → bar colour band. The verdict text the
   // reasoner stamps is the source of truth (no client-side threshold guessing):
   // "success=…" → ok, "ambiguous=…" → amber, anything else (not verified /
   // unverified) or an abandoned task → fail.
@@ -500,7 +543,7 @@
     return "band-fail";
   }
 
-  // ADR-0073 + ADR-0018 F4 — render the reasoner's active MISSION queue
+  // Render the reasoner's active MISSION task queue
   // (ordered subtasks, status, attempts, reward verdict) with the latest
   // ReasonerCore tick (tool / model / error) demoted to a footer line.
   // Empty-state until the first reasoner.tick span lands.
@@ -675,6 +718,22 @@
       const sev = String(c.severity || "info").toLowerCase();
       const kEl = document.createElement("span"); kEl.className = "k"; kEl.textContent = name;
       const vEl = document.createElement("span"); vEl.className = "pill " + sev; vEl.textContent = sev;
+      el.appendChild(kEl); el.appendChild(vEl);
+    }
+    // Persistent last-violation row: the per-check pill above resets to
+    // "info" on the next OK check and the violation's event-log row is
+    // evicted by high-rate spans within seconds — this row keeps WHY the
+    // arm stopped on screen until the next violation overwrites it.
+    const v = safety && safety.last_violation;
+    if (v) {
+      const kEl = document.createElement("span");
+      kEl.className = "k";
+      kEl.textContent = "last violation";
+      const vEl = document.createElement("span");
+      vEl.className = "pill violation";
+      const val = typeof v.violation_value === "number" ? " " + v.violation_value.toPrecision(3) : "";
+      vEl.textContent = (v.drop_reason || v.check_name || "violation") + val + " · " + fmtAge(v.ts_unix);
+      vEl.title = JSON.stringify(v);
       el.appendChild(kEl); el.appendChild(vEl);
     }
   }
@@ -1267,7 +1326,14 @@
   let JAEGER_URL = "";
   fetch("/api/config")
     .then((r) => r.ok ? r.json() : {})
-    .then((cfg) => { JAEGER_URL = (cfg && cfg.jaeger_ui_url) ? String(cfg.jaeger_ui_url).replace(/\/$/, "") : ""; })
+    .then((cfg) => {
+      JAEGER_URL = (cfg && cfg.jaeger_ui_url) ? String(cfg.jaeger_ui_url).replace(/\/$/, "") : "";
+      // voice_prompt_enabled (see vad_assets.py): false when the offline VAD
+      // model/wasm assets failed to download on dashboard start. Disable the
+      // mic proactively instead of letting the operator discover it via a
+      // failed script load after clicking.
+      if (cfg && cfg.voice_prompt_enabled === false) disableVoicePrompt();
+    })
     .catch(() => { JAEGER_URL = ""; });
 
   function renderTrace(trace) {
@@ -1351,6 +1417,7 @@
     const liveSkill = cards.rskill_execute || cards.rskill_tick || cards.rskill_activate || null;
     renderCard("rskill_execute", liveSkill);
     foldInference(liveSkill, cards.inference || null);
+    renderRewardScore(cards.reward_score || null);
     if (liveSkill) pulseIfNew("card-rskill_execute", liveSkill.ts_unix);
 
     const topics = state.topics || {};
@@ -1365,6 +1432,17 @@
     renderSystem(topics.system);
     renderLedger(topics.safety);
     renderTrace(topics.trace);
+
+    // One fixed-position button that toggles between E-STOP (running) and Reset
+    // (latched). Safe as a toggle now that `estopped` is authoritative — the
+    // dashboard sets it True the instant it issues an e-stop, so the button only
+    // becomes Reset AFTER a real stop, never while the arm is running unstopped.
+    // Skip while a click is in flight (disabled) so telemetry doesn't fight the
+    // optimistic flip.
+    const estopEl = $("estop-btn");
+    if (estopEl && !estopEl.disabled) {
+      setEstopMode(estopEl, topics.safety && topics.safety.estopped ? "reset" : "trigger");
+    }
 
     pulseIfNew("card-robot-state", topics.robot_state && topics.robot_state.ts_unix);
     pulseIfNew("card-world-state", topics.world_state && topics.world_state.ts_unix);
@@ -1441,7 +1519,9 @@
     const text = promptInput.value.trim();
     if (!text) return;
     promptSend.disabled = true;
-    setPromptStatus("publishing…", "");
+    // No "publishing…"/"published" status text — it grew the strip next to the
+    // buttons and shifted them. Clearing the input is the success signal; only a
+    // genuine failure surfaces text.
     try {
       const resp = await fetch("/api/prompt", {
         method: "POST",
@@ -1452,9 +1532,7 @@
       if (!resp.ok) {
         setPromptStatus(body.error || ("HTTP " + resp.status), "err");
       } else {
-        setPromptStatus("published", "ok");
         promptInput.value = "";
-        setTimeout(() => setPromptStatus("", ""), 3000);
       }
     } catch (e) {
       setPromptStatus(String(e), "err");
@@ -1512,6 +1590,16 @@
   const SILENCE_MS = 1100;    // finalize after this much silence following speech
   let speechSeen = false;
   let lastVoiceAt = 0;
+
+  // Called when /api/config reports voice_prompt_enabled: false — the VAD
+  // model/wasm assets (vad_assets.py) failed to download on dashboard start,
+  // most likely an offline host. Disable the control up front rather than
+  // let the operator hit a "mic unavailable" error only after clicking.
+  function disableVoicePrompt() {
+    if (!promptMic) return;
+    promptMic.disabled = true;
+    promptMic.title = "Voice prompt unavailable (offline VAD assets failed to download)";
+  }
 
   function setMicState(state) {  // "idle" | "listening" | "working"
     if (!promptMic) return;
@@ -1705,29 +1793,62 @@
     });
   }
 
-  // ── E-stop recovery (POST /api/estop_reset → ros2 service call) ──
-  // A latched safety e-stop makes the kernel drop every command, so no prompt
-  // works until it's cleared. This button calls the kernel reset service; on
-  // success the operator can send a fresh prompt to resume.
-  const estopReset = $("estop-reset");
-  if (estopReset) {
-    estopReset.addEventListener("click", async () => {
-      estopReset.disabled = true;
-      setPromptStatus("resetting e-stop…", "");
+  // Toggle the button between E-STOP (running → stop it) and Reset (latched →
+  // clear it). Fixed width in CSS + centred label, so the swap never shifts the
+  // control. Idempotent; safe to call every telemetry tick.
+  function setEstopMode(btn, mode) {
+    if (!btn || btn.dataset.mode === mode) return;
+    btn.dataset.mode = mode;
+    if (mode === "reset") {
+      btn.textContent = "Reset e-stop";
+      btn.classList.remove("trigger");
+      btn.classList.add("reset");
+      btn.title = "Clear the latched safety e-stop so the robot can be re-tasked (calls /openral/estop_reset).";
+    } else {
+      btn.textContent = "⛔ E-STOP";
+      btn.classList.remove("reset");
+      btn.classList.add("trigger");
+      btn.title = "Stop the robot NOW. Publishes /openral/estop so the kernel and HAL latch.";
+    }
+  }
+
+  // ── E-stop control — one fixed button, two modes ──
+  // `trigger` (running): POST /api/estop latches the kernel + HAL. `reset`
+  // (latched): POST /api/estop_reset clears it. The mode is driven by the
+  // authoritative `estopped` flag in render(); we optimistically flip the label
+  // on click for responsiveness. No status text on success/progress — the label
+  // change IS the feedback, and a growing status string would shift the layout.
+  // Only a genuine FAILURE surfaces text (a safety action must never fail
+  // silently), and that path is rare.
+  const estopBtn = $("estop-btn");
+  if (estopBtn) {
+    estopBtn.addEventListener("click", async () => {
+      const mode = estopBtn.dataset.mode || "trigger";
+      estopBtn.disabled = true;
       try {
-        const resp = await fetch("/api/estop_reset", { method: "POST" });
-        const body = await resp.json().catch(() => ({}));
-        if (resp.ok && body.accepted) {
-          setPromptStatus("e-stop cleared — send a prompt to resume", "ok");
-        } else if (resp.status === 409) {
-          setPromptStatus("reset rejected (cooldown) — wait a moment and retry", "err");
+        if (mode === "trigger") {
+          setEstopMode(estopBtn, "reset"); // optimistic
+          const resp = await fetch("/api/estop", { method: "POST" });
+          const body = await resp.json().catch(() => ({}));
+          if (!(resp.ok && body.accepted)) {
+            setEstopMode(estopBtn, "trigger"); // revert on failure
+            setPromptStatus(body.error || ("e-stop failed — HTTP " + resp.status), "err");
+          }
         } else {
-          setPromptStatus(body.error || ("HTTP " + resp.status), "err");
+          const resp = await fetch("/api/estop_reset", { method: "POST" });
+          const body = await resp.json().catch(() => ({}));
+          if (resp.ok && body.accepted) {
+            setEstopMode(estopBtn, "trigger"); // optimistic
+          } else if (resp.status === 409) {
+            setPromptStatus("reset rejected (cooldown) — wait a moment and retry", "err");
+          } else {
+            setPromptStatus(body.error || ("reset failed — HTTP " + resp.status), "err");
+          }
         }
       } catch (e) {
         setPromptStatus(String(e), "err");
       } finally {
-        estopReset.disabled = false;
+        estopBtn.disabled = false;
       }
     });
   }

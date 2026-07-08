@@ -1,4 +1,4 @@
-# openral_msgs/Episode — episode-boundary marker (ADR-0019 PR3).
+# openral_msgs/Episode — episode-boundary marker.
 #
 # Published TWICE per episode by DeployRunner.episode_start() /
 # episode_end():

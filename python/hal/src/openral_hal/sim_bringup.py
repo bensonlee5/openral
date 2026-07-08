@@ -1,6 +1,6 @@
 """Build an :class:`openral_sim.SimRollout` from a SimScene/DeployScene YAML path.
 
-ADR-0025 Stage 3 — shared helper for any HAL ROS lifecycle node that
+Shared helper for any HAL ROS lifecycle node that
 wants to flip into ``SimAttachedHAL`` mode via a ``sim_env_yaml`` ROS
 parameter. The lookup path is:
 
@@ -8,7 +8,7 @@ parameter. The lookup path is:
    this source file when the path is relative).
 2. Load it as either a :class:`~openral_core.SimScene` (``openral sim
    run --config``) or a :class:`~openral_core.DeployScene` (``openral
-   deploy sim --config``; ADR-0041). For DeployScene the HAL
+   deploy sim --config``). For DeployScene the HAL
    synthesises a noop :class:`~openral_core.TaskSpec` since the HAL
    drives ``env.step`` directly and never consults the task's
    ``id`` / ``instruction`` / ``max_steps`` / ``success_key``.
@@ -35,7 +35,7 @@ MuJoCo scene — so :func:`_synthesise_deploy_task_id` synthesises a valid
 concrete index (``0``) for them instead. Deploy-sim is env-only and never
 reads the task's success criterion, so booting task ``0``'s floor is the
 correct continuous-operation twin; the reasoner picks the rSkill at
-runtime (ADR-0034 / ADR-0036).
+runtime.
 """
 
 from __future__ import annotations
@@ -252,7 +252,7 @@ def build_sim_env_from_yaml(
         scene=scene_env.scene,
         task=scene_env.task,
         vla=dummy_vla,
-        # ADR-0002 Amendment 3: free-axis scenes (openarm_tabletop_pnp) read
+        # Free-axis scenes (openarm_tabletop_pnp) read
         # the mandatory mounting pose off ``SimEnvironment.base_pose``. The
         # YAML carries it on the ``SimScene``; propagate it through so
         # the loader composes the same env the direct factory path does.

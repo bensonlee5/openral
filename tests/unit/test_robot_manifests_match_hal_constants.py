@@ -31,7 +31,7 @@ in ``ur_real.py``) follow the same pattern, derived from
 ``UR5e_DESCRIPTION`` / ``UR10e_DESCRIPTION`` in ``ur.py``. In every case
 kinematics + safety envelope + capabilities + ``hal`` entrypoints are shared
 between the sim baseline and the real-HW description; only ``sdk_kind``
-differs (ADR-0031). The sim baselines stay in-tree as the manifest the MuJoCo /
+differs. The sim baselines stay in-tree as the manifest the MuJoCo /
 gym sim adapter loads when available. Issues #54–#58.
 
 The G1, H1, Rizon 4, and OpenArm all pin to their sim baselines
@@ -41,7 +41,7 @@ the G1 / H1 wait on the M2 C++ S0 cerebellum (CLAUDE.md §6.2); the
 Rizon 4 real-HW wrapper around ``flexiv_rdk`` and the OpenArm real-HW
 wrapper around lerobot's upstream driver are tracked as follow-ups.
 All four YAMLs' ``hal.sim`` points at the sim HAL and ``hal.real`` is null
-until the real adapter lands (ADR-0031).
+until the real adapter lands.
 
 The SO-100 manifest is skipped here because its YAML carries optional
 sensor entries that the in-code constant deliberately omits (the HAL
@@ -76,7 +76,7 @@ from openral_core import RobotDescription
         # awaits a wrapper around ``flexiv_rdk``; OpenArm awaits a
         # wrapper around lerobot's upstream OpenArm driver.  All four
         # YAMLs' hal.sim points at their respective sim HAL and hal.real
-        # is null until the real adapter lands (ADR-0031).
+        # is null until the real adapter lands.
         ("robots/g1/robot.yaml", "G1_DESCRIPTION"),
         ("robots/h1/robot.yaml", "H1_DESCRIPTION"),
         ("robots/rizon4/robot.yaml", "RIZON4_DESCRIPTION"),
@@ -129,4 +129,4 @@ def test_robot_yaml_matches_hal_description(manifest_path: str, hal_constant_att
     hal_modes = hal_desc.capabilities.supported_control_modes
     assert yaml_modes == hal_modes or yaml_modes == [m.value for m in hal_modes]
     assert yaml_desc.sdk_kind == hal_desc.sdk_kind
-    assert yaml_desc.hal == hal_desc.hal  # ADR-0031 sim/real HAL entrypoints
+    assert yaml_desc.hal == hal_desc.hal  # sim/real HAL entrypoints

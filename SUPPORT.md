@@ -23,7 +23,7 @@ OS, Python, ROS 2 distro, and GPU in one shot.
 
 Open a [feature request](https://github.com/OpenRAL/openral/issues/new?template=feature.yml).
 For anything that crosses a layer boundary, expect to be asked for an ADR
-(see [CLAUDE.md](CLAUDE.md) §3 and `docs/adr/`).
+(see [CLAUDE.md](CLAUDE.md) §3 and [`docs/decisions.md`](docs/decisions.md)).
 
 ## I found a security vulnerability or a safety defect
 

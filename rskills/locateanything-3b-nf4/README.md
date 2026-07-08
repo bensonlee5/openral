@@ -1,21 +1,26 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - detector
-  - object-detection
-  - visual-grounding
-  - locateanything
-  - nvidia
-  - nf4
-  - bitsandbytes
-license: other
-license_name: nvidia-license
-license_link: https://huggingface.co/nvidia/LocateAnything-3B/blob/main/LICENSE
 language:
-  - en
+- en
+license: other
+license_name: nvidia-non-commercial
+pipeline_tag: object-detection
+tags:
+- OpenRAL
+- rskill
+- detector
+- object-detection
+- nf4
+- 4-bit
+- any
+- visual-grounding
+- locateanything
+- nvidia
+- bitsandbytes
 base_model:
-  - nvidia/LocateAnything-3B
+- nvidia/LocateAnything-3B
+base_model_relation: quantized
+inference: false
+license_link: https://huggingface.co/nvidia/LocateAnything-3B/blob/main/LICENSE
 ---
 
 # rskill-locateanything-3b-nf4
@@ -65,13 +70,13 @@ and never drives `ros2_control` joints.
 ## Runtime Status
 
 The package is marked `runtime: pytorch` with NF4 metadata: OpenRAL's original
-ADR-0037 camera-tee detector runner is ONNX/TensorRT-oriented, while upstream
+camera-tee detector runner is ONNX/TensorRT-oriented, while upstream
 LocateAnything is a Transformers custom-code model needing `transformers==4.57.1`.
 The HF rSkill repo therefore contains the quantized PyTorch weights and upstream
 custom-code sidecars needed by `AutoModel.from_pretrained(..., trust_remote_code=True)`.
 
-The OpenRAL adapter is **implemented and validated** (ADR-0037 2026-06-09
-amendment): the `LocateAnythingDetector` backend
+The OpenRAL adapter is **implemented and validated** (as of the 2026-06-09
+detector-runner amendment): the `LocateAnythingDetector` backend
 (`openral_runner.backends.gstreamer`) runs the model out-of-process in an isolated
 `transformers==4.57.1` venv (`tools/locateanything_sidecar.py`) over a ZMQ +
 msgpack link, parses its `<ref>`/`<box>` text into `ObjectsMetadata`, and is
@@ -80,7 +85,7 @@ drop-in for the RT-DETR ONNX detector rskills in the
 `openral deploy sim --object-detector-manifest …` graph, with a static default
 query (manifest `labels`), a dynamic `/openral/perception/detector_query` override
 for the continuous leg, and the read-only `locate_in_view` reasoner tool + service
-for one-shot on-demand checks (ADR-0043).
+for one-shot on-demand checks.
 
 Two venvs are involved: the **sidecar** venv (`transformers==4.57.1`, holds the
 model — provision separately, point at it with `OPENRAL_LOCATEANYTHING_SIDECAR_VENV`)

@@ -14,8 +14,8 @@ Two coupled regressions surfaced by ``openral deploy sim`` against a bare
 
 2. **No dedicated publisher thread.** A bare ``MujocoArmHAL`` lacked
    ``idle_step``, so the lifecycle node published ``/joint_states`` from a timer
-   on the executor (starved by rendering) instead of ADR-0049's dedicated
-   thread + ``ProprioSnapshot``, and its cameras froze when idle (ADR-0034).
+   on the executor (starved by rendering) instead of the dedicated
+   thread + ``ProprioSnapshot``, and its cameras froze when idle.
 
 These tests build a *real* native-MuJoCo arm (no mocks, CLAUDE.md §1.11). A
 bare arm's ``connect()`` does not render, so no GL/display is required; the only
@@ -81,7 +81,7 @@ def test_read_state_recovers_after_executor_stall_no_latch() -> None:
 def test_idle_step_advances_state_and_is_recoverable() -> None:
     """``idle_step`` HOLD-steps the sim, returns True, and refreshes the clock.
 
-    Gives the bare arm the ADR-0049 dedicated-thread + ADR-0034 idle-camera
+    Gives the bare arm the dedicated-thread + idle-camera
     treatment: the lifecycle gates both on a callable ``idle_step``.
     """
     hal = _build_bare_arm()

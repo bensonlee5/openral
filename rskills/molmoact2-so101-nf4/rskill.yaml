@@ -14,6 +14,11 @@
 # weights via load_prequantized_state_for_rskill (no on-the-fly
 # quantization cost at startup).
 #
+# Provenance (lerobot 0.6.0): the model graph is built from lerobot's in-tree
+# MolmoAct2ForConditionalGeneration class (this NF4 pack loads into it
+# key-for-key) — NOT via a trust_remote_code AutoModel. source_repo below
+# supplies only the config + processor + norm_stats.json.
+#
 # norm_tag: this checkpoint requires norm_tag="so100_so101_molmoact2" (the
 # adapter's bare default is "libero", which this checkpoint rejects). It is
 # declared below under image_preprocessing.norm_tag and propagated to the
@@ -42,7 +47,7 @@ name: "OpenRAL/rskill-molmoact2-so101-nf4"
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "molmoact2"
@@ -70,7 +75,7 @@ sensors_required:
     min_width: 224
     min_height: 224
 
-# Output side (ADR-0013). For the canonical so101_follower embodiment the
+# Output side. For the canonical so101_follower embodiment the
 # loader auto-fills n_dof + vla_action_key from robots/so101_follower/robot.yaml.
 # The checkpoint emits absolute joint-position targets.
 actuators_required:
@@ -146,7 +151,7 @@ description: >
   Apache-2.0. norm_tag="so100_so101_molmoact2" travels in the manifest's
   image_preprocessing block (overridable via vla.extra.norm_tag).
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool palette so it
+# Action vocabulary surfaced to the reasoner LLM tool palette so it
 # can pick this skill by what it does (action verb + object + scene), not just
 # by its slug.
 actions:
@@ -158,10 +163,16 @@ objects: []
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge to
+# Per-checkpoint action contract (consumed by the dataset bridge to
 # bind the LeRobot v3 `action` feature shape). SO-100/101 uses a 6-D absolute
 # joint-position action (5 arm joints + 1 gripper).
 action_contract:
   dim: 6
-  # ADR-0071 — SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
+  # SO-101 emits absolute joint positions (5 arm joints + 1 gripper).
   representation: "joint_positions"
+  # EXPLICIT joint units — trained on LeRobot SO-100/101 teleop, which records in
+  # DEGREES (verified from norm_stats.json metadata_by_tag/so100_so101_molmoact2:
+  # state_stats span −270…+250, q99≈185 — far outside radians). The runner
+  # converts deg↔rad at the policy boundary; see the header UNITS note. Same
+  # convention as the smolvla-so101-pen reference.
+  joint_units: "degrees"

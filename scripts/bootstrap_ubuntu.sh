@@ -52,7 +52,7 @@ sudo apt-get install -y "ros-${ROS_DISTRO}-ros-base" python3-colcon-common-exten
 sudo apt-get install -y "ros-${ROS_DISTRO}-rmw-zenoh-cpp" || \
   echo "(rmw_zenoh may not be in the apt repo for this distro yet — install from source if needed)"
 
-# ADR-0024 / ADR-0025 — wrapped-ROS rSkills + the ADR-0025 mobile-base demo
+# wrapped-ROS rSkills + the reasoner-managed mobile-base demo
 # need these upstream packages. Mirror the Dockerfile.dev / Dockerfile.x86
 # install lists (commit d814f4a) so a fresh-machine `just quickstart`
 # produces the same graph as the container images:
@@ -61,7 +61,7 @@ sudo apt-get install -y "ros-${ROS_DISTRO}-rmw-zenoh-cpp" || \
 #   * moveit-msgs                         — IDL for the MoveGroup action
 #   * moveit-resources-panda-moveit-config — tests/integration/test_moveit_*
 #   * nav2-bringup + nav2-msgs            — openral/rskill-nav2-navigate-to-pose
-#   * slam-toolbox                        — ADR-0025 lifecycle peer
+#   * slam-toolbox                        — reasoner-managed lifecycle peer
 #   * control-msgs                        — control_msgs/GripperCommand (ALOHA HIL gripper transport)
 #   * nav-msgs                            — Odometry/OccupancyGrid (panda_mobile HAL + slam bridge)
 #
@@ -81,7 +81,7 @@ sudo apt-get install -y \
   echo "(one or more wrapped-ROS rSkill apt deps unavailable on this distro — " \
        "rSkills that need them will surface a typed runtime error)"
 
-# ADR-0065 — NVIDIA Isaac ROS cuMotion: a CUDA-accelerated MoveIt planning
+# NVIDIA Isaac ROS cuMotion: a CUDA-accelerated MoveIt planning
 # pipeline. Selected per-request via MotionPlanRequest.pipeline_id only when the
 # host clears the GPU floor (RobotCapabilities.supports_cumotion: Ampere+, CUDA
 # >= 13, ~8 GB); on CPU/low-VRAM hosts MoveIt keeps OMPL. So we install it only
@@ -93,7 +93,7 @@ sudo apt-get install -y \
 # install and no uv/pip group — the apt packages are the whole planner. Verified
 # 2026-06-22 on an RTX 4070 (Ada): the planner node loads + solves a joint plan.
 if command -v nvidia-smi >/dev/null 2>&1 && [[ "${ROS_DISTRO}" == "jazzy" ]]; then
-  echo "==> NVIDIA GPU detected — installing Isaac ROS cuMotion (ADR-0065)."
+  echo "==> NVIDIA GPU detected — installing Isaac ROS cuMotion ."
   sudo apt-get install -y \
     "ros-${ROS_DISTRO}-isaac-ros-cumotion-moveit" \
     "ros-${ROS_DISTRO}-isaac-ros-cumotion-robot-description" || \

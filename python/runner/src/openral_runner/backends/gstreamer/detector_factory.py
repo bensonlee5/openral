@@ -1,4 +1,4 @@
-"""Manifest → detector-backend dispatch for ``kind: detector`` rSkills (ADR-0037).
+"""Manifest → detector-backend dispatch for ``kind: detector`` rSkills.
 
 A GStreamer-free seam (no ``gi`` import) so the runtime↔backend selection is
 unit-testable without a live pipeline. :class:`~.detector_runner.DetectorRunner`
@@ -11,7 +11,7 @@ falls back to the legacy ``runtime``-based selection:
   (:class:`~.omdet_turbo_detector.OmDetTurboDetector`,
   :attr:`~.objects_detector.DetectorTier.ZEROSHOT_HF`) run over a fixed
   vocabulary. No ``onnx_path``; the model loads under the runtime's own
-  ``transformers`` (ADR-0037 2026-06-12 amendment).
+  ``transformers``.
 * ``runtime: onnx`` / ``tensorrt`` (or ``engine: rtdetr_onnx``) → an ONNX-backed
   detector (:class:`~.objects_detector.ObjectsDetector` CPU tier or
   :class:`~.nvmm_detector.NvmmObjectsDetector` NVMM tier), built from the
@@ -20,7 +20,7 @@ falls back to the legacy ``runtime``-based selection:
   open-vocabulary VLM detector
   (:class:`~.locateanything_detector.LocateAnythingDetector`,
   :attr:`~.objects_detector.DetectorTier.VLM_SIDECAR`). No ``onnx_path`` is
-  needed; the model runs in an isolated sidecar (ADR-0037 2026-06-09 amendment).
+  needed; the model runs in an isolated sidecar.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ __all__ = [
 
 @dataclass(frozen=True)
 class DetectorNodeWiring:
-    """How the perception detector node wires a detector, given its mode (ADR-0051).
+    """How the perception detector node wires a detector, given its mode.
 
     A GStreamer/rclpy-free policy object so the node's wiring decision is
     unit-testable without ROS; ``RosImageObjectDetectorNode`` consumes it.
@@ -67,7 +67,7 @@ class DetectorNodeWiring:
 
 
 def detector_node_wiring(mode: DetectorMode) -> DetectorNodeWiring:
-    """Map a detector's invocation mode to its node wiring (ADR-0051).
+    """Map a detector's invocation mode to its node wiring.
 
     The two modes are mutually exclusive at the node:
 

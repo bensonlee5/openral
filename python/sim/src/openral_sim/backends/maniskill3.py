@@ -1,6 +1,6 @@
 """ManiSkill3 scene adapter — wraps SAPIEN-backed GPU manipulation envs.
 
-ADR-0014. ManiSkill3 is opt-in via the ``maniskill3`` dependency group
+ManiSkill3 is opt-in via the ``maniskill3`` dependency group
 (``just sync --all-packages --group maniskill3``); without it this module still imports
 fine but the scene factory raises a typed :class:`ROSConfigError` with
 the install hint.
@@ -290,7 +290,7 @@ class _ManiSkill3Sim:
         ManiSkill3's ``sensor_data`` sub-dict carries one entry per
         registered camera (e.g. ``base_camera`` + ``hand_camera`` on
         ``panda_wristcam``). We surface them in declaration order under
-        the scene's ``cameras`` list (canonical per ADR-0070 — e.g.
+        the scene's ``cameras`` list (the canonical camera-naming convention — e.g.
         ``front`` / ``wrist``), falling back to ``camera{i+1}`` when the
         scene leaves that list empty. An rSkill manifest's
         ``image_preprocessing.aliases`` block then renames them to
@@ -382,7 +382,7 @@ def _extract_rgb_streams(
 
     Returns an ordered ``{name: rgb, ...}`` map mirroring the declaration
     order in ``sensor_data``. When ``camera_names`` is supplied (typically
-    ``scene.cameras`` per ADR-0070) the i-th sensor is keyed by
+    ``scene.cameras``, using the canonical camera-naming convention) the i-th sensor is keyed by
     ``camera_names[i]``; otherwise the ordinal fallback ``camera{i+1}`` is
     used. An rSkill manifest's ``image_preprocessing.aliases`` block then
     renames the resulting keys to model-side keys before preprocessing.
@@ -448,7 +448,7 @@ def _build_maniskill3_scene(env_cfg: SimEnvironment) -> _ManiSkill3Sim:
     # ``state_dict+rgb`` exposes ``agent.qpos`` / ``agent.qvel`` as nested
     # dicts (what :func:`_extract_state` reads). The flat ``rgb+state``
     # mode collapses those into a single top-level tensor, which the
-    # adapter would surface as an empty state vector — see ADR-0014.
+    # adapter would surface as an empty state vector.
     # robot_uids selects the MS3 agent variant — the default `panda` agent
     # carries a single `base_camera`; multi-camera rSkills (e.g. SmolVLA
     # with wrist + overhead views) need `panda_wristcam`, which adds the

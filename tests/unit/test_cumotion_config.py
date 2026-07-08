@@ -1,7 +1,7 @@
-"""Tests for the cuRobo robot-config emitter (ADR-0065 D4).
+"""Tests for the cuRobo robot-config emitter.
 
 The emitter reuses the capsule/sphere geometry the safety kernel already lowers
-(ADR-0030) so plan-time (cuMotion) and kernel-time collision geometry share one
+so plan-time (cuMotion) and kernel-time collision geometry share one
 source of truth. cuRobo represents link collision volumes as **spheres**, so the
 core transformation samples spheres along each lowered capsule's segment.
 """

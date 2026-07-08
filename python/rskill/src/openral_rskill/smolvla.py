@@ -86,6 +86,7 @@ import structlog
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
 from openral_core.schemas import Action, ControlMode, WorldState
 
+from openral_rskill.backend_registry import maybe_attach_pro_hooks
 from openral_rskill.base import rSkillBase
 from openral_rskill.executor import ChunkedExecutor
 
@@ -134,6 +135,13 @@ class SmolVLAAdapter(rSkillBase):
         device: PyTorch device string, e.g. ``"cuda:0"`` or ``"cpu"``.
         n_dof: Degrees of freedom of the robot's action space (default 6 for
             SO-100).  Used to shape the returned :class:`Action`.
+        n_cameras: Number of camera slots the deploy actually feeds. ``None``
+            defaults to ``len(policy.config.image_features)``. Pass the
+            manifest's RGB ``sensors_required`` count for checkpoints that
+            inherit unused camera slots from ``smolvla_base`` (declare 3, but
+            ``empty_cameras=0`` drops the absent one at inference) — it truncates
+            warmup to the real cameras and is threaded to the TRT export so the
+            engine never attends a phantom camera.
         prefetch_at: Steps before chunk end at which background pre-fetch is
             triggered.  See :class:`ChunkedExecutor`.
         name: Skill name passed to the :class:`~openral_rskill.base.Skill`
@@ -156,6 +164,7 @@ class SmolVLAAdapter(rSkillBase):
         *,
         device: str = "cuda:0",
         n_dof: int = 6,
+        n_cameras: int | None = None,
         prefetch_at: int = 5,
         name: str = "smolvla",
         version: str = "0.1.0",
@@ -175,6 +184,7 @@ class SmolVLAAdapter(rSkillBase):
         self._prompt = prompt
         self._device = device
         self._n_dof = n_dof
+        self._n_cameras = n_cameras
         self._prefetch_at = prefetch_at
 
         # Set in on_load_weights / activate.
@@ -195,7 +205,7 @@ class SmolVLAAdapter(rSkillBase):
             from lerobot.policies.factory import make_pre_post_processors
             from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
 
-            from openral_rskill import _lerobot_compat  # noqa: F401
+            from openral_rskill import _lerobot_compat
         except ImportError as exc:
             raise ROSConfigError(
                 "SmolVLAAdapter requires 'lerobot', 'transformers', and 'num2words'. "
@@ -205,6 +215,7 @@ class SmolVLAAdapter(rSkillBase):
         try:
             from huggingface_hub.errors import HfHubHTTPError
 
+            _lerobot_compat.sanitize_smolvla_config(self._repo_id)
             policy = SmolVLAPolicy.from_pretrained(self._repo_id)
             preprocessor, _ = make_pre_post_processors(
                 policy_cfg=policy.config, pretrained_path=self._repo_id
@@ -223,6 +234,25 @@ class SmolVLAAdapter(rSkillBase):
             n_params=sum(p.numel() for p in self._policy.parameters()),
         )
 
+        # Opt-in TensorRT runtime: swap sample_actions for
+        # the split-ONNX TRT engines via the shared env-gated seam (identical
+        # knob to the openral_sim deploy path). Loud, no silent fallback (§1.4).
+        # The TRT hook itself ships in the private openral-pro-trt package
+        # and is looked up by name — a host without it stays on
+        # the eager PyTorch path (logged, not silently skipped).
+        if maybe_attach_pro_hooks(
+            "smolvla",
+            self._policy,
+            repo_id=self._repo_id,
+            device=self._device,
+            n_cameras=self._n_cameras,
+        ):
+            log.info(
+                "smolvla.runtime_tensorrt",
+                repo_id=self._repo_id,
+                n_cameras=self._n_cameras,
+            )
+
     def on_warmup(self) -> None:
         """Run a dummy inference to amortize JIT and cuDNN autotune overhead."""
         import torch
@@ -230,12 +260,24 @@ class SmolVLAAdapter(rSkillBase):
         assert self._policy is not None, "call configure() before activate()"
         self._policy.reset()
         dummy_state = torch.zeros(1, self._n_dof, dtype=torch.float32, device=self._device)
-        dummy_img = torch.rand(1, 3, 256, 256, dtype=torch.float32, device=self._device)
+        # One dummy image per camera the deploy actually feeds — the first
+        # ``n_cameras`` configured features (``None`` = all of them). Warming a
+        # single hardcoded camera under-exercises multi-camera checkpoints, and
+        # the TRT runtime rejects a partial camera set; conversely, warming a
+        # camera slot this checkpoint never fills (an unused ``smolvla_base``
+        # slot) would exceed the 2-camera engine the TRT export builds.
+        cam_keys = self._policy.config.image_features
+        if self._n_cameras is not None:
+            cam_keys = list(cam_keys)[: self._n_cameras]
+        dummy_imgs = {
+            key: torch.rand(1, 3, 256, 256, dtype=torch.float32, device=self._device)
+            for key in cam_keys
+        }
         dummy_batch = self._preprocess(
             {
                 "observation.state": dummy_state,
-                "observation.images.camera1": dummy_img,
                 "task": [self._prompt],
+                **dummy_imgs,
             }
         )
         with torch.no_grad():

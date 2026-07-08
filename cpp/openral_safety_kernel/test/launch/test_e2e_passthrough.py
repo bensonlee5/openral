@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — end-to-end pass-through against the real C++ kernel.
+"""End-to-end pass-through against the real C++ kernel.
 
 Brings up the real ``safety_kernel_node`` as a subprocess via launch,
 publishes valid ``openral_msgs/ActionChunk`` messages on
@@ -31,7 +31,7 @@ pytest.importorskip("openral_msgs")
 # RobotDescription because launch_testing files live under cpp/ and the
 # `tests/sim/safety/_kernel_subprocess` helper is not on the launch
 # tree's sys.path. The arg list below mirrors that helper's output —
-# see ADR-0020 PR-K (kernel reads envelope from ROS parameters).
+# the kernel reads envelope fields from ROS parameters.
 _KERNEL_PARAM_ARGS: list[str] = [
     "-p",
     "n_dof:=3",

@@ -26,7 +26,7 @@ have **initial ROS 2 implementations** — an LLM reasoner/supervisor graph
 supervisor with deadman/E-stop forwarders (`openral_safety`) — with the
 certifiable **C++ safety kernel** (Layer 6) and the **WAM** (Layer 5) still
 planned; the prose below describes their target shape. The cross-cutting
-eval layer (`python/sim/`, ADR-0002) is shipped and drives the closed-loop
+eval layer (`python/sim/`) is shipped and drives the closed-loop
 sim today via `openral sim run` against the configs under `scenes/`.
 
 ## Layer contracts

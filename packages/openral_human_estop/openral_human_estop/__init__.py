@@ -1,4 +1,4 @@
-"""ADR-0018 §5 bullet 2 — human-driven estop forwarder.
+"""ROS 2 reasoner + supervisor graph spec §5 bullet 2 — human-driven estop forwarder.
 
 The dashboard / Slack / voice adapters publish on
 ``/openral/human_estop``; the forwarder node republishes onto the

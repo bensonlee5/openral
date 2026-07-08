@@ -1,4 +1,4 @@
-"""`openral collision lower|check` CLI behaviour (ADR-0030).
+"""`openral collision lower|check` CLI behaviour.
 
 Dry-by-default (a regenerated ACM is a safety input — never silent), explicit
 `--write`, and a `check` mode that exits non-zero on drift. Real panda_mobile
@@ -29,7 +29,7 @@ def _drifted_copy(tmp_path: Path) -> Path:
     """A panda_mobile copy whose ACM drops the link1↔link4 pair (deliberate drift).
 
     The manifest's ``assets.srdf = file:panda_mobile.srdf`` resolves against the
-    manifest's own directory (ADR-0058 ``resolve_asset``), so the SRDF must be
+    manifest's own directory (the ``resolve_asset`` helper), so the SRDF must be
     copied alongside ``robot.yaml`` or the SRDF ACM path can't be lowered.
     """
     src_dir = Path("robots/panda_mobile")

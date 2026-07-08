@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 r"""panda_mobile HAL lifecycle node entry point.
 
-Manifest-driven node (ADR-0032 / issue #191 Phase 3): builds its HAL via
+Manifest-driven node (issue #191 Phase 3): builds its HAL via
 :func:`openral_hal.lifecycle.make_lifecycle_main_from_manifest`. The previous
 bespoke ``_PandaMobileLifecycleNode`` is gone — its mobile-base extras are now
 generic and gated on the manifest, so adding a wheeled robot needs no subclass:
@@ -13,7 +13,7 @@ generic and gated on the manifest, so adding a wheeled robot needs no subclass:
   :class:`openral_hal.sim_sensor_bridge.SimSensorBridge`: live MJCF ray-cast when
   a ``SimAttachedHAL`` is bound (``openral deploy sim --config <scene>``), a
   constant no-hit fan for the in-process ``PandaMobileHAL`` digital twin.
-* **cameras / depth / viewer** — ``SimSensorBridge`` (ADR-0034), as for every
+* **cameras / depth / viewer** — ``SimSensorBridge``, as for every
   other manifest robot.
 * **control modes** — the base ``_on_safe_action`` + ``decode_action_chunk``
   decode every mode; ``PandaMobileHAL`` / ``SimAttachedHAL`` ``send_action`` is

@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — kernel latency soak.
+"""PR-H — kernel latency soak.
 
 Publishes 500 ``ActionChunk`` messages to the real C++ safety kernel at
 chunk rate (~30 Hz) and measures round-trip latency

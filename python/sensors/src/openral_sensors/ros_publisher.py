@@ -1,4 +1,4 @@
-"""Generalised sensor → ROS 2 image publisher (PR2 of ADR-0019).
+"""Generalised sensor → ROS 2 image publisher.
 
 The existing :class:`openral_runner.backends.gstreamer.ros_tee.RosImagePublisher`
 is GStreamer-coupled — it republishes frames pulled from a tee'd

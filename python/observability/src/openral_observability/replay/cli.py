@@ -35,7 +35,7 @@ __all__ = [
 ProfileName = Literal["slim", "full"]
 
 
-# ADR-0018 §F7 — recorded topic sets. Slim is the default and is what a
+# Recorded topic sets (bag↔OTel replay). Slim is the default and is what a
 # 24 h rollout can sustain on a single SSD; full adds the high-rate
 # state + every camera + every event topic and needs a sized disk.
 #
@@ -135,7 +135,7 @@ class ReplayResult:
 
     Attributes:
         trace_id: The trace_id used for the join. ``None`` when the bag
-            had no ADR-0018-typed messages and the dashboard had no
+            had no typed messages and the dashboard had no
             indexed traces.
         bag_trace_ids: Distinct trace_ids discovered in the bag with
             counts. Useful when the user did not pass ``--trace`` and
@@ -173,7 +173,7 @@ def run_replay(
             trace. When ``None``, pick the most-frequent trace_id in the
             bag (or the dashboard's most-recent indexed trace if the
             bag has none).
-        dashboard_url: Base URL of the ADR-0017 dashboard. When
+        dashboard_url: Base URL of the observability dashboard. When
             ``None``, spans are skipped — the timeline is bag-only.
     """
     bag_messages = list(read_bag(bag_path))

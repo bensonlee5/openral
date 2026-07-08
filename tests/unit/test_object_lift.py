@@ -1,4 +1,4 @@
-"""Unit tests for ADR-0035 lift geometry helpers."""
+"""Unit tests for lift geometry helpers."""
 
 from __future__ import annotations
 

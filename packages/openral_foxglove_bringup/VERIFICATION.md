@@ -1,6 +1,6 @@
 # Prototype verification record
 
-Spike for ADR-0059 (`docs/adr/0059-foxglove-live-scene-visualization.md`).
+Prototype verification spike.
 Verified 2026-06-16 on ROS 2 Jazzy, `foxglove_bridge` 3.2.6.
 
 ## What was proven (real, end-to-end)
@@ -74,7 +74,7 @@ ACTIVE). Pointed the bridge at it.
 
 Earlier I wrongly concluded cameras need a skill to step the sim — that was a
 premature reading taken seconds after boot. **Corrected:** master has an
-autonomous idle-step timer (`sim_sensor_bridge.py`, ADR-0034 idle-stepper
+autonomous idle-step timer (`sim_sensor_bridge.py`, idle-stepper
 amendment) gated **only** on the HAL exposing `idle_step`, *not* on the
 graph clock origin. Empirically, the idle OpenArm graph (no skill, reasoner
 unable to dispatch — no LLM) streamed cameras (base ~6 Hz, wrists ~1-2 Hz) and
@@ -108,7 +108,7 @@ Two caveats:
   the ROS path, so Foxglove renders link **frames/structure** but not textured
   meshes. A URDF whose meshes resolve via `package://<ament-pkg>` (served by the
   bridge's `assets` capability) would show full geometry.
-- **OpenArm has no local URDF** (`robots/openarm/robot.yaml`, ADR-0027:
+- **OpenArm has no local URDF** (`robots/openarm/robot.yaml`:
   `urdf_path` deliberately unset). This feature pairs with robots that resolve a
   URDF — e.g. `franka_panda` / `panda_mobile` (`panda_description`), `ur5e`,
   `so101_follower`. Under a real deploy-sim, set only
@@ -135,10 +135,10 @@ reasoner + safety kernel + dashboard + `robot_state_publisher` (Franka URDF via
 ### Bug found + fixed: stale default-layout camera topic
 
 `config/openral_layout.json`'s Image panel pointed at `/openral/cameras/0/image`
-— the pre-ADR-0069 numeric slot name that **no robot publishes anymore**. In
+— the pre-rename numeric slot name that **no robot publishes anymore**. In
 the verified LIBERO deploy scene that auto-resolves to `franka_panda`, the
-canonical third-person slot is `top` (ADR-0070 renamed the old LIBERO
-`agentview` camera to `top`). Repointed the layout to
+canonical third-person slot is `top` (the old LIBERO `agentview` camera was
+renamed to `top`). Repointed the layout to
 `/openral/cameras/top/image`; on robots without `top` (for example
 `panda_mobile`, where old `agentview_left` became `shoulder_left`) use the
 panel's topic dropdown to switch slots. README table + the representative-topic

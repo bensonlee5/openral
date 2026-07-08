@@ -52,7 +52,7 @@ name: "OpenRAL/rskill-smolvla-maniskill-franka"
 version: "0.1.0"
 license: "apache-2.0"
 role: "s1"
-kind: "vla"  # ADR-00XX: rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
+kind: "vla"  # rSkill kind discriminator. "vla" = learnable Vision-Language-Action policy.
 
 # ── Policy identity ────────────────────────────────────────────────────────
 model_family: "smolvla"
@@ -77,7 +77,7 @@ sensors_required:
     min_width: 256
     min_height: 256
 
-# Output side (ADR-0013). 7 arm joints + 1 gripper command. For
+# Output side. 7 arm joints + 1 gripper command. For
 # franka_panda the loader auto-fills n_dof + vla_action_key from
 # robots/franka_panda/robot.yaml.
 actuators_required:
@@ -130,7 +130,7 @@ latency_budget:
 paper_url: "https://arxiv.org/abs/2506.01844"
 dataset_uri: "hf://Calvert0921/SmolVLA_LiftCube_Franka_1000"
 source_repo: "hf://Calvert0921/smolvla_franka_liftcube_1000"
-# Task-data gate (ADR-0060): this checkpoint was trained on the *LiftCube*
+# Task-data gate: this checkpoint was trained on the *LiftCube*
 # dataset (a ManiSkill2-style "lift the cube to a height" task) which has NO
 # equivalent env in ManiSkill3 3.0.1 — MS3 ships PickCube-v1 (grasp + place at
 # a goal + stay static), a different task. Declaring the (MS3-absent) true task
@@ -152,7 +152,7 @@ description: >
   Runs end-to-end on ManiSkill3 PickCube-v1 with a live SAPIEN viewer
   via `openral sim run --view`.
 
-# ADR-0022 — action vocabulary surfaced to the reasoner LLM tool palette.
+# Action vocabulary surfaced to the reasoner LLM tool palette.
 # "lift" is not in the RSkillAction enum; the lift motion is expressed
 # as a pick (the post-grasp upward motion is implicit in the policy's
 # closed-loop control).
@@ -164,7 +164,7 @@ objects:
 scenes:
   - "tabletop"
 
-# ADR-0019 — per-checkpoint action contract (consumed by the dataset bridge
+# Per-checkpoint action contract (consumed by the dataset bridge
 # to bind the LeRobot v3 `action` feature shape).
 action_contract:
   dim: 8

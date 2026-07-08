@@ -1,4 +1,4 @@
-"""ADR-0025 — unit coverage for the rclpy → OTLP SLAM map bridge.
+"""Unit coverage for the rclpy → OTLP SLAM map bridge.
 
 Two layers:
 

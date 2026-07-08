@@ -7,16 +7,21 @@ conditioning (arXiv:2605.02881). The LIBERO finetune
 (``allenai/MolmoAct2-LIBERO``) scores 97.2 % on the LIBERO suite (98.1 % for
 the depth-reasoning ``-Think`` variant), edging out π0.5.
 
-Unlike the other in-tree VLA adapters, MolmoAct2 is **not** a lerobot policy.
-It ships as a transformers *custom-code* model (``trust_remote_code``,
-``auto_map`` → ``MolmoAct2ForConditionalGeneration``) and is driven through its
-own :meth:`predict_action` API rather than lerobot's ``select_action`` queue:
+Unlike the other in-tree VLA adapters, MolmoAct2 is not a lerobot ``PreTrainedPolicy``
+with a ``select_action`` queue — it is driven through its own
+:meth:`predict_action` API. Its model graph is built by the **in-tree**
+``lerobot.policies.molmoact2.molmoact2_hf_model.MolmoAct2ForConditionalGeneration``
+class (lerobot 0.6.0 vendors the exact Ai2 modeling/config/processor code that
+the upstream repos ship as ``trust_remote_code`` custom code). This adapter
+imports that class directly and loads via ``from_pretrained`` / ``from_config``
+— **no** ``AutoModelForImageTextToText``, **no** ``trust_remote_code=True``:
 
 - Bare rSkill reference required as weights URI (the manifest is the
   robot/sensor/IO contract; the eval layer never loads weights without one).
-- The model + processor + ``norm_stats.json`` come from the manifest's
-  ``source_repo`` (``hf://allenai/MolmoAct2-LIBERO``) via transformers'
-  ``AutoModelForImageTextToText`` / ``AutoProcessor``.
+- The config + processor + ``norm_stats.json`` come from the manifest's
+  ``source_repo`` (``hf://allenai/MolmoAct2-LIBERO``), loaded into the in-tree
+  ``MolmoAct2Config`` / ``MolmoAct2Processor`` (the processor stack is registered
+  with the transformers ``Auto*`` registries so it resolves without remote code).
 - The eval-layer ``Observation`` (flat ``state`` + ``images`` dict) is turned
   into the ``predict_action(images=[agentview, wrist], task=, state=, ...)``
   call. ``predict_action`` returns a *chunk* of denormalized actions in robot
@@ -160,41 +165,85 @@ def _molmoact2_phase(name: str, **fields: Any) -> Any:
     return phase_timer(name, prefix="molmoact2", gpu_mb=True, log=_log, **fields)
 
 
-def _import_transformers() -> tuple[Any, Any]:
-    """Import transformers' ``AutoModelForImageTextToText`` + ``AutoProcessor``.
+def _import_molmoact2() -> tuple[Any, Any, Any]:
+    """Import lerobot's in-tree MolmoAct2 model + config + processor classes.
 
-    MolmoAct2 is a transformers custom-code model (``auto_map`` →
-    ``modeling_molmoact2.MolmoAct2ForConditionalGeneration``), loaded with
-    ``trust_remote_code=True`` — it is NOT a lerobot policy, so this adapter
-    does not go through :func:`lazy_import_lerobot`.
+    lerobot 0.6.0 vendors the Ai2 MolmoAct2 modeling/config/processor code that
+    the upstream repos ship as ``trust_remote_code`` custom code. This adapter
+    builds the model graph from that in-tree class directly — **no**
+    ``AutoModelForImageTextToText``, **no** ``trust_remote_code=True``. The
+    in-tree graph is byte-for-byte structurally identical to the upstream
+    custom code (same 1295 ``state_dict`` keys), so the NF4 prequant pack loads
+    key-for-key.
 
-    Returns ``(AutoModelForImageTextToText, AutoProcessor)``. Both are returned
-    untyped (``Any``) because transformers has no strict stubs in this
-    workspace — same convention the lerobot adapters use for their inline
-    policy-class imports.
+    The processor stack (``MolmoAct2Processor`` → ``MolmoAct2ImageProcessor`` /
+    ``MolmoAct2VideoProcessor`` / ``Qwen2Tokenizer``) is registered with the
+    transformers ``Auto*`` registries (idempotently) so
+    ``MolmoAct2Processor.from_pretrained(source_repo)`` resolves its sub-
+    processors from the checkpoint's ``processor_config.json`` ``auto_map``
+    without executing any remote code.
+
+    Returns ``(MolmoAct2ForConditionalGeneration, MolmoAct2Config,
+    MolmoAct2Processor)``. All untyped (``Any``) because neither lerobot nor
+    transformers ship strict stubs in this workspace — same convention the
+    lerobot adapters use for their inline policy-class imports.
+
+    This function is the single model-class seam — isolating the model-class
+    import in one place keeps the load path swappable (e.g. for an A/B check
+    against the old remote-code class).
 
     Raises:
-        ROSConfigError: If transformers / torch are not installed.
+        ROSConfigError: If lerobot / transformers / torch are not installed.
     """
     try:
-        from transformers import AutoModelForImageTextToText, AutoProcessor
+        from lerobot.policies.molmoact2.molmoact2_hf_model.configuration_molmoact2 import (
+            MolmoAct2Config,
+        )
+        from lerobot.policies.molmoact2.molmoact2_hf_model.image_processing_molmoact2 import (
+            MolmoAct2ImageProcessor,
+        )
+        from lerobot.policies.molmoact2.molmoact2_hf_model.modeling_molmoact2 import (
+            MolmoAct2ForConditionalGeneration,
+        )
+        from lerobot.policies.molmoact2.molmoact2_hf_model.processing_molmoact2 import (
+            MolmoAct2Processor,
+        )
+        from lerobot.policies.molmoact2.molmoact2_hf_model.video_processing_molmoact2 import (
+            MolmoAct2VideoProcessor,
+        )
+        from transformers import (
+            AutoConfig,
+            AutoImageProcessor,
+            AutoProcessor,
+            AutoVideoProcessor,
+        )
     except ImportError as exc:  # pragma: no cover - opt-in dependency
         raise ROSConfigError(
-            "MolmoAct2 adapter requires transformers (custom-code model loaded "
-            "via AutoModelForImageTextToText + trust_remote_code). Install with: "
+            "MolmoAct2 adapter requires lerobot>=0.6.0 (in-tree MolmoAct2 model) "
+            "and transformers. Install with: "
             f"just sync --all-packages --group libero (underlying: {exc!r})"
         ) from exc
-    return AutoModelForImageTextToText, AutoProcessor
+
+    # Register the in-tree processor stack so AutoProcessor resolves the custom
+    # image/video processors named in the checkpoint's processor_config.json
+    # auto_map WITHOUT trust_remote_code. Idempotent (exist_ok) so repeat loads
+    # in one process are no-ops.
+    AutoConfig.register("molmoact2", MolmoAct2Config, exist_ok=True)
+    AutoImageProcessor.register(
+        MolmoAct2Config, slow_image_processor_class=MolmoAct2ImageProcessor, exist_ok=True
+    )
+    AutoVideoProcessor.register(MolmoAct2Config, MolmoAct2VideoProcessor, exist_ok=True)  # type: ignore[no-untyped-call]  # reason: transformers Auto*.register lacks stubs
+    AutoProcessor.register(MolmoAct2Config, MolmoAct2Processor, exist_ok=True)  # type: ignore[no-untyped-call]  # reason: transformers Auto*.register lacks stubs
+    return MolmoAct2ForConditionalGeneration, MolmoAct2Config, MolmoAct2Processor
 
 
 @contextlib.contextmanager
 def _hf_offline_if_cached(repo_id: str, probe_file: str = "config.json") -> Any:
     """Flip ``HF_HUB_OFFLINE`` on for the inner block when ``probe_file`` is cached.
 
-    MolmoAct2 is a ``trust_remote_code`` custom-code model: every
-    ``from_pretrained`` re-validates ``modeling_molmoact2.py`` (and the other
-    auto-mapped sources) against the Hub with a HEAD round-trip, even on a
-    fully warm cache — a stream of ``httpx`` INFO lines on each load. When the
+    Every ``from_pretrained`` (config, processor) and the lazy ``norm_stats.json``
+    fetch re-validate their files against the Hub with a HEAD round-trip, even on
+    a fully warm cache — a stream of ``httpx`` INFO lines on each load. When the
     file the inner block is about to read is already in the local cache we flip
     ``huggingface_hub.constants.HF_HUB_OFFLINE`` (which transformers'
     ``is_offline_mode`` reads) so the cached read does zero HEADs. Cold caches
@@ -257,53 +306,10 @@ def _split_repo_revision(repo: str) -> tuple[str, str | None]:
     return repo_id, (revision or None)
 
 
-# MolmoAct2 is a transformers *custom-code* model: ``from_pretrained`` executes
-# ``modeling_*.py`` shipped in the repo (``trust_remote_code=True``). The repo id
-# is manifest/operator-supplied and rSkill signature verification is not yet
-# implemented (ADR-0006), so this is a remote-code-execution sink. Require an
-# explicit operator acknowledgement, mirroring ``OPENRAL_ALLOW_UNSAFE_PICKLE``
-# and ``OPENRAL_ALLOW_NONCOMMERCIAL`` (security audit 2026-06, finding C3).
-_ALLOW_REMOTE_CODE_ENV = "OPENRAL_ALLOW_REMOTE_CODE"
-
-
-def _require_remote_code_ack(source_repo: str, revision: str | None) -> None:
-    """Refuse to load a ``trust_remote_code`` model unless the operator opts in.
-
-    Raises unless ``OPENRAL_ALLOW_REMOTE_CODE=1`` acknowledges that the repo's
-    custom code is trusted; logs a structured warning when enabled. Pinning a
-    ``@<sha>`` revision is strongly recommended (and surfaced in the warning).
-
-    Args:
-        source_repo: The HF repo id whose custom code will be executed.
-        revision: The pinned revision, or ``None`` if unpinned.
-
-    Raises:
-        ROSConfigError: If the acknowledgement env var is not set to ``"1"``.
-    """
-    if os.environ.get(_ALLOW_REMOTE_CODE_ENV, "0") != "1":
-        raise ROSConfigError(
-            f"MolmoAct2 loads custom code from '{source_repo}' via "
-            "trust_remote_code=True, which executes arbitrary Python from the repo "
-            "(remote-code-execution risk for untrusted or unverified weights). rSkill "
-            "signature verification is not yet implemented (ADR-0006), so this is "
-            f"blocked by default. To load a TRUSTED repo, set: export {_ALLOW_REMOTE_CODE_ENV}=1 "
-            "(pin a revision SHA in the manifest's source_repo for reproducibility)."
-        )
-    if revision is None:
-        _log.warning(
-            "molmoact2.remote_code_unpinned",
-            repo=source_repo,
-            env=_ALLOW_REMOTE_CODE_ENV,
-            note="Executing custom code from an UNPINNED repo; pin @<sha> in source_repo.",
-        )
-    else:
-        _log.warning(
-            "molmoact2.remote_code_trusted",
-            repo=source_repo,
-            revision=revision,
-            env=_ALLOW_REMOTE_CODE_ENV,
-            note="Executing custom code from the repo; ensure it is trusted.",
-        )
+# NOTE: the former ``_require_remote_code_ack`` / ``OPENRAL_ALLOW_REMOTE_CODE``
+# gate is gone. The load path builds the model from lerobot's in-tree
+# ``MolmoAct2ForConditionalGeneration`` (first-party, no ``trust_remote_code``),
+# so there is no remote-code-execution surface left to gate.
 
 
 @dataclass
@@ -498,8 +504,9 @@ def _resolve_max_crops(spec: VLASpec, manifest: Any | None) -> int | None:
 def _load_molmoact2_model(  # noqa: PLR0915  # reason: load-phase orchestration (fast meta-init vs slow from_pretrained / quantize / prequant / to_device) is naturally long
     *,
     torch: Any,
-    auto_model_cls: Any,
-    auto_processor_cls: Any,
+    model_cls: Any,
+    config_cls: Any,
+    processor_cls: Any,
     source_repo: str,
     revision: str | None,
     spec: VLASpec,
@@ -509,23 +516,21 @@ def _load_molmoact2_model(  # noqa: PLR0915  # reason: load-phase orchestration 
 ) -> tuple[Any, Any, bool, Any]:
     """Load the processor + (optionally NF4-quantized) model onto ``device``.
 
+    Builds the model graph from lerobot's in-tree
+    ``MolmoAct2ForConditionalGeneration`` (``model_cls``) and the in-tree
+    ``MolmoAct2Config`` / ``MolmoAct2Processor`` — no ``trust_remote_code``.
     Returns ``(model, processor, use_nf4, torch_dtype)``. Split out of
     :func:`_build_molmoact2` so the build function stays under the statement
     cap; all phases stay wrapped in :func:`_molmoact2_phase`.
     """
-    # Gate the custom-code execution before any from_pretrained touches the repo.
-    _require_remote_code_ack(source_repo, revision)
-
     use_nf4 = dtype_str.lower() in {"nf4", "4bit", "int4"}
     torch_dtype = torch_dtype_for(torch, None if use_nf4 else dtype_str, device)
 
-    # The processor + config resolve the trust_remote_code sources against the
-    # Hub; on a warm cache that is pure HEAD-request noise. Load offline-if-cached
-    # so a re-run emits no httpx HEAD stream.
+    # The processor + config still resolve their files against the Hub; on a
+    # warm cache that is pure HEAD-request noise. Load offline-if-cached so a
+    # re-run emits no httpx HEAD stream.
     with _hf_offline_if_cached(source_repo), _molmoact2_phase("processor", repo=source_repo):
-        processor = auto_processor_cls.from_pretrained(
-            source_repo, revision=revision, trust_remote_code=True
-        )
+        processor = processor_cls.from_pretrained(source_repo, revision=revision)
         if max_crops is not None:
             image_processor = getattr(processor, "image_processor", None)
             if image_processor is not None and hasattr(image_processor, "max_crops"):
@@ -551,16 +556,18 @@ def _load_molmoact2_model(  # noqa: PLR0915  # reason: load-phase orchestration 
     prequant_repo = detect_prequantized_nf4(spec) if use_nf4 and device.startswith("cuda") else None
     if prequant_repo is not None:
         from accelerate import init_empty_weights  # type: ignore[import-untyped]
-        from transformers import AutoConfig
 
         fast_state_keys = peek_safetensors_keys(prequant_repo)
         with (
             _hf_offline_if_cached(source_repo),
             _molmoact2_phase("load_config", repo=source_repo),
         ):
-            config = AutoConfig.from_pretrained(
-                source_repo, revision=revision, trust_remote_code=True
-            )
+            config = config_cls.from_pretrained(source_repo, revision=revision)
+        # transformers 5.x no longer populates config._name_or_path from
+        # from_pretrained, but MolmoAct2's `_get_robot_stats` reads it to locate
+        # (and hf_hub_download) norm_stats.json on the first predict_action. Set
+        # it to the source_repo so the lazy norm-stats fetch resolves.
+        config._name_or_path = source_repo
         prev_dtype = torch.get_default_dtype()
         torch.set_default_dtype(torch.bfloat16)
         try:
@@ -570,7 +577,7 @@ def _load_molmoact2_model(  # noqa: PLR0915  # reason: load-phase orchestration 
                 ),
                 init_empty_weights(),
             ):
-                model = auto_model_cls.from_config(config, trust_remote_code=True)
+                model = model_cls(config)
         finally:
             torch.set_default_dtype(prev_dtype)
         with _molmoact2_phase("quantize_nf4"):
@@ -604,13 +611,15 @@ def _load_molmoact2_model(  # noqa: PLR0915  # reason: load-phase orchestration 
         _hf_offline_if_cached(source_repo),
         _molmoact2_phase("from_pretrained", repo=source_repo, dtype=dtype_str),
     ):
-        model = auto_model_cls.from_pretrained(
+        model = model_cls.from_pretrained(
             source_repo,
             revision=revision,
-            trust_remote_code=True,
             dtype=torch_dtype if not use_nf4 else torch.bfloat16,
             low_cpu_mem_usage=True,
         )
+    # See the fast-path note: transformers 5.x leaves config._name_or_path empty,
+    # which MolmoAct2's `_get_robot_stats` needs to fetch norm_stats.json.
+    model.config._name_or_path = source_repo
 
     if not use_nf4:
         with _molmoact2_phase("cast_and_to_device", device=device, dtype=dtype_str):
@@ -651,7 +660,7 @@ def _load_molmoact2_model(  # noqa: PLR0915  # reason: load-phase orchestration 
 
 @POLICIES.register("molmoact2")
 def _build_molmoact2(env_cfg: Any) -> _MolmoAct2Adapter:
-    """Load a MolmoAct2 LIBERO finetune as a transformers custom-code model."""
+    """Load a MolmoAct2 finetune via lerobot's in-tree MolmoAct2 model class."""
     spec = env_cfg.vla
     device = resolve_device(spec)
 
@@ -663,12 +672,12 @@ def _build_molmoact2(env_cfg: Any) -> _MolmoAct2Adapter:
     with _molmoact2_phase("imports"):
         import torch
 
-        auto_model_cls, auto_processor_cls = _import_transformers()
+        model_cls, config_cls, processor_cls = _import_molmoact2()
 
     # The rSkill manifest is the source of truth. ``weights_uri`` points at the
     # NF4 prequant repo (used for the fast prequant overlay); ``source_repo``
-    # points at the upstream bf16 checkpoint that carries the model graph,
-    # processor, custom code and norm_stats.
+    # points at the upstream bf16 checkpoint that carries the config, processor
+    # and norm_stats (the model graph itself is lerobot's in-tree class).
     resolve_rskill_repo_id(spec.weights_uri, adapter_name="MolmoAct2")  # validates rSkill reference
     manifest = load_manifest_for_spec(spec)
     if manifest is None:
@@ -683,8 +692,9 @@ def _build_molmoact2(env_cfg: Any) -> _MolmoAct2Adapter:
     dtype_str = manifest_dtype(spec, manifest=manifest) or default_dtype_for_device(device)
     model, processor, use_nf4, torch_dtype = _load_molmoact2_model(
         torch=torch,
-        auto_model_cls=auto_model_cls,
-        auto_processor_cls=auto_processor_cls,
+        model_cls=model_cls,
+        config_cls=config_cls,
+        processor_cls=processor_cls,
         source_repo=source_repo,
         revision=source_revision,
         spec=spec,

@@ -1,4 +1,4 @@
-"""ADR-0020 PR-H — closed-loop Unitree H1 humanoid twin + C++ safety kernel.
+"""PR-H — closed-loop Unitree H1 humanoid twin + C++ safety kernel.
 
 H1 is a 19-DoF humanoid with a floating base; the largest single-robot
 envelope this branch tests through the kernel. Exercises the kernel's
@@ -62,7 +62,7 @@ def test_h1_humanoid_twin_closed_loop_through_kernel() -> None:
         ]
         assert len(per_joint_limits) == n_dof
 
-        with tempfile.TemporaryDirectory():  # ADR-0020 PR-K: no temp envelope file needed
+        with tempfile.TemporaryDirectory():  # PR-K: no temp envelope file needed
             node_name = f"safety_kernel_h1_{uuid.uuid4().hex[:8]}"
             domain_id = isolated_domain_id()
             proc = start_kernel(H1_DESCRIPTION, node_name, domain_id)

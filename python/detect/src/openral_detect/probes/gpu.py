@@ -180,14 +180,14 @@ def _tops_for_jetson_board(board: str) -> float:
 #: stricter match than ``"Orin"``, but the substring check finds the latter
 #: anyway, so we list only one entry per SoC family). ``"Nano"`` matches
 #: Maxwell-era Nano only — Orin Nano contains ``"Orin"`` and is caught by
-#: the first entry. ADR-0013 §3.1 mandates the explicit table; the legacy
-#: ``(8, 7) if "Orin" in board else (7, 2)`` heuristic silently classified
-#: Xavier and Maxwell-Nano boards as Volta (CC 7.2), masking a
+#: the first entry. This explicit table replaces the legacy
+#: ``(8, 7) if "Orin" in board else (7, 2)`` heuristic, which silently
+#: classified Xavier and Maxwell-Nano boards as Volta (CC 7.2), masking a
 #: best-effort gap.
 _JETSON_CC_BY_BOARD_KEYWORD: tuple[tuple[str, tuple[int, int]], ...] = (
     ("Orin", (8, 7)),  # Orin AGX / Orin NX / Orin Nano — Ampere CC 8.7
     ("Xavier", (7, 2)),  # Xavier AGX / Xavier NX — Volta CC 7.2
-    ("Nano", (5, 3)),  # Legacy Maxwell Nano — best-effort per ADR-0013
+    ("Nano", (5, 3)),  # Legacy Maxwell Nano — best-effort
 )
 
 
@@ -196,7 +196,7 @@ def _cc_for_jetson_board(board: str) -> tuple[int, int] | None:
 
     Replaces the legacy ``(8, 7) if "Orin" in board else (7, 2)``
     heuristic with the explicit :data:`_JETSON_CC_BY_BOARD_KEYWORD`
-    table mandated by ADR-0013 §3.1.
+    table above.
     """
     for keyword, cc in _JETSON_CC_BY_BOARD_KEYWORD:
         if keyword in board:
@@ -225,7 +225,7 @@ def _probe_nvmm_available(*, search_paths: Sequence[Path] | None = None) -> bool
     The library ships with the L4T multimedia stack on JetPack r35+;
     its absence on a stripped L4T image (or on any non-Tegra host) means
     the NVMM path is unavailable even when the host is otherwise a
-    Tegra. ADR-0013 PR 2/3.
+    Tegra.
 
     Args:
         search_paths: Override search roots for tests. Production omits

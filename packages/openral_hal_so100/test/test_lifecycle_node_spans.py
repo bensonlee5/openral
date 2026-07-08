@@ -1,4 +1,4 @@
-"""HAL OTel-span coverage for the SO-100 lifecycle node (ADR-0018 + dashboard).
+"""HAL OTel-span coverage for the SO-100 lifecycle node (dashboard).
 
 Drives the real ``ManifestHALLifecycleNode`` (the generic node the SO-100
 package now uses after the issue #191 Phase 2 migration) against a real

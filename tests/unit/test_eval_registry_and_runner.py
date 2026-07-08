@@ -220,7 +220,7 @@ def test_sim_list_subcommand_prints_example_configs() -> None:
     result = runner.invoke(sim_app, ["list"])
     assert result.exit_code == 0, result.output
     assert "scenes/" in result.output
-    # ADR-0041: scenes/benchmarks/diffusion_pusht.yaml was renamed to
+    # scenes/benchmarks/diffusion_pusht.yaml was renamed to
     # scenes/benchmark/pusht.yaml (rSkill name stripped; tier-only directory).
     assert "scenes/benchmark/pusht.yaml" in result.output
 

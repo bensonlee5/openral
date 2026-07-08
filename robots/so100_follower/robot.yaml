@@ -14,10 +14,10 @@ embodiment_kind: "manipulator"
 
 base_frame: "base"
 
-# ADR-0027 — robot_state_publisher wiring. `robot_descriptions` ships
+# robot_state_publisher wiring. `robot_descriptions` ships
 # the SO-ARM100 URDF (cloned from github.com/TheRobotStudio/SO-ARM100
 # on first import); root link is ``base``, matching our base_frame.
-# ADR-0058 — unified asset block (URDF / MJCF).
+# Unified asset block (URDF / MJCF).
 assets:
   urdf:
     ref: "file:so100_follower.urdf"
@@ -106,7 +106,7 @@ sensors:
     modality: "rgb"
     frame_id: "world"
     rate_hz: 30.0
-    # ADR-0065 — sim placement for the overhead camera. The generic HAL camera
+    # Per the sim camera-placement convention — sim placement for the overhead camera. The generic HAL camera
     # rig splices this `top` camera into the bare SO-100 MJCF for `deploy sim`
     # (the upstream `so_arm100` arm ships zero cameras, issue #88), world-fixed
     # above the arm's workspace looking down. Poses are in metres relative to the
@@ -134,7 +134,7 @@ sensors:
     frame_id: "wrist_camera"
     parent_frame: "gripper"
     rate_hz: 30.0
-    # ADR-0065 — sim placement for the wrist camera. The rig parents it to the
+    # Per the sim camera-placement convention — sim placement for the wrist camera. The rig parents it to the
     # SO-100 MJCF `Fixed_Jaw` body (the roll-mounted end body, the SO-100
     # equivalent of the SO-101 `gripper` body), pose in that body's local frame
     # (local +X = world-down, fingers along local -Y), looking forward-down the
@@ -188,12 +188,12 @@ safety:
   contact_force_threshold_n: 5.0
 
 sdk_kind: "open"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # sim: null → derive MujocoArmHAL.from_description from the `sim:` block below.
 hal:
   sim: null
   real: "openral_hal.so100_follower:SO100FollowerHAL"
-  # ADR-0029 — real-HAL construction defaults threaded by build_hal so the
+  # Real-HAL construction defaults threaded by build_hal so the
   # manifest-driven lifecycle node needs no bespoke `port` ROS parameter.
   parameters:
     defaults:
@@ -204,7 +204,7 @@ hal:
 # Source: ``trs_so_arm100/so_arm100.xml`` in mujoco_menagerie (vendored via
 # ``robot_descriptions``). The Jaw joint is revolute and its closed
 # position is non-zero (-0.174 rad), so gripper.read_mode is
-# ``affine_low_high``.  See ADR-0023.
+# ``affine_low_high``.
 sim:
   grippers:
     - joint: "gripper"

@@ -1,7 +1,7 @@
 """Shared integration fixtures — the live MoveIt panda demo harness.
 
-Used by ``test_moveit_plan_arm_franka.py`` (ADR-0024) and
-``test_look_at_franka.py`` (ADR-0044). Real components only: the fixture
+Used by ``test_moveit_plan_arm_franka.py`` and
+``test_look_at_franka.py``. Real components only: the fixture
 spawns the upstream ``moveit_resources_panda_moveit_config`` demo (real
 ``move_group`` + ``ros2_control`` fake hardware + ``robot_state_publisher``)
 and skips — never fakes — when the package or a ROS workspace is absent.

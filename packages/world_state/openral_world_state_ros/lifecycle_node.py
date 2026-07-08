@@ -1,8 +1,8 @@
 r"""openral_world_state ROS 2 lifecycle node.
 
 Wraps :class:`openral_world_state.WorldStateAggregator` as a managed
-lifecycle node. Subscribes to ``/joint_states`` and (per ADR-0018 F2)
-publishes a typed :class:`openral_msgs.msg.WorldStateStamped` snapshot
+lifecycle node. Subscribes to ``/joint_states`` and publishes a typed
+:class:`openral_msgs.msg.WorldStateStamped` snapshot
 on two topics:
 
 - ``/openral/world_state_fast`` (30 Hz, ``RELIABLE+VOLATILE+KL=1``) —
@@ -14,7 +14,7 @@ Both topics carry the same payload built from a single in-memory
 snapshot per fast tick (the slow topic re-publishes the same message
 every Nth fast tick where ``N = round(fast_hz / slow_hz)``). The
 legacy JSON publication on ``/world_state`` is removed by this PR —
-typed is the only path (ADR-0018 §2; capability review F2).
+typed is the only path (capability review F2).
 
 Lifecycle transitions
 ---------------------
@@ -150,7 +150,7 @@ if _ROS2_AVAILABLE:
             Args:
                 aggregator: Optional pre-constructed
                     ``openral_world_state.WorldStateAggregator`` instance.
-                    When supplied (ADR-0018 §3 / F1
+                    When supplied (F1
                     ``compose_so100_runtime`` composition), the node
                     reuses it and skips internal construction on
                     ``on_configure``. ``None`` preserves the standalone
@@ -186,10 +186,16 @@ if _ROS2_AVAILABLE:
             # `left_wrist`, `right_wrist`).
             self.declare_parameter("camera_names", [""])
             self.declare_parameter("camera_topic_prefix", "/openral/cameras")
+            # Sensors whose frames the co-located sensor
+            # leg writes straight into the shared aggregator (zero-copy NVMM
+            # handles intact). ``_on_image`` keeps serving observability
+            # (thumbnail span) for them but must NOT double-write the
+            # aggregator with its handle-less reconstruction.
+            self.declare_parameter("direct_image_frame_sensors", [""])
             self.declare_parameter("object_lift_enabled", True)
             self.declare_parameter("object_detections_topic", "/openral/perception/objects")
             self.declare_parameter("object_voxels_topic", "/openral/world_voxels")
-            # ADR-0035 amendment (#11) — depth point cloud used as the lift's
+            # Depth point cloud used as the lift's
             # depth source when no octomap voxel grid is available (octomap is
             # often disabled in dense scenes to avoid kernel false positives, yet
             # the lift still needs depth to place a 2D box in 3D). Empty disables
@@ -215,14 +221,14 @@ if _ROS2_AVAILABLE:
             self._camera_subs: dict[str, object] = {}
             self._slow_divider = 1
             self._tick_count = 0
-            # ADR-0018 F8 — heartbeat.
+            # supervisor-graph F8 — heartbeat.
             self._heartbeat: object | None = None
             self._init_lift_state()
 
             self.get_logger().info("WorldState node initialised.")
 
         def _init_lift_state(self) -> None:
-            """Zero the ADR-0035 object-lift runtime state (set up on_configure)."""
+            """Zero the object-lift runtime state (set up on_configure)."""
             self._lift_enabled = False
             self._tf_buffer: object | None = None
             self._tf_listener: object | None = None
@@ -259,7 +265,7 @@ if _ROS2_AVAILABLE:
                 self.get_parameter("staleness_limit_s").get_parameter_value().double_value
             )
 
-            # ADR-0018 §3 — `WorldStateAggregator` is the only subscriber of
+            # Per the supervisor-graph design — `WorldStateAggregator` is the only subscriber of
             # `/joint_states`. When an aggregator was supplied at
             # construction (compose_so100_runtime path), reuse it; otherwise
             # build the standalone-mode stub-backed aggregator preserved for
@@ -306,11 +312,14 @@ if _ROS2_AVAILABLE:
                 sensor_qos,
             )
 
-            # Per-camera image subscriptions. The HAL publishes
-            # `sensor_msgs/Image` with RELIABLE QoS on
-            # `<prefix>/<name>/image`; we mirror RELIABLE so the
-            # subscription matches and we never miss a frame on
-            # bring-up.
+            # Per-camera image subscriptions on `<prefix>/<name>/image`.
+            # BEST_EFFORT per CLAUDE.md §2 (sensor streams): a BEST_EFFORT
+            # subscription matches BOTH publisher reliabilities, so it
+            # receives from the sim HAL bridges (RELIABLE) and from the
+            # real-mode GStreamer ros_tee / SensorRosPublisher readers
+            # (BEST_EFFORT). The previous RELIABLE profile silently
+            # never matched the BEST_EFFORT real-camera publishers —
+            # zero frames, policy starved of images on real hardware.
             from sensor_msgs.msg import Image as RosImage
 
             camera_names_raw = list(
@@ -321,7 +330,7 @@ if _ROS2_AVAILABLE:
                 self.get_parameter("camera_topic_prefix").get_parameter_value().string_value
             )
             image_qos = QoSProfile(
-                reliability=QoSReliabilityPolicy.RELIABLE,
+                reliability=QoSReliabilityPolicy.BEST_EFFORT,
                 durability=QoSDurabilityPolicy.VOLATILE,
                 depth=1,
             )
@@ -339,7 +348,7 @@ if _ROS2_AVAILABLE:
                     f"{', '.join(camera_names)}",
                 )
 
-            # ADR-0018 §1 — RELIABLE+VOLATILE+KL=1 on both world_state topics.
+            # Per the supervisor-graph design — RELIABLE+VOLATILE+KL=1 on both world_state topics.
             ws_qos = QoSProfile(
                 reliability=QoSReliabilityPolicy.RELIABLE,
                 durability=QoSDurabilityPolicy.VOLATILE,
@@ -348,7 +357,7 @@ if _ROS2_AVAILABLE:
             self._pub_fast = self.create_publisher(WorldStateStamped, TOPIC_FAST, ws_qos)
             self._pub_slow = self.create_publisher(WorldStateStamped, TOPIC_SLOW, ws_qos)
 
-            # ADR-0018 F8 — heartbeat.
+            # supervisor-graph F8 — heartbeat.
             def _status() -> tuple[int, str, dict[str, str]]:
                 # Aggregator presence is the meaningful per-node fact here;
                 # joint-state staleness lands when F2's typed publication
@@ -646,7 +655,16 @@ if _ROS2_AVAILABLE:
                     age_ms=age_ms,
                     thumbnail_bytes=thumb,
                 )
-                self._aggregator.update_image_frame(sensor_name, frame)
+                # NVMM zero-copy vision path Phase 3: sensors fed straight into the aggregator by
+                # the co-located sensor leg keep their zero-copy handle frames —
+                # this ROS reconstruction serves observability only for them.
+                direct = {
+                    str(s)
+                    for s in (self.get_parameter("direct_image_frame_sensors").value or [])
+                    if s
+                }
+                if sensor_name not in direct:
+                    self._aggregator.update_image_frame(sensor_name, frame)
 
         def _on_joint_state(self, msg: object) -> None:
             """Convert ROS JointState → Pydantic JointState and update aggregator."""
@@ -791,7 +809,7 @@ if _ROS2_AVAILABLE:
                 return
             # Remember this detection camera so eviction can project its FOV
             # every memory tick from the camera pose alone (the real detector
-            # publishes nothing when it sees nothing — ADR-0035).
+            # publishes nothing when it sees nothing).
             self._seen_sensor_ids.add(md.sensor_id)
             base_frame = self._aggregator.description.base_frame
             t_cam_from_base = self._lookup_4x4(spec.frame_id, base_frame)
@@ -866,7 +884,7 @@ if _ROS2_AVAILABLE:
             Builds one ``WorldStateStamped`` per fast tick and publishes
             it on the fast topic; every ``_slow_divider`` ticks the same
             message also goes out on the slow topic (single snapshot, two
-            publishers, two rates — ADR-0018 F2).
+            publishers, two rates).
             """
             if self._aggregator is None or self._pub_fast is None or self._pub_slow is None:
                 return

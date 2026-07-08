@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 phase 2 — allocation-free geometric self-collision core.
+// Allocation-free geometric self-collision core.
 //
 // Hand-rolled, dependency-free (no Eigen/KDL/Pinocchio) so the safety kernel
 // stays small and auditable. All hot-path work is on the stack or in
@@ -241,6 +241,110 @@ double capsule_distance(const Transform& a, double a_radius, double a_half_lengt
   return centerline - a_radius - b_radius;
 }
 
+namespace {
+
+// Distance from a point (already in the box's local frame) to the axis-aligned
+// box [-h, +h]; 0 when the point is inside. Standard closed form.
+double point_aabb_distance(const Vec3& p, const Vec3& h) noexcept {
+  const double ox = std::fabs(p.x) - h.x;
+  const double oy = std::fabs(p.y) - h.y;
+  const double oz = std::fabs(p.z) - h.z;
+  const double cx = ox > 0.0 ? ox : 0.0;
+  const double cy = oy > 0.0 ? oy : 0.0;
+  const double cz = oz > 0.0 ? oz : 0.0;
+  return std::sqrt(cx * cx + cy * cy + cz * cz);
+}
+
+// World point -> box-local coordinates: Rᵀ (p - t), for a row-major R.
+Vec3 to_box_local(const Transform& frame, const Vec3& p) noexcept {
+  const Vec3 d = sub(p, frame.t);
+  return Vec3{frame.r[0] * d.x + frame.r[3] * d.y + frame.r[6] * d.z,
+              frame.r[1] * d.x + frame.r[4] * d.y + frame.r[7] * d.z,
+              frame.r[2] * d.x + frame.r[5] * d.y + frame.r[8] * d.z};
+}
+
+// Local axis k (0,1,2) of a row-major transform, expressed in the common frame.
+Vec3 box_axis(const Transform& frame, int k) noexcept {
+  return Vec3{frame.r[k], frame.r[k + 3], frame.r[k + 6]};
+}
+
+}  // namespace
+
+double box_capsule_distance(const Transform& box, const Vec3& half_extents, const Transform& cap,
+                            double cap_radius, double cap_half_length) noexcept {
+  // The capsule's central segment, brought into the box's local frame where the
+  // box is the axis-aligned [-h, +h]. The point→AABB distance is convex along
+  // the segment, so a ternary search on t ∈ [0, 1] converges to the global
+  // minimum surface gap; subtracting the capsule radius gives the capsule↔box
+  // distance (exact when disjoint). Allocation-free (fixed iteration count).
+  Vec3 c0;
+  Vec3 c1;
+  capsule_endpoints(cap, cap_half_length, c0, c1);
+  const Vec3 a = to_box_local(box, c0);
+  const Vec3 b = to_box_local(box, c1);
+  const Vec3 ab = sub(b, a);
+  double lo = 0.0;
+  double hi = 1.0;
+  for (int it = 0; it < 48; ++it) {
+    const double m1 = lo + (hi - lo) / 3.0;
+    const double m2 = hi - (hi - lo) / 3.0;
+    const double f1 =
+        point_aabb_distance(Vec3{a.x + m1 * ab.x, a.y + m1 * ab.y, a.z + m1 * ab.z}, half_extents);
+    const double f2 =
+        point_aabb_distance(Vec3{a.x + m2 * ab.x, a.y + m2 * ab.y, a.z + m2 * ab.z}, half_extents);
+    if (f1 < f2) {
+      hi = m2;
+    } else {
+      lo = m1;
+    }
+  }
+  const double tm = 0.5 * (lo + hi);
+  const double seg_box =
+      point_aabb_distance(Vec3{a.x + tm * ab.x, a.y + tm * ab.y, a.z + tm * ab.z}, half_extents);
+  return seg_box - cap_radius;
+}
+
+double box_box_distance(const Transform& a, const Vec3& a_half, const Transform& b,
+                        const Vec3& b_half) noexcept {
+  // Separating-axis theorem for two OBBs: project both onto each candidate axis
+  // and take the largest surface gap. For disjoint boxes that maximum equals a
+  // separating plane's clearance, which lower-bounds the true Euclidean distance
+  // — so the kernel never under-reports a collision (safety §3). Negative on all
+  // axes ⇒ overlap. Allocation-free (15 axes, no heap).
+  const Vec3 ax[3] = {box_axis(a, 0), box_axis(a, 1), box_axis(a, 2)};
+  const Vec3 bx[3] = {box_axis(b, 0), box_axis(b, 1), box_axis(b, 2)};
+  const double ahv[3] = {a_half.x, a_half.y, a_half.z};
+  const double bhv[3] = {b_half.x, b_half.y, b_half.z};
+  const Vec3 dc = sub(b.t, a.t);
+  double best = -std::numeric_limits<double>::infinity();
+  for (int idx = 0; idx < 15; ++idx) {
+    Vec3 axis_l;
+    if (idx < 3) {
+      axis_l = ax[idx];
+    } else if (idx < 6) {
+      axis_l = bx[idx - 3];
+    } else {
+      axis_l = cross(ax[(idx - 6) / 3], bx[(idx - 6) % 3]);
+    }
+    const double len = std::sqrt(dot(axis_l, axis_l));
+    if (len < 1e-9) {
+      continue;  // parallel edges — degenerate axis, already covered by faces
+    }
+    const Vec3 n = scale(axis_l, 1.0 / len);
+    double ra = 0.0;
+    double rb = 0.0;
+    for (int k = 0; k < 3; ++k) {
+      ra += ahv[k] * std::fabs(dot(ax[k], n));
+      rb += bhv[k] * std::fabs(dot(bx[k], n));
+    }
+    const double gap = std::fabs(dot(dc, n)) - ra - rb;
+    if (gap > best) {
+      best = gap;
+    }
+  }
+  return best;
+}
+
 void forward_kinematics(const CollisionModel& model, const double* qpos, std::size_t n_dof,
                         CollisionScratch& scratch) noexcept {
   for (std::size_t i = 0; i < model.n_links; ++i) {
@@ -385,6 +489,54 @@ CollisionHit check_self_collision(const CollisionModel& model, const CollisionSc
       }
     }
   }
+  // Blocky links carry an OBB instead of a capsule (issue #84):
+  // every box↔capsule and box↔box pair is checked with the same allowed-pair /
+  // same-link skips. A box↔capsule distance is exact; a box↔box distance is a
+  // conservative lower bound (SAT). Boxes are few (one per blocky link), so
+  // this stays cheap and allocation-free.
+  const std::size_t n_boxes = model.boxes.size();
+  for (std::size_t bi = 0; bi < n_boxes; ++bi) {
+    const int lb = model.box_link[bi];
+    const Transform box_i =
+        compose(scratch.link_world[static_cast<std::size_t>(lb)], model.boxes[bi].origin);
+    for (std::size_t cj = 0; cj < n_caps; ++cj) {
+      const int lc = model.capsule_link[cj];
+      if (lb == lc || is_allowed(model, lb, lc)) {
+        continue;
+      }
+      const Transform cap_j =
+          compose(scratch.link_world[static_cast<std::size_t>(lc)], model.capsules[cj].origin);
+      const double d =
+          box_capsule_distance(box_i, model.boxes[bi].half_extents, cap_j,
+                               model.capsules[cj].radius, model.capsules[cj].half_length);
+      if (d < result.min_distance) {
+        result.min_distance = d;
+      }
+      if (d <= margin && !result.hit) {
+        result.hit = true;
+        result.link_a = lb;
+        result.link_b = lc;
+      }
+    }
+    for (std::size_t bj = bi + 1; bj < n_boxes; ++bj) {
+      const int lb2 = model.box_link[bj];
+      if (lb == lb2 || is_allowed(model, lb, lb2)) {
+        continue;
+      }
+      const Transform box_j =
+          compose(scratch.link_world[static_cast<std::size_t>(lb2)], model.boxes[bj].origin);
+      const double d = box_box_distance(box_i, model.boxes[bi].half_extents, box_j,
+                                        model.boxes[bj].half_extents);
+      if (d < result.min_distance) {
+        result.min_distance = d;
+      }
+      if (d <= margin && !result.hit) {
+        result.hit = true;
+        result.link_a = lb;
+        result.link_b = lb2;
+      }
+    }
+  }
   return result;
 }
 
@@ -413,6 +565,27 @@ CollisionHit check_world_collision(const CollisionModel& model, const CollisionS
       }
     }
   }
+  // Blocky links (OBB) are checked against every world obstacle too,
+  // so a boxed link is never invisible to the world check.
+  const std::size_t n_boxes = model.boxes.size();
+  for (std::size_t b = 0; b < n_boxes; ++b) {
+    const int lb = model.box_link[b];
+    const Transform box_w =
+        compose(scratch.link_world[static_cast<std::size_t>(lb)], model.boxes[b].origin);
+    for (std::size_t w = 0; w < n_world; ++w) {
+      const double d = box_capsule_distance(box_w, model.boxes[b].half_extents,
+                                            world.capsules[w].origin, world.capsules[w].radius,
+                                            world.capsules[w].half_length);
+      if (d < result.min_distance) {
+        result.min_distance = d;
+      }
+      if (d <= margin && !result.hit) {
+        result.hit = true;
+        result.link_a = lb;
+        result.link_b = static_cast<int>(w);
+      }
+    }
+  }
   return result;
 }
 
@@ -429,6 +602,13 @@ CollisionHit check_voxel_collision(const CollisionModel& model, const CollisionS
   // counts), and only voxels inside each capsule's inflated AABB are tested.
   const double half_diag = grid.resolution * 0.86602540378443864676;  // sqrt(3)/2
   const double inv_res = 1.0 / grid.resolution;
+  // Voxel-index span of a base-frame interval, clamped to the grid (shared by
+  // the capsule and box passes).
+  const auto rng = [&](double lo, double hi, double org, int dim) {
+    const int i0 = static_cast<int>(std::floor((lo - org) * inv_res));
+    const int i1 = static_cast<int>(std::floor((hi - org) * inv_res));
+    return std::pair<int, int>{clamp_index(i0, 0, dim - 1), clamp_index(i1, 0, dim - 1)};
+  };
   const std::size_t n_caps = model.capsules.size();
   for (std::size_t c = 0; c < n_caps; ++c) {
     const int li = model.capsule_link[c];
@@ -439,11 +619,6 @@ CollisionHit check_voxel_collision(const CollisionModel& model, const CollisionS
     capsule_endpoints(cap, model.capsules[c].half_length, p0, p1);
     const double r = model.capsules[c].radius;
     const double reach = r + margin + half_diag;
-    const auto rng = [&](double lo, double hi, double org, int dim) {
-      const int i0 = static_cast<int>(std::floor((lo - org) * inv_res));
-      const int i1 = static_cast<int>(std::floor((hi - org) * inv_res));
-      return std::pair<int, int>{clamp_index(i0, 0, dim - 1), clamp_index(i1, 0, dim - 1)};
-    };
     const auto [ix0, ix1] =
         rng(std::min(p0.x, p1.x) - reach, std::max(p0.x, p1.x) + reach, grid.origin.x, grid.sx);
     const auto [iy0, iy1] =
@@ -467,6 +642,51 @@ CollisionHit check_voxel_collision(const CollisionModel& model, const CollisionS
           if (d <= margin && !result.hit) {
             result.hit = true;
             result.link_a = li;
+            result.link_b = static_cast<int>(idx);
+          }
+        }
+      }
+    }
+  }
+  // Blocky links (OBB) are voxel-checked too: an occupied voxel is the
+  // same conservative sphere, tested against the box via its box-local distance.
+  const std::size_t n_boxes = model.boxes.size();
+  for (std::size_t b = 0; b < n_boxes; ++b) {
+    const int lb = model.box_link[b];
+    const Transform box_w =
+        compose(scratch.link_world[static_cast<std::size_t>(lb)], model.boxes[b].origin);
+    const Vec3 he = model.boxes[b].half_extents;
+    // World-AABB half-size of the oriented box: |R| * half_extents (row-major R).
+    const double ex = std::fabs(box_w.r[0]) * he.x + std::fabs(box_w.r[1]) * he.y +
+                      std::fabs(box_w.r[2]) * he.z;
+    const double ey = std::fabs(box_w.r[3]) * he.x + std::fabs(box_w.r[4]) * he.y +
+                      std::fabs(box_w.r[5]) * he.z;
+    const double ez = std::fabs(box_w.r[6]) * he.x + std::fabs(box_w.r[7]) * he.y +
+                      std::fabs(box_w.r[8]) * he.z;
+    const double reach = margin + half_diag;
+    const auto [ix0, ix1] =
+        rng(box_w.t.x - ex - reach, box_w.t.x + ex + reach, grid.origin.x, grid.sx);
+    const auto [iy0, iy1] =
+        rng(box_w.t.y - ey - reach, box_w.t.y + ey + reach, grid.origin.y, grid.sy);
+    const auto [iz0, iz1] =
+        rng(box_w.t.z - ez - reach, box_w.t.z + ez + reach, grid.origin.z, grid.sz);
+    for (int iz = iz0; iz <= iz1; ++iz) {
+      for (int iy = iy0; iy <= iy1; ++iy) {
+        for (int ix = ix0; ix <= ix1; ++ix) {
+          const std::size_t idx = static_cast<std::size_t>(ix + grid.sx * (iy + grid.sy * iz));
+          if (grid.occupancy[idx] == 0) {
+            continue;
+          }
+          const Vec3 center{grid.origin.x + (ix + 0.5) * grid.resolution,
+                            grid.origin.y + (iy + 0.5) * grid.resolution,
+                            grid.origin.z + (iz + 0.5) * grid.resolution};
+          const double d = point_aabb_distance(to_box_local(box_w, center), he) - half_diag;
+          if (d < result.min_distance) {
+            result.min_distance = d;
+          }
+          if (d <= margin && !result.hit) {
+            result.hit = true;
+            result.link_a = lb;
             result.link_b = static_cast<int>(idx);
           }
         }

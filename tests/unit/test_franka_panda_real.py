@@ -99,7 +99,7 @@ class TestManifestPointer:
         real = FRANKA_PANDA_REAL_DESCRIPTION.model_dump()
         for shared_field in ("name", "joints", "end_effectors", "capabilities", "safety"):
             assert sim[shared_field] == real[shared_field]
-        # ADR-0031: only sdk_kind differs; the hal entrypoints are shared.
+        # Only sdk_kind differs; the hal entrypoints are shared.
         assert sim["sdk_kind"] != real["sdk_kind"]
         assert sim["hal"] == real["hal"]
 

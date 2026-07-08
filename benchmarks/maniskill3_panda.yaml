@@ -9,7 +9,7 @@
 # runner auto-filters to the tasks the rSkill's evaluated_tasks cover (skips
 # the rest with a logged summary) and `--task maniskill3/<Env>` runs one.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename stem.
+# Shape: bare list of BenchmarkScenes; suite id = filename stem.
 # The shared scene/robot/episode/seed/metadata fields come from the
 # `*ms3_scene` anchor; each entry overrides only the task (id + per-env
 # official max_steps + instruction). max_steps is each env's official

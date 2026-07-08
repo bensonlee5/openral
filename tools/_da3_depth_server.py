@@ -1,4 +1,4 @@
-"""ADR-0064 — DA3 monocular metric-depth inference server (sidecar process).
+"""DA3 monocular metric-depth inference server (sidecar process).
 
 Runs Depth Anything 3 (`depth-anything/DA3-SMALL` by default) in its own
 isolated venv and serves metric depth over a ZMQ REP socket using msgpack

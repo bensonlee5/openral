@@ -1,8 +1,8 @@
 """Emit the durable spatial-memory objects as an OTel span for the dashboard.
 
-ADR-0038 spatial memory is observability-visible: this module renders the
+Spatial memory is observability-visible: this module renders the
 ``object``-kind nodes of a :class:`~openral_core.SceneGraph` onto a single
-``world.scene_objects`` span. The dashboard (ADR-0017) ingests it over OTLP and
+``world.scene_objects`` span. The dashboard ingests it over OTLP and
 shows the objects both as a table card and as labelled markers on the SLAM 2D
 map (same ``map`` frame as the robot pose).
 
@@ -10,7 +10,7 @@ The span is advisory telemetry — never a safety input (CLAUDE.md §1.1).
 
 Today the emitter is driven by the Reasoner from its preloaded scene graph
 (``spatial_memory_path``); once the perception object-lift producer lands
-(ADR-0035 / PR #229) the World-State node becomes the canonical caller, right
+(PR #229) the World-State node becomes the canonical caller, right
 next to ``WorldState.detected_objects`` ingest — same helper, no change here.
 """
 

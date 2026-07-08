@@ -1,4 +1,4 @@
-"""``rc365`` layout assembler (ADR-0027).
+"""``rc365`` layout assembler.
 
 ``rc365`` and :mod:`openral_state_adapter.layouts.human300_16d` describe
 the **same 16-D physical state** — ``[base_to_eef.pos(3),

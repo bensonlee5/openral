@@ -1,12 +1,12 @@
-"""LIBERO scene loads via the deploy-sim HAL path; cameras + joint state real (ADR-0034).
+"""LIBERO scene loads via the deploy-sim HAL path; cameras + joint state real.
 
 Resolves spec risk #1 (the robosuite ``robot0_joint*`` mapping) and the camera-key
 fix (scene obs keyed ``camera1``/``camera2``, mapped to the ``front``/``wrist``
-topics by ``SimSensorBridge`` at publish time per ADR-0070) on a REAL LIBERO
+topics by ``SimSensorBridge`` at publish time) on a REAL LIBERO
 SimScene. Drives raw HAL reads (no VLA) so it is GPU-independent for inference.
 
 Environment gate: the LIBERO backend pulls ``lerobot[libero]`` → robosuite 1.4.0,
-which conflicts with RoboCasa's robosuite>=1.5 (ADR-0011) — the two cannot coexist
+which conflicts with RoboCasa's robosuite>=1.5 — the two cannot coexist
 in one venv. So this test ``importorskip``s ``libero`` and runs only on a
 LIBERO-provisioned env / CI, never alongside the robocasa group.
 """
@@ -17,7 +17,7 @@ import pytest
 
 pytest.importorskip("openral_sim")
 pytest.importorskip("mujoco")
-pytest.importorskip("libero")  # ADR-0011: libero (robosuite 1.4) ⊥ robocasa (robosuite >=1.5)
+pytest.importorskip("libero")  # libero (robosuite 1.4) ⊥ robocasa (robosuite >=1.5)
 
 from openral_core import RobotDescription
 from openral_hal import build_hal
@@ -48,7 +48,7 @@ def test_franka_libero_scene_attach_state_and_images() -> None:
         # Camera frames: the LIBERO backend keys obs['images'] by the VLA camera
         # slot (camera1/camera2), NOT the manifest sensor name. SimSensorBridge maps
         # franka's front->camera1 / wrist->camera2 (vla_feature_key) at publish
-        # time per ADR-0070; here at the HAL level we assert the scene obs keys + shape.
+        # time; here at the HAL level we assert the scene obs keys + shape.
         images = hal.read_images()
         assert {"camera1", "camera2"} <= set(images), f"missing camera frames: {sorted(images)}"
         assert images["camera1"].shape == (256, 256, 3)

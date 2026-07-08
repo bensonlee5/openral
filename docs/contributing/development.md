@@ -137,7 +137,7 @@ just ros2-test              # colcon test + colcon test-result --verbose
 ### Sim evals (closed-loop, opt-in — needs HF weights ± GPU)
 
 ```bash
-just sim-eval scenes/<name>.yaml   # canonical entry point (ADR-0002)
+just sim-eval scenes/<name>.yaml   # canonical entry point
 just sim-libero                              # SmolVLA × LIBERO
 just sim-xvla-libero                         # xVLA × LIBERO
 just sim-pi05-libero                         # π0.5 × LIBERO (≥8 GB VRAM)
@@ -179,8 +179,7 @@ robots/                                       — canonical RobotDescription man
                                                    by openral_sim at import.
 skills/                                       — rSkill packages (manifest + eval/)
                                                   (smolvla-libero, smolvla-metaworld,
-                                                   pi05-libero-nf4,
-                                                   pi05-robocasa365-human300-nf4,
+                                                   pi05-libero-int8,
                                                    xvla-libero, act-aloha,
                                                    act-aloha-insertion,
                                                    diffusion-pusht)

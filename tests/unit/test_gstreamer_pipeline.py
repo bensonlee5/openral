@@ -33,12 +33,8 @@ from openral_runner.backends.gstreamer import (
 
 
 def test_detect_platform_returns_a_known_value() -> None:
-    """Detect must return one of the three enum members on any host."""
-    assert detect_platform() in {
-        Platform.TEGRA,
-        Platform.NVIDIA_DESKTOP,
-        Platform.CPU_ONLY,
-    }
+    """Detect must return a Platform member on any host."""
+    assert detect_platform() in set(Platform)
 
 
 def test_detect_platform_is_cached() -> None:
@@ -205,8 +201,8 @@ def test_build_pipeline_string_usb_tegra_uses_nvvidconv_and_nvmm() -> None:
 def test_build_pipeline_string_usb_desktop_nvidia_uses_videoconvert_no_nvmm() -> None:
     """USB on desktop NVIDIA: v4l2src → videoconvert → system-memory caps → appsink.
 
-    The open-core image does not bundle NVIDIA DeepStream (ADR-0010
-    Amendment 2026-05-12), so ``nvvideoconvert`` is unavailable and
+    The open-core image does not bundle NVIDIA DeepStream, so
+    ``nvvideoconvert`` is unavailable and
     no element produces NVMM caps after the convert step. The
     pipeline must therefore stay on system-memory BGR / videoconvert
     on this branch; ``nvh264dec`` etc. still GPU-accelerate the
@@ -274,7 +270,7 @@ def test_build_pipeline_string_ros_tee_emits_tee_with_two_branches() -> None:
     """``enable_ros_tee=True`` inserts the named bus tee with two branches."""
     spec = PipelineSpec(source=Source.TESTSRC, fps=30, enable_ros_tee=True, enable_nvmm=False)
     result = build_pipeline_string(spec, platform=Platform.CPU_ONLY)
-    # The single per-camera tee is the named perception-bus attach point (ADR-0037).
+    # The single per-camera tee is the named perception-bus attach point.
     assert f"tee name={TEE_NAME}" in result
     # ral appsink and ros appsink are both present
     assert "appsink name=bh_sink" in result
@@ -289,7 +285,7 @@ def test_leaky_branch_builds_isolated_tee_branch() -> None:
     """``leaky_branch`` prefixes a branch body with the named tee + leaky queue.
 
     This is the single isolation primitive shared by the static builder and the
-    runtime TeeManager (ADR-0037), so a dynamically attached consumer carries
+    runtime TeeManager, so a dynamically attached consumer carries
     the same backpressure isolation as the static legs.
     """
     branch = leaky_branch("appsink name=det_sink")
@@ -333,3 +329,116 @@ def test_build_pipeline_string_is_parseable_by_gst_parse_launch_smoke() -> None:
     pipeline = Gst.parse_launch(pipeline_str)
     assert pipeline is not None
     assert pipeline.get_by_name("bh_sink") is not None
+
+
+# ── NVIDIA_DEEPSTREAM tier + MJPG source ──────────────────────────────────────
+
+
+def test_detect_platform_deepstream_when_nvjpegdec_and_nvvideoconvert(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: object
+) -> None:
+    """nvjpegdec + nvvideoconvert (and no Tegra release file) ⇒ NVIDIA_DEEPSTREAM."""
+    import pathlib
+
+    import openral_runner.backends.gstreamer.pipeline as p
+
+    monkeypatch.setattr(p, "_TEGRA_RELEASE_PATH", pathlib.Path(str(tmp_path)) / "absent")
+    monkeypatch.setattr(
+        p, "inspect_element_present", lambda name: name in {"nvjpegdec", "nvvideoconvert"}
+    )
+    p.detect_platform.cache_clear()
+    try:
+        assert p.detect_platform() is Platform.NVIDIA_DEEPSTREAM
+    finally:
+        p.detect_platform.cache_clear()
+
+
+def test_detect_platform_desktop_when_only_nvh264dec(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: object
+) -> None:
+    """nvh264dec without the DeepStream pair ⇒ NVIDIA_DESKTOP (ordering check)."""
+    import pathlib
+
+    import openral_runner.backends.gstreamer.pipeline as p
+
+    monkeypatch.setattr(p, "_TEGRA_RELEASE_PATH", pathlib.Path(str(tmp_path)) / "absent")
+    monkeypatch.setattr(p, "inspect_element_present", lambda name: name == "nvh264dec")
+    p.detect_platform.cache_clear()
+    try:
+        assert p.detect_platform() is Platform.NVIDIA_DESKTOP
+    finally:
+        p.detect_platform.cache_clear()
+
+
+def test_pipeline_spec_jpeg_requires_usb() -> None:
+    """MJPG is a UVC mode — jpeg=True on a non-USB source must fail loudly."""
+    with pytest.raises(ValueError, match="jpeg=True requires source=usb"):
+        PipelineSpec(source=Source.RTSP, device="rtsp://host/cam", jpeg=True)
+
+
+def test_pipeline_spec_jpeg_and_encoded_mutually_exclusive() -> None:
+    """A camera delivers MJPG or H.264, never both."""
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        PipelineSpec(source=Source.USB, device=0, jpeg=True, encoded=True)
+
+
+def test_build_pipeline_string_usb_jpeg_deepstream_is_nvmm_rgba() -> None:
+    """MJPG USB on the DeepStream tier: nvjpegdec decodes straight into NVMM;
+    nvvideoconvert stays on-GPU; the appsink negotiates NVMM RGBA."""
+    spec = PipelineSpec(source=Source.USB, device="/dev/video4", width=640, height=480, jpeg=True)
+    result = build_pipeline_string(spec, platform=Platform.NVIDIA_DEEPSTREAM)
+    assert "v4l2src device=/dev/video4" in result
+    jpeg_chain = (
+        "image/jpeg,width=640,height=480,framerate=30/1 ! jpegparse ! nvjpegdec max-errors=-1"
+    )
+    assert jpeg_chain in result
+    assert " ! nvvideoconvert ! " in result
+    assert "video/x-raw(memory:NVMM),format=RGBA,width=640,height=480" in result
+    assert "videoconvert !" not in result.replace("nvvideoconvert !", ""), (
+        "no CPU convert may appear on the DeepStream policy leg"
+    )
+
+
+def test_build_pipeline_string_usb_jpeg_cpu_only_uses_jpegdec() -> None:
+    """MJPG USB on CPU-only: stock jpegdec, system-memory BGR, no NVMM."""
+    spec = PipelineSpec(source=Source.USB, device=0, width=640, height=480, jpeg=True)
+    result = build_pipeline_string(spec, platform=Platform.CPU_ONLY)
+    assert "image/jpeg,width=640,height=480,framerate=30/1 ! jpegdec" in result
+    assert "nvjpegdec" not in result
+    assert "memory:NVMM" not in result
+    assert "video/x-raw,format=BGR" in result
+
+
+def test_build_pipeline_string_usb_jpeg_desktop_nvidia_uses_jpegdec() -> None:
+    """MJPG USB on nvcodec-only desktop: jpegdec (nvjpegdec is DeepStream's), no NVMM."""
+    spec = PipelineSpec(source=Source.USB, device=0, jpeg=True)
+    result = build_pipeline_string(spec, platform=Platform.NVIDIA_DESKTOP)
+    assert " jpegdec" in f" {result}" or "! jpegdec" in result
+    assert "nvjpegdec" not in result
+    assert "memory:NVMM" not in result
+
+
+def test_build_pipeline_string_deepstream_nvmm_disabled_falls_back_to_bgr() -> None:
+    """enable_nvmm=False on the DeepStream tier: nvvideoconvert emits system-memory BGR."""
+    spec = PipelineSpec(source=Source.USB, device=0, jpeg=True, enable_nvmm=False)
+    result = build_pipeline_string(spec, platform=Platform.NVIDIA_DEEPSTREAM)
+    assert "memory:NVMM" not in result
+    assert "video/x-raw,format=BGR" in result
+
+
+def test_build_pipeline_string_deepstream_ros_tee_lifts_via_nvvideoconvert() -> None:
+    """The ROS tee leg on the DeepStream tier lifts NVMM → system-memory BGR
+    through nvvideoconvert (stock videoconvert cannot accept NVMM caps)."""
+    spec = PipelineSpec(
+        source=Source.USB, device=0, width=640, height=480, jpeg=True, enable_ros_tee=True
+    )
+    result = build_pipeline_string(spec, platform=Platform.NVIDIA_DEEPSTREAM)
+    assert f"tee name={TEE_NAME}" in result
+    assert "nvvideoconvert ! video/x-raw,format=BGR ! appsink name=ros_sink" in result, result
+
+
+def test_build_pipeline_string_deepstream_rtsp_uses_nvv4l2decoder() -> None:
+    """H.264 decode on the DeepStream tier uses nvv4l2decoder."""
+    spec = PipelineSpec(source=Source.RTSP, device="rtsp://10.0.0.1:8554/cam0")
+    result = build_pipeline_string(spec, platform=Platform.NVIDIA_DEEPSTREAM)
+    assert "rtph264depay ! h264parse ! nvv4l2decoder" in result

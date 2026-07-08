@@ -1,4 +1,4 @@
-"""ADR-0030 phase 2 — end-to-end self-collision rejection through the real kernel.
+"""Collision-lowering phase 2 — end-to-end self-collision rejection through the real kernel.
 
 A synthetic 3-link arm (geometry fully controlled, so no external MJCF assets)
 is lowered to kernel collision params via

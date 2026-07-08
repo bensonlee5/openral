@@ -6,7 +6,7 @@ Public API:
     shutdown_observability  — drain and shut down providers.
     rskill_span             — span for Skill lifecycle (configure / activate / execute).
     inference_span          — span for one VLA chunk inference (foreground or prefetch).
-    reasoner_span           — span for one ReasonerCore.tick (ADR-0018 F4).
+    reasoner_span           — span for one ReasonerCore.tick.
     safety_span             — span for one safety check.
     cli_command_span        — root span for one ``openral`` CLI invocation.
     traced                  — decorator equivalent of the above context managers.

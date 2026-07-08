@@ -280,11 +280,11 @@ def test_configure_failure_latches_error_state_and_records_message() -> None:
     assert "synthetic configure failure" in skill.info.error_msg
 
 
-# ── Weight-unload contract (ADR-0050 single-resident-skill eviction) ─────────
+# ── Weight-unload contract (single-resident-skill eviction) ──────────────────
 
 
 class _WeightTrackingSkill(rSkillBase):
-    """Counts ``on_load_weights`` / ``on_unload_weights`` — pins the ADR-0050 release contract."""
+    """Counts ``on_load_weights`` / ``on_unload_weights`` — pins the release contract."""
 
     def __init__(self) -> None:
         super().__init__(name="weight_tracking", embodiment_tags=["any"])
@@ -317,7 +317,7 @@ class _WeightTrackingSkill(rSkillBase):
 
 
 def test_shutdown_calls_on_unload_weights_and_clears_loaded_flag() -> None:
-    """ADR-0050: shutdown() releases weights via on_unload_weights + clears weights_loaded."""
+    """shutdown() releases weights via on_unload_weights + clears weights_loaded."""
     skill = _WeightTrackingSkill()
     skill.configure()
     assert skill.info.weights_loaded is True
@@ -331,7 +331,7 @@ def test_shutdown_calls_on_unload_weights_and_clears_loaded_flag() -> None:
 
 
 def test_shutdown_unload_is_idempotent() -> None:
-    """ADR-0050: a second shutdown() must not re-run on_unload_weights."""
+    """A second shutdown() must not re-run on_unload_weights."""
     skill = _WeightTrackingSkill()
     skill.configure()
     skill.shutdown()
@@ -340,7 +340,7 @@ def test_shutdown_unload_is_idempotent() -> None:
 
 
 def test_shutdown_without_loaded_weights_skips_unload_hook() -> None:
-    """ADR-0050: shutting down before configure() must not call on_unload_weights."""
+    """Shutting down before configure() must not call on_unload_weights."""
     skill = _WeightTrackingSkill()
     skill.shutdown()
     assert skill.unload_calls == 0
@@ -348,7 +348,7 @@ def test_shutdown_without_loaded_weights_skips_unload_hook() -> None:
 
 
 def test_on_unload_weights_default_is_noop() -> None:
-    """ADR-0050: the base hook defaults to a no-op so existing skills need no change."""
+    """The base hook defaults to a no-op so existing skills need no change."""
     skill = _MinimalSkill()
     skill.configure()
     skill.shutdown()  # must not raise

@@ -1,4 +1,4 @@
-"""Unit tests for the reasoner's torch-free GPU-total VRAM probe (ADR-0077).
+"""Unit tests for the reasoner's torch-free GPU-total VRAM probe.
 
 `_detect_gpu_total_vram_gb` shells out to ``nvidia-smi`` so the reasoner_node can
 size the VLA+reward pair check without importing torch. It must parse MiB→GiB and

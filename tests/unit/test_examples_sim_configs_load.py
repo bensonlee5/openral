@@ -6,7 +6,7 @@ the GPU rollout that ``tools/audit_sim_configs.py`` performs. CLAUDE.md
 §1.11 — real schemas, no mocks; we load the real YAMLs that ship in the
 tree.
 
-Per ADR-0041, scenes live in three tiers — ``scenes/deploy/`` loads as
+Scenes live in three tiers — ``scenes/deploy/`` loads as
 :class:`DeployScene`, ``scenes/sim/`` as :class:`SimScene`,
 ``scenes/benchmark/`` as :class:`BenchmarkScene`. A failure here means
 the YAML carries a key the schema no longer recognises, or a required

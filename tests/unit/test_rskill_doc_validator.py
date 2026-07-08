@@ -71,6 +71,10 @@ _GOOD_README = textwrap.dedent("""\
     > **OpenRAL rSkill** — pick a cube on the SO-100 follower arm.
     > Real package, real README, fully filled in.
 
+    ## Preview
+
+    ![demo](media/demo.png)
+
     ## Upstream model
 
     Wraps the upstream Apache-2.0 checkpoint. Paper: SmolVLA (arxiv:2506.01844).
@@ -202,6 +206,24 @@ def test_readme_with_todo_sentinel_blocks_publish(tmp_path: Path) -> None:
     report = validate_rskill_docs(skill_dir, manifest)
     assert not report.is_valid
     assert any(i.field == "readme.placeholder" for i in report.errors)
+
+
+def test_readme_without_media_warns_but_still_publishes(tmp_path: Path) -> None:
+    """No image/video -> a `readme.media` warning, not a publish-blocking error."""
+    readme = _GOOD_README.replace("![demo](media/demo.png)", "")
+    skill_dir, manifest = _write_skill_dir(tmp_path, readme=readme)
+    report = validate_rskill_docs(skill_dir, manifest)
+    assert report.is_valid  # warning only, no error
+    media_warnings = [i for i in report.warnings if i.field == "readme.media"]
+    assert media_warnings, "expected a readme.media warning when no image/video present"
+
+
+def test_readme_with_video_tag_satisfies_media(tmp_path: Path) -> None:
+    """An HTML5 <video> tag counts as media (no warning)."""
+    readme = _GOOD_README.replace("![demo](media/demo.png)", '<video src="media/demo.mp4"></video>')
+    skill_dir, manifest = _write_skill_dir(tmp_path, readme=readme)
+    report = validate_rskill_docs(skill_dir, manifest)
+    assert not [i for i in report.warnings if i.field == "readme.media"]
 
 
 # ── Manifest failure modes ───────────────────────────────────────────────────

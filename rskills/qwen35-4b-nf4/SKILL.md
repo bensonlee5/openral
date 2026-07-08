@@ -1,7 +1,7 @@
 ---
 name: qwen35-4b-nf4
 description: >-
-  S2 vision-language model. Capabilities: query on open-vocabulary object, text, scene region, spatial relation. Qwen3.5-4B natively-multimodal video-language model packaged as an NF4 bitsandbytes vlm rSkill. Accepts RGB image or video frames plus a natural-language query; returns a text answer. Embodiment-agnostic. No actuators. Apache-2.0. ADR-0047. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
+  S2 vision-language model. Capabilities: query on open-vocabulary object, text, scene region, spatial relation. Qwen3.5-4B natively-multimodal video-language model packaged as an NF4 bitsandbytes vlm rSkill. Accepts RGB image or video frames plus a natural-language query; returns a text answer. Embodiment-agnostic. No actuators. Apache-2.0. Discovery view of an OpenRAL rSkill — NOT directly runnable by an agent harness; it runs via rSkill.from_pretrained + the robot HAL.
 metadata:
   openral_rskill: true            # generated discovery view of an rSkill
   schema_version: 0.1
@@ -35,7 +35,7 @@ metadata:
 
 ## What it is
 
-An OpenRAL **vision-language model** (`role: s2`, `kind: vlm`). Qwen3.5-4B natively-multimodal video-language model packaged as an NF4 bitsandbytes vlm rSkill. Accepts RGB image or video frames plus a natural-language query; returns a text answer. Embodiment-agnostic. No actuators. Apache-2.0. ADR-0047.
+An OpenRAL **vision-language model** (`role: s2`, `kind: vlm`). Qwen3.5-4B natively-multimodal video-language model packaged as an NF4 bitsandbytes vlm rSkill. Accepts RGB image or video frames plus a natural-language query; returns a text answer. Embodiment-agnostic. No actuators. Apache-2.0.
 
 ## Capabilities
 

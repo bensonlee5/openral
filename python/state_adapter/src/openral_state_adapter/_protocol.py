@@ -1,6 +1,6 @@
 """Public types the layout assemblers consume.
 
-ADR-0027. Kept rclpy-free so the assemblers are pure functions and the
+Kept rclpy-free so the assemblers are pure functions and the
 unit tests don't need a running ROS graph — the skill_runner wraps
 ``tf2_ros.Buffer.lookup_transform`` into the :class:`TfLookup` Protocol
 at call time.
@@ -52,7 +52,7 @@ class Assembler(Protocol):
     Joins ``bindings`` (per-robot source binding from the manifest) +
     ``joint_positions`` (``JointState.name → JointState.position``) +
     ``tf_lookup`` (per-call live TF) into the per-checkpoint state
-    vector. Returns ``float32`` per ADR-0019.
+    vector. Returns ``float32``.
     """
 
     def __call__(

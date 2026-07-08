@@ -137,7 +137,7 @@ def reasoner_span(
     force: bool | None = None,
     **attrs: Any,
 ) -> Iterator[Span]:
-    """Span around one :meth:`openral_reasoner.ReasonerCore.tick` (ADR-0018 F4).
+    """Span around one :meth:`openral_reasoner.ReasonerCore.tick`.
 
     Wraps the entire orchestrator pass — context render, LLM tool-use
     selection, retry-cap / min-interval gates, and dispatch routing on
@@ -145,8 +145,8 @@ def reasoner_span(
     the surrounding ``reasoner_node`` reads
     :func:`openral_observability.propagation.current_traceparent` from
     inside this scope to stamp the outbound ``EmitPromptTool``
-    PromptStamped's ``metadata_json`` (per ADR-0018 §6 "OTel context is
-    the truth; ROS fields are set from it").
+    PromptStamped's ``metadata_json`` (OTel context is
+    the truth; ROS fields are set from it).
 
     Args:
         name: Span name. Default :data:`semconv.SPAN_REASONER_TICK`.

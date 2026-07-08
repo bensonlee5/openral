@@ -14,7 +14,6 @@
     all-max-range "no hit" fan otherwise). Broadcasts the
     odom -> base_link TF so slam_toolbox and Nav2 can resolve
     frames. Subscribes /openral/safe_action and /openral/estop.
-    ADR-0024 / ADR-0025.
   </description>
   <maintainer email="contact@openral.dev">OpenRAL Contributors</maintainer>
   <license>Apache-2.0</license>

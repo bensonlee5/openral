@@ -3,7 +3,7 @@ string rskill_id            # e.g. "openral/skill-pick-cube-so100"
 string revision            # HF Hub revision (sha or tag); empty = latest pinned
 string prompt              # natural-language instruction
 string prompt_metadata_json # serialized SkillPrompt metadata (Pydantic)
-string goal_params_json    # ADR-0026 — per-skill structured parameters
+string goal_params_json    # per-skill structured parameters
                             #   (serialized JSON object); empty = disabled.
                             #   Wrapped-ROS skills deep-merge over
                             #   ros_integration.default_goal_json at

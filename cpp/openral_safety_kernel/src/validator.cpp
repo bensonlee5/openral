@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — validator.cpp: the allocation-free hot path. Pinned by
+// validator.cpp: the allocation-free hot path. Pinned by
 // test_no_alloc.cpp via a counting allocator + mlockall assertion.
 
 #include "openral_safety_kernel/validator.hpp"
@@ -35,8 +35,8 @@ Result<void, Violation> validate(const ChunkView& chunk,
 
   // 2. Decide whether ``chunk.n_dof`` is a JOINT-COUNT (must match the
   // envelope) or a per-mode width (cartesian = 6, gripper = 1, etc.,
-  // which the openral_safety Python supervisor enforces per-mode under
-  // ADR-0028b). Without this split, every slot-dispatched per-mode
+  // which the openral_safety Python supervisor enforces per-mode).
+  // Without this split, every slot-dispatched per-mode
   // chunk fails the n_dof equality check and trips an estop before
   // the Python supervisor's per-mode bounds get to run — leaving the
   // openral abstraction unable to dispatch any RoboCasa pi0.5 / rldx
@@ -212,7 +212,7 @@ Result<void, Violation> validate(const ChunkView& chunk,
     case ControlMode::kGripperBinary:
     case ControlMode::kGripperPosition:
     case ControlMode::kCompositeMode: {
-      // ADR-0028b — per-mode chunks. The C++ kernel intentionally
+      // Per-mode chunks. The C++ kernel intentionally
       // delegates per-axis bound enforcement to the Python
       // ``openral_safety/supervisor_node.py`` which knows the per-mode
       // bounds declared on the robot manifest (``max_cartesian_step_m``,
@@ -227,7 +227,7 @@ Result<void, Violation> validate(const ChunkView& chunk,
       // "structural-validate then delegate to Python's per-mode bounds
       // checker".)
       //
-      // ADR-0028d — ``kCompositeMode`` carries a single robosuite-
+      // ``kCompositeMode`` carries a single robosuite-
       // specific multiplexer flag value in [-1, +1] (sim-only). No
       // per-joint or workspace bound applies; the kernel validates
       // shape + NaN/Inf above and passes through.

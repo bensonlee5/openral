@@ -1,4 +1,4 @@
-"""Tests for the one-shot success fire added to CriticWatchdog (ADR-0074).
+"""Tests for the one-shot success fire added to CriticWatchdog.
 
 The reward-watcher must wake the reasoner the moment an attempt is over —
 stuck (stall, existing path) OR likely-done (score >= threshold).  These

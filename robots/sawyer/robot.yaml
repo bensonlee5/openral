@@ -5,7 +5,7 @@
 # MuJoCo wrappers; the sim-imposed observation/action contract (4-D
 # `agent_pos` state, 4-D delta-XYZ-plus-gripper action) lives in the
 # matching scene adapter at python/eval/src/openral_sim/adapters/
-# metaworld.py — NOT in this manifest. See docs/adr/0007-robot-sim-split.md.
+# metaworld.py — NOT in this manifest. This follows the robot/sim split convention.
 #
 # Joint limits / velocities / efforts come from the public Rethink Sawyer
 # data sheet (the company dissolved in 2018; community forks of intera_sdk
@@ -19,7 +19,7 @@ name: "sawyer"
 embodiment_kind: "manipulator"
 base_frame: "base"
 
-# ADR-0027 — robot_state_publisher: `assets.urdf` deliberately unset.
+# robot_state_publisher: `assets.urdf` deliberately unset.
 # Upstream xacro at github.com/RethinkRobotics/sawyer_robot/blob/master/
 # sawyer_description/urdf/sawyer.urdf.xacro requires xacro processing
 # at launch time (Sawyer also generates the URDF dynamically on robot
@@ -27,7 +27,7 @@ base_frame: "base"
 # `sawyer_mj_description` (MJCF). Wire when a wrapped-task-space VLA
 # targets Sawyer — today the LIBERO sawyer rSkills are joint-space.
 
-# ADR-0058 — unified asset block. MJCF-only (no URDF/SRDF wired yet).
+# Unified asset block. MJCF-only (no URDF/SRDF wired yet).
 assets:
   mjcf: "rd:sawyer_mj_description"
 
@@ -102,7 +102,7 @@ joints:
     has_torque_sensor: true
     actuator_kind: "bldc"
     role: "arm"
-  # ADR-0028a — single 1-DoF abstraction over the Rethink electric
+  # Per the single-DoF gripper abstraction convention — single 1-DoF abstraction over the Rethink electric
   # gripper. MetaWorld's MJCF expands this into per-finger mimic at
   # the simulator layer; the safety kernel + rskill action contract
   # see one width DoF. Limits follow the Rethink Electric Parallel
@@ -152,13 +152,14 @@ safety:
 
 # Single corner-view RGB camera that mirrors MetaWorld's `pixels`
 # observation (480×480 native, surfaced as `front` by the
-# openral_sim MetaWorld scene adapter per ADR-0070 — see
+# openral_sim MetaWorld scene adapter, per the canonical HAL-facing
+# sensor-naming convention — see
 # python/eval/src/openral_sim/adapters/metaworld.py:92). Declared
 # here so the rSkill compatibility check on a `openral sim run --config
 # smolvla_metaworld_push.yaml` rollout matches
 # `observation.images.camera1` against a real SensorSpec — same
 # pattern as aloha_bimanual's `top`. The HAL-facing sensor name (`front`)
-# is canonical per ADR-0070; the checkpoint-facing `vla_feature_key`
+# is canonical per that same convention; the checkpoint-facing `vla_feature_key`
 # stays camera1 since it is frozen per checkpoint. Drift-guard
 # intentionally does not assert sensors against the HAL constant (see
 # tests/unit/test_robot_manifests_match_hal_constants.py header).
@@ -193,7 +194,7 @@ sensors:
 # hal.sim: null because Sawyer has no MuJoCo HAL adapter today; the
 # MetaWorld scene adapter constructs the sim env directly.
 sdk_kind: "closed_with_api"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 # Sawyer has no MuJoCo sim HAL today → sim: null (build_hal(mode="sim") raises
 # ROSCapabilityMismatch). Real-only via the intera_sdk adapter.
 hal:

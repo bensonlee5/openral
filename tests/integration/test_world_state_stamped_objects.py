@@ -1,4 +1,4 @@
-"""WorldState <-> WorldStateStamped round-trip of detected_objects (ADR-0035)."""
+"""WorldState <-> WorldStateStamped round-trip of detected_objects."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 """SimplerEnv scene adapter — wraps the real-to-sim correlator envs.
 
-ADR-0014. SimplerEnv is opt-in via the ``simpler-env`` dependency group
+SimplerEnv is opt-in via the ``simpler-env`` dependency group
 (``just sync --all-packages --group simpler-env``); without it this module still imports
 fine but the scene factory raises a typed :class:`ROSConfigError` with
 the install hint.

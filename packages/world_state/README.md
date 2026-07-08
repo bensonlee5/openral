@@ -53,14 +53,14 @@ ros2 run openral_world_state world_state_node \
 | Sub | `/joint_states` | BEST_EFFORT / VOLATILE / KEEP_LAST=5 | `sensor_msgs/JointState` |
 | Pub | `/openral/world_state_fast` | RELIABLE / VOLATILE / KEEP_LAST=1 | `openral_msgs/WorldStateStamped` |
 | Pub | `/openral/world_state_slow` | RELIABLE / VOLATILE / KEEP_LAST=1 | `openral_msgs/WorldStateStamped` |
-| Pub | `/diagnostics` | default | `diagnostic_msgs/DiagnosticArray` (ADR-0018 F8 heartbeat) |
+| Pub | `/diagnostics` | default | `diagnostic_msgs/DiagnosticArray` (supervisor-graph F8 heartbeat) |
 
 `WorldStateStamped` carries: a `sensor_msgs/JointState`, optional
 base pose + twist, parallel arrays of EE names + poses, sensor image
 topic refs, per-component diagnostic status (`DIAG_OK | DIAG_WARN |
 DIAG_STALE | DIAG_ERROR`), per-component staleness in milliseconds,
 battery percentage, and the tf2 `frame_ids[]` consumers should look up
-themselves (ADR-0018 §2). The typed `WorldStateStamped` topics are the
+themselves (per the reasoner/supervisor-graph design). The typed `WorldStateStamped` topics are the
 only wire format — there is no JSON fallback.
 
 ## Wiring
@@ -98,7 +98,7 @@ just ros2-test        # colcon test
 just test-integration # PYTHONPATH-aware pytest run for the launch tests
 ```
 
-## Object-lift — 2D→3D spatial memory (ADR-0035)
+## Object-lift — 2D→3D spatial memory
 
 When `object_lift_enabled` is `True` (the default), the node also subscribes the
 object-detector output and a depth source, lifts each 2D detection to a
@@ -107,7 +107,7 @@ Results are written into `WorldStateAggregator.update_detected_objects()` so
 `WorldState.detected_objects` is non-empty for the first time.
 
 The depth source is the 3D occupancy voxel grid (`object_voxels_topic`) when a fresh
-one is available; otherwise — ADR-0035 amendment (#11) — the node **falls back to the
+one is available; otherwise — per the depth-fallback amendment (#11) — the node **falls back to the
 depth camera point cloud** (`object_depth_points_topic`) decoded by
 `depth_cloud_to_centers_base`. This decouples the lift from octomap, so spatial-memory
 ingest (and `recall_object`) work even with `--no-enable-octomap`.
@@ -118,7 +118,7 @@ When there is neither a usable voxel grid nor a usable depth cloud the node publ
 The node **never fabricates a pose**: any path lacking a truthful 3D lift (no `map` TF,
 no camera intrinsics, no in-frustum voxels, stale grid) silently skips the detection.
 
-**On the wire (ADR-0035, landed):** the shared in-process `WorldStateAggregator` owns
+**On the wire (landed):** the shared in-process `WorldStateAggregator` owns
 `WorldState.detected_objects`, and `openral_msgs/WorldStateStamped` now also carries them as
 `detected_object_*` parallel arrays (labels / confidences / `geometry_msgs/Point[]` positions /
 `int32[]` track ids (`-1` = unset) / frame), serialised by `_fill_detected_objects` inside
@@ -133,7 +133,7 @@ the spatial memory.
 | `object_lift_enabled` | `True` | Master toggle. `False` → feature fully inert; no subscriptions or timer are created. |
 | `object_detections_topic` | `/openral/perception/objects` | `PromptStamped` topic carrying `ObjectsMetadata` detections. |
 | `object_voxels_topic` | `/openral/world_voxels` | `OccupancyVoxels` topic (base frame, row-major x-fastest). Preferred depth source when fresh. |
-| `object_depth_points_topic` | `/openral/cameras/front_depth/points` | ADR-0035 amendment (#11) — depth `PointCloud2` used as the lift's depth source when no fresh voxel grid exists (e.g. `--no-enable-octomap`). Empty disables the fallback. |
+| `object_depth_points_topic` | `/openral/cameras/front_depth/points` | Depth-fallback amendment (#11) — depth `PointCloud2` used as the lift's depth source when no fresh voxel grid exists (e.g. `--no-enable-octomap`). Empty disables the fallback. |
 | `object_lift_depth_max_points` | `4000` | Cap on depth-cloud points fed to the lift (uniform subsample) so a dense cloud can't stall per-detection projection. |
 | `object_lift_map_frame` | `map` | Fixed frame used to anchor the object memory. |
 | `object_lift_k_nearest` | `25` | K voxels (nearest to box centre) used to estimate the 3D centre. |
@@ -173,8 +173,7 @@ RobotDescription.sensors[sensor_id].intrinsics                  ─┘          
 - `openral_core.WorldState` / `JointState` / `Pose6D` /
   `RobotDescription` — Pydantic schemas this node produces and consumes.
 - `openral_msgs/msg/WorldStateStamped.msg` — the typed wire format.
-- [ADR-0018](../../docs/adr/0018-ros2-reasoner-supervisor.md) §2 and the
+- The ROS 2 reasoner/supervisor-graph design and the
   capability review's F2 section for the full design rationale.
-- [ADR-0035](../../docs/adr/0035-perception-spatial-memory-object-lift.md) —
-  perception→spatial-memory object lift design decisions and follow-ups.
+- The perception → spatial-memory object-lift design decisions and follow-ups.
 - CLAUDE.md §6.1 (layer discipline) and §5.3 (QoS).

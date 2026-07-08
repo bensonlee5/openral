@@ -1,8 +1,8 @@
 r"""Benchmark runner — loop a ``list[BenchmarkScene]`` and emit a :class:`RSkillEvalResult`.
 
-ADR-0009 (PR D) introduced the runner; ADR-0042 (June 2026) deleted the
-``BenchmarkSpec`` wrapper class so a benchmark suite is now a bare
-``list[BenchmarkScene]`` on disk (``benchmarks/<suite_id>.yaml``) and in
+This runner later dropped an earlier ``BenchmarkSpec`` wrapper class, so a
+benchmark suite is now a bare ``list[BenchmarkScene]`` on disk
+(``benchmarks/<suite_id>.yaml``) and in
 memory. The suite id is the filename stem. The runner is the **only**
 way to produce a ``rskills/<vla>/eval/<suite_id>.json`` with
 ``reproduced_locally=true``; hand-edited JSONs continue to be valid but
@@ -15,7 +15,7 @@ The runner is intentionally a thin layer over :class:`SimRunner`:
 * For every (``scene``, ``seed``) tuple in
   ``scenes × range(seed, seed + n_episodes)``, build a one-episode
   :class:`SimEnvironment` and drive it with a fresh :class:`SimRunner`
-  (ADR-0010 amendment 1: sim and hardware share the same
+  (sim and hardware share the same
   :class:`InferenceRunner` Protocol). Each :class:`BenchmarkScene`
   carries its own ``robot_id``, ``task``, ``n_episodes``, ``seed``, and
   paper provenance (suite-level invariants — uniformity of robot_id /
@@ -150,9 +150,10 @@ def filter_scenes_for_skill(
     raising on a single mismatched scene, a suite run keeps the scenes the
     rSkill is trained for and skips the rest (the caller logs the skips and
     raises only when *nothing* matches). This both delivers "run my rSkill
-    against everything it supports" in one command and closes the ADR-0060 gap
-    for suites (mismatched tasks were previously run and silently scored 0,
-    because the suite path never called the gate).
+    against everything it supports" in one command and closes the
+    task-compatibility gate's suite-path gap (mismatched tasks were
+    previously run and silently scored 0, because the suite path never
+    called the gate).
 
     Args:
         scenes: The suite's scenes (pre-validated by ``raise_on_invalid_suite``).
@@ -188,7 +189,7 @@ def run_benchmark(
 ) -> tuple[RSkillEvalResult, list[EpisodeResult]]:
     """Run a benchmark suite end-to-end against one rSkill.
 
-    ADR-0042: a benchmark suite is a bare ``list[BenchmarkScene]`` plus a
+    A benchmark suite is a bare ``list[BenchmarkScene]`` plus a
     ``suite_id`` (typically ``Path("benchmarks/<id>.yaml").stem``). Callers
     that load from disk should use :func:`openral_core.load_benchmark_suite`
     and :func:`openral_core.raise_on_invalid_suite` before calling this
@@ -232,7 +233,7 @@ def run_benchmark(
 
     from openral_sim.sim_runner import SimRunner
 
-    # Suite auto-filter (ADR-0060): keep only the tasks the rSkill declares it
+    # Suite auto-filter: keep only the tasks the rSkill declares it
     # was trained/validated for, skip the rest with a logged summary. Unlike
     # run_benchmark_scene the suite path never gated tasks, so a task-mismatched
     # but same-embodiment rSkill used to run and silently score 0; now it is
@@ -336,7 +337,7 @@ def _aggregate_results(
     exercised by unit tests that build synthetic per-task lists without
     paying for a full rollout.
 
-    ADR-0042: paper-comparison display strings (``display_name``,
+    Paper-comparison display strings (``display_name``,
     ``simulator``) and the optional arxiv URL all flow from the per-scene
     :class:`BenchmarkMetadata` block (suite-uniform by invariant). The
     ``RSkillEvalBenchmark.name`` falls back to ``suite_id`` and
@@ -392,7 +393,7 @@ def _aggregate_results(
         if first.scene.id == "pusht":
             results["mean_coverage_iou"] = sum(e.max_step_reward for e in episodes) / len(episodes)
 
-    # ADR-0042: per-scene metadata is the single source of truth. ``paper``
+    # Per-scene metadata is the single source of truth. ``paper``
     # is the canonical per-scene provenance (required by
     # :class:`BenchmarkMetadata`); the arxiv URL is auto-derived from it
     # when the URL contains ``arxiv.org/`` — matches the per-scene
@@ -512,7 +513,7 @@ def run_benchmark_scene(
     assert success_key is not None
     assert max_steps is not None
 
-    # Task-data gate (ADR-0060): refuse a checkpoint trained for a different
+    # Task-data gate: refuse a checkpoint trained for a different
     # task than this benchmark evaluates (e.g. a LiftCube policy on PickCube).
     # Fail fast — before the rollout. Skipped for the built-in mock policies
     # (no manifest) and hf:// URIs (rejected by the sim runner anyway).

@@ -4,7 +4,7 @@
 # (Chi et al., 2023): 50 evaluation rollouts, mean coverage as the
 # reward signal.
 #
-# Shape (ADR-0042): bare list of BenchmarkScenes; suite id = filename
+# Shape: bare list of BenchmarkScenes; suite id = filename
 # stem ("pusht"). Single-task suite — one BenchmarkScene replayed
 # across 50 seeds. Suite-level invariants are enforced by
 # :func:`openral_core.raise_on_invalid_suite`.

@@ -1,4 +1,4 @@
-"""Repo-wide TaskSpace compliance sweep (ADR-0071).
+"""Repo-wide TaskSpace compliance sweep.
 
 Verifies that **every** shipped robot and rSkill complies with the schema, and
 pins the cross-layer task-space compatibility of every actuating skill against
@@ -16,7 +16,7 @@ Three kinds of compliance are distinguished:
   + gr1 29-DoF — both dedicated-controller paths, not the default packers). The
   test asserts the gap set exactly, so a fix that isn't recorded here (or a new
   regression) trips it.
-* **Scene leg (rSkill × scene)** — ADR-0071 Phase 4. For each scene family an
+* **Scene leg (rSkill × scene)** — Phase 4. For each scene family an
   rSkill is `evaluated_tasks`-on, the skill's `TaskSpace` modes (and fixed dim)
   must be executable by that family's declared `SceneTaskSpace`. `KNOWN_SCENE_GAPS`
   is empty; every declared family must have an entry in `SCENE_FAMILY_TASK_SPACE`.
@@ -49,7 +49,7 @@ def _name(path: str) -> str:
 
 
 # Pairs that are NOT executable by the DEFAULT-sim SimAttachedHAL OSC packers
-# (SIM_EXECUTABLE_CONTROL_MODES). After the ADR-0071 manifest fixes these are no
+# (SIM_EXECUTABLE_CONTROL_MODES). After the manifest fixes these are no
 # longer cross-layer *bugs* — both remaining entries run sim through a dedicated
 # controller path, not the default packers, so their control mode is correctly
 # outside the default-packer set (same category as any sidecar skill):
@@ -63,8 +63,8 @@ def _name(path: str) -> str:
 #     design, NOT joints. So the bare-dim contract's single 29-wide joint segment
 #     exceeds the 17 enumerated joints. It runs via the robosuite BASIC composite
 #     controller (gr1_unified wrapper), not the default packers. Full DOF-aware
-#     accounting (counting EE-owned hand DoF toward the joint budget) is an
-#     ADR-0071 follow-up; the empty-modes bug on the gr1 robot IS fixed here.
+#     accounting (counting EE-owned hand DoF toward the joint budget) is a
+#     follow-up; the empty-modes bug on the gr1 robot IS fixed here.
 #
 # The test asserts this set EXACTLY: a regression adds an entry, a fix that
 # isn't recorded here removes one — either trips it.
@@ -143,7 +143,7 @@ def test_sim_executability_matches_known_state() -> None:
 
 
 def test_gr1_empty_modes_bug_fixed() -> None:
-    """ADR-0071 fix: the gr1 robot now advertises joint_position (was empty) and
+    """Fix: the gr1 robot now advertises joint_position (was empty) and
     documents the two Fourier hands as 6-DoF dexterous EEs.
 
     The 29-vs-17 DOF-accounting gap remains a recorded KNOWN_SIM_GAP (the 12
@@ -160,19 +160,20 @@ def test_gr1_empty_modes_bug_fixed() -> None:
 
 
 def test_rc365_sim_executable_after_fix() -> None:
-    """ADR-0071 fix: rc365 cartesian slot EE corrected panda_hand -> panda_gripper.
+    """Fix: rc365 cartesian slot EE corrected panda_hand -> panda_gripper.
 
-    Both robocasa-365 checkpoints are now sim-executable on panda_mobile (the
+    The remaining robocasa-365 rSkill is sim-executable on panda_mobile (the
     cartesian/gripper/base/composite modes are all in SIM_EXECUTABLE and the EE
     names match the robot).
     """
     robot = RobotDescription.from_yaml(str(REPO_ROOT / "robots" / "panda_mobile" / "robot.yaml"))
-    for sname in ("pi05-robocasa365-human300-nf4", "rldx1-ft-rc365-nf4"):
-        skill = RSkillManifest.from_yaml(str(REPO_ROOT / "rskills" / sname / "rskill.yaml"))
-        assert skill.action_contract is not None
-        space = TaskSpace.from_action_contract(skill.action_contract, robot)
-        match = task_space_compatible(space, robot, hal_mode="sim")
-        assert match.ok is True, (sname, match.reasons)
+    skill = RSkillManifest.from_yaml(
+        str(REPO_ROOT / "rskills" / "rldx1-ft-rc365-nf4" / "rskill.yaml")
+    )
+    assert skill.action_contract is not None
+    space = TaskSpace.from_action_contract(skill.action_contract, robot)
+    match = task_space_compatible(space, robot, hal_mode="sim")
+    assert match.ok is True, match.reasons
 
 
 def test_every_actuating_skill_has_a_matching_robot() -> None:
@@ -188,7 +189,7 @@ def test_every_actuating_skill_has_a_matching_robot() -> None:
     assert not orphans, f"actuating skills with no matching robot: {orphans}"
 
 
-# ─── Scene leg (ADR-0071 Phase 4) ──────────────────────────────────────────────
+# ─── Scene leg (Phase 4) ────────────────────────────────────────────────────────
 #
 # The third side of the triangle: an actuating rSkill must be executable not only
 # on the robot it claims (above) but by the SCENE it is evaluated on. The scene's
@@ -261,7 +262,7 @@ def test_scene_executability_matches_known_state() -> None:
 
 
 def test_metaworld_skill_is_ee_delta_not_joint() -> None:
-    """ADR-0071 Phase 4: smolvla-metaworld is 3-D EE-delta + gripper, not joint.
+    """Phase 4: smolvla-metaworld is 3-D EE-delta + gripper, not joint.
 
     The MetaWorld mocap controller drives EE translation + gripper (4-D); the
     checkpoint previously fell through the undeclared-layout path and was modelled
@@ -280,7 +281,7 @@ def test_metaworld_skill_is_ee_delta_not_joint() -> None:
 
 
 def test_pusht_skill_and_robot_agree_on_joint_space() -> None:
-    """ADR-0071 Phase 4: pusht is joint-space end to end (robot mode + contract).
+    """Phase 4: pusht is joint-space end to end (robot mode + contract).
 
     The pusht_2d robot advertises joint_position over its two prismatic tip
     joints, and diffusion-pusht declares joint_positions(2) — so the skill is now

@@ -1,6 +1,6 @@
 # openral_safety_watchdog
 
-ADR-0018 §5 — **defense-in-depth E-stop sources**, independent of the in-band
+ROS 2 reasoner + supervisor graph spec §5 — **defense-in-depth E-stop sources**, independent of the in-band
 `openral_safety` node and the C++ safety kernel so a crash in either still
 triggers a brake event. Two lifecycle nodes:
 

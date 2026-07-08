@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-0018 §5 bullet 3 — hardware_estop_node.
+"""ROS 2 reasoner + supervisor graph spec §5 bullet 3 — hardware_estop_node.
 
 Bridges a hardware estop source (GPIO relay via libgpiod, or a USB HID
 pendant via /dev/input) onto ``/openral/estop``. Polls the device at

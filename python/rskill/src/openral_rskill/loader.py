@@ -5,7 +5,7 @@ distribution format for a robot skill (CLAUDE.md §6.4 / RFC §1.4, §8.7).
 
 .. warning::
    Cryptographic signature verification of skills (sigstore) is **not yet
-   implemented** — see ADR-0006.  ``from_pretrained`` / ``from_yaml`` validate
+   implemented**.  ``from_pretrained`` / ``from_yaml`` validate
    the manifest schema and license posture but do **not** verify provenance of
    the downloaded weights.  Set ``OPENRAL_REQUIRE_SIGNED_SKILLS=1`` to fail
    closed (refuse to load) until verification lands.
@@ -77,13 +77,13 @@ _RSKILL_MANIFEST_CACHE: dict[str, RSkillManifest] = {}
 
 _ALLOW_NONCOMMERCIAL_ENV = "OPENRAL_ALLOW_NONCOMMERCIAL"
 # Fail-closed switch for operators who require verified provenance.  Skill
-# signature verification (sigstore) is not yet implemented (ADR-0006); when this
+# signature verification (sigstore) is not yet implemented; when this
 # is set to "1", the loader refuses to load any skill rather than silently
 # trusting unverified weights.  CLAUDE.md §1.1 (safety beats helpfulness).
 _REQUIRE_SIGNED_ENV = "OPENRAL_REQUIRE_SIGNED_SKILLS"
 """Set to ``"1"`` to acknowledge non-commercial research use of restricted weights."""
 
-# The explicit embodiment-agnostic wildcard (ADR-0072). An rSkill that runs on
+# The explicit embodiment-agnostic wildcard. An rSkill that runs on
 # every embodiment — perception kinds (detector / vlm / reward) and ``playbook``
 # decision procedures — declares ``embodiment_tags: ["any"]``; the rSkill↔robot
 # embodiment gate treats this as match-any. Agnosticism is *declared*, never
@@ -142,7 +142,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
     """Packaged, capability-tagged robot skill from the HF Hub.
 
     .. warning::
-       Signature verification (sigstore) is not yet implemented (ADR-0006); the
+       Signature verification (sigstore) is not yet implemented; the
        loader validates the manifest and license but does not verify the
        provenance of downloaded weights.  See module docstring.
 
@@ -198,7 +198,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
         6. Register the entry in the local JSON registry.
 
         .. warning::
-           No cryptographic signature verification is performed (ADR-0006).  The
+           No cryptographic signature verification is performed.  The
            weights are trusted on the basis of HF Hub transport security only.
            Pin ``revision`` to a commit SHA for reproducibility, and treat any
            ``*.pt`` weights as untrusted code (see :class:`PyTorchRuntime`).
@@ -255,7 +255,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
         # ── 3. License guard ───────────────────────────────────────────────────
         cls._check_license(manifest, commercial_use=commercial_use)
 
-        # ── 4. Provenance guard (signatures not yet verified — ADR-0006) ────────
+        # ── 4. Provenance guard (signatures not yet verified) ───────────────────
         cls._check_provenance(manifest, source=repo_id)
 
         # ── 5. Download weights ────────────────────────────────────────────────
@@ -396,7 +396,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
         """Verify the manifest's embodiment tags intersect the robot's.
 
         Embodiment-agnostic rSkills declare the explicit wildcard
-        ``embodiment_tags: ["any"]`` (ADR-0072) — perception kinds (detector /
+        ``embodiment_tags: ["any"]`` — perception kinds (detector /
         vlm / reward) and ``playbook`` decision procedures — and run on any
         robot. Agnosticism is declared, not derived: the manifest validator
         rejects an empty tag list, so emptiness never silently means match-any.
@@ -525,7 +525,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
             robot_capabilities: The target robot's declared capabilities.
             compute: Optional compute spec resolved from the deployment tier
                 (:attr:`RobotDescription.compute_edge` falling back to
-                :attr:`RobotDescription.compute_local`; ADR-0069).  When
+                :attr:`RobotDescription.compute_local`).  When
                 ``None``, runtime and dtype checks are skipped if the legacy
                 capability fields are also absent.
 
@@ -769,7 +769,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
         """Surface the absence of signature verification, and optionally fail closed.
 
         CLAUDE.md §3 describes sigstore-signed skills whose loaders "verify before
-        activation", but that control is **not yet implemented** (ADR-0006): there
+        activation", but that control is **not yet implemented**: there
         is no signature field on the manifest and no verification step here.  This
         guard makes that gap explicit per CLAUDE.md §1.2 (truth over plausibility)
         and §1.4 (explicit beats implicit):
@@ -790,7 +790,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
         if os.environ.get(_REQUIRE_SIGNED_ENV, "0") == "1":
             raise ROSConfigError(
                 f"rSkill '{manifest.name}' cannot be verified: signature verification "
-                "is not yet implemented (ADR-0006), and "
+                "is not yet implemented, and "
                 f"{_REQUIRE_SIGNED_ENV}=1 requires verified provenance. "
                 f"Refusing to load '{source}'. Unset {_REQUIRE_SIGNED_ENV} to load "
                 "unverified skills at your own risk."
@@ -799,7 +799,7 @@ class rSkill:  # noqa: N801  # reason: rSkill is the official package-format nam
             "rskill.unverified_provenance",
             repo=manifest.name,
             source=source,
-            note="Skill signatures are NOT verified (ADR-0006); weights are trusted on "
+            note="Skill signatures are NOT verified; weights are trusted on "
             "HF Hub transport security only. Pin a revision SHA and treat *.pt weights "
             "as untrusted code.",
         )

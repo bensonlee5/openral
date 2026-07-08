@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scene-VLM query service node (ADR-0047).
+"""Scene-VLM query service node (``vlm`` rSkill kind).
 
 Subscribes one or more camera ``sensor_msgs/Image`` streams, caches each
 camera's latest frame, and serves ``/openral/perception/query_scene``
@@ -7,7 +7,7 @@ camera's latest frame, and serves ``/openral/perception/query_scene``
 about camera Y's current view" backed by a ``kind: "vlm"`` rSkill (Qwen3.5-4B
 NF4) running in the out-of-process sidecar (:mod:`tools.qwen_vlm_sidecar`).
 
-Driven by the reasoner's ``query_scene`` tool (ADR-0047): the reasoner asks
+Driven by the reasoner's ``query_scene`` tool: the reasoner asks
 open-ended scene-state questions for its replanning ladder — task progress and
 success/failure verification ("has the robot grasped the mug?", "is the bowl on
 the shelf?", "did we drop the object?").
@@ -89,7 +89,7 @@ def main(args: Any = None) -> None:
                 for cid, topic in self._cameras.items()
             ]
 
-            # query_scene service (ADR-0047) — only if the IDL is built.
+            # query_scene service — only if the IDL is built.
             self._srv = None
             try:
                 from openral_msgs.srv import QueryScene
@@ -150,7 +150,7 @@ def main(args: Any = None) -> None:
             return _cb
 
         def _on_query_scene(self, request: Any, response: Any) -> Any:
-            """Service (ADR-0047): answer a question about camera Y's current frame."""
+            """Service: answer a question about camera Y's current frame."""
             question = request.question.strip()
             camera = request.camera.strip() or self._primary_id
             response.camera = camera

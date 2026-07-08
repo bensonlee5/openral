@@ -1,5 +1,5 @@
 # RoboTwin 2.0 benchmark suite — dual-arm SAPIEN tasks on the aloha-agilex
-# embodiment (Chen et al., arXiv 2506.18088, MIT). ADR-0061.
+# embodiment (Chen et al., arXiv 2506.18088, MIT).
 #
 # Run a single task:
 #   openral benchmark scene --config scenes/benchmark/robotwin_lift_pot.yaml \
@@ -7,14 +7,14 @@
 # Run the suite:
 #   openral benchmark run --suite robotwin --vla smolvla:rskills/smolvla-robotwin
 #
-# Setup: provision the py3.10 SAPIEN+RoboTwin sidecar venv (ADR-0061) and
+# Setup: provision the py3.10 SAPIEN+RoboTwin sidecar venv and
 # `just sync --all-packages --group robotwin --inexact` for the openral-side wire.
 #
 # Official protocol: 100 episodes/task, seed 0 (single seed here; the paper
 # reports mean over seeds 0/1/2), sim built-in success, episode_length=300
 # (LeRobot robotwin env). A representative 5-task slice of the 50-task suite;
 # the smolvla-robotwin checkpoint is multi-task (trained on robotwin_unified),
-# so `evaluated_tasks: ["robotwin"]` covers every task here (ADR-0060 gate).
+# so `evaluated_tasks: ["robotwin"]` covers every task here.
 
 - &scene
   scene: &scene_block

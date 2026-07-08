@@ -8,7 +8,7 @@
 #
 # Same LiberoEnv backend + Franka panda as libero_spatial; only the suite
 # (scene.id) and the eval horizon differ. The rSkill must declare
-# evaluated_tasks=["libero_goal"] (ADR-0060) — a LIBERO-Spatial-only
+# evaluated_tasks=["libero_goal"] — a LIBERO-Spatial-only
 # checkpoint is refused here.
 
 robot_id: franka_panda

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0030 — OctoMap → OccupancyVoxels bridge node.
+// OctoMap → OccupancyVoxels bridge node.
 //
 // Subscribes an octomap_msgs/Octomap (the 3-D world map, typically in `map` /
 // `odom`), deserializes it with octomap_msgs::msgToMap, looks up the transform

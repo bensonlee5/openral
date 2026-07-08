@@ -1,4 +1,4 @@
-"""ADR-0030 phase 2 — real humanoid (Unitree H1) self-collision through the kernel.
+"""Collision-lowering phase 2 — real humanoid (Unitree H1) self-collision through the kernel.
 
 Unlike the synthetic-arm test, this drives a **real robot's MuJoCo model**: H1's
 collidable geometry is all primitives (capsules / cylinders / spheres / one box),

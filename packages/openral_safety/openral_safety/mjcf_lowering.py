@@ -1,4 +1,4 @@
-"""Offline MJCF → kernel collision-params lowering tool (ADR-0030).
+"""Offline MJCF → kernel collision-params lowering tool.
 
 Reads a compiled MuJoCo model and produces the flat ROS-parameter arrays the
 C++ safety kernel's ``load_collision_model`` consumes. This is the source
@@ -11,7 +11,7 @@ Self-collision is computed in the robot's own base frame, so a floating base
 joint is treated as a fixed identity root: a rigid base transform applies to
 every link equally and cannot change inter-link distances.
 
-Scope (ADR-0030 phase 2): one representative primitive per body (the first
+Scope (current lowering phase): one representative primitive per body (the first
 collidable capsule / sphere / cylinder). Cylinders lower to capsules and boxes
 to a bounding sphere — both **conservative over-approximations** (the proxy
 fully contains the real geom), so the safety check never misses a real

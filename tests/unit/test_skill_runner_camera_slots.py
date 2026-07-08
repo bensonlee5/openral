@@ -1,4 +1,4 @@
-"""Deploy-sim camera-slot realignment in rskill_runner_node (ADR-0034).
+"""Deploy-sim camera-slot realignment in rskill_runner_node.
 
 Deploy-sim keys ``WorldState.image_frames`` by the manifest SENSOR NAME
 (the ``/openral/cameras/<name>/image`` topic basename), but VLA adapters
@@ -6,7 +6,7 @@ resolve their ``camera_keys`` and look up ``obs["images"]`` by the VLA
 slot (``camera1`` / ``camera2`` / ...) — the LIBERO convention
 ``openral sim run`` and the rldx adapter already use. Without a realignment
 a manifest whose RGB sensors are descriptively named (franka: ``top`` /
-``wrist`` per ADR-0070) hands the pi0.5 adapter
+``wrist``) hands the pi0.5 adapter
 ``obs["images"]["top"]`` while it looks up ``camera1`` and its
 ``cam_alias`` maps ``camera1 -> image`` for the checkpoint — so the
 policy sees no frames.
@@ -116,7 +116,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """Sensor-name ``scene_cameras`` (what runtime_node passes) → VLA slots.
 
         ``runtime_node`` forwards ``camera_names`` (manifest sensor names,
-        e.g. ``top`` / ``wrist`` per ADR-0070) as ``scene_cameras``; the
+        e.g. ``top`` / ``wrist``) as ``scene_cameras``; the
         adapter needs the VLA slots (``camera1`` / ``camera2``) so its
         ``cam_alias`` maps ``camera1 -> image`` for the checkpoint. Capture
         the ``env_cfg.scene.cameras`` the policy factory receives by
@@ -125,7 +125,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """
         import openral_sim.factory as _sim_factory
 
-        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         if not yaml_path.is_file():
             pytest.skip(f"missing in-tree fixture: {yaml_path}")
 
@@ -161,7 +161,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """
         import openral_sim.factory as _sim_factory
 
-        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         if not yaml_path.is_file():
             pytest.skip(f"missing in-tree fixture: {yaml_path}")
 
@@ -189,7 +189,7 @@ class TestBuildRuntimeSkillSceneCameras:
         """No description → keep the caller's ``scene_cameras`` untouched."""
         import openral_sim.factory as _sim_factory
 
-        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-nf4" / "rskill.yaml"
+        yaml_path = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         if not yaml_path.is_file():
             pytest.skip(f"missing in-tree fixture: {yaml_path}")
 

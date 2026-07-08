@@ -145,7 +145,7 @@ def _openarm_gripper_target(raw: float, ctrl_range: NDArray[np.float64]) -> floa
 def _resolve_base_translation(env_cfg: SimEnvironment) -> tuple[float, float]:
     """Resolve the (z lift, x forward) MJCF base translation from ``base_pose``.
 
-    ADR-0002 Amendment 3. ``env_cfg.base_pose`` is the only knob —
+    ``env_cfg.base_pose`` is the only knob —
     there is no legacy ``backend_options`` fallback and no hand-tuned
     default. A YAML that omits ``base_pose`` for this scene is a
     :class:`ROSConfigError` at compose time.
@@ -158,8 +158,7 @@ def _resolve_base_translation(env_cfg: SimEnvironment) -> tuple[float, float]:
     if env_cfg.base_pose is None:
         raise ROSConfigError(
             "openarm_tabletop_pnp scene requires `base_pose:` to be set on "
-            "the SimScene YAML (ADR-0002 Amendment 3; ADR-0041 renamed "
-            "SceneEnvironment → SimScene). Example: "
+            "the SimScene YAML. Example: "
             "`base_pose: {xyz: [0.20, 0.0, 0.55], quat_xyzw: [0.0, 0.0, "
             "0.0, 1.0], frame_id: world}`. There is no implicit default "
             "— the previous `robot_lift_z` / `robot_forward_x` knobs and "
@@ -347,7 +346,7 @@ def _arm_joint_names_for_side(
     ``robot.yaml`` joint whose ``name`` starts with ``"{side}_joint"``,
     falling back to the legacy hardcoded ``openarm_{side}_joint{i}``
     pattern when no description is passed (lets hermetic tests build
-    the env without a description). ADR-0025.
+    the env without a description).
     """
     if description is None:
         return [f"openarm_{side}_joint{i}" for i in range(1, _ARM_JOINT_COUNT + 1)]
@@ -382,7 +381,7 @@ def _build_arm_handles(
     """Look up actuator / joint indices for one arm in the composed MJCF.
 
     Joint names come from the per-joint ``sim_joint_name`` overrides
-    in :class:`~openral_core.RobotDescription` (ADR-0025) — falling
+    in :class:`~openral_core.RobotDescription` — falling
     back to the previous hardcoded ``openarm_{side}_joint{i}`` strings
     when no description is passed (legacy / hermetic-test paths).
 
@@ -647,7 +646,8 @@ class _OpenArmTabletopRollout:
                 height=self._render_height,
             )
         out: dict[str, NDArray[np.uint8]] = {}
-        # Per ADR-0070 the sensor / output keys are canonical (``top`` /
+        # Per the scene's canonical camera-naming convention the sensor /
+        # output keys are (``top`` /
         # ``wrist_left`` / ``wrist_right``); the openarm MJCF composer renames
         # the upstream wrist cameras to match, so the same name is used for both
         # the renderer lookup and the output dict.
@@ -754,7 +754,7 @@ class _OpenArmTabletopRollout:
         return self._model, self._sim.data._data
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed MuJoCo sim time in ns (ADR-0048 Phase 1).
+        """Elapsed MuJoCo sim time in ns.
 
         Reads ``MjData.time`` off :meth:`mujoco_handles`. Monotonic within an
         episode; rewinds on ``reset``.
@@ -765,7 +765,7 @@ class _OpenArmTabletopRollout:
     def action_dim(self) -> int:
         """Flat action width the env's ``step`` accepts (bimanual state_dim, e.g. 16).
 
-        ADR-0034 follow-up — ``SimAttachedHAL._probe_env_action_dim`` reads this so a
+        ``SimAttachedHAL._probe_env_action_dim`` reads this so a
         deploy-sim action (``send_action`` / ``idle_step``) is sized to the OpenArm's
         joint-position width (``state_dim``, derived from the rSkill's
         ``action_contract.dim`` / manifest joint count) rather than the
@@ -804,8 +804,7 @@ def _build_openarm_tabletop_scene(env_cfg: SimEnvironment) -> _OpenArmTabletopRo
     opts_compose: dict[str, Any] = dict(env_cfg.scene.backend_options or {})
 
     # Robot mounting pose: required, must be set via `base_pose:` in the
-    # SimScene YAML (ADR-0002 Amendment 3; ADR-0041 renamed
-    # SceneEnvironment → SimScene). No legacy knobs, no implicit defaults.
+    # SimScene YAML. No legacy knobs, no implicit defaults.
     lift_z, forward_x = _resolve_base_translation(env_cfg)
     white_bg = bool(opts_compose.get("white_background", True))
     top_camera_pos = _parse_xyz(opts_compose.get("top_camera_pos"), "top_camera_pos")

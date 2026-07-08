@@ -1,4 +1,4 @@
-"""HTTP client over the ADR-0017 dashboard's F7 trace-query endpoints.
+"""HTTP client over the observability dashboard's bag↔OTel trace-query endpoints.
 
 The dashboard receiver exposes:
 

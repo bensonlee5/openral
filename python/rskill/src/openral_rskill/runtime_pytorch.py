@@ -32,7 +32,7 @@ log = structlog.get_logger()
 # Loading a full pickled ``torch.nn.Module`` executes arbitrary code embedded in
 # the checkpoint (``__reduce__``).  For HF-Hub-sourced rSkill weights this is a
 # remote-code-execution sink, and rSkill signature verification is not yet
-# implemented (ADR-0006).  The unsafe load is therefore refused unless the
+# implemented.  The unsafe load is therefore refused unless the
 # operator explicitly acknowledges the trust assumption via this env var.
 # CLAUDE.md §1.4 (explicit beats implicit) / §6 (default to safer).
 _ALLOW_UNSAFE_PICKLE_ENV = "OPENRAL_ALLOW_UNSAFE_PICKLE"
@@ -99,7 +99,7 @@ class PyTorchRuntime:
         Deserializing a full pickled module runs ``torch.load`` with
         ``weights_only=False``, which **executes arbitrary code embedded in the
         checkpoint**.  Because rSkill weights are fetched from third-party HF Hub
-        repos and signature verification is not yet implemented (ADR-0006), the
+        repos and signature verification is not yet implemented, the
         load is refused unless ``OPENRAL_ALLOW_UNSAFE_PICKLE=1`` is set to
         acknowledge that the checkpoint is trusted.  Prefer ``.safetensors``
         weights, which load without code execution.
@@ -120,7 +120,7 @@ class PyTorchRuntime:
                 f"PyTorchRuntime: refusing to load '{p}'. Loading a pickled torch.nn.Module "
                 "executes arbitrary code from the checkpoint (remote-code-execution risk for "
                 "untrusted or unsigned weights). rSkill signature verification is not yet "
-                "implemented (ADR-0006), so this is blocked by default. To load a TRUSTED "
+                "implemented, so this is blocked by default. To load a TRUSTED "
                 f"checkpoint, set: export {_ALLOW_UNSAFE_PICKLE_ENV}=1 . "
                 "Prefer .safetensors weights, which load without code execution."
             )

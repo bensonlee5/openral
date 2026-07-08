@@ -1,4 +1,4 @@
-"""Scene-VLM backend backed by the Qwen3.5-4B sidecar (ADR-0047).
+"""Scene-VLM backend backed by the Qwen3.5-4B sidecar.
 
 ``Qwen/Qwen3.5-4B`` is a natively-multimodal vision-language model that, given
 an RGB image and a natural-language question, returns a free-text answer. It

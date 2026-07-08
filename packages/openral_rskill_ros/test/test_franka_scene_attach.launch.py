@@ -1,6 +1,6 @@
 """Integration test: franka manifest-driven HAL, scene-attached, publishes over ROS.
 
-Exercises ADR-0034 end-to-end at the ROS level — :class:`_ManifestHALLifecycleNode`
+Exercises deploy-sim scene-attach end-to-end at the ROS level — :class:`_ManifestHALLifecycleNode`
 is driven through ``configure → activate``, attaches to a real MuJoCo scene, and
 the test asserts:
 
@@ -76,9 +76,10 @@ def _spin_until(executor: object, condition: object, timeout_s: float) -> bool:
 
 
 def test_franka_tabletop_push_joint_states() -> None:
-    """ADR-0034: franka+tabletop_push → configure→activate → /joint_states 8-DoF.
+    """Deploy-sim scene-attach: franka+tabletop_push → configure→activate → /joint_states 8-DoF.
 
-    The tabletop_push scene is robot-agnostic (ADR-0033). The franka manifest
+    The tabletop_push scene is robot-agnostic (robot-parameterized native sim
+    scenes). The franka manifest
     drives the joint-name mapping (``sim_joint_name`` on each JointSpec) so
     ``read_state()`` maps the native MJCF qpos to the 8-DoF panda schema.
 
@@ -154,7 +155,7 @@ def test_franka_tabletop_push_joint_states() -> None:
             )
             assert len(msg.name) == _FRANKA_DOF, f"joint name count mismatch: {list(msg.name)}"
 
-            # Verify canonical panda joint names (ADR-0034 §3.6 joint-name mapping).
+            # Verify canonical panda joint names (deploy-sim scene-attach joint-name mapping).
             expected_joints = {
                 "panda_joint1",
                 "panda_joint2",
@@ -189,7 +190,7 @@ def test_franka_tabletop_push_joint_states() -> None:
 
 
 def test_franka_libero_milk_camera_image() -> None:
-    """ADR-0034: franka+LIBERO milk scene → /openral/cameras/agentview/image 256×256.
+    """Deploy-sim scene-attach: franka+LIBERO milk scene → /openral/cameras/agentview/image 256×256.
 
     Guarded: skips cleanly if:
     * ``libero`` is not installed.

@@ -1,29 +1,57 @@
 ---
-tags:
-  - OpenRAL
-  - rskill
-  - reward
-  - reward-model
-  - robot-learning
-  - progress-estimation
-  - success-detection
-  - qwen3-vl
-  - nf4
-  - bitsandbytes
-license: apache-2.0
 language:
-  - en
+- en
+license: apache-2.0
+pipeline_tag: robotics
+tags:
+- OpenRAL
+- rskill
+- nf4
+- 4-bit
+- any
+- reward
+- reward-model
+- robot-learning
+- progress-estimation
+- success-detection
+- qwen3-vl
+- bitsandbytes
 base_model:
-  - Qwen/Qwen3-VL-4B-Instruct
+- robometer/Robometer-4B
+base_model_relation: quantized
+inference: false
 ---
 
 # rskill-robometer-4b-nf4
 
 > **OpenRAL rSkill** — Robometer-4B (Qwen3-VL-4B robotic **reward foundation
-> model**) packaged as an NF4 bitsandbytes `reward` rSkill (ADR-0057). Given a
+> model**) packaged as an NF4 bitsandbytes `reward` rSkill. Given a
 > rollout's RGB frames plus the task instruction, it emits **per-frame
 > normalized progress (0–1)** and **per-frame success probability**, queried on
 > demand by the Reasoner. **No actuators. Advisory-only.** Apache-2.0.
+
+## Preview
+
+Per-frame **progress** + **success** on a real **LIBERO `libero_spatial`** deploy
+clip — task *"pick up the black bowl and place it on the plate"* — scored live
+with the NF4 Qwen3-VL-4B backbone (peak **3.79 GB**, RTX 4070 Laptop 8 GB).
+Progress rises from **0.44** (first 20% of frames) to **0.72** (last 20%) as the
+bowl is grasped and placed:
+
+![progress curve](media/progress.png)
+
+| Start of clip | Mid-reach | Bowl placed |
+| :---: | :---: | :---: |
+| ![start](media/frame_start.png) | ![mid](media/frame_mid.png) | ![end](media/frame_end.png) |
+
+> In deploy the Reasoner scores a **trailing window** each tick and reads the
+> last-frame value (`success_now`) — exactly what this preview reproduces. HF
+> cards render images but not HTML5 `<video>`; the full overlay is
+> **[`media/progress.mp4`](media/progress.mp4)** (20 frames, downloadable).
+>
+> Runs the lerobot 0.6.0 in-tree `RobometerRewardModel` (plain `transformers`,
+> no `robometer` git package, no `transformers==4.57.1` pin) — a lighter
+> native-integration path than the original vendored-loader recipe (amended).
 
 ## Quick Start
 
@@ -72,11 +100,10 @@ failing rollout triggers replanning instead of running to a timeout.
 Robometer-4B finetunes `Qwen/Qwen3-VL-4B-Instruct` (`model_type: qwen3_vl`)
 with three prediction heads — `progress_head`, `success_head`, `preference_head`
 — on top of a frame-pooled attention readout (`frame_pool_attn`). The on-disk
-HF `config.json` advertises `architectures: ["RFM"]`, but the actual model
-class is `RBM` (in the upstream `robometer` package). **It has no `auto_map` and
-ships no Hub-side modeling code, so vanilla `transformers.AutoModel` cannot load
-it** — the sidecar loads it via the pinned `robometer` package
-(`robometer.utils.save.load_model_from_hf`).
+HF `config.json` advertises `architectures: ["RFM"]`; OpenRAL loads it through
+lerobot's in-tree `lerobot.rewards.robometer.RobometerRewardModel` and the
+pre-quantized OpenRAL NF4 checkpoint, without executing the old upstream
+`robometer` runtime package.
 
 ## Runtime
 
@@ -84,13 +111,11 @@ The `kind: reward` runtime is implemented as a read-only Reasoner tool
 (`QueryTaskProgressTool`), **not** an `ExecuteSkill` (a reward monitor produces
 scalars, not actions):
 
-- **Sidecar**: an out-of-process ZMQ REQ/REP + msgpack server boots the NF4
-  model in its own isolated venv, maintains a rolling time-indexed frame buffer
-  (`frame_window_s`), and answers windowed progress/success queries. It loads
-  via `robometer.utils.save.load_model_from_hf` with **`transformers` pinned to
-  `4.57.1`** (5.x changes the processor `__call__` kwargs and drops `input_ids`)
-  and the `robometer` package pinned to commit `a669dffc`.
-- **Frame source**: abstracted for **sim and real**. The sidecar consumes the
+- **Reward monitor node**: `openral_perception_ros.reward_monitor_node` boots the
+  NF4 model in-process, maintains a rolling time-indexed frame buffer
+  (`frame_window_s`), and answers windowed progress/success queries. It loads via
+  lerobot's in-tree `RobometerRewardModel` with plain `transformers`.
+- **Frame source**: abstracted for **sim and real**. The reward monitor consumes the
   same `sensor_msgs/Image` camera topic the co-active VLA uses — fed by the
   GStreamer perception tee on real hardware, or by the sim HAL camera publisher
   in `deploy-sim` (which has no GStreamer). In `deploy-sim` only camera-rendering
@@ -110,19 +135,18 @@ raw, unnormalized regression values instead. Default sampling is 3 fps.
 
 ### Validated live
 
-End-to-end on an **NVIDIA RTX 4070 Laptop (8 GB)** (ADR-0057 Phases 0/2/3):
+End-to-end on an **NVIDIA RTX 4070 Laptop (8 GB)**:
 
 - **NF4 quantization**: 236 `Linear` modules → `Linear4bit`; **8.91 GB bf16 →
   3.33 GB resident**, **3.56 GB peak** including an 8-frame forward — **4.44 GB
   headroom** for a co-resident small NF4 VLA.
-- **Working sidecar**: streaming a real rollout video ("Put green stick in
-  brown bowl") through the ZMQ sidecar, **progress ramped 0.21 → 0.88** and
+- **Working monitor**: streaming a real rollout video ("Put green stick in
+  brown bowl") through the reward monitor, **progress ramped 0.21 → 0.88** and
   **success spiked to 0.90 exactly at task completion**, then eased — exactly
   the Reasoner signal intended.
 
 Run with `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`. The model loads via
-the `robometer` package (not `AutoModel`); the sidecar venv pins
-`transformers==4.57.1`.
+lerobot's in-tree Robometer module with plain `transformers`.
 
 ## Benchmark Numbers
 
@@ -164,7 +188,7 @@ The model emits no action chunks and has no proprioception contract.
 | `weights_uri` | `hf://OpenRAL/rskill-robometer-4b-nf4` (pre-quantized NF4, meta-loadable; built from the SHA-pinned upstream `source_repo`) |
 | `min_vram_gb.bf16` | 9.0 GB |
 | `min_vram_gb.int4` | 3.6 GB |
-| `reward.frame_window_s` / `target_fps` | 40.0 s / 3.0 fps (ADR-0074 amendment — scores the whole attempt start→now, not an 8 s trailing slice) |
+| `reward.frame_window_s` / `target_fps` | 40.0 s / 3.0 fps (a later reward-window amendment — scores the whole attempt start→now, not an 8 s trailing slice) |
 | `reward.progress_range` / `success_threshold` | `[0,1]` / 0.5 |
 | `latency_budget.per_chunk_ms` | 3000 ms |
 | `actions` | `monitor` |
@@ -174,6 +198,5 @@ The model emits no action chunks and has no proprioception contract.
 The rSkill package metadata and README are OpenRAL project files under
 Apache-2.0. The wrapped Robometer-4B weights are released under **Apache-2.0**,
 permitting commercial use. No `OPENRAL_ALLOW_NONCOMMERCIAL=1` flag is needed.
-The upstream `robometer` code (loaded by the sidecar) is governed by its own
-repository license; it is executed in an isolated, pinned sidecar venv and is
-**not** an OpenRAL-trusted org (see `_vendor/PROVENANCE.md`).
+The reward model now loads through lerobot's in-tree Robometer module with plain
+`transformers`; no pinned upstream `robometer` runtime package is executed.

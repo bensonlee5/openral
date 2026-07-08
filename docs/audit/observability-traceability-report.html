@@ -154,7 +154,7 @@
     full OpenTelemetry pipeline (traces + metrics + logs), W3C context propagation across Python ↔ ROS&nbsp;2 ↔ C++,
     a typed failure bus, a self-hosted live dashboard, and end-to-end <i>trace&nbsp;↔ dataset&nbsp;↔ eval</i> correlation.
     The principal <span class="bad">gap is provenance</span>: rSkill weight <b>signing/verification is specified but not
-    implemented</b> (ADR-0006), so the §8 "replayable from the trace alone" guarantee is <span class="warn">forensic,
+    implemented</b>, so the §8 "replayable from the trace alone" guarantee is <span class="warn">forensic,
     not cryptographically verifiable</span>. Secondary gaps are scoped, not structural: multiprocess log correlation,
     the Tier-C critic producer, and richer quantization/model-lineage provenance fields.
   </div>
@@ -169,7 +169,7 @@
   <a href="#spine">4 · Traceability spine</a>
   <a href="#repro">5 · Reproducibility audit</a>
   <a href="#recs">6 · Prioritized recommendations</a>
-  <a href="#refs">7 · ADR &amp; reference index</a>
+  <a href="#refs">7 · Reference index</a>
   <a href="#appendix">8 · Appendix</a>
   <div class="sec"></div>
   <h4>Status legend</h4>
@@ -216,7 +216,7 @@
 
   <h3>What's missing or partial</h3>
   <ul>
-    <li class="gap"><b>Provenance signing (P0).</b> Sigstore signing/verification from ADR-0006 is unimplemented —
+    <li class="gap"><b>Provenance signing (P0).</b> Sigstore signing/verification is unimplemented —
       no <code>signature</code> manifest field, no verify-on-load; loader only emits an
       <code>rskill.unverified_provenance</code> warning (<code>loader.py:748</code>).</li>
     <li class="gap"><b>Multiprocess log correlation (P1).</b> The structlog→OTel bridge is single-process
@@ -252,7 +252,7 @@
     <div class="card g"><div class="big">6</div><div class="lbl">failure-bus sources</div></div>
     <div class="card y"><div class="big">1</div><div class="lbl">P0 gap (provenance signing)</div></div>
     <div class="card y"><div class="big">2</div><div class="lbl">P1 gaps</div></div>
-    <div class="card b"><div class="big">F1–F10</div><div class="lbl">ADR-0018 features (F1–F10 landed)</div></div>
+    <div class="card b"><div class="big">F1–F10</div><div class="lbl">Reasoner supervisor features (F1–F10 landed)</div></div>
   </div>
 
   <h3>Capability matrix</h3>
@@ -274,7 +274,7 @@
       <tr><td>WAM observability</td><td><span class="chip c-yellow">partial</span> protocol-only</td><td class="mono">/openral/failure/wam</td></tr>
       <tr><td>Multiprocess log correlation</td><td><span class="chip c-yellow">partial</span></td><td class="mono">logging.py:12 (note)</td></tr>
       <tr><td>Tier-C critic producer</td><td><span class="chip c-red">missing</span> contract-only</td><td class="mono">/openral/failure/critic</td></tr>
-      <tr><td>Weight signature verification</td><td><span class="chip c-red">missing</span></td><td class="mono">loader.py:748 (ADR-0006)</td></tr>
+      <tr><td>Weight signature verification</td><td><span class="chip c-red">missing</span></td><td class="mono">loader.py:748</td></tr>
     </tbody>
   </table>
 </section>
@@ -297,7 +297,7 @@
       <li>Hot-path attribute encoders flatten joint state and the next-applied action onto spans with cardinality
         guards (≤64 joints, ≤8 EEs, 3-dp rounding, ±inf clamp): <code>producer.record_joint_state</code>,
         <code>record_action</code>, <code>record_ee_poses</code> (<code>producer.py</code>).</li>
-      <li>Multithreaded executor + proprio snapshot timing per ADR-0049.</li>
+      <li>Multithreaded executor + proprio snapshot timing, adopted to fix odom-TF starvation under a single-threaded executor.</li>
     </ul>
     <div class="kv"><span class="k">Gaps</span></div>
     <ul>
@@ -337,8 +337,8 @@
         <code>openral.world_state.staleness_ms</code>, <code>.components_stale</code>, <code>.has_latched_error</code>
         (<code>semconv.py:135–138, 223–224</code>).</li>
       <li><code>world.scene_objects</code> span with object list/count/frame/source (<code>semconv.py:144–147</code>),
-        rendered as a dashboard card + SLAM-map markers (ADR-0038/0039).</li>
-      <li><code>WorldStateStamped</code> IDL carries <code>trace_id</code>, per-component staleness, and (ADR-0035)
+        rendered as a dashboard card + SLAM-map markers.</li>
+      <li><code>WorldStateStamped</code> IDL carries <code>trace_id</code>, per-component staleness, and
         detected-object parallel arrays; published fast (30&nbsp;Hz) / slow (5&nbsp;Hz).</li>
     </ul>
     <div class="kv"><span class="k">Gaps</span></div>
@@ -381,7 +381,7 @@
     <div class="kv"><span class="k">Exists</span></div>
     <ul>
       <li><code>reasoner_span</code> per <code>ReasonerCore.tick()</code> with <code>tick_idx</code>, <code>model</code>,
-        <code>force</code>, and (ADR-0018 amendment) <code>reasoner.tier</code> (<code>tracing.py:132</code>).</li>
+        <code>force</code>, and <code>reasoner.tier</code> (<code>tracing.py:132</code>).</li>
       <li><code>ReasonerTickResult</code> records <code>tool_call</code>, <code>error</code>, <code>elapsed_s</code>,
         <code>suppressed_reason</code> and the active <code>traceparent</code> (<code>core.py:43</code>).</li>
       <li>Typed tool palette: <code>ReasonerToolCall</code> discriminated union validated via
@@ -423,12 +423,12 @@
         (<code>semconv.py:216–217</code>).</li>
       <li>C++ kernel resumes the trace from the <code>traceparent</code> packed in <code>ActionChunk</code> via
         <code>extract_traceparent</code> (<code>propagation.py:82</code>).</li>
-      <li>Failure source <code>/openral/failure/safety</code> is the Tier-A preempting signal (ADR-0018 amendment);
+      <li>Failure source <code>/openral/failure/safety</code> is the Tier-A preempting signal;
         <code>ROSSafetyViolation</code> drives the structured incident log at the supervisor boundary (CLAUDE.md §5).</li>
     </ul>
     <div class="kv"><span class="k">Gaps</span></div>
     <ul>
-      <li class="gap">Kernel-side LTTng tracepoints + sim/HIL gating are in-flight (ADR-0020); kernel timing breakdown
+      <li class="gap">Kernel-side LTTng tracepoints + sim/HIL gating are in-flight; kernel timing breakdown
         not yet a first-class metric.</li>
     </ul>
   </div>
@@ -470,12 +470,12 @@
   <p><code>configure_observability()</code> (<code>_sdk.py:107</code>) is idempotent and a no-op until
     <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> is set (CLAUDE.md §1.12-friendly for CI). It supports OTLP/gRPC (default)
     and HTTP/protobuf (for the dashboard receiver), head-based sampling via <code>OPENRAL_OTEL_SAMPLE_RATIO</code>
-    (ParentBased + TraceIdRatio, ADR-0010), and batch tuning via <code>OPENRAL_OTEL_SPAN_SCHEDULE_DELAY_MS</code>
+    (ParentBased + TraceIdRatio), and batch tuning via <code>OPENRAL_OTEL_SPAN_SCHEDULE_DELAY_MS</code>
     (~33&nbsp;Hz default) / <code>OPENRAL_OTEL_METRIC_INTERVAL_MS</code>. <code>shutdown_observability()</code>
     (<code>_sdk.py:280</code>) drains all three pipelines via an <code>atexit</code> hook.</p>
 
   <h3>W3C context propagation (Python ↔ ROS&nbsp;2 ↔ C++)</h3>
-  <p>The truth is the OTel context; ROS message fields are populated <i>from</i> it (ADR-0018 §6).
+  <p>The truth is the OTel context; ROS message fields are populated <i>from</i> it.
     <code>current_traceparent()</code> (<code>propagation.py:37</code>) reads the active span;
     <code>inject_traceparent()</code> / <code>extract_traceparent()</code> (<code>propagation.py:52, 82</code>) move it
     across the wire. The same <code>trace_id</code> appears on <code>ActionChunk</code>, <code>FailureTrigger</code>,
@@ -494,7 +494,7 @@
     (<code>/api/stream</code>), a bounded trace index (<code>/api/traces</code>, <code>/api/spans/{trace_id}</code> —
     F7), and an offline voice-prompt path (local <code>faster-whisper</code>). The <code>TelemetryStore</code>
     (<code>store.py:283</code>) is a thread-safe, ring-buffered aggregator (bounded events/metrics/traces). No external
-    collector is required (ADR-0017).</p>
+    collector is required.</p>
 
   <h3>Record / replay</h3>
   <p><code>read_bag()</code> (<code>replay/bag_reader.py:144</code>) iterates <code>.mcap</code> without a
@@ -531,7 +531,7 @@
         <td><code>SensorFrame.data</code>/<code>topic</code>/<code>handle</code> (<code>schemas.py:1716</code>);
           full-res replay via bag/topic.</td></tr>
       <tr><td>Cryptographic integrity of weights</td><td><span class="chip c-red">missing</span></td>
-        <td>Sigstore unimplemented (ADR-0006) — trust rests on HF transport only. <b>P0.</b></td></tr>
+        <td>Sigstore unimplemented — trust rests on HF transport only. <b>P0.</b></td></tr>
       <tr><td>Trace persisted for offline join</td><td><span class="chip c-green">shipped</span></td>
         <td><code>TickResult.trace_context</code> (<code>schemas.py:5730</code>) + dataset trace columns.</td></tr>
     </tbody>
@@ -583,7 +583,7 @@
         <td>Add a <code>signature</code> field to <code>RSkillManifest</code>; sign-on-publish in
           <code>tools/rskill_publisher.py</code>; verify-on-load in <code>_check_provenance</code>; record verification
           outcome as a span attribute. Bump on-disk <code>schema_version</code> + migrator.</td>
-        <td>ADR-0006 · <code>loader.py:748</code> · <code>schemas.py:3848</code></td>
+        <td><code>loader.py:748</code> · <code>schemas.py:3848</code></td>
       </tr>
       <tr data-p="P1">
         <td>R2</td><td><span class="pri P1">P1</span></td>
@@ -600,9 +600,9 @@
         <td>"Progress stalled" has no structured signal, so the replanning ladder can't react to silent failure — a
           robot can wedge without a trace event.</td>
         <td>Ship a default progress watchdog publishing <code>FailureTrigger</code> with <code>CriticEvidence</code> on
-          <code>/openral/failure/critic</code> (reuse the Robometer reward rSkill, ADR-0057); emit a
+          <code>/openral/failure/critic</code> (reuse the Robometer reward rSkill); emit a
           <code>reasoner.tier=C</code> span on preemption.</td>
-        <td>ADR-0018 §4 amendment · ADR-0057 · <code>failure_bus.py:118</code></td>
+        <td><code>failure_bus.py:118</code></td>
       </tr>
       <tr data-p="P2">
         <td>R4</td><td><span class="pri P2">P2</span></td>
@@ -628,7 +628,7 @@
         <td>Auditing the LLM prompt history (a §8 input) requires the bag; there's no queryable prompt store.</td>
         <td>Add a bounded prompt ring to <code>TelemetryStore</code> with a <code>/api/prompts</code> endpoint, keyed by
           <code>trace_id</code>; persist to the dataset <code>meta/</code> on finalize.</td>
-        <td><code>dashboard/store.py:283</code> · ADR-0018 F6/F10</td>
+        <td><code>dashboard/store.py:283</code> · features F6/F10</td>
       </tr>
       <tr data-p="P2">
         <td>R7</td><td><span class="pri P2">P2</span></td>
@@ -653,7 +653,7 @@
         <td>Kernel-side µs timing isn't yet correlated with OTel in CI/HIL, limiting realtime regression detection.</td>
         <td>Wire kernel LTTng tracepoints to the existing <code>otel_trace_id</code> join (already done Python-side in
           <code>tracing_lttng.py</code>); add sim/HIL gate.</td>
-        <td>ADR-0020 · <code>tracing_lttng.py</code></td>
+        <td><code>tracing_lttng.py</code></td>
       </tr>
       <tr data-p="P2">
         <td>R10</td><td><span class="pri P2">P2</span></td>
@@ -669,18 +669,18 @@
 
 <!-- ============================= 7 ============================= -->
 <section id="refs">
-  <h2><span class="num">7</span>ADR &amp; reference index</h2>
+  <h2><span class="num">7</span>Reference index</h2>
   <table>
-    <thead><tr><th>Ref</th><th>Subject</th><th>Status vs report</th></tr></thead>
+    <thead><tr><th>Topic</th><th>Subject</th><th>Status vs report</th></tr></thead>
     <tbody>
-      <tr><td><a href="../adr/0006-hf-hub-skill-packaging.md">ADR-0006</a></td><td>HF Hub rSkill packaging; sigstore provenance</td><td><span class="chip c-red">signing missing (P0)</span></td></tr>
-      <tr><td><a href="../adr/0010-inference-runner.md">ADR-0010</a></td><td>Inference runner; head-based sampling rationale</td><td><span class="chip c-green">shipped</span></td></tr>
-      <tr><td><a href="../adr/0017-dashboard-otlp-receiver.md">ADR-0017</a></td><td><code>openral dashboard</code> OTLP/HTTP receiver</td><td><span class="chip c-green">shipped</span></td></tr>
-      <tr><td><a href="../adr/0018-ros2-reasoner-supervisor.md">ADR-0018</a></td><td>Reasoner + supervisor graph (F1–F10, tier taxonomy)</td><td><span class="chip c-green">shipped</span> <span class="chip c-red">Tier-C producer (P1)</span></td></tr>
-      <tr><td><a href="../adr/0019-rosbag2-lerobot-dataset-bridge.md">ADR-0019</a></td><td>rosbag2 ↔ LeRobotDataset v3 + trace columns</td><td><span class="chip c-green">shipped</span></td></tr>
-      <tr><td><a href="../adr/0020-cpp-safety-kernel.md">ADR-0020</a></td><td>C++ safety kernel</td><td><span class="chip c-yellow">LTTng/HIL gates pending (P2)</span></td></tr>
-      <tr><td><a href="../adr/0038-persistent-semantic-spatial-memory.md">ADR-0038</a> / <a href="../adr/0039-llm-task-planning-active-search.md">0039</a></td><td>Spatial memory; <code>world.scene_objects</code> span</td><td><span class="chip c-yellow">Phase 5 pending</span></td></tr>
-      <tr><td><a href="../adr/0057-robometer-reward-rskill.md">ADR-0057</a></td><td>Robometer reward rSkill (critic candidate)</td><td><span class="chip c-yellow">reusable for R3</span></td></tr>
+      <tr><td>rSkill packaging &amp; provenance</td><td>HF Hub rSkill packaging; sigstore provenance</td><td><span class="chip c-red">signing missing (P0)</span></td></tr>
+      <tr><td>Inference runner</td><td>Inference runner; head-based sampling rationale</td><td><span class="chip c-green">shipped</span></td></tr>
+      <tr><td>Dashboard OTLP receiver</td><td><code>openral dashboard</code> OTLP/HTTP receiver</td><td><span class="chip c-green">shipped</span></td></tr>
+      <tr><td>Reasoner supervisor graph</td><td>Reasoner + supervisor graph (F1–F10, tier taxonomy)</td><td><span class="chip c-green">shipped</span> <span class="chip c-red">Tier-C producer (P1)</span></td></tr>
+      <tr><td>Dataset bridge</td><td>rosbag2 ↔ LeRobotDataset v3 + trace columns</td><td><span class="chip c-green">shipped</span></td></tr>
+      <tr><td>Safety kernel</td><td>C++ safety kernel</td><td><span class="chip c-yellow">LTTng/HIL gates pending (P2)</span></td></tr>
+      <tr><td>Spatial memory</td><td>Spatial memory; <code>world.scene_objects</code> span</td><td><span class="chip c-yellow">Phase 5 pending</span></td></tr>
+      <tr><td>Robometer reward rSkill</td><td>Robometer reward rSkill (critic candidate)</td><td><span class="chip c-yellow">reusable for R3</span></td></tr>
       <tr><td><a href="../methods/06-reasoning-wam-safety-observability.md">methods/06</a></td><td>Public-symbol inventory (Layers 5–8)</td><td>reference</td></tr>
       <tr><td><a href="../architecture/repo-state-map.html">repo-state-map.html</a></td><td>Per-module status canvas</td><td>reference</td></tr>
     </tbody>

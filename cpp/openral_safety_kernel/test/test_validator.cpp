@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0020 — gtest unit coverage for the allocation-free validator.
+// gtest unit coverage for the allocation-free validator.
 // Real EnvelopeIntersection structs (no mocks); real chunk views.
 
 #include "openral_safety_kernel/validator.hpp"
@@ -167,7 +167,7 @@ TEST(Validator, CartesianPoseWorkspaceAabb) {
   EXPECT_EQ(rc.error().kind, osk::ViolationKind::kWorkspace);
 }
 
-// ADR-0028b — per-mode chunks pass the kernel structural check and
+// Per-mode chunks pass the kernel structural check and
 // delegate per-axis bounds to the Python openral_safety supervisor. The
 // kernel only enforces ``chunk.n_dof == envelope.n_dof`` for JOINT
 // modes; cartesian / twist / gripper chunks have a per-mode width

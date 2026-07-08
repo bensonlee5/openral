@@ -1,4 +1,4 @@
-"""Open-vocabulary text embedder for spatial memory (ADR-0038 §5, Phase 4).
+"""Open-vocabulary text embedder for spatial memory.
 
 Provides a small :class:`TextEmbedder` Protocol and an :class:`OpenClipEmbedder`
 backed by **OpenCLIP ViT-B/32** (MIT code + weights). :class:`SpatialMemory`
@@ -6,10 +6,10 @@ takes an optional embedder so a free-text query ("the red wine") matches object
 nodes by CLIP cosine similarity, not just exact/substring labels — handling
 synonyms and paraphrases that label matching misses.
 
-This is **optional and compute-gated** (ADR-0038 §5): with no embedder the memory
+This is **optional and compute-gated**: with no embedder the memory
 works on label + pose + recency. The embedder embeds *per object label* (and the
-query) — single-digit-ms per text on a robot GPU, negligible vs the dense
-feature fields the ADR deferred. Install with ``uv sync --group clip``.
+query) — single-digit-ms per text on a robot GPU, negligible vs. dense
+feature fields, which are deferred. Install with ``uv sync --group clip``.
 
 Embeddings are L2-normalized, so cosine similarity is a plain dot product.
 
@@ -31,7 +31,7 @@ from numpy.typing import NDArray
 from openral_core.exceptions import ROSConfigError
 
 DEFAULT_CLIP_MODEL = "ViT-B-32-quickgelu"
-"""OpenCLIP model name (ADR-0038 §5 default) — the quickgelu variant matches the
+"""OpenCLIP model name (default) — the quickgelu variant matches the
 ``openai`` pretrained weights' activation (avoids the QuickGELU mismatch warning)."""
 
 DEFAULT_CLIP_PRETRAINED = "openai"
@@ -53,7 +53,7 @@ class TextEmbedder(Protocol):
 
 
 class OpenClipEmbedder:
-    """OpenCLIP text embedder (ViT-B/32, MIT) for open-vocab matching (ADR-0038 §5).
+    """OpenCLIP text embedder (ViT-B/32, MIT) for open-vocab matching.
 
     Args:
         model_name: OpenCLIP architecture (default ``"ViT-B-32"``).

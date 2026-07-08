@@ -1,5 +1,4 @@
-# Franka in an Isaac Sim (Omniverse + PhysX + RTX) world — deploy playground
-# (ADR-0045).
+# Franka in an Isaac Sim (Omniverse + PhysX + RTX) world — deploy playground.
 #
 # Env-only DeployScene (no task, no eval) — boots the full OpenRAL stack
 # (HAL + reasoner + safety kernel) with the scene driven by an out-of-process
@@ -8,7 +7,7 @@
 # Uses the lift_cube layout: its 8-D action (7 Franka arm joints + gripper)
 # matches the franka_panda manifest's 8 joints and JOINT_POSITION control mode,
 # so a HAL action packs cleanly to env_action_dim=8 — no n_dof gap (cf. the 7-D
-# LIBERO/OSC path, ADR-0036). This is the minimal deploy-sim bring-up (ADR-0045):
+# LIBERO/OSC path and its cartesian_delta dispatch fix). This is the minimal deploy-sim bring-up:
 # the HAL activates, cameras + stepping work.
 #
 # Known limitation (minimal bring-up): /joint_states publishes zeros —

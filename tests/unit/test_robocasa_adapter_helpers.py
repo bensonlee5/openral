@@ -170,7 +170,7 @@ task:
         path = tf.name
     args = SimpleNamespace(
         config=path,
-        rskill="rskills/pi05-robocasa365-human300-nf4",
+        rskill="rskills/rldx1-ft-rc365-nf4",
         robot=None,
         task=None,
         instruction=None,
@@ -189,7 +189,7 @@ task:
     assert "panda_mobile" in msg
 
 
-# ── PandaMobile base-velocity + LaserScan helpers (ADR-0025) ───────────────
+# ── PandaMobile base-velocity + LaserScan helpers ───────────────────────────
 #
 # Hermetic — uses a tiny synthetic MJCF that declares the
 # OmronMobileBase joint names and one obstacle at a known distance so
@@ -304,7 +304,7 @@ def test_synthesize_laser_scan_2d_finds_known_obstacle() -> None:
     )
 
 
-# Spawn-rotation regression (the SLAM-map-rotated-vs-kitchen bug, ADR-0025).
+# Spawn-rotation regression (the SLAM-map-rotated-vs-kitchen bug).
 # Under a composed robocasa scene the robot is placed by rotating the
 # ``mobilebase0`` body to its spawn facing while the ``mobile_yaw`` joint
 # stays at 0. The scan origin already reads the body's WORLD pose
@@ -464,7 +464,7 @@ _MULTIBODY_PANDA_MOBILE_MJCF = """
 def test_synthesize_laser_scan_2d_excludes_whole_robot_tree() -> None:
     """Self-exclusion must cover the ENTIRE robot kinematic tree.
 
-    Regression (ADR-0025 live-sim finding): in the robocasa kitchen the
+    Regression (live-sim finding): in the robocasa kitchen the
     chassis collision geometry lives on ``mobilebase0_wheeled_base`` — a
     *child* of the excluded ``mobilebase0_base`` root. A single-body
     ``bodyexclude`` only dropped the (geomless) root, so every one of the
@@ -509,7 +509,7 @@ _NON_OMRON_MOBILE_MJCF = f"""
 def test_synthesize_laser_scan_2d_with_caller_supplied_names() -> None:
     """`base_joint_names` override generalises the helper to any mobile base.
 
-    ADR-0025 — the helper is designed to work for any planar
+    The helper is designed to work for any planar
     holonomic base whose MJCF declares (forward, side, yaw) slide/
     hinge joints. The default constants target the robosuite
     OmronMobileBase, but a caller passing

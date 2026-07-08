@@ -2,7 +2,7 @@
 
 Single ROS 2 lifecycle node that fans in operator prompts from any
 external source into a normalised `openral_msgs/PromptStamped` stream
-on `/openral/prompt` (ADR-0018 F10).
+on `/openral/prompt`.
 
 ## Topology
 
@@ -27,13 +27,13 @@ exclusively — sources never publish there directly.
 | `auto` | 10 (machine) | `EmitPromptTool` self-cascades from the F4 reasoner |
 
 Per-source allowlist comes from the constructor's `sources` dict; the
-deployment YAML may restrict the set (ADR-0018 §3.F10 "per-source
-allowlist in deployment YAML").
+deployment YAML may restrict the set (per capability review §3.F10,
+the "per-source allowlist in deployment YAML").
 
 ## QoS
 
 `/openral/prompt` and every `/openral/prompt_in/<source>` use
-`RELIABLE + VOLATILE + KEEP_LAST=10` per ADR-0018 §1. No silent drops
+`RELIABLE + VOLATILE + KEEP_LAST=10`. No silent drops
 — a saturated subscriber surfaces as a structlog warning, not a
 swallowed message.
 
@@ -54,6 +54,5 @@ openral prompt "pick the red cube"
 
 ## See also
 
-- [ADR-0018](../../docs/adr/0018-ros2-reasoner-supervisor.md) §3.F10.
 - [`packages/openral_reasoner_ros`](../openral_reasoner_ros/) — F4 consumer.
 - [`openral_cli.prompt`](../../python/cli/src/openral_cli/prompt.py) — `openral prompt` CLI entry point.

@@ -1,5 +1,5 @@
 """Unit tests for :func:`openral_hal.build_hal` — the single sim/real HAL
-construction seam (ADR-0031).
+construction seam.
 
 The resolver is what makes ``deploy sim`` deterministically build a
 **simulation** HAL and ``deploy run`` a **real** HAL, with the choice driven
@@ -67,7 +67,7 @@ class TestSimMode:
         assert isinstance(hal, AnvilOpenArmV2MujocoHAL)
 
     def test_anvil_openarm_v2_threads_manifest_defaults(self) -> None:
-        """``hal.parameters.defaults`` reach the constructed HAL (ADR-0029).
+        """``hal.parameters.defaults`` reach the constructed HAL.
 
         The manifest-driven node relies on build_hal threading these
         kwargs; a silently-dropped default would run the sim with

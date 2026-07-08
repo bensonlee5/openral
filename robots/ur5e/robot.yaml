@@ -9,7 +9,8 @@
 # openral_hal.ur:UR5eHAL, MuJoCo-backed) lives in
 # python/hal/src/openral_hal/ur.py:154 — the kinematic spec, safety
 # envelope and capabilities are identical between the two; only sdk_kind
-# differs (the `hal` block is shared, ADR-0031).
+# differs (the `hal` block is shared between them, per the HAL
+# entrypoint-resolution convention).
 #
 # Joint limits, velocities, and torques are taken from the UR5e datasheet:
 # https://www.universal-robots.com/products/ur5e/
@@ -25,14 +26,14 @@ name: "ur5e"
 embodiment_kind: "manipulator"
 base_frame: "ur5e_base_link"
 
-# ADR-0027 — robot_state_publisher wiring. Upstream UR description's
+# robot_state_publisher wiring. Upstream UR description's
 # URDF root link is ``base_link``; this robot.yaml uses
 # ``ur5e_base_link`` to keep names unambiguous in multi-arm cells, so
 # a static_transform bridges the two.
-# Self-collision ACM source for the offline lowering tool (ADR-0030): the
+# Self-collision ACM source for the offline lowering tool: the
 # UR MoveIt SRDF (ros-industrial). Regenerate via
 # `openral collision lower --robot robots/ur5e/robot.yaml --write`.
-# ADR-0058 — unified asset block (vendored URDF / MJCF / SRDF).
+# Unified asset block (vendored URDF / MJCF / SRDF).
 assets:
   urdf:
     ref: "file:ur5e.urdf"
@@ -147,7 +148,7 @@ safety:
   deadman_required: true
 
 sdk_kind: "closed"
-# ADR-0031 — explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
+# Explicit sim/real HAL entrypoints (resolved by openral_hal.build_hal).
 hal:
   sim: "openral_hal.ur:UR5eHAL"
   real: "openral_hal.ur_real:UR5eRealHAL"
@@ -155,7 +156,7 @@ hal:
 # MuJoCo wiring consumed by ``openral_hal.MujocoArmHAL.from_description``
 # for the sim baseline.  Source: ``universal_robots_ur5e/ur5e.xml`` in
 # mujoco_menagerie.  Default 1:1 joint→qpos/actuator mapping applies (the
-# UR5e has no gripper). See ADR-0023.
+# UR5e has no gripper).
 sim: {}
 
 onboard_compute:

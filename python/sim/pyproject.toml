@@ -1,6 +1,6 @@
 [project]
 name = "openral-sim"
-version = "0.1.0"
+version = "0.1.2"
 description = "OpenRAL sim eval — robot × scene × task × VLA factory and runner for rSkill validation before hardware deployment"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -10,11 +10,12 @@ dependencies = [
     "openral-runner", # reason: InferenceRunnerBase for SimRunner
     "openral-rskill",  # reason: rSkill loader
     "openral-observability",  # reason: configure_observability / shutdown_observability bracketing
-    "openral-dataset",        # reason: ADR-0019 RolloutRecorder + LeRobotDatasetSink for --dataset-out
-    "openral-world-state",    # reason: ADR-0044 shared look-at gaze geometry for scene-camera placement
+    "openral-dataset",        # reason: RolloutRecorder + LeRobotDatasetSink for --dataset-out
+    "openral-world-state",    # reason: shared look-at gaze geometry for scene-camera placement
     "structlog>=24.1",    # reason: structured logging per CLAUDE.md §5.1
     "PyYAML>=6.0",        # reason: SimEnvironment YAML config loader
     "typer>=0.12",        # reason: CLI framework — exposes eval_app for mounting into ral
+    "imageio[ffmpeg]>=2.34",  # reason: --save-video and website MP4 writers use imageio's ffmpeg plugin.
 ]
 
 [build-system]

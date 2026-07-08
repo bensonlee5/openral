@@ -40,6 +40,15 @@ from opentelemetry.proto.trace.v1.trace_pb2 import ResourceSpans, Span
 __all__ = ["TelemetryEvent", "TelemetryStore"]
 
 _EVENT_RING_SIZE = 200
+# A SEPARATE, protected ring for error/fatal events. The main ring is a single
+# FIFO shared with high-rate streams (world_state ~30 Hz, read_state WARN
+# floods), so it fully cycles in ~5-7 s and evicts rare-but-critical events
+# (skill_failure, estop, safety.violation) before an operator can see them —
+# enabling the "Error" filter then shows nothing because the event is already
+# gone from the ring. Errors ALSO land here so they survive the flood; the
+# snapshot merges both lanes.
+_ERROR_EVENT_RING_SIZE = 64
+_ERROR_SEVERITIES = ("error", "fatal")
 _METRIC_SAMPLE_RING_SIZE = 600  # ~5 min at one sample per 500 ms
 _SUBSCRIBER_QUEUE_SIZE = 256
 # OTLP Status.code values per opentelemetry-proto: 0=UNSET, 1=OK, 2=ERROR.
@@ -56,7 +65,7 @@ _SEVERITY_ERROR_MIN = 17
 _SEVERITY_WARN_MIN = 13
 _SEVERITY_INFO_MIN = 9
 
-# ADR-0018 F7 — query-time bag↔OTel join. Cap memory: keep at most
+# Query-time bag↔OTel join. Cap memory: keep at most
 # _TRACE_INDEX_MAX_TRACES distinct trace_ids and _TRACE_INDEX_MAX_SPANS
 # spans per trace. Old traces evict in arrival order.
 _TRACE_INDEX_MAX_TRACES = 64
@@ -336,13 +345,16 @@ class TelemetryStore:
         self._last_ingest_ts: float = 0.0
         self._cards: dict[str, _SpanCard] = {}
         self._events: deque[TelemetryEvent] = deque(maxlen=_EVENT_RING_SIZE)
+        # Protected lane: error/fatal events, immune to the high-rate flood that
+        # cycles the main ring in seconds (see _ERROR_EVENT_RING_SIZE).
+        self._error_events: deque[TelemetryEvent] = deque(maxlen=_ERROR_EVENT_RING_SIZE)
         self._counters: dict[str, int] = defaultdict(int)
         self._metrics: dict[str, _MetricSeries] = {}
         # Topical state buckets — one per "topic" the dashboard renders
         # as a dedicated card. Latched/static keys (run mode, robot
         # model, skill id, kernel) live in :attr:`_identity`; everything
         # high-frequency lives under :attr:`_topics` keyed by topic name.
-        # ADR-0018 F7: bounded per-trace span index. Ordered dict so
+        # Bounded per-trace span index (bag↔OTel replay). Ordered dict so
         # eviction is FIFO on first-seen trace_id; each value is a deque
         # capped by _TRACE_INDEX_MAX_SPANS.
         self._spans_by_trace: dict[str, deque[_IndexedSpan]] = {}
@@ -354,23 +366,25 @@ class TelemetryStore:
             "world_state": {},
             "perception": {},  # per-camera modality + age + thumbnail
             "inference": {},
-            "safety": {"checks": {}},  # check_name -> {last_verdict, severity, ts}
+            # ``estopped`` tracks the kernel's e-stop latch so the UI shows an
+            # E-STOP control while running and Reset e-stop while latched.
+            "safety": {"checks": {}, "estopped": False},  # check_name -> {..., severity, ts}
             "system": {},  # populated by metrics ingest (gpu/cpu/ram)
-            # ADR-0025 — live 2D occupancy map from slam_toolbox (and any
+            # Live 2D SLAM occupancy map from slam_toolbox (and any
             # future Reasoner-managed mapping service). Populated by
             # ``slam.occupancy_grid`` spans emitted by
             # ``openral_runner.slam_bridge.SlamMapBridge``.
             "slam": {},
-            # ADR-0030 — robot-perspective octomap pointcloud render.
+            # Robot-perspective octomap pointcloud render.
             # Populated by ``world.pointcloud`` spans emitted by
             # ``openral_runner.world_cloud_bridge.WorldCloudBridge``.
             "pointcloud": {},
-            # ADR-0038 — durable spatial-memory objects (table card + map
+            # Durable spatial-memory scene-object graph (table card + map
             # overlay). Populated by ``world.scene_objects`` spans emitted by
             # ``openral_world_state.emit_scene_objects_span`` (the Reasoner's
             # preloaded map today; the World-State node post-producer).
             "scene_objects": {},
-            # ADR-0018 F4 — last Reasoner tick (one entry per
+            # Last Reasoner tick (one entry per
             # `reasoner.tick` span emitted by `ReasonerCore.tick`).
             # The dashboard "Reasoner" card reads this to show the
             # latest tool decision; the Event Log carries the full
@@ -485,6 +499,24 @@ class TelemetryStore:
         with self._lock:
             return self._snapshot_locked()
 
+    def set_estopped(self, value: bool) -> None:
+        """Force the e-stop latch flag from an authoritative operator action.
+
+        The autonomous ``safety.check`` path (violation → True, ok → False) only
+        updates while command chunks flow through the kernel. An operator e-stop
+        ABORTS the in-flight skill, so chunk flow stops and the kernel emits no
+        further ``safety.check`` spans — the flag would never flip and the UI's
+        Reset control would never appear. The dashboard issues the e-stop itself,
+        so it authoritatively knows the latch state and sets it here directly
+        (kernel self-trips still ride the safety.check path). Push the new state
+        to SSE subscribers immediately so the button updates without waiting for
+        the next telemetry tick.
+        """
+        with self._lock:
+            self._topics["safety"]["estopped"] = bool(value)
+            payload = self._snapshot_locked()
+        self._publish(payload)
+
     def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
         """Register an asyncio queue that receives every state update.
 
@@ -544,14 +576,14 @@ class TelemetryStore:
         if trace_id_hex:
             self._topics["trace"]["latest_trace_id"] = trace_id_hex
             self._topics["trace"]["latest_ts_unix"] = ts_unix
-            # ADR-0018 F7: index full spans by trace_id for `openral replay`.
+            # Index full spans by trace_id for `openral replay` (bag↔OTel replay).
             self._index_span(span, trace_id_hex, ts_unix, attrs)
 
         # Always append a one-line event so the operator sees the
         # most recent activity. Severity escalates on ERROR status.
         severity = "error" if span.status.code == _STATUS_ERROR else "info"
         title = _summarise_span(span.name, attrs, duration_ms)
-        self._events.append(
+        self._append_event(
             TelemetryEvent(
                 ts_unix=ts_unix,
                 kind=span.name,
@@ -567,17 +599,45 @@ class TelemetryStore:
         # reads the reason, not just the bare event name.
         for event in span.events:
             event_attrs = _attrs_to_dict(list(event.attributes))
-            self._events.append(
+            severity = _event_severity(event.name)
+            # A skill_failure that lands WHILE the kernel is e-stop-latched is a
+            # consequence of the stop — the in-flight goal is aborted and the
+            # reasoner's retries are rejected because the kernel drops everything
+            # until reset. That is the safety system working, not an independent
+            # fault, so it reads as a warning rather than a red error. Genuine
+            # failures (timeout / vram_insufficient / reward_plateau, which occur
+            # when not latched) still surface as errors.
+            if (
+                severity == "error"
+                and event.name == "openral.event.skill_failure"
+                and self._topics["safety"].get("estopped")
+            ):
+                severity = "warn"
+            self._append_event(
                 TelemetryEvent(
                     ts_unix=event.time_unix_nano / 1_000_000_000.0,
                     kind=event.name,
                     title=_summarise_event(event.name, event_attrs),
                     attrs=event_attrs,
-                    severity=_event_severity(event.name),
+                    severity=severity,
                 )
             )
             if event.name in _COUNTED_EVENTS:
                 self._counters[event.name] += 1
+
+    def _append_event(self, ev: TelemetryEvent) -> None:
+        """Append to the main ring, and mirror durable events into the protected lane.
+
+        The protected lane keeps the last :data:`_ERROR_EVENT_RING_SIZE` events
+        alive even when the high-rate info/debug stream cycles the main ring, so
+        a skill_failure / estop / safety.violation always leaves a trace the
+        operator can still find seconds later. Mirrored when the severity is
+        error/fatal OR the kind is in :data:`_PROTECTED_EVENT_KINDS` (a
+        skill_failure downgraded to "warn" while latched must still survive).
+        """
+        self._events.append(ev)
+        if ev.severity in _ERROR_SEVERITIES or ev.kind in _PROTECTED_EVENT_KINDS:
+            self._error_events.append(ev)
 
     def _record_log(self, record: LogRecord, scope_name: str) -> None:
         """Append one bridged OTLP ``LogRecord`` to the event ring (issue #318)."""
@@ -586,7 +646,7 @@ class TelemetryStore:
         ts_unix = ts_ns / 1_000_000_000.0 if ts_ns else time.time()
         body = _attr_value(record.body)
         title = str(body) if body is not None else scope_name
-        self._events.append(
+        self._append_event(
             TelemetryEvent(
                 ts_unix=ts_unix,
                 kind=scope_name,
@@ -660,7 +720,7 @@ class TelemetryStore:
             spans = sorted((s.to_json() for s in bucket), key=lambda s: s["start_unix_ns"])
         return spans
 
-    def _update_topics(  # noqa: PLR0912  # reason: linear span-name dispatch; each arm sets a different topic slot. Splitting into per-span methods (as already done for slam.occupancy_grid / reasoner.tick) hurts the read-this-and-see-every-routed-family ergonomic that the operator-facing dashboard handlers benefit from.
+    def _update_topics(  # noqa: PLR0912, PLR0915  # reason: linear span-name dispatch; each arm sets a different topic slot. Splitting into per-span methods (as already done for slam.occupancy_grid / reasoner.tick) hurts the read-this-and-see-every-routed-family ergonomic that the operator-facing dashboard handlers benefit from.
         self, span_name: str, attrs: dict[str, Any], ts_unix: float, duration_ms: float
     ) -> None:
         """Route span attributes into per-topic dynamic-state buckets."""
@@ -745,7 +805,7 @@ class TelemetryStore:
                     entry["thumbnail_jpeg_b64"] = existing["thumbnail_jpeg_b64"]
             per_camera[source] = entry
         elif span_name == "slam.occupancy_grid":
-            # ADR-0025 — live 2D occupancy map from slam_toolbox.
+            # Live 2D SLAM occupancy map from slam_toolbox.
             # Bridge emits one span per /map message (1 Hz throttled
             # in `openral_runner.slam_bridge.SlamMapBridge`).
             self._topics["slam"].update(
@@ -770,7 +830,7 @@ class TelemetryStore:
                 }
             )
         elif span_name == "world.pointcloud":
-            # ADR-0030 — robot-frame octomap pointcloud render (one span per
+            # Robot-frame octomap pointcloud render (one span per
             # accepted cloud, throttled in
             # ``openral_runner.world_cloud_bridge.WorldCloudBridge``).
             self._topics["pointcloud"].update(
@@ -784,7 +844,7 @@ class TelemetryStore:
                 }
             )
         elif span_name == "world.scene_objects":
-            # ADR-0038 — durable spatial-memory objects. One span per emit
+            # Durable spatial-memory scene-object graph. One span per emit
             # (0.2 Hz from the Reasoner's preloaded map today). ``objects`` is a
             # decoded list of {id,label,x,y,z,frame_id,confidence,
             # last_seen_ns,observation_count,is_container} dicts.
@@ -823,6 +883,58 @@ class TelemetryStore:
                 "duration_ms": duration_ms,
             }
             self._topics["safety"]["latest_ts_unix"] = ts_unix
+            # E-stop latch state for the UI's E-STOP / Reset control. The kernel
+            # drops every chunk with severity "violation" while latched (a
+            # violation, an /openral/estop, or a subsequent estop_latched drop)
+            # and reports "ok" once running clean again — so this self-corrects
+            # after a reset without the dashboard needing an rclpy node. A clamp
+            # ("warning") is not a latch and leaves the flag untouched.
+            if severity == "violation":
+                self._topics["safety"]["estopped"] = True
+            elif severity == "ok":
+                self._topics["safety"]["estopped"] = False
+            if severity == "violation":
+                # A violation must SURVIVE and STAND OUT. The generic
+                # per-span event is severity "info" (the kernel span's
+                # status is OK — dropping the action IS the kernel working)
+                # and the 30 Hz hal.read_state stream evicts it from the
+                # 200-slot event ring within seconds, so the operator never
+                # saw WHY the arm stopped (observed live: SO-101 self-
+                # collision e-stop with zero trace on the dashboard). Two
+                # fixes: (a) a persistent ``last_violation`` slot on the
+                # safety topic that only the next violation overwrites (the
+                # per-check ledger row is reset by the next OK check), and
+                # (b) a dedicated error-severity ``safety.violation`` event
+                # + counter so the Event Log shows a red row while it lasts.
+                violation = {
+                    "ts_unix": ts_unix,
+                    "check_name": check_name,
+                    "drop_reason": attrs.get("safety.drop_reason"),
+                    "violation_value": attrs.get("safety.violation_value"),
+                    "collision_mode": attrs.get("safety.collision_mode"),
+                    "rskill_id": attrs.get("rskill.id"),
+                    "kernel": attrs.get("safety.kernel"),
+                }
+                self._topics["safety"]["last_violation"] = violation
+                reason = violation["drop_reason"] or "envelope"
+                value = violation["violation_value"]
+                value_s = f" value={value:.4g}" if isinstance(value, (int, float)) else ""
+                self._append_event(
+                    TelemetryEvent(
+                        ts_unix=ts_unix,
+                        kind="safety.violation",
+                        title=(
+                            f"safety.violation · {check_name} · reason={reason}{value_s}"
+                            f" · rskill={violation['rskill_id'] or '(unknown)'}"
+                        ),
+                        attrs=attrs,
+                        severity="error",
+                    )
+                )
+                # Reuse the counted-event key the dashboard's Safety counter
+                # already reads (`cnt-safety` ← openral.event.safety_violation)
+                # so the tally lights up without a UI change.
+                self._counters["openral.event.safety_violation"] += 1
         elif span_name == "reasoner.tick":
             self._record_reasoner_tick(attrs, ts_unix, duration_ms)
 
@@ -831,7 +943,7 @@ class TelemetryStore:
     ) -> None:
         """Stash the latest ``reasoner.tick`` attributes for the dashboard card.
 
-        ADR-0018 F4 — :meth:`openral_reasoner.ReasonerCore.tick` emits one
+        :meth:`openral_reasoner.ReasonerCore.tick` emits one
         of these spans per orchestrator pass via
         :func:`openral_observability.reasoner_span`. The dashboard's
         Reasoner card reads the slot this writes (the Event Log carries
@@ -956,6 +1068,25 @@ class TelemetryStore:
             return non_hal[0]
         return sorted(self._services)[0]
 
+    def _merged_events(self) -> list[TelemetryEvent]:
+        """Main ring + protected error lane, deduped, most-recent first.
+
+        Error events evicted from the fast-cycling main ring survive in
+        ``_error_events`` and are merged back here, so the event log always
+        carries the last ``_ERROR_EVENT_RING_SIZE`` errors no matter how hard the
+        info/debug stream floods the main ring. Dedup is by object identity (the
+        same event object is appended to both lanes).
+        """
+        seen: set[int] = set()
+        merged: list[TelemetryEvent] = []
+        for ev in (*self._events, *self._error_events):
+            if id(ev) in seen:
+                continue
+            seen.add(id(ev))
+            merged.append(ev)
+        merged.sort(key=lambda e: e.ts_unix, reverse=True)
+        return merged
+
     def _snapshot_locked(self) -> dict[str, Any]:
         return {
             "service_name": self._primary_service(),
@@ -968,7 +1099,7 @@ class TelemetryStore:
             "identity": dict(self._identity),
             "topics": _deep_copy_topics(self._topics),
             "cards": {k: v.to_json() for k, v in self._cards.items()},
-            "events": [e.to_json() for e in reversed(self._events)],
+            "events": [e.to_json() for e in self._merged_events()],
             "counters": dict(self._counters),
             "metrics": [s.to_json() for s in self._metrics.values()],
         }
@@ -1053,6 +1184,9 @@ _HEADLINE_FAMILIES: dict[str, str] = {
     "rskill.configure": "rskill_configure",
     "rskill.chunk_inference": "inference",
     "safety.check": "safety",
+    # Reward monitor assessment (query or critic tick); the rSkill
+    # card renders the latest progress/success as a colour-banded bar.
+    "reward.score": "reward_score",
     "hal.send_action": "hal_send_action",
     "hal.read_state": "hal_read_state",
     "sensors.read_latest": "sensors_read",
@@ -1071,7 +1205,7 @@ _COUNTED_EVENTS = frozenset(
         "openral.event.deadline_missed",
         "openral.event.sensor_stale",
         "openral.event.action_dropped",
-        # ADR-0074/0077 — Reasoner-published skill failures (vram_insufficient,
+        # Reasoner-published skill failures (vram_insufficient,
         # reward_plateau, unavailable, timeout, aborted). Tallied so the
         # dashboard's "skill failures" counter makes a failing run obvious.
         "openral.event.skill_failure",
@@ -1093,6 +1227,18 @@ _WARN_EVENTS = frozenset(
         "openral.event.sensor_stale",
         "openral.event.staleness_latched",
         "openral.event.action_dropped",
+    }
+)
+
+# Event kinds that must ALWAYS survive the high-rate main-ring flood, even when
+# their severity is only "warn". A skill_failure carries the reason the operator
+# needs (aborted / rejected / timeout …); when it lands while e-stop-latched it
+# is downgraded to a warning, but it must still leave a durable trace — a warn
+# that gets evicted in seconds is the "counter goes up, no trace" bug. So these
+# are mirrored into the protected lane regardless of severity.
+_PROTECTED_EVENT_KINDS = frozenset(
+    {
+        "openral.event.skill_failure",
     }
 )
 

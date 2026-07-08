@@ -2,8 +2,8 @@
 
 The openarm_robosuite scene composer used to carry module-level
 constants for the "top" (a.k.a. "base") overview camera, baked to the
-``mddoai/openarm_2026-05-14_clean`` dataset POV. ADR-0066 moved those
-defaults onto the deploy scene composition so the environment owns its
+``mddoai/openarm_2026-05-14_clean`` dataset POV. Those
+defaults moved onto the deploy scene composition so the environment owns its
 arena and camera pose; the robot manifest describes only the robot.
 
 CLAUDE.md §1.11: real schemas, real fixture under ``robots/openarm/``,
@@ -76,7 +76,7 @@ def test_openarm_deploy_scene_loads_top_camera_defaults() -> None:
 
 
 def test_openarm_robot_yaml_does_not_own_scene_defaults() -> None:
-    """ADR-0066 keeps scene camera defaults off the robot manifest."""
+    """Scene camera defaults stay off the robot manifest."""
     desc = RobotDescription.from_yaml("robots/openarm/robot.yaml")
     assert desc.scene_defaults is None
 

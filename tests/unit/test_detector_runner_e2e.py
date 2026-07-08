@@ -1,4 +1,4 @@
-"""End-to-end tests for :class:`DetectorRunner` (ADR-0037 integration).
+"""End-to-end tests for :class:`DetectorRunner`.
 
 These are **live** tests — no mocks, no stubs, per CLAUDE.md §1.11.
 
@@ -250,7 +250,7 @@ class TestDetectorRunnerKindGuard:
         can use a minimal pipeline (``videotestsrc ! fakesink``) with no tee —
         the ``TeeManager`` constructor is never reached.
         """
-        vla_fixture = _REPO_ROOT / "rskills" / "pi05-libero" / "rskill.yaml"
+        vla_fixture = _REPO_ROOT / "rskills" / "pi05-libero-int8" / "rskill.yaml"
         assert vla_fixture.exists(), f"vla fixture not found: {vla_fixture}"
         with open(vla_fixture, encoding="utf-8") as fh:
             vla_data = yaml.safe_load(fh)

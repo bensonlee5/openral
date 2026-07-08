@@ -58,7 +58,7 @@ def _build_env_cfg() -> object:
         max_steps=32,
     )
     vla = VLASpec(id="mock-noop", weights_uri="mock-noop", device="cpu")
-    # The openarm scene requires an explicit base mount (ADR-0002 Amendment 3).
+    # The openarm scene requires an explicit base mount (the explicit-base-mount rule, Amendment 3).
     base_pose = Pose6D(xyz=(0.20, 0.0, 0.55), quat_xyzw=(0.0, 0.0, 0.0, 1.0), frame_id="world")
     return SimEnvironment(
         robot_id="openarm",
@@ -91,7 +91,7 @@ def test_openarm_tabletop_scene_builds_through_loader() -> None:
 
     Regression guard for the loader dropping ``SimScene.base_pose``:
     the ``openarm_tabletop_pnp`` scene mandates ``base_pose`` at compose time
-    (ADR-0002 Amendment 3), so before the fix this raised at compose time —
+    (the explicit-base-mount rule, Amendment 3), so before the fix this raised at compose time —
     BEFORE the HAL/action-dim probe was even reached. The loader now threads
     the YAML's ``base_pose`` into the composed ``SimEnvironment``, so the scene
     builds through the loader exactly as it does through the direct factory.

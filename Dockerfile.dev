@@ -13,12 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0-dev libudev-dev \
     udev usbutils \
     lttng-tools python3-lttngust babeltrace2 \
-    # ADR-0024 / ADR-0025 — wrapped-ROS rSkills + lifecycle-peer
+    # wrapped-ROS rSkills + lifecycle-peer
     # services. moveit + moveit-resources-panda back the in-tree
     # `rskill-moveit-joints` rSkill and its integration test
     # (`tests/integration/test_moveit_joints_franka.py`). nav2 +
     # nav2-msgs back the `openral-nav2-navigate-to-pose` rSkill.
-    # slam-toolbox is the first concrete ADR-0025 background service
+    # slam-toolbox is the first concrete reasoner-managed background service
     # (`packages/openral_slam_bringup/`); nav-msgs carries the
     # OccupancyGrid the SlamMapBridge subscribes to. Mirrors the
     # matching block in `docker/inference/Dockerfile.x86` so the dev
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-nav2-msgs \
     ros-${ROS_DISTRO}-slam-toolbox \
     ros-${ROS_DISTRO}-nav-msgs \
-    # ADR-0030 — geometric world-collision via OctoMap. `octomap` +
+    # geometric world-collision via OctoMap. `octomap` +
     # `octomap-msgs` + `tf2-geometry-msgs` are the build/runtime deps of
     # `packages/openral_octomap_bridge/` (the octree→OccupancyVoxels node
     # that feeds the C++ safety kernel's allocation-free voxel check).
@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-tf2-geometry-msgs \
     && rm -rf /var/lib/apt/lists/*
 
-# F9 (ADR-0018 LTTng opt-in): the distro's ``python3-lttngust`` installs into
+# F9 (LTTng opt-in): the distro's ``python3-lttngust`` installs into
 # /usr/lib/python3/dist-packages — outside the uv venv. Surface it on
 # PYTHONPATH so ``openral_observability.tracing_lttng._resolve_backend``
 # picks the working 2.13.x binding instead of falling back to the JSONL

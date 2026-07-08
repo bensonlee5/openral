@@ -1,4 +1,4 @@
-# ADR-0018 F2 — typed WorldState publication.
+# Typed WorldState publication.
 #
 # Replaces the JSON ``std_msgs/String`` snapshot the world_state node
 # used to publish on ``/world_state``. Carries the same fields as
@@ -55,10 +55,10 @@ bool battery_valid
 float32 battery_pct
 
 # tf2 frames referenced by this snapshot — consumers read /tf themselves
-# (ADR-0018 §2 / capability-review F2: tf2 reference-only).
+# (tf2 reference-only).
 string[] frame_ids
 
-# Detected objects (ADR-0035 object lift) — parallel arrays keyed by index.
+# Detected objects (object lift) — parallel arrays keyed by index.
 # Positions are pose.xyz in `detected_object_frame` (e.g. "map"); track ids are
 # -1 when unset. 3D bbox is intentionally omitted from the wire (center + frame
 # is what consumers need; bbox_3d stays in the in-process WorldState).

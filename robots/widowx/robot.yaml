@@ -1,6 +1,6 @@
 # RobotDescription — Trossen WidowX-250s (sim-only embodiment).
 #
-# ADR-0010. Per ADR-0007 (robot/sim split) every robot.yaml is supposed
+# Per the sim-only pseudo-embodiment exception to the robot/sim split convention, every robot.yaml is supposed
 # to describe a *physical* embodiment; the WidowX-250s is a real
 # 5-DoF + gripper desktop arm (Trossen Robotics), but OpenRAL ships
 # no HAL adapter for it today — the manifest exists only so SimEnvironment
@@ -18,7 +18,7 @@ name: "widowx"
 embodiment_kind: "manipulator"
 base_frame: "base_link"
 
-# ADR-0027 — robot_state_publisher: `assets.urdf` deliberately unset.
+# robot_state_publisher: `assets.urdf` deliberately unset.
 # Upstream xacro at github.com/Interbotix/interbotix_ros_manipulators/
 # blob/main/interbotix_ros_xsarms/interbotix_xsarm_descriptions/
 # urdf/wx250s.urdf.xacro requires the apt package
@@ -27,7 +27,7 @@ base_frame: "base_link"
 # `mujoco_menagerie/trossen_wx250s` (MJCF, no URDF wrapper).
 # Wire when a wrapped-task-space VLA targets WidowX.
 
-# ADR-0058 — unified asset block. MJCF-only (no URDF/SRDF wired yet).
+# Unified asset block. MJCF-only (no URDF/SRDF wired yet).
 assets:
   mjcf: "menagerie:trossen_wx250s"
 
@@ -104,7 +104,7 @@ capabilities:
   supported_control_modes:
     - "joint_position"
     - "cartesian_pose"
-    # ADR-0071 — the parallel gripper accepts position commands.
+    # Per the gripper/task-space joint-role convention — the parallel gripper accepts position commands.
     - "gripper_position"
   supported_vla_embodiments: ["widowx", "bridge"]
   embodiment_tags:
@@ -139,6 +139,6 @@ sensors:
     model: "simpler_env_overhead"
 
 sdk_kind: "open"
-# observation_spec / action_spec deliberately omitted (ADR-0007). The
+# observation_spec / action_spec deliberately omitted, per the robot/sim split convention. The
 # per-sim IO contracts live in the matching scene adapters.
 schema_version: '0.2'

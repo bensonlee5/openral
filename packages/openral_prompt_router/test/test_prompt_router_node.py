@@ -1,4 +1,4 @@
-"""colcon-test for openral_prompt_router (ADR-0018 F10).
+"""colcon-test for openral_prompt_router.
 
 Mirrors ``packages/openral_reasoner_ros/test/test_reasoner_node.py``
 — a thin import-only smoke so ``colcon test`` has a real file to run.

@@ -307,7 +307,7 @@ class _So101BoxRollout:
         return self._model, self._data
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed MuJoCo sim time in ns (ADR-0048 Phase 1).
+        """Elapsed MuJoCo sim time in ns.
 
         Reads ``MjData.time`` off :meth:`mujoco_handles`. Monotonic within an
         episode; rewinds on ``reset``.
@@ -318,7 +318,7 @@ class _So101BoxRollout:
     def action_dim(self) -> int:
         """Flat action width the env's ``step`` accepts (SO-101 = 6 joint targets).
 
-        ADR-0034 follow-up — ``SimAttachedHAL._probe_env_action_dim`` reads this so a
+        ``SimAttachedHAL._probe_env_action_dim`` reads this so a
         deploy-sim action (``send_action`` / ``idle_step``) is sized to the SO-101's
         6-D joint-position action rather than the robosuite-mobile-manipulator
         fallback (11). Without it the probe missed this native backend (it exposes
@@ -547,13 +547,13 @@ def build_so101_box_scene(env_cfg: SimEnvironment) -> _So101BoxRollout:
     composed once at build time; the same model is reused across all
     ``reset()`` calls.
 
-    ADR-0033 — the base arm MJCF is resolved from the robot manifest's
+    The base arm MJCF is resolved from the robot manifest's
     ``assets.mjcf`` (the same source ``build_hal(mode="sim")`` uses), not a
     hardcode. The scene's splice anchors (``<body name="base">`` /
     ``<body name="gripper">``) + actuator naming (``"1"``..``"6"``) are still
     so_arm101-schema-specific, so ``fixed_robot`` stays ``so101_follower``
     until those anchors are parameterised (then this becomes free-axis and the
-    robot is a true flag — see ADR-0033 follow-ups).
+    robot is a true flag).
     """
     import mujoco
 

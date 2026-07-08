@@ -134,7 +134,7 @@ def test_pack_action_joint_position_full_fills_both() -> None:
 
 
 def test_pack_action_cartesian_delta_packs_arm_slots() -> None:
-    """ADR-0028c — CARTESIAN_DELTA fills slots [3:9] (arm OSC); base + gripper zero."""
+    """CARTESIAN_DELTA fills slots [3:9] (arm OSC); base + gripper zero."""
     chunk = Action(
         control_mode=ControlMode.CARTESIAN_DELTA,
         horizon=1,
@@ -151,7 +151,7 @@ def test_pack_action_cartesian_delta_packs_arm_slots() -> None:
 
 
 def test_pack_action_gripper_position_packs_last_slot() -> None:
-    """ADR-0028c — GRIPPER_POSITION fills the trailing slot; arm + base zero."""
+    """GRIPPER_POSITION fills the trailing slot; arm + base zero."""
     chunk = Action(
         control_mode=ControlMode.GRIPPER_POSITION,
         horizon=1,
@@ -178,7 +178,7 @@ def test_pack_action_rejects_other_modes() -> None:
 def test_pack_action_rejects_wrong_row_width() -> None:
     """Wrong row width for the declared mode is caught at Action construction.
 
-    ADR-0028c — ``Action.body_twist: list[tuple[float, ..., 6]]`` enforces
+    ``Action.body_twist: list[tuple[float, ..., 6]]`` enforces
     the 6-tuple shape at Pydantic-validation time, so a 3-wide body twist
     is rejected before ever reaching ``pack_action_for_env``. The HAL's
     runtime guard inside ``pack_action_for_env`` survives as defence in
@@ -552,7 +552,7 @@ def test_body_twist_rejects_non_planar_components() -> None:
 
 def test_body_twist_without_mujoco_handles_steps_env() -> None:
     """BODY_TWIST on a non-MuJoCo env (handles=None) with base dims routes through
-    ``env.step`` (ADR-0045): the scene integrates the base inside the step, so the
+    ``env.step``: the scene integrates the base inside the step, so the
     HAL packs ``(vx, vy, wz)`` into the FINAL three action slots (zeroing the
     arm/gripper) instead of the MuJoCo direct-qpos path."""
     env = FakeSimEnv(action_dim=11, handles=None)
@@ -590,7 +590,7 @@ def test_body_twist_without_base_dims_raises_runtime_error() -> None:
         hal.send_action(chunk)
 
 
-# ── ADR-0048 Phase 1 — sim_time_ns accessor + cross-reset offset ─────────
+# ── Phase 1 — sim_time_ns accessor + cross-reset offset ──────────────────
 
 
 def _joint_position_chunk() -> Action:
@@ -637,7 +637,7 @@ def test_sim_time_ns_does_not_rewind_across_reset() -> None:
     """The cross-reset offset keeps sim_time_ns monotonic across env.reset.
 
     The FakeSimEnv rewinds its per-episode clock to 0 on ``reset`` (modelling
-    robocasa's ``MjData.time``). Drive the ADR-0036 auto-reset via the
+    robocasa's ``MjData.time``). Drive the auto-reset via the
     ``_episode_done`` latch and assert the HAL-published value never goes back.
     """
     env = FakeSimEnv(action_dim=11, has_sim_clock=True, sim_dt_ns=20_000_000)

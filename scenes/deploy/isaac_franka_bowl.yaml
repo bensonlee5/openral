@@ -1,12 +1,12 @@
 # Franka in an Isaac Sim table+bowl+plate world — deploy playground for a
-# LIBERO camera-VLA (ADR-0045).
+# LIBERO camera-VLA.
 #
 # Env-only DeployScene (no task) using the bowl_plate layout: the LIBERO
 # obs/action contract — camera1 (agent-view) + camera2 (eye-in-hand wrist) +
 # 8-D state, and a 7-D OSC-pose-delta action. A LIBERO franka rSkill
 # (act-libero / smolvla-libero) dispatches as CARTESIAN_DELTA (env_action_dim=7),
 # which SimAttachedHAL packs into the 7-D env action and the scene applies via
-# Lula IK — the same path LIBERO uses (ADR-0036; SimAttachedHAL does not gate on
+# Lula IK — the same path LIBERO uses (the cartesian_delta dispatch fix; SimAttachedHAL does not gate on
 # the manifest's supported_control_modes). Two cameras feed the VLA, so there is
 # no missing-camera warning (cf. the single-camera lift_cube deploy scene).
 #

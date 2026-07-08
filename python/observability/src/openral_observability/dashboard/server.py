@@ -53,7 +53,7 @@ def _exposure_warning(host: str) -> str | None:
     )
 
 
-def run_dashboard(
+def run_dashboard(  # noqa: PLR0915, PLR0912  # reason: linear bootstrap (app + vad assets + estop pub + discovery + uvicorn)
     *,
     host: str = "127.0.0.1",
     port: int = 4318,
@@ -91,6 +91,37 @@ def run_dashboard(
 
     app = create_app(store)
 
+    # Voice-prompt (VAD) static assets: fetched on first start into
+    # $OPENRAL_CACHE_DIR (~/.cache/openral by default) and placed under the
+    # served static dir — see vad_assets.py. Best-effort: an offline host or
+    # upstream outage must never block the dashboard from starting; the mic
+    # button just degrades (voice_prompt_enabled=false in /api/config).
+    try:
+        from openral_observability.dashboard.vad_assets import ensure_vad_assets
+
+        if ensure_vad_assets():
+            _LOG.info("dashboard.vad_assets ready (voice prompt available)")
+        else:
+            _LOG.warning("dashboard.vad_assets incomplete — voice prompt disabled")
+    except Exception as exc:  # never gate the dashboard on the voice-prompt assets
+        _LOG.warning("dashboard.vad_assets_start_failed error=%s", exc)
+
+    # Persistent e-stop publisher: created ONCE here so DDS discovery of the
+    # HAL/kernel/runner subscribers happens at launch, and every later E-STOP
+    # press publishes instantly (no per-press shell-out / discovery race — a
+    # racing shell-out once lost the message and the robot never stopped). Inert
+    # + graceful when rclpy/ROS is absent; the endpoints then fall back.
+    try:
+        from openral_observability.dashboard.estop_publisher import EstopPublisher
+
+        app.state.estop = EstopPublisher()
+        if app.state.estop.available:
+            _LOG.info("dashboard.estop_publisher ready (instant e-stop)")
+        else:
+            _LOG.warning("dashboard.estop_publisher inert (no ROS) — estop falls back to shell-out")
+    except Exception as exc:  # never gate the dashboard on the e-stop publisher
+        _LOG.warning("dashboard.estop_publisher_start_failed error=%s", exc)
+
     discovery = None
     try:
         from openral_observability.dashboard.discovery import Discovery
@@ -123,7 +154,7 @@ def run_dashboard(
         _write_controls_msg = (
             "dashboard write-controls ENABLED (OPENRAL_DASHBOARD_WRITE_CONTROLS=1): "
             "skill-switch + non-safety param-tune are live and reach actuation config. "
-            "Pending safety-WG review (ADR-0064). The safety kernel still disposes all motion."
+            "Pending safety-WG review. The safety kernel still disposes all motion."
         )
         _LOG.warning("dashboard.write_controls_enabled")
         print(f"WARNING: {_write_controls_msg}", file=sys.stderr, flush=True)

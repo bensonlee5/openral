@@ -1,4 +1,4 @@
-"""ADR-0020 PR-F — end-to-end: the C++ kernel emits safety.check spans.
+"""End-to-end: the C++ kernel emits safety.check spans.
 
 Brings up the real ``safety_kernel_node`` as a subprocess pointed at a
 loopback FastAPI server that decodes OTLP/HTTP protobuf on
@@ -44,7 +44,7 @@ pytest.importorskip("uvicorn")
 # query field → every OTLP POST 422s and no spans are recorded.
 from fastapi import Request
 
-# Kernel envelope as ROS parameters (ADR-0020 PR-K).
+# Kernel envelope as ROS parameters.
 _KERNEL_PARAM_ARGS: list[str] = [
     "-p",
     "n_dof:=3",

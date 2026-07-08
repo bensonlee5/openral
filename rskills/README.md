@@ -19,13 +19,16 @@ first load.
 | `weights_uri` scheme | Where the weights live | Example |
 | --- | --- | --- |
 | `hf://OpenRAL/...` | Hugging Face Hub, fetched + cached on first load | every VLA / detector / VLM / reward skill |
-| `local://rskills/...` | An ONNX file inside the rSkill dir, **gitignored** and reproduced via a `tools/export_*.py` script (also mirrored to HF) | `rtdetr-coco-r18`, `rtdetr-v2-r50vd` |
+| `local://rskills/...` | An ONNX file inside the rSkill dir, **gitignored** and reproduced via a `tools/export_*.py` script (also mirrored to HF) | `rtdetr-coco-r18` |
 
-The two `rtdetr-*` ONNX skills are the deliberate `local://` exception: the
-GStreamer perception path is ONNX-file-based, and `openral deploy sim` uses
-`rskills/rtdetr-coco-r18/model.onnx` as its offline detector fallback. Those
-binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
-— the clone stays small; the files are regenerated locally on demand.
+`rtdetr-coco-r18` is the deliberate `local://` exception: the GStreamer
+perception path is ONNX-file-based, and `openral deploy sim` uses
+`rskills/rtdetr-coco-r18/model.onnx` as its offline detector fallback. That
+binary is listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
+— the clone stays small; the file is regenerated locally on demand. The
+heavier `rtdetr-v2-r50vd` variant (`runtime: tensorrt`) moved to the private
+`openral-pro` repo — the commercial-tier split that hosts the TensorRT engine
+runtime it depends on as an OpenRAL Pro plugin.
 
 ## Catalog
 
@@ -36,14 +39,14 @@ binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 | --- | --- | --- |
 | `act-aloha` / `act-aloha-insertion` | act | aloha |
 | `act-libero` | act | franka_panda |
+| `act-so101-pen` | act | so101_follower |
 | `diffusion-pusht` | diffusion | pusht |
 | `3d-diffuser-actor-rlbench` | diffuser_actor | franka_panda |
 | `gr00t-n17-libero` | gr00t | franka_panda |
 | `molmoact2-libero-nf4` | molmoact2 | franka_panda |
 | `molmoact2-so101-nf4` | molmoact2 | so100/so101_follower |
 | `openvla-oft-simpler-widowx-nf4` | openvla | widowx |
-| `pi05-libero-nf4` | pi05 | franka_panda |
-| `pi05-robocasa365-human300-nf4` | pi05 | panda_mobile |
+| `pi05-libero-int8` | pi05 | franka_panda |
 | `rldx1-ft-gr1-nf4` | rldx | gr1 |
 | `rldx1-ft-libero-nf4` | rldx | franka_panda |
 | `rldx1-ft-rc365-nf4` | rldx | panda_mobile |
@@ -52,6 +55,8 @@ binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
 | `smolvla-maniskill-franka` | smolvla | franka_panda |
 | `smolvla-metaworld` | smolvla | sawyer |
 | `smolvla-robotwin` | smolvla | aloha_agilex |
+| `smolvla-so101-pen` | smolvla | so101_follower |
+| `smolvla-so101-pick-place-pen` | smolvla | so101_follower |
 | `xvla-libero` | xvla | franka_panda |
 
 **Auxiliary skills — run alongside a policy or on deploy scenes,
@@ -61,9 +66,9 @@ embodiment-agnostic.**
 | --- | --- |
 | `locateanything-3b-nf4` | detector (open-vocab VLM) |
 | `omdet-turbo-indoor` / `omdet-turbo-locator` | detector (open-vocab) |
-| `rtdetr-coco-r18` / `rtdetr-v2-r50vd` | detector (ONNX, `local://`) |
+| `rtdetr-coco-r18` | detector (ONNX, `local://`) |
 | `qwen35-4b-nf4` | vlm |
-| `robometer-4b` | reward |
+| `robometer-4b` / `topreward-qwen3vl-4b-nf4` | reward |
 | `rskill-moveit-eef-pose` / `rskill-moveit-joints` / `rskill-moveit-look-at` | ros_action (MoveIt) |
 | `rskill-nav2-navigate-to-pose` | ros_action (Nav2) |
 

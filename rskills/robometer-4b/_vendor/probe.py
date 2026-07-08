@@ -1,4 +1,4 @@
-"""Phase 0 load+forward probe for robometer/Robometer-4B (ADR-0057 gating spike).
+"""Phase 0 load+forward probe for robometer/Robometer-4B (reward rSkill gating spike).
 
 Mirrors robometer's scripts/example_inference_local.py but builds a tiny synthetic
 clip programmatically (no example_videos needed, since we pip-installed the package

@@ -8,7 +8,7 @@ runtime form the adapters see is the composed **`SimEnvironment`**
 (`SimScene` + `RSkillManifest`); the YAML on disk never carries a
 `vla:` block.
 
-`SimScene` is the middle tier of the [ADR-0041](../../adr/0041-scene-three-tier-hierarchy.md)
+`SimScene` is the middle tier of the three-tier
 scene hierarchy:
 
 ```
@@ -35,11 +35,7 @@ It covers six things, in increasing depth:
 5. Writing a **new policy adapter** (a new VLA backend) and matching it to an
    rSkill.
 
-The companion cookbook is [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md);
-the reference schemas are documented in
-[ADR-0002](../../adr/0002-eval-and-sim-environments.md),
-[ADR-0009](../../adr/0009-separate-sim-and-benchmarking.md), and
-[ADR-0041](../../adr/0041-scene-three-tier-hierarchy.md).
+The companion cookbook is [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md).
 
 ---
 
@@ -148,7 +144,7 @@ obscure a profiling investigation), set
 `OPENRAL_SIM_SEQUENTIAL_INIT=1`:
 
 ```bash
-OPENRAL_SIM_SEQUENTIAL_INIT=1 openral sim run --config scenes/sim/libero_spatial.yaml --rskill pi05-libero-nf4
+OPENRAL_SIM_SEQUENTIAL_INIT=1 openral sim run --config scenes/sim/libero_spatial.yaml --rskill pi05-libero-int8
 ```
 
 See [GH-134](https://github.com/OpenRAL/openral/issues/134).
@@ -267,10 +263,10 @@ for a 7-DoF arm. The required top-level blocks are:
 | `capabilities` | Control modes, embodiment tags, lift / dexterity flags |
 | `safety` | Workspace box, speed/force/torque limits, deadman flag |
 | `observation_spec`, `action_spec` | State / action shapes and representations |
-| `assets` (optional) | URDF / MJCF / SRDF reference block (ADR-0058) — see below |
+| `assets` (optional) | URDF / MJCF / SRDF reference block — see below |
 | `sim` (optional) | MuJoCo joint↔qpos wiring consumed by `MujocoArmHAL.from_description` — see below |
 
-### The `assets:` block (ADR-0058)
+### The `assets:` block
 
 The robot's URDF / MJCF / SRDF are named once, at the top level, via the
 unified `assets:` block. Every ref shares the
@@ -287,13 +283,13 @@ assets:
   # Optional URDF (robot_state_publisher / collision lowering):
   # urdf:
   #   ref: "file:ur5e.urdf"          # or rd:<module> / ros2://robot_description
-  #   root_frame: "base_link"         # ADR-0027 robot_state_publisher wiring
+  #   root_frame: "base_link"         # robot_state_publisher root-frame wiring
   #   base_to_root_xyz_rpy: [0, 0, 0, 0, 0, 0]
   # Optional SRDF (seeds allowed_collision_pairs):
   # srdf: "file:ur5e.srdf"
 ```
 
-### The `sim:` block (ADR-0023)
+### The `sim:` block
 
 For any robot that should drive a MuJoCo digital twin through the shared
 `MujocoArmHAL` base, declare a `sim:` block alongside `assets.mjcf`. The
@@ -619,7 +615,7 @@ under `rskills/README.md`; existing manifests (e.g. `rskills/smolvla-libero/`)
 are the practical templates.
 
 If your rollout needs to write a LeRobotDataset v3 via the bridge
-(ADR-0019, `openral sim run --dataset-out`), declare BOTH `state_contract`
+(`openral sim run --dataset-out`), declare BOTH `state_contract`
 AND `action_contract` on the manifest:
 
 ```yaml
@@ -665,10 +661,9 @@ fails loud on mismatches.)
 
 ---
 
-## Level 6: a custom MuJoCo environment via RoboCasa (ADR-0011)
+## Level 6: a custom MuJoCo environment via RoboCasa
 
-[ADR-0015](../../adr/0015-robocasa-isolated-backend-lazy-assets.md)
-adds **RoboCasa** as a `openral sim` backend so you can run kitchen
+**RoboCasa** is a `openral sim` backend so you can run kitchen
 scenarios with custom robots, tasks, and rSkills against real MuJoCo
 physics.
 
@@ -681,7 +676,7 @@ license posture, then a `typer.confirm()` prompt:
 
 ```bash
 openral sim run --config scenes/sim/robocasa_pnp.yaml \
-            --rskill rskills/pi05-robocasa365-human300-nf4 \
+            --rskill rskills/rldx1-ft-rc365-nf4 \
             --max-steps 200
 ```
 
@@ -719,51 +714,18 @@ bypassed at adapter import-time via `_spoof_robocasa_version_pins`;
 the controller config's missing-actuator entries are stripped before
 they reach robosuite. See "Known constraints" below for the full set.
 
-### Running with a π₀.₅ checkpoint
+### Running with a RoboCasa-365 checkpoint
 
-`rskills/pi05-robocasa365-human300-nf4` (manifest: `rskills/pi05-robocasa365-human300-nf4/rskill.yaml`)
-wraps the **OpenRAL/rskill-pi05-robocasa365-human300-nf4**
-Apache-2.0 checkpoint — Physical Intelligence's π₀.₅ (3.4 B params,
-16-D state, chunk_size=50) fine-tuned on RoboCasa365 Human-300
-(300 atomic+composite tasks, 100 demos each) against the
-**PandaMobile** robot, pre-quantized to nf4 so the prequant fast-path
-in `openral_sim._quantization` loads the policy in ~20 s instead
-of the ~150 s `from_pretrained` walk.
+`rskills/rldx1-ft-rc365-nf4` wraps the verified RoboCasa-365 PandaMobile
+rSkill. It runs through the same three-camera, 16-D state, 12-D action
+contract as the RoboCasa scene.
 
 ```bash
 OPENRAL_ALLOW_ROBOCASA_ASSETS=1 \
   uv run openral sim run --config scenes/sim/robocasa_pnp.yaml \
-                    --rskill rskills/pi05-robocasa365-human300-nf4 \
+                    --rskill rskills/rldx1-ft-rc365-nf4 \
                     --view --max-steps 200
 ```
-
-Three extra one-time dependencies are needed alongside the RoboCasa
-setup above (the `robocasa` extras group drops `transformers` and
-`bitsandbytes` because of its `libero`-group conflict):
-
-```bash
-# lerobot pi05's tested transformers pin (5.3.0) -- newer versions
-# break with `'Tensor' object has no attribute 'pooler_output'` because
-# SiglipVisionModel's output type changed in transformers >=4.50.
-uv pip install "transformers==5.3.0"
-
-# nf4 quantization (essential for 8 GiB consumer cards -- bf16 OOMs
-# the moment robosuite's offscreen renderer pins GL textures).
-uv pip install "bitsandbytes>=0.45"
-
-# Authenticate to download google/paligemma-3b-pt-224 (gated -- accept
-# the license at https://huggingface.co/google/paligemma-3b-pt-224
-# first):
-hf auth login --token <YOUR_HF_TOKEN>
-```
-
-The first launch downloads the prequantized nf4 safetensors from
-`OpenRAL/rskill-pi05-robocasa365-human300-nf4` plus
-`google/paligemma-3b-pt-224`'s tokenizer.model into
-`~/.cache/huggingface/hub/`. The pi05 adapter detects the
-`quantization_metadata.json` sentinel and overlays the prequant state
-via `install_prequantized_linears`, skipping the bf16->nf4 conversion
-entirely. Total VRAM after warmup: ~4-5 GiB.
 
 What that config wires together:
 
@@ -776,9 +738,9 @@ What that config wires together:
 - `scene.backend_options.mode: prebuilt` -- validated through
   :class:`openral_core.RoboCasaBackendOptions` (prebuilt-vs-procedural
   XOR).
-- `--rskill rskills/pi05-robocasa365-human300-nf4` -- the
-  prequantized π₀.₅ Apache-2.0 manifest that declares the embodiment
-  tags / sensor requirements the runner validates.
+- `--rskill rskills/rldx1-ft-rc365-nf4` -- the verified RoboCasa-365
+  manifest that declares the embodiment tags / sensor requirements the
+  runner validates.
 
 The first invocation fetches the ~11 GB CC-BY-4.0 kitchen asset bundle
 under `~/.cache/openral/robocasa/`. The download is gated by
@@ -921,22 +883,16 @@ The auto-install prompts fire from the benchmark runner's path too —
 - The full list of registered IDs on your machine: `openral sim list`.
 - The cookbook of existing configs and a per-backend ID table:
   [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md).
-- ADRs that explain the design:
-  [ADR-0002](../../adr/0002-eval-and-sim-environments.md) (the original
-  scene/eval design — the `SceneEnvironment` → `SimScene` rename and the
-  three-tier split landed in ADR-0041),
-  [ADR-0009](../../adr/0009-separate-sim-and-benchmarking.md) (`openral sim
-  run` vs `openral benchmark run`),
-  [ADR-0041](../../adr/0041-scene-three-tier-hierarchy.md) (the
-  `DeployScene ⊆ SimScene ⊆ BenchmarkScene` hierarchy + per-tier loader
-  strictness), and
-  [ADR-0015](../../adr/0015-robocasa-isolated-backend-lazy-assets.md)
-  (RoboCasa as a free-axis MuJoCo backend with custom robots + tasks —
-  rolling out in five PRs per
+- Design background: the original scene/eval design renamed
+  `SceneEnvironment` to `SimScene` and later split it into the
+  three-tier `DeployScene ⊆ SimScene ⊆ BenchmarkScene` hierarchy (with
+  per-tier loader strictness) that also underlies the `openral sim run`
+  vs `openral benchmark run` split. RoboCasa was added as a free-axis
+  MuJoCo backend with custom robots + tasks — rolling out in five PRs per
   [issue #88](https://github.com/OpenRAL/openral/issues/88);
   the Pydantic `RoboCasaBackendOptions` validator and the
   `[dependency-groups].robocasa` extras group already ship today, the
   adapter and a Level-6 procedural-kitchen walkthrough land in later
-  PRs).
+  PRs.
 - The public-symbol inventory for the sim layer:
   [`docs/METHODS.md`](../../METHODS.md), section **Eval (sim)**.

@@ -1,4 +1,4 @@
-"""Layout-adapter registry (ADR-0027).
+"""Layout-adapter registry for per-checkpoint state-vector assembly.
 
 Single mapping from the closed :data:`openral_core.StateLayout` literal
 to an :class:`~openral_state_adapter._protocol.Assembler` function.

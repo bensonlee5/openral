@@ -1,4 +1,4 @@
-"""Transport-agnostic rolling frame buffer for the reward monitor (ADR-0057).
+"""Transport-agnostic rolling frame buffer for the reward monitor.
 
 The reward sidecar is stateless — it scores a clip on demand. State lives here,
 node-side: a time-indexed ring of recent frames fed by whatever publishes the

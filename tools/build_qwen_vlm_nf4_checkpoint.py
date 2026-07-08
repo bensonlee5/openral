@@ -3,7 +3,7 @@
 Why pre-quantize (vs quantizing at load): loading the raw bf16 model and letting
 bitsandbytes quantize on-GPU spikes VRAM to ~7.4 GB before it shrinks to the
 ~3.3 GB NF4 resident — which OOMs an 8 GB card unless the transformers loader is
-forced serial (ADR-0047). Saving the *already-4bit* weights once and loading
+forced serial. Saving the *already-4bit* weights once and loading
 that checkpoint skips the bf16 spike entirely: the 4-bit tensors load directly,
 so deployment on an 8 GB GPU "just works" with no loader workaround.
 
@@ -16,7 +16,7 @@ sidecar venv** (``tools/_qwen_vlm_server.py``) that cannot import
 That path needs the **transformers-native** layout this script writes —
 ``save_pretrained`` with an embedded ``quantization_config`` in ``config.json``,
 which ``from_pretrained`` auto-detects. Same quantizer (bitsandbytes nf4),
-different serialization for a different loader; see ADR-0047.
+different serialization for a different loader.
 
 This is the reproducible recipe behind the published
 ``OpenRAL/rskill-qwen35-4b-nf4`` weights. Run it INSIDE the sidecar venv (it

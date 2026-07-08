@@ -119,7 +119,7 @@ class _LiberoSim:
     task: TaskSpec
     _env: Any  # LiberoEnv (lazy-imported)
     _last_pixels: dict[str, np.ndarray]  # type: ignore[type-arg]  # reason: heterogeneous numpy dict
-    # ADR-0036 — when True (set by SimAttachedHAL for deploy-sim) the episode runs
+    # When True (set by SimAttachedHAL for deploy-sim) the episode runs
     # continuously: lerobot's inline reset-on-terminated is suppressed so a task
     # success / horizon does NOT re-randomise the scene mid-mission (which also
     # re-creates the MjData and orphans the passive viewer). openral sim run keeps
@@ -151,7 +151,7 @@ class _LiberoSim:
         return None
 
     def enable_continuous(self) -> None:
-        """Run the LIBERO episode continuously (deploy-sim; ADR-0036).
+        """Run the LIBERO episode continuously (deploy-sim).
 
         lerobot's ``LiberoEnv.step`` calls ``self.reset()`` inline the instant the
         task succeeds or the horizon is reached, re-randomising the whole scene —
@@ -199,7 +199,7 @@ class _LiberoSim:
     def action_dim(self) -> int:
         """Flat action width the env's ``step`` accepts (LIBERO OSC_POSE = 7).
 
-        ADR-0036 — ``SimAttachedHAL._probe_env_action_dim`` reads this so a
+        ``SimAttachedHAL._probe_env_action_dim`` reads this so a
         cartesian rSkill's slot-packed action is sized to the LIBERO action
         space (6-D OSC end-effector delta + gripper) rather than the
         robosuite-mobile-manipulator fallback. Without it, ``openral deploy sim``
@@ -265,7 +265,7 @@ class _LiberoSim:
         return model, data
 
     def sim_time_ns(self) -> int | None:
-        """Elapsed MuJoCo sim time in ns (ADR-0048 Phase 1), or None.
+        """Elapsed MuJoCo sim time in ns, or None.
 
         Reads ``MjData.time`` off :meth:`mujoco_handles`. Monotonic within an
         episode; the LIBERO env rewinds the clock on ``reset``.

@@ -10,10 +10,11 @@ exactly two documented joint ranges plus one part:
 * **J1: +/-135 deg** (standard v2 ships -200..+80 deg in the MJCF sign
   convention) — symmetric base yaw on both arms.
 * **J6: -45..+70 deg** (standard v2: +/-45 deg) — the extra +25 deg of
-  radial deviation enabled by Anvil's red wrist bracket.
-* **The red wrist bracket** — clamps the J6 rotor hub and lands on a
+  radial deviation enabled by Anvil's wrist support bracket.
+* **The wrist support bracket** — clamps the J6 rotor hub and lands on a
   plate bolted to the J7 motor end cap; represented in the MJCF by
-  stylised visual-only meshes on the ``link6`` gimbal bodies.
+  visual-only STL meshes from the hardware CAD, hosted on the ``link5``
+  forearm bodies (the bracket must not rotate with J6).
 
 Everything else — kinematics, meshes, native ``<position>`` actuators
 with per-class PD gains, the single-driven-finger grippers with the
@@ -25,7 +26,7 @@ comparison table) and fetched at a pinned SHA by
 ``openarm:anvil_v2_bimanual`` asset ref.
 
 Like the Enactic v2 adapter (:mod:`openral_hal.openarm`) this is a thin
-manifest-driven :class:`MujocoArmHAL` subclass (ADR-0023): the MJCF's
+manifest-driven :class:`MujocoArmHAL` subclass: the MJCF's
 own PD law handles dynamics, ``send_action`` writes target → ctrl.
 
 Action layout
@@ -244,7 +245,7 @@ ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(
     # framebuffer at its 640x480 default, so the sim sensors render at
     # 640x400 — same 16:10 aspect, fovy-matched intrinsics
     # (fy = 200 / tan(33 deg) ≈ 308).  Published by
-    # MujocoArmHAL.read_images via the SimSensorBridge (ADR-0065/0070).
+    # MujocoArmHAL.read_images via the SimSensorBridge.
     sensors=[
         SensorSpec(
             name="wrist_left",
@@ -296,7 +297,7 @@ ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(
         sim="openral_hal.anvil_openarm_v2:AnvilOpenArmV2MujocoHAL",
         real=None,
         # Same manifest-driven construction defaults as the Enactic v2
-        # arm; threaded by build_hal (ADR-0029).
+        # arm; threaded by build_hal.
         parameters=HalParameters(
             defaults={"settle_steps": 4, "gravity_enabled": False, "staleness_limit_s": 0.5}
         ),
@@ -304,7 +305,7 @@ ANVIL_OPENARM_V2_DESCRIPTION = RobotDescription(
     # MuJoCo wiring — the Anvil 2.0 bimanual MJCF fetched at a pinned
     # SHA by ``ensure_anvil_openarm_v2_mjcf`` (``openarm:anvil_v2_bimanual``).
     # No vendored URDF: upstream is xacro-only and, like ALOHA, the
-    # MuJoCo asset is the sim source of truth (ADR-0027 / ADR-0058).
+    # MuJoCo asset is the sim source of truth.
     #
     # qpos layout (18 slots, same as the Enactic v2 arm): left arm 0-6,
     # left fingers 7 + 8, right arm 9-15, right fingers 16 + 17.  The
@@ -372,11 +373,11 @@ class AnvilOpenArmV2MujocoHAL(MujocoArmHAL):
     ``openarm:anvil_v2_bimanual`` MJCF ref, the joint→qpos map that skips
     the follower fingers, two ``PASSTHROUGH`` hinge grippers,
     ``seed_ctrl_from_qpos``) lives in
-    :data:`ANVIL_OPENARM_V2_DESCRIPTION.sim` (ADR-0023).
+    :data:`ANVIL_OPENARM_V2_DESCRIPTION.sim`.
 
     What makes it the *Anvil* 2.0 rather than the stock v2 arm is
     entirely in the fetched MJCF: J1 clamped to +/-135 deg, J6 widened
-    to -45..+70 deg of radial deviation, and the red wrist bracket
+    to -45..+70 deg of radial deviation, and the wrist support bracket
     (visual-only) that enables it — see
     :mod:`openral_hal._anvil_openarm_v2_assets`.
 

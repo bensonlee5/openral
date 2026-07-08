@@ -1,4 +1,4 @@
-"""Unit tests for the robot-agnostic Isaac scene marshalling (ADR-0045 amendment).
+"""Unit tests for the robot-agnostic Isaac scene marshalling.
 
 Two halves, both GPU-free:
 

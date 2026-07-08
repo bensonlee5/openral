@@ -130,7 +130,7 @@ def configure_observability(
             parent's decision when one is in scope (so a cli.command
             sampled IN keeps its whole tick subtree), and untraced root
             spans are sampled at the given rate. Recommended for
-            ``openral.run.mode == "hardware"`` per ADR-0010 to keep
+            ``openral.run.mode == "hardware"`` to keep
             100 Hz over 24 h runs under the OTLP/gRPC headroom. Also
             reads ``OPENRAL_OTEL_SAMPLE_RATIO`` as a fallback.
 

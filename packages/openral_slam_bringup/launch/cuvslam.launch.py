@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ADR-0064 — stand-alone launch for cuVSLAM under ``/openral/visual_slam``.
+"""Stand-alone launch for cuVSLAM under ``/openral/visual_slam``.
 
 NVIDIA Isaac ROS Visual SLAM (cuVSLAM).
 This is the camera-based SLAM backend for **lidar-less** robots: it
 fills the same ``map→odom`` TF edge that ``slam_toolbox`` fills on lidar
-robots (ADR-0025), but from stereo / mono+IMU / RGB-D cameras instead of
+robots, but from stereo / mono+IMU / RGB-D cameras instead of
 a ``/scan``. Composed into
 ``packages/openral_rskill_ros/launch/sim_e2e.launch.py`` when the
 ``slam_backend`` launch argument is ``visual`` (resolved from
@@ -18,7 +18,7 @@ CONFIGURE/ACTIVATE — the node is live once composed. It runs inside a
 stay intra-process zero-copy.
 
 The cuVSLAM engine ships as a precompiled NVIDIA library under an NVIDIA
-EULA — it is **not** bundled by OpenRAL (ADR-0064 license guard). This
+EULA — it is **not** bundled by OpenRAL (license guard). This
 launch only references the upstream ``isaac_ros_visual_slam`` package;
 the operator installs it on the target GPU host.
 

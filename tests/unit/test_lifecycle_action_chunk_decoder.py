@@ -1,4 +1,4 @@
-"""Regression test for the ADR-0028b ``/openral/safe_action`` decoder.
+"""Regression test for the ``/openral/safe_action`` decoder.
 
 The HAL lifecycle node's ``_on_safe_action`` callback used to hardcode
 every incoming chunk as :class:`ControlMode.JOINT_POSITION`, throwing

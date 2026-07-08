@@ -8,20 +8,20 @@ It decides *what to do next*; it never drives motors itself.
 
 - **Core (transport-agnostic):** [`openral_reasoner.ReasonerCore`](https://github.com/OpenRAL/openral/blob/master/python/reasoner/src/openral_reasoner/core.py)
 - **ROS 2 lifecycle node:** [`openral_reasoner_ros.reasoner_node`](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/) — full contract in its [README](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/README.md)
-- **Design:** [ADR-0018](../adr/0018-ros2-reasoner-supervisor.md) (graph + F4 tool-dispatch), [ADR-0039](../adr/0039-llm-task-planning-active-search.md) (active search), ADR-0043/0047/0056/0057 (query tools)
+- **Design:** covers the supervisor graph + tool-dispatch, active search, and the read-only query tools
 - **Design narrative (how it thinks):** [Reasoner Design & Decisions](reasoner-design.md) — the connective story across the decisions below, organized by logic problem (tick loop → grounding → decomposition → completion verdict → reward pairing → replanning → memory → LLM choice).
 
 > **Authority boundary.** The reasoner **never** publishes `openral_msgs/ActionChunk`.
 > Actuation lives behind the S1 skill runner (`/openral/execute_rskill` action
 > server) and the F5 safety boundary. The reasoner *proposes*; the C++ safety
-> kernel *disposes* (see [ADR-0020](../adr/0020-cpp-safety-kernel.md) + the [hazard log](hazard-log.md)).
+> kernel *disposes* (see the safety hazard log — private OpenRAL/management repo).
 
 ---
 
 ## Cadence & event model
 
-Per the [ADR-0018](../adr/0018-ros2-reasoner-supervisor.md) amendment of
-2026-05-25, the reasoner is **event-driven with a slow heartbeat**:
+As of the 2026-05-25 amendment,
+the reasoner is **event-driven with a slow heartbeat**:
 
 - **Heartbeat** — a periodic timer ticks at `tick_hz` (default **0.2 Hz**, one
   tick every 5 s). A heartbeat tick that sees no new event since the last
@@ -51,13 +51,13 @@ the provider's tool-use API returns a Pydantic-validated object, never free-form
 JSON. Extending the palette requires a new variant in `openral_core` **and** the
 matching dispatch in `reasoner_node` (CLAUDE.md §3).
 
-### Effect tools (ADR-0018 §4)
+### Effect tools
 
 | Tool (`tool=`) | Dispatch | Notes |
 |---|---|---|
-| `ExecuteRskillTool` (`execute_rskill`) | action goal on `/openral/execute_rskill` | `rskill_id`, `prompt`, `goal_params_json` (ADR-0026), `deadline_s`. Emits a `FailureTrigger` on rejection/abort/timeout. |
+| `ExecuteRskillTool` (`execute_rskill`) | action goal on `/openral/execute_rskill` | `rskill_id`, `prompt`, `goal_params_json`, `deadline_s`. Emits a `FailureTrigger` on rejection/abort/timeout. |
 | `LifecycleTransitionTool` (`lifecycle_transition`) | `<node>/change_state` service | `configure` / `activate` / `deactivate` / `cleanup` only — `shutdown` is reserved for the safety supervisor (CLAUDE.md §6). |
-| `EmitPromptTool` (`emit_prompt`) | publish on a `PromptStamped` topic | Stamps the active OTel `traceparent` into `metadata_json` (ADR-0018 §6). Used to stage multi-step plans / cascade prompts. |
+| `EmitPromptTool` (`emit_prompt`) | publish on a `PromptStamped` topic | Stamps the active OTel `traceparent` into `metadata_json`. Used to stage multi-step plans / cascade prompts. |
 | `ReloadGstPipelineTool` (`reload_gst_pipeline`) | `/openral/sensors/<id>/reload_pipeline` service | ⚠️ **log-and-acknowledge stub** today — the F6 sensor-service IDL is not yet on disk ([GH-126](https://github.com/OpenRAL/openral/issues/126)). |
 
 ### Read-only query tools
@@ -66,28 +66,28 @@ These hold **no actuation authority** — they read state and feed the result ba
 to the LLM as a re-prompt. Each is gated by a `ToolPalette` flag and only offered
 when the corresponding service is present.
 
-| Tool (`tool=`) | Reads | Gate | ADR |
-|---|---|---|---|
-| `RecallObjectTool` (`recall_object`) | spatial-memory scene graph — *"where did I last see X?"* | `spatial_memory_available` | 0038/0039 |
-| `ResolvePlaceTool` (`resolve_place`) | spatial memory → navigation goal pose + path | `spatial_memory_available` | 0039 |
-| `LocateInViewTool` (`locate_in_view`) | on-demand open-vocab detector — *"where is X right now?"* | `detector_available` | 0043/0056 |
-| `QuerySceneTool` (`query_scene`) | scene VLM (Qwen3.5-4B) — free-text *"did the grasp succeed?"* | `scene_query_available` | 0047 |
-| `QueryTaskProgressTool` (`query_task_progress`) | reward monitor (Robometer-4B) — windowed `progress_now` / `success_now` / trends / `stalled` | `task_progress_available` | 0057 |
+| Tool (`tool=`) | Reads | Gate |
+|---|---|---|
+| `RecallObjectTool` (`recall_object`) | spatial-memory scene graph — *"where did I last see X?"* | `spatial_memory_available` |
+| `ResolvePlaceTool` (`resolve_place`) | spatial memory → navigation goal pose + path | `spatial_memory_available` |
+| `LocateInViewTool` (`locate_in_view`) | on-demand open-vocab detector — *"where is X right now?"* | `detector_available` |
+| `QuerySceneTool` (`query_scene`) | scene VLM (Qwen3.5-4B) — free-text *"did the grasp succeed?"* | `scene_query_available` |
+| `QueryTaskProgressTool` (`query_task_progress`) | reward monitor (Robometer-4B) — windowed `progress_now` / `success_now` / trends / `stalled` | `task_progress_available` |
 
 `locate_in_view` carries an optional `detector` selector — `omdet-turbo-locator`
 (fast, in-process) for simple "find X", `locateanything-3b` for complex referring
 expressions. `recall_object` *remembers*; `locate_in_view` *looks now*.
 
-### Memory & mission tools (ADR-0072 / ADR-0073)
+### Memory & mission tools
 
 These edit the reasoner's own state — its `MEMORY.md` file and its task ledger —
 never the robot. They are advisory and hold no actuation authority.
 
-| Tool (`tool=`) | Effect | ADR |
-|---|---|---|
-| `MemoryWriteTool` (`memory_write`) | the reasoner's first **write-capable** variant — `add` / `update` / `supersede` / `delete` an entry in the self-maintained `MEMORY.md` | 0072 |
-| `MemorySearchTool` (`memory_search`) | read-only query over the archival memory log | 0072 |
-| `DecomposeMissionTool` (`decompose_mission`) | write the deterministic `MissionState` task queue — populate/replace it, or flat-splice a blocked task into finer subtasks (`subdivide_active`) | 0073 |
+| Tool (`tool=`) | Effect |
+|---|---|
+| `MemoryWriteTool` (`memory_write`) | the reasoner's first **write-capable** variant — `add` / `update` / `supersede` / `delete` an entry in the self-maintained `MEMORY.md` |
+| `MemorySearchTool` (`memory_search`) | read-only query over the archival memory log |
+| `DecomposeMissionTool` (`decompose_mission`) | write the deterministic `MissionState` task queue — populate/replace it, or flat-splice a blocked task into finer subtasks (`subdivide_active`) |
 
 ---
 
@@ -95,7 +95,7 @@ never the robot. They are advisory and hold no actuation authority.
 
 Three S2 capabilities layer on top of the tool surface:
 
-- **Playbooks (`kind: playbook`, ADR-0072).** At palette-seed time the reasoner
+- **Playbooks (`kind: playbook`).** At palette-seed time the reasoner
   gathers installed, capability-matched playbook rSkills, reads their
   `PLAYBOOK.md` bodies, and appends a `## PLAYBOOKS` section to the system prompt
   — so the LLM follows the relevant authored decision procedure when its trigger
@@ -103,13 +103,13 @@ Three S2 capabilities layer on top of the tool surface:
   palette; every motion still crosses `execute_rskill` + the C++ safety kernel.
   Six ship in-tree: `decompose-mission`, `verify-outcome`, `clarify-ambiguity`,
   `preflight-reach`, `stage-for-manipulation`, `find-object`.
-- **Self-maintained `MEMORY.md` (ADR-0072).** A persistent semantic memory
+- **Self-maintained `MEMORY.md`.** A persistent semantic memory
   (`MemoryStore` / `MemoryEntry`) the reasoner reads each tick and edits through
   `memory_write`, with `consolidate()` (drop duplicates) and a
   `to_context_block(cap=N)` render that bounds the always-on `## MEMORY` block on
   a long-running robot. Loaded at deploy time via `openral deploy sim/run
   --memory-dir` (alongside `scene_graph.json` and the 2D nav map).
-- **Sequential missions (ADR-0073).** The operator goal seeds a single-task
+- **Sequential missions.** The operator goal seeds a single-task
   `MissionState`; the LLM decomposes it into the ordered queue via
   `decompose_mission` with at most one `active` (or `verifying`) `TaskState`.
   The queue advances only when the active task passes the reward/critic gate,
@@ -132,7 +132,7 @@ installed rSkills by:
 - `role == "s1"` (S0/S2 excluded from the actuation palette),
 - license posture (commercial-deployment gate).
 
-Per ADR-0022, the LLM sees **one tool per skill** (`execute_rskill__<slug>`) with
+The LLM sees **one tool per skill** (`execute_rskill__<slug>`) with
 a real description + action/object/scene discriminators, not one opaque tool with
 an enum. Continuous detectors are surfaced as `continuous_detectors` so the LLM is
 told *what is already tracked for free* and only reaches for `locate_in_view` on
@@ -205,7 +205,7 @@ subscribed topics: **world state** (`/openral/world_state_slow`, 5 Hz),
 **failures** (the `/openral/failure/*` bus), **perception** events, and pending
 **operator prompts**. The reasoner does **not** read pixels directly — vision
 reaches it through the perception tools (`query_scene`, `query_task_progress`,
-`locate_in_view`) and the GStreamer perception bus (ADR-0037).
+`locate_in_view`) and the GStreamer perception bus.
 
 ---
 
@@ -257,7 +257,7 @@ safety, world-state, and perception nodes.
 ## In development
 
 The reasoner core, playbooks, the self-maintained `MEMORY.md`, and the sequential
-mission task-queue have all landed on this integration branch (ADR-0072/0073).
+mission task-queue have all landed on this integration branch.
 Still in flight:
 
 - **Dashboard mission card** — surfacing the `MissionState` ledger + the reward
@@ -269,9 +269,9 @@ Still in flight:
 
 - [Reasoner Design & Decisions](reasoner-design.md) — the **why** behind every mechanism on this page, organized by logic problem.
 - [`openral_reasoner_ros` README](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/README.md) — full ROS wrapper contract, provider presets, baseline LLM configs.
-- [ADR-0018](../adr/0018-ros2-reasoner-supervisor.md) — reasoner/supervisor graph + F4 dispatch.
-- [ADR-0025](../adr/0025-reasoner-managed-background-services.md) — reasoner-managed SLAM/Nav2 background services.
-- [ADR-0039](../adr/0039-llm-task-planning-active-search.md) — LLM task planning & active search.
-- [ADR-0072](../adr/0072-reasoner-playbooks-and-self-maintained-memory.md) — playbooks + self-maintained MEMORY.md.
-- [ADR-0073](../adr/0073-reasoner-success-gating-and-task-queue.md) — success-gating + sequential mission task queue.
+- The reasoner/supervisor graph + tool-dispatch design.
+- Reasoner-managed SLAM/Nav2 background services.
+- LLM task planning & active search.
+- Playbooks + self-maintained MEMORY.md.
+- Success-gating + sequential mission task queue.
 - [rSkills reference](rskills.md) — the `kind: detector` / `vlm` / `reward` / `ros_action` / `playbook` skills the reasoner reads and dispatches.

@@ -1,4 +1,4 @@
-"""Tests for the ``kind: "reward"`` rSkill manifest variant (ADR-0057).
+"""Tests for the ``kind: "reward"`` rSkill manifest variant.
 
 Covers:
 - :class:`~openral_core.schemas.RewardContract` Hypothesis round-trip +
@@ -56,7 +56,7 @@ def _ordered_range(draw: st.DrawFn) -> tuple[float, float]:
 
 @st.composite
 def _reward_contract_st(draw: st.DrawFn) -> RewardContract:
-    # check_floor ≤ success_threshold is a model invariant (ADR-0074), so draw
+    # check_floor ≤ success_threshold is a model invariant, so draw
     # the threshold first and the floor within [0, threshold].
     success_threshold = draw(_prob)
     check_floor = draw(

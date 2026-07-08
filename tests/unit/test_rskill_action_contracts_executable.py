@@ -1,21 +1,21 @@
 """Repo-wide safeguard: every VLA rSkill's ``action_contract`` is executable
-on each declared embodiment (ADR-0036 §4).
+on each declared embodiment.
 
-This is the regression net behind the worked ADR-0036 sweeps
+This is the regression net behind the worked sweeps
 (``test_libero_action_contracts.py`` / ``test_cartesian_rskill_contracts.py``):
 those assert the *specific* skills that were fixed; this walks **every**
 ``rskills/*/rskill.yaml`` so a *future* cartesian rSkill cannot silently ship a
 bare ``action_contract.dim`` (no ``representation`` / ``slots``) that the
 skill_runner would mis-dispatch as ``JOINT_POSITION`` on a non-matching robot —
-the exact bug ADR-0036 fixed for the LIBERO class.
+the exact bug this guards against for the LIBERO class.
 
 The check is pure ``openral_core`` (representation / slots / dim vs the robot's
 joints + a sim-executable control-mode set). It deliberately does **not** import
 ``openral_reasoner_ros.reasoner_node`` (that pulls rclpy + openral_msgs); the
-small ADR-0036 gate rule is re-derived here so the validator runs under a bare
+small gate rule is re-derived here so the validator runs under a bare
 ``uv run --no-sync`` without a ROS environment. It mirrors
 ``reasoner_node._required_control_modes`` and uses the canonical
-``openral_core.SIM_EXECUTABLE_CONTROL_MODES`` (ADR-0036 amendment 2026-06-04 —
+``openral_core.SIM_EXECUTABLE_CONTROL_MODES`` (amended 2026-06-04 —
 single source of truth shared by the reasoner gate and the HAL packers, so this
 validator can no longer drift from what the deploy-sim path actually executes).
 
@@ -68,16 +68,16 @@ _RSKILLS_ROOT = _REPO / "rskills"
 _ROBOTS_ROOT = _REPO / "robots"
 
 # Deploy-sim executable control modes are the canonical
-# ``openral_core.SIM_EXECUTABLE_CONTROL_MODES`` (ADR-0036 amendment 2026-06-04):
+# ``openral_core.SIM_EXECUTABLE_CONTROL_MODES`` (amended 2026-06-04):
 # the exact set the default sim HAL action-packers
 # (``openral_hal.sim_attached``) can pack + execute via the robosuite
 # OSC / composite controller in the MuJoCo twin, pinned to the packers by
 # ``tests/unit/test_sim_executable_modes_match_packers.py``. ``COMPOSITE_MODE`` is
-# included (the robosuite-composite multiplexer flag, ADR-0028d); the modes that
+# included (the robosuite-composite multiplexer flag); the modes that
 # no packer implements (JOINT_TORQUE / JOINT_TRAJECTORY / CARTESIAN_POSE /
 # GRIPPER_BINARY) are excluded — admitting them here would let an
 # unexecutable-in-sim contract pass declaration validation, the very kind of
-# latent false-admit ADR-0036 removed from the gate.
+# latent false-admit this gate removes.
 
 # Embodiment-tag aliases → canonical ``robots/<dir>`` fixture name. The closed
 # ``EmbodimentTag`` vocabulary already uses ``franka_panda`` directly, but tags
@@ -119,13 +119,13 @@ def _resolve_tag_to_fixture(tag: str, fixtures: set[str]) -> str | None:
 # SKIPS validation for these names but ALSO asserts each is *still* failing
 # (below) so the exception self-removes the moment the skill is fixed.
 #
-# (smolvla-metaworld was here until ADR-0071 Phase 4 added the
-# ``DELTA_EE_3D_PLUS_GRIPPER`` representation it needed; its contract now
+# (smolvla-metaworld was here until the
+# ``DELTA_EE_3D_PLUS_GRIPPER`` representation it needed was added; its contract now
 # declares a 3-D EE delta + gripper and passes the rule, so it was removed.)
 _KNOWN_DEFERRED: dict[str, str] = {
     "OpenRAL/rskill-3d-diffuser-actor-rlbench": (
         "3D Diffuser Actor emits end-effector cartesian_pose trajectories; the "
-        "deploy-sim OSC path executes delta/joint modes only (ADR-0036). RLBench "
+        "deploy-sim OSC path executes delta/joint modes only. RLBench "
         "runs it via its own Mover, not the deploy-sim OSC path; tracked separately"
     ),
 }
@@ -189,7 +189,7 @@ def _check_action_contract_executable(manifest: RSkillManifest, robot: RobotDesc
                 f"{n_joints} actuated joints. A bare-dim contract is joint-space; this mismatch "
                 f"means a non-joint (likely cartesian) skill is under-declared and would be "
                 f"mis-dispatched as JOINT_POSITION. Declare action_contract.representation "
-                f"(e.g. delta_ee_6d_plus_gripper) or explicit slots. See ADR-0036."
+                f"(e.g. delta_ee_6d_plus_gripper) or explicit slots."
             )
         return
 
@@ -208,7 +208,7 @@ def _check_action_contract_executable(manifest: RSkillManifest, robot: RobotDesc
     assert not unexecutable, (
         f"rSkill {manifest.name!r} on robot {robot.name!r} requires control modes "
         f"{sorted(m.value for m in unexecutable)} that the deploy-sim OSC path cannot execute. "
-        f"Executable set: {sorted(m.value for m in SIM_EXECUTABLE_CONTROL_MODES)}. See ADR-0036."
+        f"Executable set: {sorted(m.value for m in SIM_EXECUTABLE_CONTROL_MODES)}."
     )
 
 

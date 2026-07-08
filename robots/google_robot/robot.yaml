@@ -1,6 +1,6 @@
 # RobotDescription — Google Everyday Robot (sim-only embodiment).
 #
-# ADR-0010. Per ADR-0007 (robot/sim split) every robot.yaml is supposed
+# Per the sim-only pseudo-embodiment exception to the robot/sim split convention, every robot.yaml is supposed
 # to describe a *physical* embodiment, but Google Robot is the same
 # exception as pusht_2d: there is no openly available real-hardware
 # adapter — the robot was internal to Google. This manifest exists so
@@ -22,7 +22,7 @@ name: "google_robot"
 embodiment_kind: "mobile_manipulator"
 base_frame: "base_link"
 
-# ADR-0027 — robot_state_publisher: `assets.urdf` deliberately unset.
+# robot_state_publisher: `assets.urdf` deliberately unset.
 # The Google "Everyday Robot" (RT-1 platform) has no public URDF —
 # `awesome-robot-descriptions` and `robot_descriptions` both lack
 # one, and `google-research/robotics_transformer` ships training
@@ -120,7 +120,7 @@ capabilities:
   supported_control_modes:
     - "joint_position"
     - "cartesian_pose"
-    # ADR-0071 — the parallel gripper accepts position commands.
+    # Per the gripper/task-space joint-role convention — the parallel gripper accepts position commands.
     - "gripper_position"
   supported_vla_embodiments: ["google_robot"]
   embodiment_tags:
@@ -162,6 +162,6 @@ sensors:
 # ship MJCF/USD assets reverse-engineered from RT-1 / RT-2 paper figures.
 sdk_kind: "open"
 
-# observation_spec / action_spec deliberately omitted (ADR-0007). The
+# observation_spec / action_spec deliberately omitted, per the robot/sim split convention. The
 # per-sim IO contracts live in the matching scene adapters.
 schema_version: '0.2'

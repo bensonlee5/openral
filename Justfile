@@ -147,8 +147,8 @@ fmt:
     uv run ruff check --fix .
 
 # Build the consolidated x86 deploy image — Ubuntu 24.04 + Py 3.12 +
-# CUDA 13 + ROS 2 Jazzy + GStreamer (ADR-0010 amendment "Single-Dockerfile
-# consolidation + CUDA-13/DeepStream-9 alignment"). This is the ONLY
+# CUDA 13 + ROS 2 Jazzy + GStreamer (the single-Dockerfile
+# consolidation + CUDA-13/DeepStream-9 alignment). This is the ONLY
 # supported deployment surface today; the per-flavour Dockerfiles
 # `.x86-ros`, `.x86-deepstream`, `.l4t` of PR #93 have been folded into
 # this one or dropped. ENTRYPOINT is `/entrypoint.sh openral deploy`.
@@ -156,34 +156,11 @@ docker-build-x86:
     docker buildx build -f docker/inference/Dockerfile.x86 \
         -t openral:x86-latest .
 
-# Opt-in DeepStream variant (ADR-0010 amendment "Single-Dockerfile
-# consolidation"). DeepStream is proprietary + EULA-restricted; this
-# target refuses to run unless the user has downloaded the SDK tarball
-# locally (signalling EULA acceptance). The tarball lives at
-# `docker/inference/deepstream/deepstream_sdk_v9.0.0_x86_64.tbz2`
-# (gitignored) and is loaded via a BuildKit named context so it stays
-# OUT of the default build context for non-DS builds.
-# The resulting image is NEVER pushed to GHCR — it's for local /
-# private-registry use only. Read `docker/inference/README.md` first.
-docker-build-x86-deepstream:
-    @test -f docker/inference/deepstream/deepstream_sdk_v9.0.0_x86_64.tbz2 || ( \
-        echo ""; \
-        echo "ERROR: deepstream_sdk_v9.0.0_x86_64.tbz2 not found in docker/inference/deepstream/."; \
-        echo ""; \
-        echo "Before building this image you must:"; \
-        echo "  1. Read docker/inference/README.md (EULA implications)."; \
-        echo "  2. Read the NVIDIA DeepStream EULA at"; \
-        echo "     https://developer.download.nvidia.com/assets/Deepstream/LicenseAgreement-NGC.pdf"; \
-        echo "  3. Download the SDK from https://developer.nvidia.com/deepstream-getting-started"; \
-        echo "     (~1.5 GB; requires NGC account)."; \
-        echo "  4. Move the tarball into docker/inference/deepstream/."; \
-        echo ""; \
-        exit 1 \
-    )
-    docker buildx build -f docker/inference/Dockerfile.x86 \
-        --build-arg WITH_DEEPSTREAM_STAGE=on \
-        --build-context ds=docker/inference/deepstream/ \
-        -t openral:x86-deepstream-latest .
+# The DeepStream + TensorRT variant (`openral:x86-deepstream-latest`) is
+# now built from openral-pro's `docker/Dockerfile.pro`, which FROMs the
+# image `docker-build-x86` produces. It is proprietary +
+# EULA-restricted and never pushed to GHCR — see that repo, not this
+# Justfile, for the build target.
 
 # Live ROS-tee round-trip inside the consolidated x86 image (which
 # always carries ROS 2 Jazzy after the consolidation): starts the
@@ -196,7 +173,7 @@ docker-smoke-x86-ros-tee: docker-build-x86
         openral:x86-latest \
         python /workspace/smoke_ros_tee.py
 
-# Live perception-tee round-trip inside the x86 image (ADR-0018 F6):
+# Live perception-tee round-trip inside the x86 image:
 # starts a PerceptionEventPublisher fed by a videotestsrc pattern=ball
 # event leg, spins a real rclpy subscriber on
 # /openral/perception/motion, asserts at least one PromptStamped
@@ -214,8 +191,8 @@ docker-smoke-x86-perception-tee: docker-build-x86
         openral:x86-latest \
         python /workspace/smoke_perception_tee.py
 
-# Live reasoner + prompt-router round-trip inside the x86 image
-# (ADR-0018 F4 + F10): spins a real PromptRouterNode + ReasonerNode in
+# Live reasoner + prompt-router round-trip inside the x86 image:
+# spins a real PromptRouterNode + ReasonerNode in
 # the same executor, publishes one operator prompt on
 # /openral/prompt_in/cli, asserts the reasoner's EmitPromptTool reply
 # lands on /openral/prompt with frame_id=openral_reasoner AND a
@@ -252,7 +229,7 @@ docker-smoke-x86-safety-kernel: docker-build-x86
 # system GLib does not coexist in the same process as torch's bundled GLib
 # (segfault on x86 dev hosts where ``gi`` resolves to /usr/lib/python3/
 # dist-packages). The Docker images (Commit #7) install gi from apt under a
-# matching GLib so both can co-load. See ADR-0010 amendment for context.
+# matching GLib so both can co-load.
 #
 # The second invocation only runs when ``gi`` (PyGObject) is importable —
 # pytest 8 exits 4 (USAGE_ERROR) on ``-q + no collectors`` for the
@@ -301,6 +278,7 @@ test-doctest:
         python/hal/src/openral_hal/lifecycle.py \
         python/hal/src/openral_hal/so100_follower.py \
         python/hal/src/openral_hal/ros_control.py \
+        python/rskill/src/openral_rskill/backend_registry.py \
         python/rskill/src/openral_rskill/base.py \
         python/rskill/src/openral_rskill/engine_cache.py \
         python/rskill/src/openral_rskill/loader.py \
@@ -421,7 +399,7 @@ ros2-env:
 # test-ros2.yml`, which also activates the venv before colcon.
 #
 # The list mirrors every colcon package currently on disk under packages/ and
-# cpp/ that is wired into the ADR-0018 ROS 2 graph (F1 skill_runner,
+# cpp/ that is wired into the ROS 2 graph (F1 skill_runner,
 # F4 reasoner, F5 safety, F8 world_state, F10 prompt_router, plus the
 # C++ safety kernel from PR #138 and the HAL nodes). When a new ROS 2
 # package lands under packages/ or cpp/, add it here so `just ros2-build`
@@ -471,9 +449,9 @@ ros2-build:
 # ExternalProject_Add CMAKE_ARGS for the upstream otel-cpp 1.16.1 tree.
 
 # Optional: install the NVIDIA Isaac ROS stack (cuVSLAM + nvblox) for the
-# ADR-0064 camera-based SLAM backend used by lidar-less robots
+# camera-based SLAM backend used by lidar-less robots
 # (`slam_backend:=visual`). NOT part of bootstrap/quickstart — these are
-# closed-source NVIDIA binaries under an NVIDIA EULA (ADR-0064 license guard)
+# closed-source NVIDIA binaries under an NVIDIA EULA (license guard)
 # and a multi-GB download, needed only to run cuVSLAM/nvblox live. Requires
 # Ubuntu 24.04 (noble) x86_64 (or a supported Jetson), CUDA 13.0+, driver 580+.
 # Runs sudo (apt) — needs a real terminal for the password, so run it directly
@@ -557,7 +535,7 @@ ros2-test:
     colcon test-result --verbose
 
 # Run a SimEnvironment YAML config end-to-end via the eval registry/runner.
-# This is the canonical config-driven entry point — see ADR-0002.
+# This is the canonical config-driven entry point.
 sim-eval config *args:
     uv run openral sim run --config {{config}} {{args}}
 
@@ -584,7 +562,7 @@ _ensure-libero-config:
 # `--all-packages` is required: without it, `uv run --group libero` evicts
 # the workspace's `openral` console script (and other openral_* packages) when
 # uv switches dependency groups, breaking the next run with
-# "Failed to spawn: `openral`". `--rskill` is required by ADR-0009 — the YAML
+# "Failed to spawn: `openral`". `--rskill` is required — the YAML
 # config carries the scene/task/robot tuple while the rSkill manifest
 # carries the policy + action contract.
 sim-libero *args: _strip-hf-libero-egg _ensure-libero-config
@@ -596,7 +574,7 @@ sim-xvla-libero *args: _strip-hf-libero-egg _ensure-libero-config
 
 # LIBERO sim eval with π0.5 (SimScene tier; requires ≥8 GB VRAM; weights are non-commercial).
 sim-pi05-libero *args: _strip-hf-libero-egg _ensure-libero-config
-    MUJOCO_GL=egl uv run --all-packages --group libero openral sim run --config scenes/sim/libero_spatial.yaml --rskill rskill://rskills/pi05-libero-nf4 --save-video example_videos {{args}}
+    MUJOCO_GL=egl uv run --all-packages --group libero openral sim run --config scenes/sim/libero_spatial.yaml --rskill rskill://rskills/pi05-libero-int8 --save-video example_videos {{args}}
 
 # MetaWorld push-v2 with SmolVLA — 1-episode demo via the BenchmarkScene tier
 # (no SimScene sibling for MetaWorld today). `--no-update-manifest` keeps the
@@ -643,10 +621,6 @@ sim-custom *args:
 sim-act-libero *args: _strip-hf-libero-egg _ensure-libero-config
     MUJOCO_GL=egl uv run --all-packages --group libero openral sim run --config scenes/sim/libero_spatial.yaml --rskill rskill://rskills/act-libero --save-video example_videos {{args}}
 
-# RoboCasa PickPlaceCounterToCabinet with π0.5 (SimScene tier; NF4 already; ~5 GB VRAM).
-sim-pi05-robocasa *args:
-    MUJOCO_GL=egl uv run --all-packages --group robocasa openral sim run --config scenes/sim/robocasa_pnp.yaml --rskill rskill://rskills/pi05-robocasa365-human300-nf4 --save-video example_videos {{args}}
-
 # Full end-to-end audit of every YAML under scenes/.
 # 1 episode per config, real GPU rollout (CLAUDE.md §1.11–§1.12), JSON report
 # written to outputs/audit_sim_configs.json. Per-config timeout 10 min.
@@ -689,7 +663,7 @@ schema-export:
 skill-new id:
     uv run openral skill new {{ id }}
 
-# ADR-0020 — build just the C++ safety kernel (and its dependencies).
+# Build just the C++ safety kernel (and its dependencies).
 # Requires a sourced ROS 2 environment and the workspace venv on $PATH so
 # rosidl_adapter picks up empy 3.x.
 safety-kernel-build:
@@ -698,7 +672,7 @@ safety-kernel-build:
         --cmake-args -DBUILD_TESTING=ON \
                      -DPython3_EXECUTABLE=$(which python)
 
-# ADR-0020 — run the C++ kernel's gtest + lifecycle test suite. CI parity
+# Run the C++ kernel's gtest + lifecycle test suite. CI parity
 # with `colcon test`; linter failures (cpplint, flake8, pep257,
 # uncrustify, xmllint) are reported but do not gate the recipe — the
 # functional gtest binaries do.
@@ -708,7 +682,7 @@ safety-kernel-test:
     colcon test-result --verbose --test-result-base \
         build/openral_safety_kernel/test_results/openral_safety_kernel
 
-# ADR-0020 — clang-format + clang-tidy. Requires both binaries on $PATH.
+# clang-format + clang-tidy. Requires both binaries on $PATH.
 safety-kernel-lint:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -724,14 +698,14 @@ safety-kernel-lint:
         echo "clang-tidy not on PATH — skipping (CI parity gate)"
     fi
 
-# ADR-0020 — run safety-kernel sim tests with real GPU + ROS. Skips
+# Run safety-kernel sim tests with real GPU + ROS. Skips
 # cleanly when the requested config is absent or no GPU is detected.
 sim-safety config *args:
     MUJOCO_GL=egl uv run --group sim openral sim run \
         --config scenes/{{config}} \
         {{args}}
 
-# ADR-0020 — HIL safety tests for a robot (today: so100 only). Mirrors
+# HIL safety tests for a robot (today: so100 only). Mirrors
 # the existing `hil` recipe's no-hardware skip semantics.
 hil-safety robot:
     #!/usr/bin/env bash

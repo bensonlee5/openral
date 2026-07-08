@@ -1,4 +1,4 @@
-"""RoboTwin 2.0 SAPIEN dual-arm benchmark backend (ADR-0061).
+"""RoboTwin 2.0 SAPIEN dual-arm benchmark backend.
 
 Exercises the openral-side backend, the shipped scene/suite YAMLs, the
 ``aloha_agilex`` robot manifest, and the ``smolvla-robotwin`` rSkill — all without
@@ -13,7 +13,7 @@ Covers:
    unprovisioned and auto-provision is off.
 4. Scene + suite YAMLs validate at the official RoboTwin horizon (sapien backend,
    max_steps 300, n_episodes 100).
-5. The ``smolvla-robotwin`` rSkill loads and the ADR-0060 task-data gate accepts it
+5. The ``smolvla-robotwin`` rSkill loads and the task-data gate accepts it
    on every ``robotwin/*`` scene and rejects a foreign scene.
 6. The ``aloha_agilex`` robot manifest (14-DoF, 3 cameras) + ``SAPIEN`` enum.
 """
@@ -290,7 +290,7 @@ def test_aloha_agilex_manifest() -> None:
     assert "aloha_agilex" in r.capabilities.embodiment_tags
 
 
-# ─── rSkill + ADR-0060 task-data gate ────────────────────────────────────────
+# ─── rSkill + task-data gate ─────────────────────────────────────────────────
 
 
 def _robotwin_rskill() -> RSkillManifest:

@@ -1,11 +1,11 @@
-"""Shared gaze geometry — look-at rotations and camera gaze poses (ADR-0044; ADR-0065).
+"""Shared gaze geometry — look-at rotations and camera gaze poses.
 
 Promotes the look-at math that was previously triplicated across the MuJoCo
 scene composers (``openral_sim.backends.{so101_box,openarm_robosuite,
 tabletop_push}._assets``) into one public helper, and adds the full-pose
 variant the ``rskill-moveit-look-at`` rSkill consumes.
 
-Lives in ``openral_core`` (ADR-0065) so every layer can compute camera
+Lives in ``openral_core`` so every layer can compute camera
 orientations from one source — in particular the layer-0 HAL camera rig
 (``openral_hal._camera_rig``) places manifest cameras without a backward
 dependency on world-state (layer 2). ``openral_world_state.geometry``
@@ -18,7 +18,7 @@ Camera conventions differ per consumer, so the **view axis is explicit**:
 - ``"-z"`` — MuJoCo cameras: look along local -Z with +Y up in the image.
 - ``"+z"`` — ROS optical frames (REP-103 ``*_optical``): +Z forward, +X right,
   +Y down.
-- ``"+x"`` — body-frame forward (the ADR-0038 approach-viewpoint convention:
+- ``"+x"`` — body-frame forward (the approach-viewpoint convention:
   +X forward, +Z up).
 """
 
@@ -199,7 +199,7 @@ def compute_gaze_pose(
 ) -> Pose6D:
     """Full 6-DOF camera pose at ``camera_xyz`` whose view axis hits ``target_xyz``.
 
-    The pose the ``rskill-moveit-look-at`` rSkill (ADR-0044 Phase 3) plans the
+    The pose the ``rskill-moveit-look-at`` rSkill plans the
     camera frame to: position fixed at ``camera_xyz``, orientation from
     :func:`look_at_quat_wxyz`. Defaults to the ROS optical-frame convention
     (``"+z"`` forward) since real camera ``frame_id``s are optical frames.

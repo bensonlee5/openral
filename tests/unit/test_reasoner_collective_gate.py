@@ -1,4 +1,4 @@
-"""Unit slice for the collective-target detector (ADR-0075).
+"""Unit slice for the collective-target detector.
 
 A skill acts on exactly ONE specific object, so the reasoner refuses to actuate
 while the active task targets a collective/quantified set ("put ALL the objects

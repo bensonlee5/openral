@@ -1,4 +1,4 @@
-"""ADR-0018 F7 — bag↔OTel correlator end-to-end against a real mcap file.
+"""bag↔OTel correlator end-to-end against a real mcap file.
 
 Per CLAUDE.md §1.11 — no mocks. The bag is a real ``mcap.writer.Writer``
 output containing both a ``jsonschema``-encoded message (the encoding
@@ -101,7 +101,7 @@ def test_read_bag_extracts_trace_id_from_both_encodings(sample_bag: Path) -> Non
 def test_read_bag_extracts_raw_trace_id_and_span_id_from_tick(tmp_path: Path) -> None:
     """ISSUE-109: /openral/tick carries raw trace_id (32 hex) + span_id (16 hex).
 
-    Unlike the ADR-0018 ROS IDL messages (which pack a full W3C
+    Unlike the ROS IDL messages that support tracing (which pack a full W3C
     traceparent into a single ``trace_id`` field), the dataset Tick
     schema carries the two ids as separate raw-hex fields. The reader
     must index that 32-hex value directly and reconstruct the full

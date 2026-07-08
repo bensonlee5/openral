@@ -7,9 +7,8 @@ gripper). The MetaWorld MT50 benchmark simulates this same robot through
 action contract (4-D `agent_pos` state, 4-D delta-XYZ-plus-gripper
 action) lives in the matching scene adapter at
 [`python/sim/src/openral_sim/adapters/metaworld.py`](../../python/sim/src/openral_sim/adapters/metaworld.py),
-not in this manifest. See
-[ADR-0007](../../docs/adr/0007-robot-sim-split.md) for the
-robot-vs-sim split rationale.
+not in this manifest. This follows the
+robot/sim split convention.
 
 ## At a glance
 
@@ -31,8 +30,8 @@ ships in tree today.
 
 ## Why "physical robot only"
 
-Same rationale as `franka_panda` — see
-[ADR-0007](../../docs/adr/0007-robot-sim-split.md). The manifest
+Same rationale as `franka_panda` — the
+robot/sim split convention. The manifest
 describes the physical Sawyer; the MetaWorld scene adapter translates
 to/from MetaWorld's 4-D action / observation conventions inside the
 runner.
@@ -49,6 +48,6 @@ runner.
 
 ## See also
 
-- [`docs/adr/0007-robot-sim-split.md`](../../docs/adr/0007-robot-sim-split.md) — robot-vs-sim split rationale.
+- The robot/sim split convention — robot-vs-sim split rationale.
 - [`docs/reference/vla_compatibility.md`](../../docs/reference/vla_compatibility.md) §3.2 — MetaWorld VLA matrix.
 - [`python/sim/src/openral_sim/adapters/metaworld.py`](../../python/sim/src/openral_sim/adapters/metaworld.py) — sim-side IO contract.

@@ -27,7 +27,7 @@ from openral_rskill.loader import discover_intree_rskills
 #     `manifest.processors is None` and uses the snapshot_download path.
 #   - gr00t-n17-libero: GR00T checkpoints carry norm stats in their own
 #     `experiment_cfg/` metadata, not lerobot processor JSONs, and run
-#     out-of-process via the GR00T sidecar (ADR-0046). `gr00t` is
+#     out-of-process via the GR00T sidecar. `gr00t` is
 #     deliberately excluded from `_MODERN_PROCESSOR_FAMILIES` for the same
 #     reason.
 _LEGACY_NO_PROCESSORS_ALLOWLIST: frozenset[str] = frozenset(
@@ -67,10 +67,9 @@ def test_every_modern_intree_manifest_declares_processors() -> None:
     schema-level contract that forbids them from carrying a ``processors``
     block at all:
 
-    * Wrapped-ROS rSkills (``kind: ros_action`` / ``ros_service`` per
-      ADR-0024) carry no policy weights and therefore no preprocessor
-      JSONs.
-    * Detector rSkills (``kind: detector`` per ADR-0037) are perception
+    * Wrapped-ROS rSkills (``kind: ros_action`` / ``ros_service``) carry no
+      policy weights and therefore no preprocessor JSONs.
+    * Detector rSkills (``kind: detector``) are perception
       producers with an exported ONNX/TensorRT engine and no lerobot
       ``PolicyProcessorPipeline`` — ``RSkillManifest._check_kind_consistency``
       FORBIDS ``processors`` for this kind.
@@ -84,8 +83,8 @@ def test_every_modern_intree_manifest_declares_processors() -> None:
     for name, manifest in manifests:
         # Non-VLA kinds don't carry a lerobot policy; `processors` is
         # `None` by construction and the manifest-level validator forbids
-        # it from being set (ADR-0024 wrapped-ROS, ADR-0037 detector,
-        # ADR-0047 scene VLM, ADR-0057 reward monitor, ADR-0072 playbook).
+        # it from being set (wrapped-ROS, detector, scene VLM, reward
+        # monitor, playbook kinds).
         if manifest.kind in {
             "ros_action",
             "ros_service",
@@ -123,8 +122,8 @@ def test_every_processors_block_uses_per_file_uris() -> None:
     """The two URIs must point at distinct per-file artefacts."""
     manifests = list(discover_intree_rskills())
     for name, manifest in manifests:
-        # Non-VLA kinds have no processors block (ADR-0024 wrapped-ROS,
-        # ADR-0037 detector, ADR-0047 scene VLM).
+        # Non-VLA kinds have no processors block (wrapped-ROS,
+        # detector, scene VLM).
         if manifest.kind in {"ros_action", "ros_service", "detector", "vlm"}:
             continue
         if manifest.processors is None:

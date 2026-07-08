@@ -1,7 +1,7 @@
 {
   "$defs": {
     "SensorReaderBackend": {
-      "description": "Which :class:`SensorReader` implementation to instantiate.\n\nADR-0010 \u00a7SensorReader \u2014 four backends are reserved. ``opencv_thread``\nis the default and mirrors lerobot's per-camera background-thread\npattern. ``ros2_image`` subscribes to a ROS 2 image topic published by\na vendor driver. ``gstreamer`` runs a GStreamer pipeline whose appsink\ndelivers frames (NVMM / DMA-BUF on Jetson; CPU bytes on x86).\n\n``holoscan`` is **reserved-but-unimplemented**: ADR-0010 Amendment\n2026-05-12 evaluated NVIDIA Holoscan SDK as a parallel ingest backbone\nand deferred adoption (lean GStreamer with custom NvBufSurface glue\nwon the comparison). The enum value exists so a future PR can add\nthe backend additively without bumping the schema again; configs\nthat select it today raise ``ROSConfigError`` at factory time.",
+      "description": "Which :class:`SensorReader` implementation to instantiate.\n\nFour backends are reserved. ``opencv_thread``\nis the default and mirrors lerobot's per-camera background-thread\npattern. ``ros2_image`` subscribes to a ROS 2 image topic published by\na vendor driver. ``gstreamer`` runs a GStreamer pipeline whose appsink\ndelivers frames (NVMM / DMA-BUF on Jetson; CPU bytes on x86).\n\n``holoscan`` is **reserved-but-unimplemented**: a 2026-05-12 evaluation\nof NVIDIA Holoscan SDK as a parallel ingest backbone\ndeferred adoption (lean GStreamer with custom NvBufSurface glue\nwon the comparison). The enum value exists so a future PR can add\nthe backend additively without bumping the schema again; configs\nthat select it today raise ``ROSConfigError`` at factory time.",
       "enum": [
         "opencv_thread",
         "ros2_image",

@@ -2,7 +2,7 @@
 
 These tests load the **Anvil OpenARM 2.0** bimanual MJCF — the standard
 Enactic OpenArm v2 with Anvil's documented range deltas (J1 +/-135 deg,
-J6 -45..+70 deg of radial deviation) and the red wrist bracket — via
+J6 -45..+70 deg of radial deviation) and the wrist support bracket — via
 :mod:`openral_hal._anvil_openarm_v2_assets`, and exercise the full HAL
 lifecycle (connect → read_state → send_action → estop / disconnect)
 against a real ``mj_step`` loop.  No mocks; the closed-loop behaviour
@@ -218,22 +218,24 @@ class TestUpstreamSchema:
                 lo, hi = model.jnt_range[jid]
                 assert (lo, hi) == pytest.approx(expected, abs=1e-3), jname
 
-    def test_red_wrist_bracket_present(self) -> None:
+    def test_wrist_bracket_present(self) -> None:
         """The Anvil wrist bracket (the part that enables J6's +70 deg)
-        ships as visual-only red mesh geoms on both link6 bodies."""
+        ships as visual-only CAD mesh geoms hosted on both link5 forearm
+        bodies (it clamps the J6 hub, so it must not rotate with J6)."""
         model = mujoco.MjModel.from_xml_path(_ANVIL_MJCF)
         for side in ("left", "right"):
             gname = f"anvil_wrist_bracket_{side}"
             gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, gname)
             assert gid >= 0, f"bracket geom {gname!r} missing from the pinned MJCF"
-            bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"openarm_{side}_link6")
+            bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, f"openarm_{side}_link5")
             assert model.geom_bodyid[gid] == bid
             # Visual-only: must not take part in collision.
             assert model.geom_contype[gid] == 0
             assert model.geom_conaffinity[gid] == 0
-            # Red (via its material).
+            # Machined aluminum (via its material): bright and neutral.
             rgba = model.mat_rgba[model.geom_matid[gid]]
-            assert rgba[0] > 0.5 and rgba[1] < 0.2 and rgba[2] < 0.2, rgba
+            assert all(c > 0.5 for c in rgba[:3]), rgba
+            assert max(rgba[:3]) - min(rgba[:3]) < 0.1, rgba
 
     def test_wrist_cameras_present(self) -> None:
         model = mujoco.MjModel.from_xml_path(_ANVIL_MJCF)
@@ -287,7 +289,7 @@ class TestAnvilLifecycle:
 
     def test_connect_seeds_ctrl_from_qpos(self, hal: AnvilOpenArmV2MujocoHAL) -> None:
         # Driven by ``ANVIL_OPENARM_V2_DESCRIPTION.sim.seed_ctrl_from_qpos``
-        # (ADR-0023) — the native <position> actuators must hold the
+        # — the native <position> actuators must hold the
         # rest pose on the first mj_step rather than yanking to ctrl=0.
         hal.connect()
         try:

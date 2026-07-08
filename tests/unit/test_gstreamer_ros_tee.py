@@ -1,4 +1,4 @@
-"""Unit tests for the GStreamer ROS-tee image publisher (ADR-0010 PR I/4).
+"""Unit tests for the GStreamer ROS-tee image publisher.
 
 Exercises the real :class:`RosImagePublisher` against a real GStreamer
 pipeline + a real rclpy subscriber in the same process. No mocks.
