@@ -38,6 +38,7 @@ from openral_rskill._vla_core import (
     run_inference,
     to_numpy_action,
 )
+from openral_rskill.backend_registry import maybe_attach_pro_hooks
 
 from openral_sim.registry import POLICIES
 
@@ -330,23 +331,19 @@ def _build_act(env_cfg: Any) -> _ACTAdapter:
     #     device pointers (no host vision copy). Used per-step when handles arrive.
     #  2. host TensorRT — swaps ``predict_action_chunk`` for the ONNX/TRT runner.
     #  3. torch.compile of the eager forward.
-    # ``act_trt`` ships in the private openral-pro-trt package (ADR-0083); a
-    # host without it falls straight through to torch.compile below.
+    # The TRT hook itself ships in the private openral-pro-trt package
+    # (ADR-0083) and is looked up by name — a host without it falls straight
+    # through to torch.compile below (logged, not silently skipped).
     nvmm_executor = _maybe_build_act_nvmm(policy, repo_id, device, manifest)
     if nvmm_executor is None:
-        attached = False
-        try:
-            from openral_rskill.act_trt import maybe_attach_act_trt_from_env
-        except ImportError:
-            _log.debug("act.trt_unavailable", reason="openral-pro-trt not installed — eager path")
-        else:
-            onnx_uri = manifest.policy_extras.get("act_onnx_uri") if manifest is not None else None
-            attached = maybe_attach_act_trt_from_env(
-                policy,
-                repo_id,
-                onnx_uri=onnx_uri if isinstance(onnx_uri, str) else None,
-                device=device,
-            )
+        onnx_uri = manifest.policy_extras.get("act_onnx_uri") if manifest is not None else None
+        attached = maybe_attach_pro_hooks(
+            "act",
+            policy,
+            repo_id=repo_id,
+            onnx_uri=onnx_uri if isinstance(onnx_uri, str) else None,
+            device=device,
+        )
         if not attached:
             maybe_compile_chunk_forward(policy, spec.extra, device, torch)
 

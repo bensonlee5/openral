@@ -301,6 +301,7 @@ test-doctest:
         python/hal/src/openral_hal/lifecycle.py \
         python/hal/src/openral_hal/so100_follower.py \
         python/hal/src/openral_hal/ros_control.py \
+        python/rskill/src/openral_rskill/backend_registry.py \
         python/rskill/src/openral_rskill/base.py \
         python/rskill/src/openral_rskill/engine_cache.py \
         python/rskill/src/openral_rskill/loader.py \

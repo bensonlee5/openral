@@ -86,6 +86,7 @@ import structlog
 from openral_core.exceptions import ROSConfigError, ROSRuntimeError
 from openral_core.schemas import Action, ControlMode, WorldState
 
+from openral_rskill.backend_registry import maybe_attach_pro_hooks
 from openral_rskill.base import rSkillBase
 from openral_rskill.executor import ChunkedExecutor
 
@@ -236,23 +237,21 @@ class SmolVLAAdapter(rSkillBase):
         # Opt-in TensorRT runtime (ADR-0037 follow-up): swap sample_actions for
         # the split-ONNX TRT engines via the shared env-gated seam (identical
         # knob to the openral_sim deploy path). Loud, no silent fallback (§1.4).
-        # ``smolvla_trt`` ships in the private openral-pro-trt package
-        # (ADR-0083); a host without it stays on the eager PyTorch path.
-        try:
-            from openral_rskill.smolvla_trt import maybe_attach_trt_from_env
-        except ImportError:
-            log.debug(
-                "smolvla.trt_unavailable", reason="openral-pro-trt not installed — eager path"
+        # The TRT hook itself ships in the private openral-pro-trt package
+        # (ADR-0083) and is looked up by name — a host without it stays on
+        # the eager PyTorch path (logged, not silently skipped).
+        if maybe_attach_pro_hooks(
+            "smolvla",
+            self._policy,
+            repo_id=self._repo_id,
+            device=self._device,
+            n_cameras=self._n_cameras,
+        ):
+            log.info(
+                "smolvla.runtime_tensorrt",
+                repo_id=self._repo_id,
+                n_cameras=self._n_cameras,
             )
-        else:
-            if maybe_attach_trt_from_env(
-                self._policy, self._repo_id, device=self._device, n_cameras=self._n_cameras
-            ):
-                log.info(
-                    "smolvla.runtime_tensorrt",
-                    repo_id=self._repo_id,
-                    n_cameras=self._n_cameras,
-                )
 
     def on_warmup(self) -> None:
         """Run a dummy inference to amortize JIT and cuDNN autotune overhead."""
