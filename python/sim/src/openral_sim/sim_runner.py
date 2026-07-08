@@ -419,9 +419,8 @@ class SimRunner(InferenceRunnerBase):
             self.manifest.latency_budget.per_chunk_ms if self.manifest is not None else None
         )
 
-        # Outer OTel span equivalent to the deleted run_evaluation's
-        # ``eval.run_evaluation``. Held open until deactivate() so child
-        # ``rskill.tick`` spans from the base class nest under it.
+        # Held open until deactivate() so child ``rskill.tick`` spans from
+        # the base class nest under it.
         self._run_span_ctx = _tracer().start_as_current_span(
             "sim.run",
             attributes={
@@ -853,10 +852,6 @@ class SimRunner(InferenceRunnerBase):
 
 
 # ── rSkill / RNG / viewer helpers ────────────────────────────────────────────
-#
-# These were private to the deleted ``runner.py`` module. They moved here
-# verbatim — no behaviour change. Kept module-private (single underscore)
-# because nothing outside this file should call them directly.
 
 
 _MOCK_POLICY_IDS = frozenset({"zero", "random"})

@@ -136,11 +136,6 @@ class GStreamerSensorReader:
     Raises:
         ROSConfigError: When both / neither of ``pipeline`` / ``spec``
             are provided, or when the pipeline string is malformed.
-
-    Example:
-        >>> # Doctest exercised in tests/unit/test_gstreamer_sensor_reader.py
-        >>> # to avoid requiring videotestsrc + Gst.init at doctest time.
-        >>> pass
     """
 
     sensor_id: str

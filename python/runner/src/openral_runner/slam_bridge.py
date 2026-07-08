@@ -25,15 +25,10 @@ import base64
 import io
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import structlog
 from openral_core.geometry import quat_xyzw_to_yaw
-
-if TYPE_CHECKING:
-    # `rclpy` / `nav_msgs` are not importable without a sourced ROS 2
-    # workspace; deferring at type-check time keeps the module lightweight.
-    pass
 
 log = structlog.get_logger(__name__)
 

@@ -48,7 +48,6 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 import structlog
 from openral_core.exceptions import (
@@ -80,9 +79,6 @@ from openral_core.schemas import (
 from openral_hal._base import HALBase
 from openral_hal._mujoco_arm import MujocoArmHAL
 from openral_hal._real_description import make_real_description
-
-if TYPE_CHECKING:
-    pass
 
 __all__ = [
     "ALOHA_DESCRIPTION",

@@ -75,10 +75,6 @@ class RosImagePublisher:
     Raises:
         RuntimeError: When :meth:`start` is called but ``rclpy`` is
             not importable. Construction itself is safe without ROS.
-
-    Example:
-        >>> # End-to-end exercised in tests/unit/test_gstreamer_ros_tee.py
-        >>> pass
     """
 
     def __init__(

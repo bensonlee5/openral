@@ -130,12 +130,6 @@ class ROSPublishingHAL:
             ``read_state()``. Defaults to ``/joint_states``.
         candidate_action_topic: Topic to publish ``ActionChunk`` on.
             Defaults to ``/openral/candidate_action``.
-
-    Example:
-        >>> # Real usage exercised in
-        >>> # tests/unit/test_ros_publishing_hal.py against a real
-        >>> # rclpy LifecycleNode + the real openral_msgs IDL.
-        >>> pass
     """
 
     description: RobotDescription

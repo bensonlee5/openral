@@ -60,11 +60,6 @@ class OpenCVThreadSensorReader:
         default_max_age_ms: Default staleness budget applied when
             :meth:`read_latest` is called with ``max_age_ms=None``.
             Defaults to ~3 frames at 30 Hz.
-
-    Example:
-        >>> # Doctest requires a real video device; exercised in
-        >>> # tests/unit/test_opencv_thread_sensor_reader.py.
-        >>> pass
     """
 
     sensor_id: str

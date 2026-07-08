@@ -114,11 +114,6 @@ class DeployRunner(InferenceRunnerBase):
             :class:`InferenceRunnerBase.__init__` (``rate_hz``,
             ``deadline_overrun_policy``, ``runner_name``,
             ``latency_budget_ms``, ``save_dir``).
-
-    Example:
-        >>> # Exercised in tests/unit/test_deploy_runner.py against a
-        >>> # real SO100FollowerHAL backed by SO100DigitalTwin.
-        >>> pass
     """
 
     def __init__(
