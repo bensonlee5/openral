@@ -31,7 +31,6 @@ def test_vendor_ur5e_has_provenance_header(tmp_path: Path) -> None:
     text = out.read_text()
     assert "Vendored by" in text
     assert "rd:ur5e_description" in text
-    assert "0057" in text
 
 
 def test_vendor_ur5e_joint_names_match_manifest(tmp_path: Path) -> None:

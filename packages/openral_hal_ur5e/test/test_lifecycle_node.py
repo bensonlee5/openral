@@ -8,8 +8,8 @@ Drives the standard managed-lifecycle transition path against the generic
 smoke exercises the same RobotDescription wiring used at runtime, not a
 stub.
 
-Skips cleanly when ``rclpy`` / ``openral_hal`` / ``mujoco`` /
-``robot_descriptions`` are unavailable (lint-only environments).
+Skips cleanly when ``rclpy`` / generated ROS messages / ``openral_hal`` /
+``mujoco`` / ``robot_descriptions`` are unavailable (lint-only environments).
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 rclpy = pytest.importorskip("rclpy")
+pytest.importorskip("openral_msgs.msg", reason="openral_msgs not built; run `just ros2-build`")
 pytest.importorskip("openral_hal")
 pytest.importorskip("mujoco")
 pytest.importorskip("robot_descriptions")
