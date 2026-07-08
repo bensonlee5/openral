@@ -5,7 +5,7 @@
 # MuJoCo wrappers; the sim-imposed observation/action contract (4-D
 # `agent_pos` state, 4-D delta-XYZ-plus-gripper action) lives in the
 # matching scene adapter at python/eval/src/openral_sim/adapters/
-# metaworld.py — NOT in this manifest. See docs/adr/0007-robot-sim-split.md.
+# metaworld.py — NOT in this manifest. See ADR-0007.
 #
 # Joint limits / velocities / efforts come from the public Rethink Sawyer
 # data sheet (the company dissolved in 2018; community forks of intera_sdk

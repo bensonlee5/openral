@@ -7,8 +7,7 @@ file pins the validator contract — prebuilt-vs-procedural XOR,
 ``extra="forbid"``, JSON round-trip — so PR B can rely on it without
 re-checking.
 
-ADR-0011 (`docs/adr/0011-robocasa-isolated-backend-lazy-assets.md`) is
-the parent design document.
+ADR-0015 is the parent design document (OpenRAL/management).
 
 CLAUDE.md §1.11 — no mocks, no smoke tests. The model is exercised
 against real Pydantic validation paths and a real JSON round-trip.

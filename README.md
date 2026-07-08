@@ -51,7 +51,7 @@ We compose ROS 2, tf2, MoveIt 2 (with optional CUDA-accelerated **cuMotion** pla
 - **Object detection & spatial lift** — promptable open-vocabulary detectors (OmDet-Turbo default, RT-DETR fallback) → `ObjectsMetadata`, lifted 2D→3D into world state; on-demand `locate_in_view` for novel targets
 - **Navigation & SLAM** — `openral_slam_bringup` + `openral_nav2_bringup` as reasoner-managed services: `slam_toolbox` for lidar robots, or **NVIDIA Isaac ROS cuVSLAM + nvblox** (fed by a **Depth Anything 3** monocular metric-depth provider) for lidar-less robots → `map` frame + Nav2 path planning
 - **GPU-accelerated MoveIt planning** — `cuMotion` CUDA pipeline behind a capability gate, OMPL fallback (ADR-0065)
-- **TensorRT runtime** — `TensorRTRuntime` + engine cache, plus a GStreamer/NVMM zero-copy detector path for accelerated on-device inference
+- **TensorRT fast path (OpenRAL Pro)** — the TensorRT engine runtime + a GStreamer/NVMM zero-copy detector path for accelerated on-device inference; a private plugin per ADR-0083, plugged in via an entry-point seam — the open-core PyTorch/ONNX runtimes keep working without it
 - C++ **safety kernel** — deny-by-default allocation-free validator (envelope + self/world/voxel collision) + independent deadman & hardware-E-stop watchdogs
 - ADR-0018 [reasoner](docs/reference/reasoner.md)/safety ROS graph with provider-agnostic LLM tool dispatch
 - OpenTelemetry instrumentation with OTLP export, live `openral dashboard`, and a read-only **Foxglove** live-scene surface
@@ -75,8 +75,8 @@ Live status: [docs/roadmap/index.md](docs/roadmap/index.md). Per-module canvas: 
 | Navigation & SLAM | Reasoner-managed `slam_toolbox` (lidar) or Isaac ROS cuVSLAM + nvblox + Depth-Anything-3 mono-depth (lidar-less) → `map` frame; Nav2 path planning | `packages/openral_slam_bringup/`, `packages/openral_nav2_bringup/`, ADR-0025/0064 |
 | GPU-accelerated planning | `cuMotion` CUDA-accelerated MoveIt pipeline behind `RobotCapabilities.supports_cumotion()`, OMPL fallback | `packages/openral_safety/` (`cumotion_config.py`), ADR-0065 |
 | Safety kernel | C++ deny-by-default validator — joint position/velocity/torque + global cap, Cartesian workspace + EE-speed, NaN/Inf, self/world/voxel collision; deadman + hardware E-stop watchdogs | `cpp/openral_safety_kernel/`, `packages/openral_safety/`, ADR-0020/0030/0040 |
-| rSkill (S1) runtime | `Skill` ABC, `rSkill` loader (HF Hub), PyTorch / ONNX / **TensorRT** adapters (engine cache), async action chunks | `python/rskill/`, `rskills/` |
-| Inference runtimes | One `InferenceRunner` Protocol shared by `openral sim run`, `openral benchmark run`, and `openral deploy`; `TensorRTRuntime` + GStreamer/NVMM zero-copy detector path for accelerated on-device inference | `python/runner/`, `python/rskill/`, `python/sim/` |
+| rSkill (S1) runtime | `Skill` ABC, `rSkill` loader (HF Hub), PyTorch / ONNX adapters (engine cache), async action chunks; TensorRT is an OpenRAL Pro plugin (ADR-0083) resolved via an entry-point seam | `python/rskill/`, `rskills/` |
+| Inference runtimes | One `InferenceRunner` Protocol shared by `openral sim run`, `openral benchmark run`, and `openral deploy`; the TensorRT + GStreamer/NVMM zero-copy detector path for accelerated on-device inference is an OpenRAL Pro plugin (ADR-0083) | `python/runner/`, `python/rskill/`, `python/sim/` |
 | Sim rollouts | One YAML → reproducible sim rollout; video + metrics + `SkillEvalResult` JSON out | `python/sim/`, `scenes/benchmark/` |
 | Simulation engines | MuJoCo (LIBERO, MetaWorld, ManiSkill3, SimplerEnv, gym-aloha, gym-pusht), RoboCasa, RoboTwin 2.0 (SAPIEN), Isaac Sim, RLBench/CoppeliaSim (PyRep, py3.10 sidecar) | `python/sim/`, `docs/reference/sim-environments.md` |
 | Observability | OpenTelemetry SDK + OTLP exporter, span helpers, structlog bridge, live `openral dashboard`, read-only Foxglove live-scene surface | `python/observability/`, ADR-0059 |
@@ -86,7 +86,7 @@ Live status: [docs/roadmap/index.md](docs/roadmap/index.md). Per-module canvas: 
 
 ## Supported platforms
 
-OpenRAL ships an **x86 inference Dockerfile** today; a Jetson / L4T family is planned ([ADR-0016](docs/adr/0016-multi-platform-support.md)):
+OpenRAL ships an **x86 inference Dockerfile** today; a Jetson / L4T family is planned (ADR-0016):
 
 | Image | Target | Notes |
 |---|---|---|
@@ -118,7 +118,7 @@ Heavy extras (LIBERO, RoboCasa, MetaWorld, ManiSkill3, SimplerEnv, ROS 2) are in
 > curl -fsSL https://raw.githubusercontent.com/OpenRAL/openral/master/scripts/install.sh \
 >   | OPENRAL_INSTALL_SOURCE=git+https://github.com/OpenRAL/openral bash
 > ```
-> See [ADR-0021](docs/adr/0021-curl-installer-cli-rename-and-pypi-release.md).
+> See ADR-0021.
 
 For contributors (full clone + ROS 2 + `colcon`):
 

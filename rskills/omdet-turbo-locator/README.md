@@ -160,5 +160,5 @@ locator is fully commercial-safe (CLAUDE.md §1.9).
   background sibling (same weights, `mode: continuous`, fixed 266-class vocab).
 - [`rskills/locateanything-3b-nf4/`](../locateanything-3b-nf4/) — higher-quality
   3B open-vocab locator (NVIDIA non-commercial; `VLM_SIDECAR` tier).
-- [`docs/adr/0051-detector-invocation-mode.md`](../../docs/adr/0051-detector-invocation-mode.md) — continuous vs on-demand detector mode.
+- ADR-0051 — continuous vs on-demand detector mode.
 - [CLAUDE.md §6.4](../../CLAUDE.md) — rSkill packaging contract.

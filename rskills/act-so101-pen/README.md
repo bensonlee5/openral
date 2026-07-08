@@ -122,10 +122,12 @@ plain CNN+transformer and exports **whole-model** to one ONNX graph:
   single `model.onnx`.
 - **Ship:** `model.onnx` is committed into this rSkill's HF repo
   (`policy_extras.act_onnx_uri`).
-- **Run:** with `OPENRAL_ACT_TRT=1`, the ACT adapter loads `model.onnx` through
-  the generic `ONNXRuntime` / `TensorRTRuntime` backend; TensorRT builds and
-  **caches** the engine on the host on first load (same delivery shape as
-  `rtdetr-v2-r50vd`). Without the flag the torch path runs unchanged.
+- **Run:** with `OPENRAL_ACT_TRT=1` and the private `openral-pro-trt` package
+  installed (ADR-0083), the ACT adapter loads `model.onnx` through the
+  TensorRT backend, which builds and **caches** the engine on the host on
+  first load (same delivery shape as `rtdetr-v2-r50vd`, also an OpenRAL Pro
+  rSkill). Without `openral-pro-trt` the torch path runs unchanged — the
+  flag is a no-op, logged, not a silent skip.
 
 ## Manifest summary
 

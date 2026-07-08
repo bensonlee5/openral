@@ -6,7 +6,7 @@ point cloud (voxels), joint states, TF, the robot model (**Bucket-1**, native),
 plus the custom OpenRAL world types re-published as standard markers/clouds
 (**Bucket-2**, via a converter node).
 
-Governed by [**ADR-0059**](../../docs/adr/0059-foxglove-live-scene-visualization.md):
+Governed by **ADR-0059**:
 this is the live-scene half of a **hybrid** — Foxglove owns the live 3D/2D
 scene; the `openral dashboard` OTel receiver (ADR-0017) keeps traces, metrics,
 system health, and the reasoner/safety cards. Foxglove is a visualization tool,

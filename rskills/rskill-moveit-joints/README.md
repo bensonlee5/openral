@@ -26,10 +26,10 @@ inference: false
 > collision-free joint-space motion planning through the same
 > `ExecuteRskill` path used by VLA skills. No model weights — the manifest
 > is the entire artefact. Renamed from `openral/rskill-moveit-plan-arm`
-> under [ADR-0054](../../docs/adr/0054-moveit-goal-builder-library.md).
+> under ADR-0054.
 
 This package uses `kind: ros_action` (see
-[ADR-0024](../../docs/adr/0024-ros-wrapped-rskills.md)) — a discriminator
+ADR-0024) — a discriminator
 on `RSkillManifest.kind` that selects the
 [`ROSActionRskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py)
 engine at resolve time, with `ros_integration.goal_builder: joint` selecting
@@ -228,13 +228,13 @@ The rSkill package itself (this manifest + README) is **Apache-2.0**.
 The wrapped MoveIt code (`moveit_msgs` IDL, `moveit2` planners) is
 **BSD-3-Clause** and lives outside this repository — installed via
 `ros-${ROS_DISTRO}-moveit`. Per
-[ADR-0012](../../docs/adr/0012-open-core-licensing.md) both postures
+ADR-0012 both postures
 are commercial-use-permissive.
 
 ## See also
 
-- [ADR-0054 — MoveIt goal-builder library + rskill-moveit-* rename](../../docs/adr/0054-moveit-goal-builder-library.md)
-- [ADR-0024 — ROS-wrapped rSkills](../../docs/adr/0024-ros-wrapped-rskills.md)
+- ADR-0054 — MoveIt goal-builder library + rskill-moveit-* rename
+- ADR-0024 — ROS-wrapped rSkills
 - [`openral_rskill.ros_action_rskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py) — engine source
 - [`openral_rskill.joint_goal_rskill`](../../python/rskill/src/openral_rskill/joint_goal_rskill.py) — goal-lowering adapter
 - [`rskills/rskill-moveit-eef-pose/`](../rskill-moveit-eef-pose/) — sibling Cartesian end-effector pose wrapper

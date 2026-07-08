@@ -214,7 +214,7 @@ def _sidecar_python() -> Path:
         "  # 2) uv venv --python 3.10 ~/.cache/openral/rlbench-policy/.venv\n"
         "  # 3) uv pip install (with COPPELIASIM_ROOT set): PyRep (stepjam) +\n"
         "  #    RLBench (MohitShridhar@peract, editable) + gymnasium==1.0.0a2\n"
-        "See docs/adr/0062-rlbench-benchmark-backend.md for the full recipe."
+        "See ADR-0062 (OpenRAL/management) for the full recipe."
     )
 
 

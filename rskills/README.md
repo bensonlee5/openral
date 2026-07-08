@@ -19,13 +19,16 @@ first load.
 | `weights_uri` scheme | Where the weights live | Example |
 | --- | --- | --- |
 | `hf://OpenRAL/...` | Hugging Face Hub, fetched + cached on first load | every VLA / detector / VLM / reward skill |
-| `local://rskills/...` | An ONNX file inside the rSkill dir, **gitignored** and reproduced via a `tools/export_*.py` script (also mirrored to HF) | `rtdetr-coco-r18`, `rtdetr-v2-r50vd` |
+| `local://rskills/...` | An ONNX file inside the rSkill dir, **gitignored** and reproduced via a `tools/export_*.py` script (also mirrored to HF) | `rtdetr-coco-r18` |
 
-The two `rtdetr-*` ONNX skills are the deliberate `local://` exception: the
-GStreamer perception path is ONNX-file-based, and `openral deploy sim` uses
-`rskills/rtdetr-coco-r18/model.onnx` as its offline detector fallback. Those
-binaries are listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
-— the clone stays small; the files are regenerated locally on demand.
+`rtdetr-coco-r18` is the deliberate `local://` exception: the GStreamer
+perception path is ONNX-file-based, and `openral deploy sim` uses
+`rskills/rtdetr-coco-r18/model.onnx` as its offline detector fallback. That
+binary is listed in the repo `.gitignore` (`model.onnx`, `model.onnx.data`)
+— the clone stays small; the file is regenerated locally on demand. The
+heavier `rtdetr-v2-r50vd` variant (`runtime: tensorrt`) moved to the private
+`openral-pro` repo (ADR-0083) — the TensorRT engine runtime it depends on
+is an OpenRAL Pro plugin.
 
 ## Catalog
 
@@ -63,7 +66,7 @@ embodiment-agnostic.**
 | --- | --- |
 | `locateanything-3b-nf4` | detector (open-vocab VLM) |
 | `omdet-turbo-indoor` / `omdet-turbo-locator` | detector (open-vocab) |
-| `rtdetr-coco-r18` / `rtdetr-v2-r50vd` | detector (ONNX, `local://`) |
+| `rtdetr-coco-r18` | detector (ONNX, `local://`) |
 | `qwen35-4b-nf4` | vlm |
 | `robometer-4b` / `topreward-qwen3vl-4b-nf4` | reward |
 | `rskill-moveit-eef-pose` / `rskill-moveit-joints` / `rskill-moveit-look-at` | ros_action (MoveIt) |

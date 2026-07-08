@@ -41,4 +41,4 @@ just test               # run the test suite
 - [API](reference/api.md)
 - [VLA × Robot × Sim compatibility](reference/vla_compatibility.md)
 - [Sensor catalog & roadmap](reference/sensors_landscape.md)
-- [ADRs](adr/0001-record-architecture-decisions.md)
+- [Design decisions (ADRs)](decisions.md)

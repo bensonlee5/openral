@@ -498,7 +498,7 @@ def depth_image_from_grid(
     """Pack an ``(H, W)`` metric-depth raster into a ``32FC1 sensor_msgs/Image``.
 
     The dense, organised depth image nvblox's projective depth integrator
-    consumes (ADR-0064) — produced by
+    consumes (ADR-0085) — produced by
     :func:`openral_sim.backends.depth_camera.synthesize_depth_image`. Pixels are
     perpendicular optical-Z metres, ``0.0`` = no measurement (nvblox skips them).
 

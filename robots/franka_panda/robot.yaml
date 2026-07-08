@@ -14,7 +14,7 @@
 # delta-EEF action, 180° image flip; RoboCasa's 4-D agent_pos; etc.) live
 # in the matching scene adapter under
 # python/eval/src/openral_sim/adapters/<sim>.py — not here. See
-# docs/adr/0007-robot-sim-split.md.
+# ADR-0007.
 #
 # Joint / EE limits taken from the Franka FR3 / Panda data sheet:
 # https://frankaemika.github.io/docs/control_parameters.html

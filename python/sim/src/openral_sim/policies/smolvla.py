@@ -37,7 +37,7 @@ from openral_rskill._vla_core import (
     run_inference,
     to_numpy_action,
 )
-from openral_rskill.smolvla_trt import maybe_attach_trt_from_env
+from openral_rskill.backend_registry import maybe_attach_pro_hooks
 
 from openral_sim.policies._policy_loading import (
     lazy_import_lerobot,
@@ -301,7 +301,7 @@ class _SmolVLAAdapter:
                 "needs all cameras (partial NVMM tiers are unsupported)."
             )
         if self._nvmm_encoder is None:
-            from openral_runner.backends.gstreamer.nvmm_vision_encoder import (
+            from openral_pro_trt.nvmm_vision_encoder import (
                 NvmmVisionEncoder,
             )
 
@@ -316,7 +316,7 @@ class _SmolVLAAdapter:
                 n_cameras=self._nvmm_encoder.n_cameras,
                 model_id=sampler.vision_rskill_id,
             )
-        from openral_runner.backends.gstreamer.nvbufsurface import NvBufSurfaceHandle
+        from openral_pro_trt.nvbufsurface import NvBufSurfaceHandle
 
         embs = self._nvmm_encoder.encode_nvmm(
             [NvBufSurfaceHandle.model_validate(d) for d in ordered]
@@ -597,8 +597,13 @@ def _build_smolvla(env_cfg: Any) -> _SmolVLAAdapter:
     # Opt-in TensorRT runtime (ADR-0037 follow-up): swaps sample_actions for the
     # split-ONNX TRT engines. Mutually exclusive with torch.compile (both target
     # the same forward) — TRT fully replaces the flow-matching call, so skip the
-    # compile pass when it engages. Loud, no silent fallback (§1.4).
-    if maybe_attach_trt_from_env(policy, repo_id, device=device, n_cameras=len(cam_keys)):
+    # compile pass when it engages. The hook itself ships in the private
+    # openral-pro-trt package (ADR-0083) and is looked up by name — a host
+    # without it falls straight through to torch.compile (logged, not
+    # silently skipped).
+    if maybe_attach_pro_hooks(
+        "smolvla", policy, repo_id=repo_id, device=device, n_cameras=len(cam_keys)
+    ):
         _log.info("smolvla.runtime_tensorrt", repo_id=repo_id, n_cameras=len(cam_keys))
     else:
         maybe_compile_chunk_forward(policy, spec.extra, device, torch)

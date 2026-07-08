@@ -58,7 +58,7 @@ class TestComputeSpecDefaults:
 
 
 class TestVisionSlamCapability:
-    """ADR-0064 — ``has_vision_slam`` stays on :class:`RobotCapabilities`."""
+    """ADR-0085 — ``has_vision_slam`` stays on :class:`RobotCapabilities`."""
 
     def test_defaults_false(self) -> None:
         from openral_core.schemas import RobotCapabilities

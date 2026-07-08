@@ -6,7 +6,7 @@ Pre-ADR-0028a, the only way the runner could discover that a checkpoint's
 action vector exceeded the robot's joint count was at *runtime* — the
 safety supervisor's ``n_dof`` envelope check would fire, the HAL would
 E-stop, and the reasoner would spin in retry loops (see the trace at the
-top of ``docs/adr/0028-rskill-action-contract-slots.md``).
+top of ADR-0028, OpenRAL/management).
 
 This test pins the invariant at fixture load. For every
 ``rskills/*/rskill.yaml``:

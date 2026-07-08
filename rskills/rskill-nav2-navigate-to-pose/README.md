@@ -22,7 +22,7 @@ inference: false
 > through OpenRAL's safety supervisor.
 
 This package uses `kind: ros_action` (see
-[ADR-0024](../../docs/adr/0024-ros-wrapped-rskills.md)) with
+ADR-0024) with
 `ros_integration.result_trajectory_field: null` to put the
 [`ROSActionRskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py)
 adapter into result-only mode: it sends the goal, awaits the action
@@ -174,12 +174,12 @@ The rSkill package itself (this manifest + README) is **Apache-2.0**.
 The wrapped Nav2 code (`nav2_msgs` IDL, `navigation2` planners) is
 **Apache-2.0** and lives outside this repository — installed via
 `ros-${ROS_DISTRO}-nav2-bringup`. Per
-[ADR-0012](../../docs/adr/0012-open-core-licensing.md) both postures
+ADR-0012 both postures
 are commercial-use-permissive.
 
 ## See also
 
-- [ADR-0024 — ROS-wrapped rSkills](../../docs/adr/0024-ros-wrapped-rskills.md)
+- ADR-0024 — ROS-wrapped rSkills
 - [`openral_rskill.ros_action_rskill`](../../python/rskill/src/openral_rskill/ros_action_rskill.py) — adapter source
 - [`rskills/rskill-moveit-joints/`](../rskill-moveit-joints/) — sibling MoveIt wrapper (trajectory mode)
 - [CLAUDE.md §3 — Architecture Discipline](../../CLAUDE.md)

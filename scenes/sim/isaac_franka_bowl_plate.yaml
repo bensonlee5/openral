@@ -45,7 +45,7 @@ n_episodes: 1
 seed: 0
 
 metadata:
-  adr: "docs/adr/0045-isaac-sim-backend-integration.md"
+  adr: "ADR-0045 (OpenRAL/management)"
   honest_scope: >-
     LIBERO-shaped Isaac Sim scene for driving a LIBERO rSkill (act/smolvla) end-to-end.
     Proves the wire + EE-delta IK arm motion; the props are OOD for the policy so this

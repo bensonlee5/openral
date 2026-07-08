@@ -90,7 +90,7 @@ the no-enforcement-change claim.
 ## Entry 002 — Standardized description assets: relocate lowering inputs (ADR-0058)
 
 **Date:** 2026-06-16
-**ADR:** [ADR-0058](../adr/0058-standardized-description-assets.md) (standardized
+**ADR:** ADR-0058 (standardized
 robot description assets — URDF / xacro / MJCF / SRDF)
 **PR:** _pending_ (implementing PR for ADR-0058; this entry is authored with the
 ADR per CLAUDE.md §3 and links the regression test below as its mitigation)

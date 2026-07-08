@@ -8,7 +8,7 @@ runtime form the adapters see is the composed **`SimEnvironment`**
 (`SimScene` + `RSkillManifest`); the YAML on disk never carries a
 `vla:` block.
 
-`SimScene` is the middle tier of the [ADR-0041](../../adr/0041-scene-three-tier-hierarchy.md)
+`SimScene` is the middle tier of the ADR-0041
 scene hierarchy:
 
 ```
@@ -37,9 +37,9 @@ It covers six things, in increasing depth:
 
 The companion cookbook is [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md);
 the reference schemas are documented in
-[ADR-0002](../../adr/0002-eval-and-sim-environments.md),
-[ADR-0009](../../adr/0009-separate-sim-and-benchmarking.md), and
-[ADR-0041](../../adr/0041-scene-three-tier-hierarchy.md).
+ADR-0002,
+ADR-0009, and
+ADR-0041.
 
 ---
 
@@ -667,7 +667,7 @@ fails loud on mismatches.)
 
 ## Level 6: a custom MuJoCo environment via RoboCasa (ADR-0011)
 
-[ADR-0015](../../adr/0015-robocasa-isolated-backend-lazy-assets.md)
+ADR-0015
 adds **RoboCasa** as a `openral sim` backend so you can run kitchen
 scenarios with custom robots, tasks, and rSkills against real MuJoCo
 physics.
@@ -889,15 +889,15 @@ The auto-install prompts fire from the benchmark runner's path too —
 - The cookbook of existing configs and a per-backend ID table:
   [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md).
 - ADRs that explain the design:
-  [ADR-0002](../../adr/0002-eval-and-sim-environments.md) (the original
+  ADR-0002 (the original
   scene/eval design — the `SceneEnvironment` → `SimScene` rename and the
   three-tier split landed in ADR-0041),
-  [ADR-0009](../../adr/0009-separate-sim-and-benchmarking.md) (`openral sim
+  ADR-0009 (`openral sim
   run` vs `openral benchmark run`),
-  [ADR-0041](../../adr/0041-scene-three-tier-hierarchy.md) (the
+  ADR-0041 (the
   `DeployScene ⊆ SimScene ⊆ BenchmarkScene` hierarchy + per-tier loader
   strictness), and
-  [ADR-0015](../../adr/0015-robocasa-isolated-backend-lazy-assets.md)
+  ADR-0015
   (RoboCasa as a free-axis MuJoCo backend with custom robots + tasks —
   rolling out in five PRs per
   [issue #88](https://github.com/OpenRAL/openral/issues/88);

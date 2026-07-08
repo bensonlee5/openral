@@ -1,10 +1,10 @@
-"""ADR-0064 (Phase 2) — hermetic checks on ``nvblox.launch.py``.
+"""ADR-0085 (Phase 2) — hermetic checks on ``nvblox.launch.py``.
 
 No real ROS 2 graph and no nvblox engine (an NVIDIA binary OpenRAL does not
 bundle). Asserts the launch file's structural contract: pinned node/package/
 plugin, a valid default params YAML carrying the frame contract, and a single
 ``ComposableNodeContainer`` with one nvblox ``ComposableNode`` and no
-``LifecycleNode`` (nvblox is a plain composable node, like cuVSLAM — ADR-0064).
+``LifecycleNode`` (nvblox is a plain composable node, like cuVSLAM — ADR-0085).
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ def test_default_params_file_exists_and_parses() -> None:
 
 
 def test_launch_defaults_to_sim_depth_camera_topics() -> None:
-    """ADR-0064 — deploy-sim's manifest depth camera is nvblox's default input."""
+    """ADR-0085 — deploy-sim's manifest depth camera is nvblox's default input."""
     mod = _import_launch_module()
     from launch.actions import DeclareLaunchArgument
     from launch_ros.actions import Node

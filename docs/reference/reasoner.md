@@ -8,19 +8,19 @@ It decides *what to do next*; it never drives motors itself.
 
 - **Core (transport-agnostic):** [`openral_reasoner.ReasonerCore`](https://github.com/OpenRAL/openral/blob/master/python/reasoner/src/openral_reasoner/core.py)
 - **ROS 2 lifecycle node:** [`openral_reasoner_ros.reasoner_node`](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/) — full contract in its [README](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/README.md)
-- **Design:** [ADR-0018](../adr/0018-ros2-reasoner-supervisor.md) (graph + F4 tool-dispatch), [ADR-0039](../adr/0039-llm-task-planning-active-search.md) (active search), ADR-0043/0047/0056/0057 (query tools)
+- **Design:** ADR-0018 (graph + F4 tool-dispatch), ADR-0039 (active search), ADR-0043/0047/0056/0057 (query tools)
 - **Design narrative (how it thinks):** [Reasoner Design & Decisions](reasoner-design.md) — the connective story across the decisions below, organized by logic problem (tick loop → grounding → decomposition → completion verdict → reward pairing → replanning → memory → LLM choice).
 
 > **Authority boundary.** The reasoner **never** publishes `openral_msgs/ActionChunk`.
 > Actuation lives behind the S1 skill runner (`/openral/execute_rskill` action
 > server) and the F5 safety boundary. The reasoner *proposes*; the C++ safety
-> kernel *disposes* (see [ADR-0020](../adr/0020-cpp-safety-kernel.md) + the [hazard log](hazard-log.md)).
+> kernel *disposes* (see ADR-0020 + the [hazard log](hazard-log.md)).
 
 ---
 
 ## Cadence & event model
 
-Per the [ADR-0018](../adr/0018-ros2-reasoner-supervisor.md) amendment of
+Per the ADR-0018 amendment of
 2026-05-25, the reasoner is **event-driven with a slow heartbeat**:
 
 - **Heartbeat** — a periodic timer ticks at `tick_hz` (default **0.2 Hz**, one
@@ -269,9 +269,9 @@ Still in flight:
 
 - [Reasoner Design & Decisions](reasoner-design.md) — the **why** behind every mechanism on this page, organized by logic problem.
 - [`openral_reasoner_ros` README](https://github.com/OpenRAL/openral/blob/master/packages/openral_reasoner_ros/README.md) — full ROS wrapper contract, provider presets, baseline LLM configs.
-- [ADR-0018](../adr/0018-ros2-reasoner-supervisor.md) — reasoner/supervisor graph + F4 dispatch.
-- [ADR-0025](../adr/0025-reasoner-managed-background-services.md) — reasoner-managed SLAM/Nav2 background services.
-- [ADR-0039](../adr/0039-llm-task-planning-active-search.md) — LLM task planning & active search.
-- [ADR-0072](../adr/0072-reasoner-playbooks-and-self-maintained-memory.md) — playbooks + self-maintained MEMORY.md.
-- [ADR-0073](../adr/0073-reasoner-success-gating-and-task-queue.md) — success-gating + sequential mission task queue.
+- ADR-0018 — reasoner/supervisor graph + F4 dispatch.
+- ADR-0025 — reasoner-managed SLAM/Nav2 background services.
+- ADR-0039 — LLM task planning & active search.
+- ADR-0072 — playbooks + self-maintained MEMORY.md.
+- ADR-0073 — success-gating + sequential mission task queue.
 - [rSkills reference](rskills.md) — the `kind: detector` / `vlm` / `reward` / `ros_action` / `playbook` skills the reasoner reads and dispatches.

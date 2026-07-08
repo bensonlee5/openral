@@ -209,9 +209,9 @@ class PipelineSpec(BaseModel):
             :class:`PerceptionEventPublisher` (ADR-0018 F6) runs
             detectors on its samples and publishes
             ``PromptStamped`` on ``/openral/perception/<kind>``. Policy
-            and event legs share the
-            :func:`openral_runner.backends.gstreamer.cuda_context.get_shared_cuda_context`
-            singleton, per ADR-0011 §"Shared CUDA context".
+            and event legs share the ``cuda_context`` shared CUDA
+            context singleton, per ADR-0011 §"Shared CUDA context"
+            (moved to openral-pro, ADR-0083).
         appsink_name: Name attached to the openral appsink for
             ``Gst.Bin.get_by_name``. Defaults to ``bh_sink``.
         ros_appsink_name: Name attached to the ROS-side appsink (when

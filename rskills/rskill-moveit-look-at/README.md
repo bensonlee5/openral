@@ -22,7 +22,7 @@ inference: false
 # rskill-moveit-look-at
 
 Aim a robot-mounted camera at a 3-D point (ADR-0044 Phase 3; renamed from
-`openral/rskill-look-at` under [ADR-0054](../../docs/adr/0054-moveit-goal-builder-library.md)).
+`openral/rskill-look-at` under ADR-0054).
 
 A `kind: ros_action` rSkill wrapping `moveit_msgs/action/MoveGroup` — like
 [`rskill-moveit-joints`](../rskill-moveit-joints/), but the goal is a
@@ -196,13 +196,13 @@ ros2 action send_goal /openral/execute_rskill openral_msgs/action/ExecuteRskill 
 The rSkill package itself (this manifest + README) is **Apache-2.0**. The
 wrapped MoveIt code (`moveit_msgs` IDL, `moveit2` planners) is **BSD-3-Clause**
 and is installed via `ros-${ROS_DISTRO}-moveit`, outside this repository. Per
-[ADR-0012](../../docs/adr/0012-open-core-licensing.md) both postures are
+ADR-0012 both postures are
 commercial-use-permissive.
 
 ## See also
 
-- [ADR-0054 — MoveIt goal-builder library + rskill-moveit-* rename](../../docs/adr/0054-moveit-goal-builder-library.md)
-- [ADR-0044 — look_at skill + grid-refined approach](../../docs/adr/0044-look-at-skill-grid-refined-approach.md)
+- ADR-0054 — MoveIt goal-builder library + rskill-moveit-* rename
+- ADR-0044 — look_at skill + grid-refined approach
 - [`openral_rskill.look_at_rskill`](../../python/rskill/src/openral_rskill/look_at_rskill.py) — adapter source
 - [`openral_world_state.geometry`](../../python/world_state/src/openral_world_state/geometry.py) — gaze math
 - [`rskills/rskill-moveit-joints/`](../rskill-moveit-joints/) — sibling joint-space MoveIt wrapper

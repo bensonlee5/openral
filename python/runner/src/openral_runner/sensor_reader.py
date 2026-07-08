@@ -13,7 +13,7 @@ frame the backend has buffered, or raises
 :class:`~openral_core.exceptions.ROSPerceptionStale` when the
 freshest frame is older than the caller's ``max_age_ms`` budget.
 
-See ``docs/adr/0010-inference-runner.md`` §SensorReader for the design.
+See ADR-0010 §SensorReader for the design.
 """
 
 from __future__ import annotations

@@ -229,7 +229,7 @@ class SimSensorBridge:
         # Feeds octomap_server → safety kernel world-collision voxel check.
         # Gated on live MuJoCo handles; _depth_disabled prevents repeated warnings.
         self._depth_pubs: dict[str, Any] = {}
-        # ADR-0064 — per depth camera, a dense 32FC1 depth image + CameraInfo
+        # ADR-0085 — per depth camera, a dense 32FC1 depth image + CameraInfo
         # alongside the PointCloud2, so nvblox's projective depth integrator
         # (which rejects the sparse hit-only cloud) can build a `/map`.
         self._depth_image_pubs: dict[str, Any] = {}
@@ -857,7 +857,7 @@ class SimSensorBridge:
             self._depth_pubs[spec.name] = self._node.create_publisher(
                 PointCloud2, f"{base}/points", depth_qos
             )
-            # ADR-0064 — dense depth image + CameraInfo for nvblox's depth integrator.
+            # ADR-0085 — dense depth image + CameraInfo for nvblox's depth integrator.
             self._depth_image_pubs[spec.name] = self._node.create_publisher(
                 Image, f"{base}/depth/image", depth_qos
             )
@@ -933,7 +933,7 @@ class SimSensorBridge:
         return None
 
     def _publish_depth_clouds(self) -> None:
-        """Ray-cast + publish a PointCloud2 (+ ADR-0064 depth image) per camera, and its TF.
+        """Ray-cast + publish a PointCloud2 (+ ADR-0085 depth image) per camera, and its TF.
 
         ADR-0030 — the deploy-sim source for octomap_server. Each depth
         ``SensorSpec`` is synthesised with
@@ -1008,7 +1008,7 @@ class SimSensorBridge:
                 )
                 cloud = pointcloud2_from_points_xyz(points, frame_id=spec.frame_id, stamp=stamp)
                 pub.publish(cloud)
-                # ADR-0064 — dense 32FC1 depth image + CameraInfo for nvblox.
+                # ADR-0085 — dense 32FC1 depth image + CameraInfo for nvblox.
                 # Same pinhole ray-cast, but every pixel (0.0 = no return); the
                 # CameraInfo intrinsics scale by 1/stride to match the raster.
                 depth_grid = synthesize_depth_image(

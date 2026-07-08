@@ -152,40 +152,29 @@ What happens:
   proposes, C++ disposes, and `ROSSafetyViolation` is never silently caught.
   Keep your E-stop within reach.
 
-### SO-101 SmolVLA TensorRT fast path
+### SO-101 SmolVLA TensorRT fast path (OpenRAL Pro)
 
 For the public SO-101 pen-pick skill, the real deploy scene and rSkill are:
 
 ```bash
 openral rskill install OpenRAL/rskill-smolvla-so101-pick-place-pen
-OPENRAL_SMOLVLA_TRT=1 openral deploy run \
+openral deploy run \
   --config scenes/deploy/so101_bench.yaml
 ```
 
-`OPENRAL_SMOLVLA_TRT=1` switches the SmolVLA runner to its split ONNX/TensorRT
-engines and keeps the GStreamer camera leg on the NVMM zero-copy path. Pre-build
-the engines once on the target host before a real run; cold export inside the ROS
-runner can contend with the executor. The shortest pre-build is:
+The `OPENRAL_SMOLVLA_TRT=1` split ONNX/TensorRT fast path (and the GStreamer
+NVMM zero-copy camera leg it pairs with) is an **OpenRAL Pro plugin**
+(ADR-0083) — it ships in the
+private `openral-pro-trt` package, not this repo. With `openral-pro-trt`
+installed, `OPENRAL_SMOLVLA_TRT=1` before `openral deploy run` attaches the
+same way it always did (the env var is read by the pro-side hook, looked up
+by name via `openral_rskill.backend_registry.maybe_attach_pro_hooks`); see
+`openral-pro`'s own docs for the engine pre-build recipe.
 
-```bash
-python - <<'PY'
-import torch
-from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
-from openral_rskill._lerobot_compat import sanitize_smolvla_config
-from openral_rskill.smolvla_trt import attach_trt_sample_actions
-
-repo = "OpenRAL/rskill-smolvla-so101-pick-place-pen"
-torch.set_default_dtype(torch.float32)
-sanitize_smolvla_config(repo)
-policy = SmolVLAPolicy.from_pretrained(repo)
-policy.model = policy.model.to("cuda:0").eval()
-attach_trt_sample_actions(policy, repo, precision="bf16", device_index=0, n_cameras=2)
-PY
-```
-
-Without `OPENRAL_SMOLVLA_TRT`, the policy runs in PyTorch. For the SO-101 NVMM
-camera path, either use the TRT engines or disable NVMM for the relevant cameras
-in the deploy scene.
+Without `openral-pro-trt` installed, the policy runs in eager PyTorch —
+logged, not a silent skip. For the SO-101 NVMM camera path, either install
+the OpenRAL Pro plugin or disable NVMM for the relevant cameras in the
+deploy scene.
 
 ### Optional reward monitor
 
@@ -233,4 +222,4 @@ mode).
 - [`scenes/README.md`](https://github.com/OpenRAL/openral/blob/master/scenes/README.md) — DeployScene / SimScene / BenchmarkScene tiers.
 - [`openral dashboard` quickstart](../../quickstart/dashboard.md).
 - `openral detect` — auto-generate `robot.yaml` by probing USB devices and sensors.
-- [ADR-0031 / ADR-0032](https://github.com/OpenRAL/openral/blob/master/docs/adr/) — the deploy graph design.
+- ADR-0031 / ADR-0032 — the deploy graph design.

@@ -6,7 +6,10 @@ OpenRAL World Action Model (WAM) layer — `WorldModel` Protocol +
 > **Scaffold status (2026-05-18).** This package ships the **Protocol surface only**:
 > `WorldModel`, `Rollout`, and a `NullWorldModel` stub for plumbing tests.
 > Concrete adapters (Cosmos Predict, UnifoLM-WMA-0, IRASim) land in
-> v0.3+ per CLAUDE.md §6.3.
+> v0.3+ per CLAUDE.md §6.3. Per ADR-0083,
+> those concrete generative WAM adapters ship as separate downstream
+> packages in the private OpenRAL Pro monorepo — this public package
+> stays the Protocol/contract surface.
 
 ## Layer
 
@@ -41,7 +44,7 @@ from openral_wam import WorldModel, Rollout, NullWorldModel
 
 ## ADRs
 
-- [ADR-0003 — Pydantic v2 over `@dataclass`](../../docs/adr/0003-pydantic-over-dataclasses.md)
+- ADR-0003 — Pydantic v2 over `@dataclass`
 - CLAUDE.md §6.3 — the canonical write-up of the three integration
   patterns; a dedicated ADR will follow when the first concrete
   adapter lands.

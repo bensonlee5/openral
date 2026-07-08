@@ -11,7 +11,7 @@ dataset and the public RoboTwin checkpoints (e.g.
 
 Unlike most robots in `robots/`, this manifest ships **no on-disk URDF/MJCF**. The actual
 robot lives inside the **SAPIEN** environment owned by the RoboTwin sidecar
-([ADR-0061](../../docs/adr/0061-robotwin-dual-arm-benchmark-backend.md)), so the openral side
+(ADR-0061), so the openral side
 never instantiates it. The manifest exists only so the eval layer can:
 
 - resolve the **14-D joint-position action/state contract**, and

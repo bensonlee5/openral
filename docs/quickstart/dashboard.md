@@ -5,7 +5,7 @@ Renders the most recent `rskill.execute`, `skill.chunk_inference`,
 and `safety.check` spans, rolling metric histograms, and an event
 log — live, no Jaeger required.
 
-See also [ADR-0017](../adr/0017-dashboard-otlp-receiver.md) for the
+See also ADR-0017 for the
 "embedded receiver, not in-process exporter" design choice.
 
 ## Run it

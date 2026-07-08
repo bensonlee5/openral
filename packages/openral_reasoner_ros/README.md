@@ -289,6 +289,6 @@ typed tool call per tick and the node routes it onto the ROS graph.
 
 ## See also
 
-- [ADR-0018](../../docs/adr/0018-ros2-reasoner-supervisor.md) — graph contract (incl. the F4 dispatch decisions).
+- ADR-0018 — graph contract (incl. the F4 dispatch decisions).
 - [`openral_reasoner.core`](../../python/reasoner/src/openral_reasoner/core.py) — transport-agnostic orchestrator.
 - [`packages/openral_prompt_router`](../openral_prompt_router/) — F10 prompt fan-in.

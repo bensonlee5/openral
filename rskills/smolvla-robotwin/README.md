@@ -85,7 +85,7 @@ position commands.
 ## How to run it
 
 RoboTwin runs on **SAPIEN** out-of-process via a Python 3.10 sidecar
-([ADR-0061](../../docs/adr/0061-robotwin-dual-arm-benchmark-backend.md)) — its stack is
+(ADR-0061) — its stack is
 incompatible with the openral 3.12 venv. Provision the sidecar venv, then:
 
 ```bash

@@ -1,11 +1,11 @@
-"""Shared gaze geometry — look-at rotations and camera gaze poses (ADR-0044; ADR-0065).
+"""Shared gaze geometry — look-at rotations and camera gaze poses (ADR-0044; ADR-0086).
 
 Promotes the look-at math that was previously triplicated across the MuJoCo
 scene composers (``openral_sim.backends.{so101_box,openarm_robosuite,
 tabletop_push}._assets``) into one public helper, and adds the full-pose
 variant the ``rskill-moveit-look-at`` rSkill consumes.
 
-Lives in ``openral_core`` (ADR-0065) so every layer can compute camera
+Lives in ``openral_core`` (ADR-0086) so every layer can compute camera
 orientations from one source — in particular the layer-0 HAL camera rig
 (``openral_hal._camera_rig``) places manifest cameras without a backward
 dependency on world-state (layer 2). ``openral_world_state.geometry``

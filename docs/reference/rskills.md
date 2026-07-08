@@ -65,12 +65,12 @@ All entries are published under `OpenRAL/rskill-*` on HuggingFace Hub and exerci
 
 ## Perception rSkills (`kind: detector`)
 
-Object-detection rSkills emit `ObjectsMetadata` (2-D detections lifted to 3-D in the deploy graph) instead of an `Action`. See [ADR-0035](../adr/0035-perception-spatial-memory-object-lift.md) and [ADR-0037](../adr/0037-gstreamer-perception-bus-object-detection.md).
+Object-detection rSkills emit `ObjectsMetadata` (2-D detections lifted to 3-D in the deploy graph) instead of an `Action`. See ADR-0035 and ADR-0037.
 
 | rSkill | Backbone | Notes |
 |---|---|---|
 | [`rtdetr-coco-r18`](https://github.com/OpenRAL/openral/tree/master/rskills/rtdetr-coco-r18/) | RT-DETR R18 (COCO) | lightweight ONNX export |
-| [`rtdetr-v2-r50vd`](https://github.com/OpenRAL/openral/tree/master/rskills/rtdetr-v2-r50vd/) | RT-DETR v2 R50vd | higher-accuracy variant |
+| `rtdetr-v2-r50vd` | RT-DETR v2 R50vd | higher-accuracy variant; `runtime: tensorrt` — moved to the private `openral-pro` repo (ADR-0083) since it depends on the TensorRT engine runtime |
 | [`locateanything-3b-nf4`](https://github.com/OpenRAL/openral/tree/master/rskills/locateanything-3b-nf4/) | NVIDIA LocateAnything-3B NF4 | open-vocabulary grounding; runs via the `VLM_SIDECAR` detector tier (out-of-process sidecar); dynamic reasoner-driven query via the read-only `locate_in_view` tool (ADR-0043) |
 | [`omdet-turbo-indoor`](https://github.com/OpenRAL/openral/tree/master/rskills/omdet-turbo-indoor/) | OmDet-Turbo Swin-tiny (`omlab/omdet-turbo-swin-tiny-hf`) | **Apache-2.0** open-vocabulary detector run **in-process** over a fixed ~266-class curated indoor vocabulary; `engine: zeroshot_hf` → `DetectorTier.ZEROSHOT_HF`; `mode: continuous` background producer, far more than the 80 COCO classes (ADR-0037 2026-06-12 amendment) |
 | [`omdet-turbo-locator`](https://github.com/OpenRAL/openral/tree/master/rskills/omdet-turbo-locator/) | OmDet-Turbo Swin-tiny (`omlab/omdet-turbo-swin-tiny-hf`) | **Apache-2.0** on-demand sibling — same weights/engine, `mode: on_demand`; the reasoner prompts it via `locate_in_view`. Lightweight, real-time, in-process alternative to the 3B LocateAnything VLM (ADR-0051) |

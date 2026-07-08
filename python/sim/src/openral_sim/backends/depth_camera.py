@@ -253,7 +253,7 @@ def synthesize_depth_image(
 
     The image counterpart of :func:`synthesize_depth_pointcloud`, sharing the
     same pinhole ray-cast (:func:`_cast_depth_rays`) but keeping **every** pixel
-    — a dense raster nvblox's projective depth integrator (ADR-0064) consumes
+    — a dense raster nvblox's projective depth integrator (ADR-0085) consumes
     directly (it rejects the sparse, hit-only cloud, whose unorganised layout
     matches no camera/lidar intrinsic model). Each pixel holds the *perpendicular
     optical-Z* depth in metres (``range · ẑ`` — the ROS depth-image convention,

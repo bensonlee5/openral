@@ -604,7 +604,7 @@ def test_bh_deploy_sim_enable_slam_forwards_launch_arg_and_flag() -> None:
     assert "enable_slam:=true" in joined
 
 
-# ADR-0064 — SLAM backend selection (cuVSLAM/nvblox visual vs slam_toolbox lidar).
+# ADR-0085 — SLAM backend selection (cuVSLAM/nvblox visual vs slam_toolbox lidar).
 
 
 @pytest.mark.parametrize(
@@ -632,7 +632,7 @@ def test_resolve_slam_backend(
 
 
 def test_bh_deploy_sim_lidar_robot_forwards_slam_backend_lidar() -> None:
-    """ADR-0064 — panda_mobile (lidar) resolves the lidar backend and forwards it."""
+    """ADR-0085 — panda_mobile (lidar) resolves the lidar backend and forwards it."""
     invocation = resolve_launch_invocation(
         config=_PANDA_MOBILE_CONFIG,
         robot_override=None,
@@ -646,7 +646,7 @@ def test_bh_deploy_sim_lidar_robot_forwards_slam_backend_lidar() -> None:
 
 
 def test_bh_deploy_sim_no_slam_robot_forwards_backend_none() -> None:
-    """ADR-0064 — openarm (no lidar, no vision SLAM) resolves backend ``none``."""
+    """ADR-0085 — openarm (no lidar, no vision SLAM) resolves backend ``none``."""
     invocation = resolve_launch_invocation(
         config=_OPENARM_CONFIG,
         robot_override=None,

@@ -284,7 +284,7 @@ class DetectorRunner:
         """
         import ctypes  # noqa: PLC0415  # reason: only the NVMM path needs ctypes
 
-        from openral_runner.backends.gstreamer.nvbufsurface import wrap_buffer  # noqa: PLC0415
+        from openral_pro_trt.nvbufsurface import wrap_buffer  # noqa: PLC0415
 
         ok_flow = int(Gst.FlowReturn.OK)
         sample = appsink.emit("pull-sample")

@@ -375,7 +375,7 @@ def scale_intrinsics_to(base: IntrinsicsPinhole, width: int, height: int) -> Int
 
 
 class CameraSimPlacement(BaseModel):
-    """Where an RGB sensor's camera sits in the sim MJCF (ADR-0065).
+    """Where an RGB sensor's camera sits in the sim MJCF (ADR-0086).
 
     Lets the generic HAL camera rig (``openral_hal._camera_rig``) splice a
     manifest camera into a bare-arm MJCF that ships no ``<camera>`` elements, so
@@ -468,7 +468,7 @@ class SensorSpec(BaseModel):
     # name matches ``name``" (the common case). E.g. openarm's ``base`` sensor
     # renders the MJCF ``top`` camera.
     sim_camera_name: str | None = None
-    # ADR-0065 — where this camera sits in the sim MJCF. When set, the generic
+    # ADR-0086 — where this camera sits in the sim MJCF. When set, the generic
     # HAL camera rig (``openral_hal._camera_rig``) splices the camera into a
     # bare-arm MJCF that ships no ``<camera>`` elements, so a ``deploy sim`` twin
     # renders the robot's declared cameras without a per-robot scene composer.
@@ -775,7 +775,7 @@ class RobotCapabilities(BaseModel):
             ``slam_toolbox`` backend (ADR-0025).
         has_vision_slam: Whether the robot should run camera-based visual
             SLAM (cuVSLAM + nvblox) for localization/mapping, for robots
-            that lack a lidar. Gates the visual SLAM backend (ADR-0064).
+            that lack a lidar. Gates the visual SLAM backend (ADR-0085).
             Independent of ``has_lidar``; when both are set the lidar
             backend wins (it does not require an AI depth model).
         has_audio: Whether audio I/O is present.

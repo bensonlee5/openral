@@ -91,31 +91,6 @@ openral-state-adapter = { workspace = true } # reason: ADR-0027 layout adapter r
 # `just sim-audit robocasa_pnp` to confirm no regression.
 robosuite = { git = "https://github.com/ARISE-Initiative/robosuite.git", rev = "232ce7d4a6ed89c949a9aba024a05c8c32fdd08b" }
 
-# The NVIDIA `tensorrt*` distributions are wheel_stub sdists whose build
-# backend downloads the real wheel from pypi.nvidia.com at METADATA time, so
-# any `uv lock` re-resolution needs that index reachable just to read their
-# requires-dist. Declare the (version-pinned) metadata statically — copied
-# from the dependency edges the lockfile already records — so locking works
-# on sandboxed / air-gapped hosts. Installing the `tensorrt` group still
-# downloads from pypi.nvidia.com as before. Re-pin when bumping tensorrt.
-[[tool.uv.dependency-metadata]]
-name = "tensorrt"
-version = "10.16.1.11"
-requires-dist = ["tensorrt-cu13==10.16.1.11"]
-
-[[tool.uv.dependency-metadata]]
-name = "tensorrt-cu13"
-version = "10.16.1.11"
-requires-dist = [
-    "tensorrt-cu13-bindings==10.16.1.11",
-    "tensorrt-cu13-libs==10.16.1.11",
-]
-
-[[tool.uv.dependency-metadata]]
-name = "tensorrt-cu13-libs"
-version = "10.16.1.11"
-requires-dist = []
-
 [dependency-groups]
 dev = [
     "pytest>=8,<9", # reason: test runner. Pin <9: pytest 9.0.3 has a collection regression where multiple modules with module-level pytest.importorskip / pytest.skip(allow_module_level=True) emit "ERROR: found no collectors" and conflate every SKIPPED entry under the first module — silently hides skip reasons in tests/sim/ (breaks tests/unit/test_sim_collection.py).
@@ -394,11 +369,6 @@ omdet = [
     "torch>=2.2",           # reason: OmDet-Turbo forward pass + .to(device); CUDA when available, CPU fallback for GPU-less hosts / deploy sim.
     "pillow>=10.0",         # reason: BGR frame -> RGB PIL.Image for the processor.
     "timm>=1.0",            # reason: OmDet-Turbo's Swin backbone loads via TimmBackbone under transformers 5.3; also used to rebuild the backbone at the processor's 640² input (the pretrained checkpoint is pinned to 224² — see _fit_timm_backbone_to_processor).
-]
-tensorrt = [
-    "tensorrt>=10.0,<11",      # reason: ONNX->TRT build-on-load for rSkill runtime_tensorrt; engines are arch/version-specific so rSkills ship ONNX and build here. Match the CUDA-suffixed wheel (tensorrt-cu13 / -cu12) to the host toolkit if the meta-wheel mis-resolves.
-    "cuda-python>=12.0",       # reason: device malloc/memcpy/stream for TensorRTRuntime.infer via the cuda.bindings API (new-style import: `from cuda.bindings import runtime as cudart`).
-    "torch>=2.1",              # reason: ONNX fixture export in test_runtime_tensorrt.py — keeps `uv sync --group tensorrt` a self-contained test env (torch.onnx.export authors the tiny model the ONNX->TRT build/infer tests parse).
 ]
 onnx-export = [
     "transformers>=4.45",  # reason: RTDetrForObjectDetection for ONNX export (one-time, ADR-0037)

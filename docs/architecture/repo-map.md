@@ -13,7 +13,7 @@ openral/                      ← THIS monorepo
 │  ├─ hal/          (openral_hal)         ← `HAL` Protocol + manifest-driven `MujocoArmHAL` adapters (SO-100/101, Franka, UR5e/10e, ALOHA, OpenArm, Rizon4, H1, G1, panda_mobile) ✓
 │  ├─ sensors/      (openral_sensors)     ← Sensor catalog + vendor adapters ✓
 │  ├─ world_state/  (openral_world_state) ← `WorldStateAggregator` (30 Hz snapshot, staleness latching, detected-objects fold-in) ✓
-│  ├─ rskill/       (openral_rskill)      ← `rSkillBase` ABC, `rSkill` loader, runtime adapters (PyTorch/ONNX/TensorRT), VLA + detector adapters ✓
+│  ├─ rskill/       (openral_rskill)      ← `rSkillBase` ABC, `rSkill` loader, runtime adapters (PyTorch/ONNX; TensorRT is an OpenRAL Pro plugin, ADR-0083), VLA + detector adapters ✓
 │  ├─ state_adapter/ (openral_state_adapter) ← rSkill state-contract bindings (ADR-0027) ✓
 │  ├─ sim/          (openral_sim)         ← `SimRunner` + `openral sim run` / `openral benchmark run` registry; LIBERO/MetaWorld/RoboCasa/ManiSkill3/SimplerEnv/gym-aloha/gym-pusht/IsaacSim (ADR-0045 sidecar) adapters ✓
 │  ├─ runner/       (openral_runner)      ← `InferenceRunner` Protocol + `DeployRunner` + `GStreamerSensorReader` + `NullSafetyClient`; ADR-0010 ✓
@@ -48,7 +48,7 @@ openral/                      ← THIS monorepo
 ├─ deployments/                   ← retired; deploy configs live in scenes/deploy (ADR-0078) ✓
 ├─ robots/                        ← canonical RobotDescription manifests ✓
 ├─ tests/{unit,integration,sim,hil}/  ← all four trees ✓
-├─ docs/                          ← mkdocs-material; ADRs in docs/adr/ ✓
+├─ docs/                          ← mkdocs-material; ADR log lives in the private OpenRAL/management repo ✓
 ├─ tools/                         ← schema_export.py, skill_publisher.py ✓
 ├─ scripts/                       ← bootstrap_*.sh, install.sh ✓
 ├─ Justfile                       ← canonical task runner ✓

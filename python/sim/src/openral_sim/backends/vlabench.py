@@ -163,7 +163,7 @@ def _check_vlabench_assets() -> None:
         f"VLABench asset bundle missing under {root / 'assets'} (no populated "
         "assets/obj). It is a one-time ~12 GB CC-BY download from Google Drive; "
         f"fetch it with:\n  VLABENCH_ROOT={root} python {scripts}\n"
-        "See docs/adr/0079-vlabench-benchmark-backend.md."
+        "See ADR-0079 (OpenRAL/management)."
     )
 
 
@@ -186,7 +186,7 @@ def _build_vlabench_scene(env_cfg: SimEnvironment) -> _VLABenchSim:
             "VLABench backend not installed; the 'vlabench' install plan "
             "(openral_sim._deps) auto-provisions it — re-run with "
             "OPENRAL_AUTO_INSTALL_DEPS=1, or install manually per "
-            "docs/adr/0079-vlabench-benchmark-backend.md and set VLABENCH_ROOT."
+            "ADR-0079 (OpenRAL/management) and set VLABENCH_ROOT."
         ) from exc
     _check_vlabench_assets()
 

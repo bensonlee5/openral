@@ -323,7 +323,7 @@ class LaunchInvocation:
     """ADR-0025 opt-in. Set by ``openral deploy sim --enable-slam``;
     forwarded into the launch as ``enable_slam:=true``."""
     slam_backend: str
-    """ADR-0064 — which SLAM backend the launch composes when
+    """ADR-0085 — which SLAM backend the launch composes when
     ``enable_slam`` is true: ``"lidar"`` (slam_toolbox, needs ``/scan``),
     ``"visual"`` (cuVSLAM + nvblox, camera-based, for lidar-less robots),
     or ``"none"`` (no SLAM). Resolved from capabilities — ``has_lidar``
@@ -549,7 +549,7 @@ def _object_detector_onnx_present(path: Path) -> bool:
 
 
 def _resolve_slam_backend(*, has_lidar: bool, has_vision_slam: bool, enable_slam: bool) -> str:
-    """ADR-0064 — pick the SLAM backend the launch composes.
+    """ADR-0085 — pick the SLAM backend the launch composes.
 
     Returns one of ``"lidar"`` (slam_toolbox; needs ``/scan``), ``"visual"``
     (cuVSLAM + nvblox; camera-based, for lidar-less robots), or ``"none"``.
@@ -1063,14 +1063,14 @@ def resolve_launch_invocation(  # noqa: PLR0912, PLR0915  # reason: a flat resol
     # opts out with `--no-enable-slam`. Fixed-base arms (no mobile base, no lidar)
     # correctly stay off — there is no base to localise and nothing to map.
     # `enable_slam is None` means "auto": honour the manifest; an explicit flag wins.
-    # ADR-0064 — SLAM is on for any robot that can localise/map: a lidar
+    # ADR-0085 — SLAM is on for any robot that can localise/map: a lidar
     # (slam_toolbox) OR camera-based visual SLAM (cuVSLAM+nvblox, for
     # lidar-less robots). Fixed-base arms with neither correctly stay off.
     if enable_slam is None:
         enable_slam = bool(
             description.capabilities.has_lidar or description.capabilities.has_vision_slam
         )
-    # ADR-0064 — backend selection (pure helper, unit-tested directly).
+    # ADR-0085 — backend selection (pure helper, unit-tested directly).
     slam_backend = _resolve_slam_backend(
         has_lidar=bool(description.capabilities.has_lidar),
         has_vision_slam=bool(description.capabilities.has_vision_slam),

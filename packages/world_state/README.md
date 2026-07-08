@@ -173,8 +173,8 @@ RobotDescription.sensors[sensor_id].intrinsics                  ─┘          
 - `openral_core.WorldState` / `JointState` / `Pose6D` /
   `RobotDescription` — Pydantic schemas this node produces and consumes.
 - `openral_msgs/msg/WorldStateStamped.msg` — the typed wire format.
-- [ADR-0018](../../docs/adr/0018-ros2-reasoner-supervisor.md) §2 and the
+- ADR-0018 §2 and the
   capability review's F2 section for the full design rationale.
-- [ADR-0035](../../docs/adr/0035-perception-spatial-memory-object-lift.md) —
+- ADR-0035 —
   perception→spatial-memory object lift design decisions and follow-ups.
 - CLAUDE.md §6.1 (layer discipline) and §5.3 (QoS).

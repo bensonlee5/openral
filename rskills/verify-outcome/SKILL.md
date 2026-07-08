@@ -17,7 +17,7 @@ metadata:
   latency_budget: {per_chunk_ms: 5000.0}
   license_code: Apache-2.0
   license_weights: apache-2.0
-  paper_url: https://github.com/OpenRAL/openral/blob/master/docs/adr/0072-reasoner-playbooks-and-self-maintained-memory.md
+  paper_url: https://github.com/OpenRAL/openral/blob/master/docs/decisions.md
 ---
 
 # verify-outcome — rSkill discovery view

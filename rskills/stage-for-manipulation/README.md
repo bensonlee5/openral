@@ -46,7 +46,7 @@ tool calls the reasoner makes while following the SOP, bounded by
 ## How it was authored / Upstream provenance
 
 N/A — a playbook is **hand-authored**, not trained: it has no weights and no
-upstream model. Its provenance is [ADR-0072](../../docs/adr/0072-reasoner-playbooks-and-self-maintained-memory.md)
+upstream model. Its provenance is ADR-0072
 (also linked via `paper_url`). To change behaviour, edit `PLAYBOOK.md` and bump
 `version`.
 
@@ -98,6 +98,6 @@ N/A — no `eval/*.json`; a playbook produces no benchmarkable policy output.
 
 ## See also
 
-- [ADR-0072](../../docs/adr/0072-reasoner-playbooks-and-self-maintained-memory.md) — the `playbook` kind + reasoner memory.
-- [ADR-0051](../../docs/adr/0051-approach-to-pose.md) — the collision-aware approach-to-pose this playbook drives.
+- ADR-0072 — the `playbook` kind + reasoner memory.
+- ADR-0051 — the collision-aware approach-to-pose this playbook drives.
 - [`PLAYBOOK.md`](./PLAYBOOK.md) — the decision procedure itself.

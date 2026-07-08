@@ -177,5 +177,5 @@ unlike the NVIDIA non-commercial `locateanything-3b-nf4` open-vocab detector.
   open-vocab detector (NVIDIA non-commercial; `VLM_SIDECAR` tier).
 - [`rskills/rtdetr-coco-r18/`](../rtdetr-coco-r18/) — fixed 80-class COCO RT-DETR
   detector (ONNX tier).
-- [`docs/adr/0037-gstreamer-perception-bus-object-detection.md`](../../docs/adr/0037-gstreamer-perception-bus-object-detection.md) — detector kind + tier contract.
+- ADR-0037 — detector kind + tier contract.
 - [CLAUDE.md §6.4](../../CLAUDE.md) — rSkill packaging contract.
