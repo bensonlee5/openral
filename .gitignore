@@ -150,3 +150,11 @@ install_py312/
 
 # Impeccable copy-edit hook scratch cache (scattered wherever it edits)
 .impeccable/
+
+# Superpowers skill scratch/state cache
+.superpowers/
+
+# Agent-session transcripts and worktree-creation logs dropped at repo root
+# by Copilot/Claude tooling — never a checked-in artefact.
+/copilot-session-*.md
+/[0-9][0-9][0-9][0-9]-*-*.txt
