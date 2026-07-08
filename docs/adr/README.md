@@ -99,7 +99,7 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0062](0062-rlbench-benchmark-backend.md) | RLBench (CoppeliaSim/PyRep) benchmark backend + 3D Diffuser Actor | Accepted | renumbered from 0061; reuses 0045 sidecar; refs 0060 gate |
 | [0079](0079-vlabench-benchmark-backend.md) | VLABench (MuJoCo + dm_control) benchmark backend — native in-process, auto-provisioned | Accepted | native (no sidecar) unlike 0062; refs 0060 gate; assets manual like 0062 |
 | [0060](0060-benchmark-task-data-compatibility-gate.md) | Benchmark task-data compatibility gate (`evaluated_tasks`) | Accepted | gates 0061/0062/0063 |
-| [0065](0065-generic-sim-camera-rig.md) | Generic sim camera rig driven by `SensorSpec.sim_placement` | Accepted | closes issue #88 |
+| [0086](0086-generic-sim-camera-rig.md) | Generic sim camera rig driven by `SensorSpec.sim_placement` | Accepted | closes issue #88; renumbered from the colliding 0065 |
 | [0066](0066-deploy-scene-owns-composition.md) | `DeployScene` owns its MJCF composition (robot / scene / rSkill separation) | Accepted | extends 0034, 0041 |
 
 ## F · Deploy path & runtime
@@ -113,7 +113,7 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0063](0063-openvla-oft-policy-family.md) | OpenVLA / OpenVLA-OFT policy family (in-process custom-code, token de-norm) | Accepted | renumbered from 0061; new `ModelFamily`; refs 0046, 0060 gate |
 | [0048](0048-deploy-sim-clock-publisher.md) | A sim `/clock` publisher for the deploy-sim graph | Proposed | refs 0034 idle-stepper; safety-WG-gated |
 | [0050](0050-single-resident-skill-vram-eviction.md) | Single-resident-skill VRAM eviction (unload-on-switch) | Proposed | — |
-| [0069](0069-compute-deployment-targets.md) | Compute deployment targets — edge / local / cloud slots on `RobotDescription` | Proposed | extends ComputeSpec split (Jun 2026); builds on 0008, 0010, 0016, 0018; refs 0046, 0065 |
+| [0069](0069-compute-deployment-targets.md) | Compute deployment targets — edge / local / cloud slots on `RobotDescription` | Proposed | extends ComputeSpec split (Jun 2026); builds on 0008, 0010, 0016, 0018; refs 0046, 0065 (cuMotion GPU gate) |
 
 ## G · Safety & collision
 
@@ -146,11 +146,11 @@ the highest-numbered ADR in its cluster — that is usually the live one.
 | [0017](0017-dashboard-otlp-receiver.md) | `openral dashboard` — embedded OTLP/HTTP receiver | Accepted | — |
 | [0019](0019-rosbag2-lerobot-dataset-bridge.md) | rosbag2 ↔ LeRobotDataset v3 bridge | Accepted | amends 0010 |
 | [0059](0059-foxglove-live-scene-visualization.md) | Foxglove as the read-only live-scene surface (hybrid with the OTel dashboard) | Accepted | keeps 0017; taps 0058 `/tf`; safety-WG-signed-off |
-| [0064](0064-vision-slam-lidarless-cuvslam-nvblox-monodepth.md) | Vision SLAM for lidar-less robots (cuVSLAM + nvblox + monocular metric depth) | Accepted | extends 0025; reuses 0046 license/sidecar pattern; competes with 0050 VRAM budget; Ph1+2 landed, live mapping operator-run |
-| [0064](0064-critic-score-topic-and-tier-c-producer.md) | Generic `CriticScore` topic + Tier-C critic producer | Accepted | duplicate number (cross-refs use filenames); consumed by 0073 |
-| [0064](0064-dashboard-write-controls.md) | Dashboard guarded write-controls | Proposed | duplicate number; pending safety-WG review |
+| [0085](0085-vision-slam-lidarless-cuvslam-nvblox-monodepth.md) | Vision SLAM for lidar-less robots (cuVSLAM + nvblox + monocular metric depth) | Accepted | extends 0025; reuses 0046 license/sidecar pattern; competes with 0050 VRAM budget; Ph1+2 landed, live mapping operator-run; renumbered from the colliding 0064 |
+| [0064](0064-critic-score-topic-and-tier-c-producer.md) | Generic `CriticScore` topic + Tier-C critic producer | Accepted | kept 0064 (earliest of the three collisions); consumed by 0073 |
+| [0084](0084-dashboard-write-controls.md) | Dashboard guarded write-controls | Proposed | pending safety-WG review; renumbered from the colliding 0064 |
 | [0068](0068-robot-sensor-catalog-provenance.md) | Robot sensor catalog provenance via `SensorSpec.catalog_id` | Accepted | extends 0058 |
-| [0070](0070-canonical-camera-slot-names.md) | Canonical camera slot names | Accepted | refs 0065 camera rig; consumed by 0071 |
+| [0070](0070-canonical-camera-slot-names.md) | Canonical camera slot names | Accepted | refs 0086 camera rig; consumed by 0071 |
 
 ## J · Motion / MoveIt goal building
 

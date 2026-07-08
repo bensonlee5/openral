@@ -65,7 +65,7 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 
 def _write_controls_enabled() -> bool:
-    """Whether guarded write-controls are on (default OFF; ADR-0064)."""
+    """Whether guarded write-controls are on (default OFF; ADR-0084)."""
     return os.environ.get("OPENRAL_DASHBOARD_WRITE_CONTROLS", "") == "1"
 
 
@@ -145,7 +145,7 @@ async def _drain_skill_goal_stdout(
 
     Runs as a background ``asyncio.Task`` — must catch all exceptions and log
     them (never crash the event loop). Called by ``_skill_execute_response``
-    after the action server accepts the goal (ADR-0064 §4).
+    after the action server accepts the goal (ADR-0084 §4).
     """
     remaining: list[str] = list(captured_lines)
     try:
@@ -457,7 +457,7 @@ def _config_response() -> JSONResponse:
 
     The UI fetches this once on load to decide whether to enable the
     "open in jaeger" link and whether to reveal the operator write-controls
-    panel (ADR-0064). Returning ``""`` (the default) leaves the Jaeger link
+    panel (ADR-0084). Returning ``""`` (the default) leaves the Jaeger link
     disabled with a helpful tooltip — the previous behaviour of
     unconditionally linking to ``localhost:16686`` produced a
     broken-link click for every user who doesn't run Jaeger locally.
@@ -473,7 +473,7 @@ async def _skill_execute_from_request(request: Request) -> JSONResponse:
 
     Handles the flag check, JSON decode, field validation, and dispatch in one
     place so the route closure stays under the statement cap (PLR0915).
-    Every attempt — permitted or denied — is audit-logged (ADR-0064 §4).
+    Every attempt — permitted or denied — is audit-logged (ADR-0084 §4).
     """
     operator_ip = request.client.host if request.client else "unknown"
     if not _write_controls_enabled():
@@ -481,14 +481,14 @@ async def _skill_execute_from_request(request: Request) -> JSONResponse:
             "dashboard_write_attempt",
             operation="skill_execute",
             outcome="denied_flag_off",
-            adr="ADR-0064",
+            adr="ADR-0084",
             operator_ip=operator_ip,
         )
         return JSONResponse(
             {
                 "error": (
                     "write-controls disabled; set OPENRAL_DASHBOARD_WRITE_CONTROLS=1 "
-                    "(pending safety-WG review, ADR-0064)"
+                    "(pending safety-WG review, ADR-0084)"
                 )
             },
             status_code=403,
@@ -512,7 +512,7 @@ async def _skill_execute_from_request(request: Request) -> JSONResponse:
 async def _skill_execute_response(
     skill_id: str, revision: str, prompt: str, goal_params_json: str, operator_ip: str
 ) -> JSONResponse:
-    """Dispatch an ExecuteRskill action goal (ADR-0064; safety kernel disposes).
+    """Dispatch an ExecuteRskill action goal (ADR-0084; safety kernel disposes).
 
     Async accept-then-track: the endpoint returns as soon as the action server
     **accepts** the goal (HTTP 202) rather than blocking on full completion.
@@ -527,12 +527,12 @@ async def _skill_execute_response(
     - Returns **HTTP 503** if ``ros2`` is not on PATH.
 
     On 202 a background ``asyncio.Task`` drains the remaining stdout, awaits
-    process exit, and audit-logs the eventual outcome (ADR-0064 §4). The task
+    process exit, and audit-logs the eventual outcome (ADR-0084 §4). The task
     reference is kept in ``_BACKGROUND_DRAIN_TASKS`` so the event loop cannot
     GC it before completion.
 
     Every call is audit-logged at WARNING level before the subprocess is
-    spawned (ADR-0064 §4). ``prompt`` and ``goal_params_json`` are never logged.
+    spawned (ADR-0084 §4). ``prompt`` and ``goal_params_json`` are never logged.
     """
     ros2 = shutil.which("ros2")
     if ros2 is None:
@@ -561,7 +561,7 @@ async def _skill_execute_response(
         "dashboard_write_attempt",
         operation="skill_execute",
         outcome="sent",
-        adr="ADR-0064",
+        adr="ADR-0084",
         skill_id=skill_id,
         revision=revision,
         operator_ip=operator_ip,
@@ -607,7 +607,7 @@ async def _skill_execute_response(
             "dashboard_write_attempt",
             operation="skill_execute",
             outcome="rejected",
-            adr="ADR-0064",
+            adr="ADR-0084",
             skill_id=skill_id,
             operator_ip=operator_ip,
         )
@@ -633,7 +633,7 @@ async def _skill_execute_response(
         "dashboard_write_attempt",
         operation="skill_execute",
         outcome="accepted",
-        adr="ADR-0064",
+        adr="ADR-0084",
         skill_id=skill_id,
         goal_id=accepted_goal_id,
         operator_ip=operator_ip,
@@ -660,7 +660,7 @@ async def _param_set_from_request(request: Request) -> JSONResponse:
 
     Handles the flag check, JSON decode, field validation, denylist check, and
     dispatch in one place so the route closure stays under the statement cap
-    (PLR0915). Every attempt — permitted or denied — is audit-logged (ADR-0064 §4).
+    (PLR0915). Every attempt — permitted or denied — is audit-logged (ADR-0084 §4).
     """
     operator_ip = request.client.host if request.client else "unknown"
     if not _write_controls_enabled():
@@ -668,14 +668,14 @@ async def _param_set_from_request(request: Request) -> JSONResponse:
             "dashboard_write_attempt",
             operation="param_set",
             outcome="denied_flag_off",
-            adr="ADR-0064",
+            adr="ADR-0084",
             operator_ip=operator_ip,
         )
         return JSONResponse(
             {
                 "error": (
                     "write-controls disabled; set OPENRAL_DASHBOARD_WRITE_CONTROLS=1 "
-                    "(pending safety-WG review, ADR-0064)"
+                    "(pending safety-WG review, ADR-0084)"
                 )
             },
             status_code=403,
@@ -703,7 +703,7 @@ async def _param_set_from_request(request: Request) -> JSONResponse:
 
 
 async def _param_set_response(node: str, name: str, value: str, operator_ip: str) -> JSONResponse:
-    """Set a NON-safety ROS param via ``ros2 param set`` (ADR-0064).
+    """Set a NON-safety ROS param via ``ros2 param set`` (ADR-0084).
 
     Checks ``name`` case-insensitively against ``_SAFETY_PARAM_DENYLIST`` before
     any shell-out. A matching name is refused with 403 and a paper-trail audit
@@ -717,7 +717,7 @@ async def _param_set_response(node: str, name: str, value: str, operator_ip: str
             "dashboard_write_attempt",
             operation="param_set",
             outcome="denied_denylist",
-            adr="ADR-0064",
+            adr="ADR-0084",
             operator_ip=operator_ip,
             node=node,
             name=name,
@@ -743,7 +743,7 @@ async def _param_set_response(node: str, name: str, value: str, operator_ip: str
         "dashboard_write_attempt",
         operation="param_set",
         outcome="sent",
-        adr="ADR-0064",
+        adr="ADR-0084",
         operator_ip=operator_ip,
         node=node,
         name=name,
@@ -969,14 +969,14 @@ def create_app(store: TelemetryStore | None = None) -> FastAPI:  # noqa: PLR0915
 
     @app.post("/api/skill/execute")
     async def post_skill_execute(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # issue #75c / ADR-0064 — guarded skill switch. Default OFF.
+        # issue #75c / ADR-0084 — guarded skill switch. Default OFF.
         # Full logic lives in _skill_execute_from_request to keep create_app
         # under the statement cap (PLR0915).
         return await _skill_execute_from_request(request)
 
     @app.post("/api/param/set")
     async def post_param_set(request: Request) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        # issue #75c / ADR-0064 — guarded param tune. Default OFF; safety params
+        # issue #75c / ADR-0084 — guarded param tune. Default OFF; safety params
         # refused via denylist. Full logic in _param_set_from_request to keep
         # create_app under the statement cap (PLR0915).
         return await _param_set_from_request(request)

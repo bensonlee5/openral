@@ -1,4 +1,4 @@
-"""ADR-0064 — hermetic checks on ``cuvslam.launch.py``.
+"""ADR-0085 — hermetic checks on ``cuvslam.launch.py``.
 
 These do NOT spawn a real ROS 2 graph and do NOT need the cuVSLAM engine
 (an NVIDIA binary OpenRAL does not bundle). They assert the launch file's
@@ -11,7 +11,7 @@ structural contract so a regression surfaces at unit-test time:
 * The launch description composes exactly one ``ComposableNodeContainer``
   holding exactly one cuVSLAM ``ComposableNode`` — and, unlike
   ``slam_toolbox.launch.py``, there is NO ``LifecycleNode`` (cuVSLAM is a
-  plain composable node, not a ROS 2 lifecycle node — ADR-0064).
+  plain composable node, not a ROS 2 lifecycle node — ADR-0085).
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ def test_launch_module_pins_node_package_and_plugin() -> None:
 def test_launch_description_shape() -> None:
     """One container, one cuVSLAM composable node, and NO LifecycleNode.
 
-    cuVSLAM is a plain composable node (ADR-0064) — composing it makes it
+    cuVSLAM is a plain composable node (ADR-0085) — composing it makes it
     live, so there is no UNCONFIGURED→INACTIVE auto-transition and no
     Reasoner-driven CONFIGURE/ACTIVATE (contrast slam_toolbox, ADR-0025).
     """
@@ -96,6 +96,6 @@ def test_launch_description_shape() -> None:
     assert len(containers) == 1, f"expected exactly 1 container, got {len(containers)}"
     lifecycle_nodes = [a for a in actions if isinstance(a, LifecycleNode)]
     assert len(lifecycle_nodes) == 0, (
-        "cuVSLAM is a composable node, not a LifecycleNode — ADR-0064. "
+        "cuVSLAM is a composable node, not a LifecycleNode — ADR-0085. "
         f"Got {len(lifecycle_nodes)} LifecycleNode(s)."
     )

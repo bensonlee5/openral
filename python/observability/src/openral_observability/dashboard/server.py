@@ -139,7 +139,7 @@ def run_dashboard(  # noqa: PLR0915  # reason: linear bootstrap (app + estop pub
         _write_controls_msg = (
             "dashboard write-controls ENABLED (OPENRAL_DASHBOARD_WRITE_CONTROLS=1): "
             "skill-switch + non-safety param-tune are live and reach actuation config. "
-            "Pending safety-WG review (ADR-0064). The safety kernel still disposes all motion."
+            "Pending safety-WG review (ADR-0084). The safety kernel still disposes all motion."
         )
         _LOG.warning("dashboard.write_controls_enabled")
         print(f"WARNING: {_write_controls_msg}", file=sys.stderr, flush=True)

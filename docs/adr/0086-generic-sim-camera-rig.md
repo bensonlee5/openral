@@ -1,11 +1,12 @@
-# ADR-0065 — Generic sim camera rig driven by `SensorSpec.sim_placement`
+# ADR-0086 — Generic sim camera rig driven by `SensorSpec.sim_placement`
 
 - **Status:** Accepted 2026-06-22. Closes issue #88 (so101_box / so100 deploy
   sim rendered no cameras) with a robot-agnostic mechanism rather than a
   per-robot scene composer.
 - **Date:** 2026-06-22
-- **ADR number:** `0065`. The integer is not load-bearing — cross-refs use
-  filenames.
+- **ADR number:** `0086` (renumbered from the original `0065`, which collided
+  with ADR-0065 cuMotion; the earlier-dated cuMotion ADR kept `0065`). The
+  integer is not load-bearing — cross-refs use filenames.
 - **Related:**
   - issue #191 Phase 3b / ADR-0033 — `scene_defaults.composition`: the
     manifest-driven HAL node calls a named composer to build a *task* MJCF (arm

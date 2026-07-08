@@ -12,7 +12,7 @@ lidar profile:  /scan ─────▶ Nav2 (obstacle_layer) ──/navigate_t
 visual profile: /map ──────▶ Nav2 (static_layer)   ──/navigate_to_pose──▶ /cmd_vel
 ```
 
-## Costmap profiles (ADR-0064 — backend-agnostic)
+## Costmap profiles (ADR-0085 — backend-agnostic)
 
 Nav2 is selected to match the SLAM backend via the `slam_backend` launch arg, so
 navigation works **regardless of how the 2D map is built**:
@@ -22,7 +22,7 @@ navigation works **regardless of how the 2D map is built**:
 | `lidar` (default) | `nav2_panda_mobile.yaml` | `/scan` via `obstacle_layer`/`voxel_layer` |
 | `visual` | `nav2_visual.yaml` | **`/map`** `OccupancyGrid` via `static_layer` |
 
-The **visual** profile lets a lidar-less robot (cuVSLAM + nvblox, ADR-0064)
+The **visual** profile lets a lidar-less robot (cuVSLAM + nvblox, ADR-0085)
 navigate: the global+local costmaps consume the backend-agnostic `/map` (which
 nvblox publishes, remapped from its `static_occupancy_grid`) via `static_layer`
 with `map_subscribe_transient_local: False` (nvblox's `/map` is RELIABLE+VOLATILE,
@@ -41,7 +41,7 @@ visual profile activated and `ComputePathToPose` returned a path consuming only
 Normally started by the Reasoner as a background service when the active goal
 needs navigation (ADR-0025); the `openral deploy sim` / `deploy run` graph wires
 the leg when the robot declares a lidar (`has_lidar`) **or** vision SLAM
-(`has_vision_slam`, ADR-0064) and forwards the resolved `slam_backend`.
+(`has_vision_slam`, ADR-0085) and forwards the resolved `slam_backend`.
 Standalone:
 
 ```bash

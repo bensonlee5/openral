@@ -219,7 +219,7 @@ def _build_nav2_include(
         launch_arguments={
             "use_sim_time": "true" if use_sim_time else "false",
             "robot_yaml": robot_yaml,
-            # ADR-0064 — visual robots get the `/map`-consuming costmap profile
+            # ADR-0085 — visual robots get the `/map`-consuming costmap profile
             # (nav2_visual.yaml); lidar robots keep the `/scan` base config.
             "slam_backend": slam_backend,
         }.items(),
@@ -310,10 +310,10 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         "true",
         "yes",
     )
-    # ADR-0064 — which SLAM backend to compose when enable_slam: "lidar"
+    # ADR-0085 — which SLAM backend to compose when enable_slam: "lidar"
     # (slam_toolbox), "visual" (cuVSLAM, camera-based, lidar-less robots),
     # or "none". Resolved upstream in deploy_sim.py from capabilities;
-    # default "lidar" preserves the pre-ADR-0064 behaviour for any caller
+    # default "lidar" preserves the pre-ADR-0085 behaviour for any caller
     # that sets enable_slam without forwarding slam_backend.
     slam_backend = LaunchConfiguration("slam_backend").perform(context).strip().lower()
     enable_nav2 = LaunchConfiguration("enable_nav2").perform(context).lower() in (
@@ -972,7 +972,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     ),
                 )
 
-    # ADR-0025 / ADR-0064 — opt-in SLAM. The backend is selected by
+    # ADR-0025 / ADR-0085 — opt-in SLAM. The backend is selected by
     # ``slam_backend`` (resolved from capabilities in deploy_sim.py):
     # ``visual`` composes cuVSLAM (camera-based, lidar-less robots);
     # anything else composes slam_toolbox (2D lidar). ``enable_slam`` is
@@ -984,7 +984,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
         from ament_index_python.packages import get_package_share_directory
 
         if slam_backend == "visual":
-            # ADR-0064 — cuVSLAM is the camera-based backend for lidar-less
+            # ADR-0085 — cuVSLAM is the camera-based backend for lidar-less
             # robots; it fills the same ``map→odom`` TF edge slam_toolbox
             # fills on lidar robots. It is a *composable node*, not a ROS
             # lifecycle node, so there is no Reasoner-driven CONFIGURE/
@@ -992,7 +992,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
             # We include the package's own ``cuvslam.launch.py`` so the node
             # spec stays single-sourced (and hermetically tested). The
             # cuVSLAM/nvblox engines are NVIDIA binaries the operator installs
-            # on the GPU host behind the ADR-0064 license guard (not bundled).
+            # on the GPU host behind the ADR-0085 license guard (not bundled).
             from launch.actions import IncludeLaunchDescription
             from launch.launch_description_sources import PythonLaunchDescriptionSource
 
@@ -1006,7 +1006,7 @@ def compose_runtime_graph(context: LaunchContext, *_args: object, **_kwargs: obj
                     launch_arguments={"use_sim_time": sim_time_arg}.items(),
                 )
             )
-            # ADR-0064 Phase 2 — cuVSLAM gives pose, NOT an occupancy grid.
+            # ADR-0085 Phase 2 — cuVSLAM gives pose, NOT an occupancy grid.
             # When navigating (enable_nav2), also bring up nvblox to fuse depth
             # + cuVSLAM pose into the ESDF cost map Nav2's planner needs. The
             # depth stream feeding nvblox comes from the monocular metric-depth
@@ -1723,12 +1723,12 @@ def generate_launch_description() -> LaunchDescription:
             "slam_backend",
             default_value="lidar",
             description=(
-                "ADR-0064 — SLAM backend composed when ``enable_slam`` is "
+                "ADR-0085 — SLAM backend composed when ``enable_slam`` is "
                 "true: ``lidar`` (slam_toolbox, needs /scan), ``visual`` "
                 "(cuVSLAM, camera-based, for lidar-less robots), or ``none``. "
                 "Normally resolved upstream by deploy_sim.py from "
                 "``RobotCapabilities`` (``has_lidar`` / ``has_vision_slam``); "
-                "defaults to ``lidar`` to preserve pre-ADR-0064 behaviour."
+                "defaults to ``lidar`` to preserve pre-ADR-0085 behaviour."
             ),
         ),
         DeclareLaunchArgument(

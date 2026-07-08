@@ -91,14 +91,14 @@ def test_launch_module_includes_upstream_navigation_launch() -> None:
     assert len(opaque) == 1, f"expected exactly 1 deferred OpaqueFunction; got {len(opaque)}"
     arg_names = {a.name for a in actions if isinstance(a, DeclareLaunchArgument)}
     assert "robot_yaml" in arg_names, arg_names
-    # ADR-0064 — the SLAM-backend selector arg drives the costmap profile.
+    # ADR-0085 — the SLAM-backend selector arg drives the costmap profile.
     assert "slam_backend" in arg_names, arg_names
     default_path = getattr(mod, "DEFAULT_PARAMS_PATH")  # noqa: B009
     assert Path(default_path).is_file(), default_path
 
 
 def test_slam_backend_selects_costmap_profile() -> None:
-    """ADR-0064 — `_params_path_for_backend` maps the backend to the right config."""
+    """ADR-0085 — `_params_path_for_backend` maps the backend to the right config."""
     mod = _import_launch_module()
     visual = Path(mod._params_path_for_backend("visual"))
     lidar = Path(mod._params_path_for_backend("lidar"))
@@ -111,7 +111,7 @@ def test_slam_backend_selects_costmap_profile() -> None:
 
 
 def test_visual_profile_consumes_map_not_scan() -> None:
-    """ADR-0064 — the visual profile's costmaps read `/map` via static_layer (no /scan).
+    """ADR-0085 — the visual profile's costmaps read `/map` via static_layer (no /scan).
 
     This is what makes Nav2 backend-agnostic: a lidar-less robot (cuVSLAM+nvblox)
     plans off the same `/map` interface slam_toolbox publishes, with no `/scan`.

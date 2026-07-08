@@ -1,6 +1,6 @@
 """Encode a metric-depth ndarray into a sensor_msgs/Image (+ CameraInfo).
 
-ADR-0064 — the monocular metric-depth provider (DA3-Small by default) turns a
+ADR-0085 — the monocular metric-depth provider (DA3-Small by default) turns a
 mono RGB stream into a metric depth image that **nvblox** fuses with cuVSLAM's
 pose into a 2D costmap for Nav2, so lidar-less robots get a `/map`. This module
 is the pure, ROS-message-boundary half: float32 metres → `32FC1` Image, and the
