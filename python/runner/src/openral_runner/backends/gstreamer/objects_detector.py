@@ -597,9 +597,17 @@ def make_objects_detector(
     if tier is DetectorTier.CPU_ONNX:
         return ObjectsDetector(onnx_path, labels=labels, model_id=model_id, **kwargs)
     if tier is DetectorTier.NVMM_AGGREGATOR:
-        from openral_runner.backends.gstreamer.nvmm_detector import (  # noqa: PLC0415
-            NvmmObjectsDetector,
-        )
+        try:
+            from openral_runner.backends.gstreamer.nvmm_detector import (  # noqa: PLC0415
+                NvmmObjectsDetector,
+            )
+        except ModuleNotFoundError as exc:
+            raise ROSConfigError(
+                "ObjectsDetector: the 'nvmm_aggregator' detector tier requires "
+                "openral-pro-trt (ADR-0083) — the zero-copy NVMM aggregator ships "
+                "in the private OpenRAL Pro package, not the public repo. Pass "
+                "tier=DetectorTier.CPU_ONNX for the open ONNXRuntime path."
+            ) from exc
 
         return NvmmObjectsDetector(onnx_path, labels=labels, model_id=model_id, **kwargs)
     if tier is DetectorTier.NVINFER:

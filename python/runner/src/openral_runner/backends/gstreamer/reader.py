@@ -536,13 +536,26 @@ class GStreamerSensorReader:
         through the handle.
         """
         # Lazy import: keeps the CPU path independent of libnvbufsurface.
-        from openral_runner.backends.gstreamer.nvbufsurface import (  # noqa: PLC0415
-            NvBufSurfaceColorFormat,
-            NvBufSurfaceLibraryError,
-            StableSurfaceMirror,
-            load,
-            wrap_buffer,
-        )
+        # ``nvbufsurface`` ships in the private openral-pro-trt package
+        # (ADR-0083); a physically-absent module degrades identically to a
+        # present-but-unloadable libnvbufsurface.so — both are "NVMM caps
+        # negotiated but the runtime backend is unavailable" (§1.4, no
+        # silent fallback: this is a bus error, not a quiet skip).
+        try:
+            from openral_runner.backends.gstreamer.nvbufsurface import (  # noqa: PLC0415
+                NvBufSurfaceColorFormat,
+                NvBufSurfaceLibraryError,
+                StableSurfaceMirror,
+                load,
+                wrap_buffer,
+            )
+        except ImportError as exc:
+            with self._frame_lock:
+                self._bus_error = (
+                    f"NVMM caps negotiated but the NVMM runtime backend is unavailable "
+                    f"(openral-pro-trt not installed): {exc}"
+                )
+            return int(Gst.FlowReturn.ERROR)
 
         try:
             load()
