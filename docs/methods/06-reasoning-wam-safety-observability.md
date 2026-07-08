@@ -119,7 +119,10 @@ _Tier-C critic progress-stall / success watchdog — default decision core for t
 - `class CriticWatchdogGroup` (L272) — Multiplexer keying one `CriticWatchdog` per `critic_id` so multiple/future reward models (Robometer + SARM + …) share the `/openral/failure/critic` source independently. `__init__(*, stall_patience: int, min_delta: float = 0.0)`. Methods: `observe(*, critic_id: str, score: float, threshold: float) -> CriticEvidence | None` — lazily creates a watchdog per `critic_id` (binding `threshold` on first sight, held stable) and delegates; `known_critics() -> frozenset[str]`; `reset(critic_id: str | None = None) -> None` — drop one critic's watchdog (rebinds its threshold) or all. Read-only properties `stall_patience`, `min_delta`.
 
 ### `python/wam/src/openral_wam/protocol.py`
-_World Action Model Protocol (CLAUDE.md §6.3)._
+_World Action Model Protocol (CLAUDE.md §6.3). This package ships the Protocol/contract
+surface only (`WorldModel`, `Rollout`, `NullWorldModel`); concrete generative WAM adapters
+(Cosmos Predict, UnifoLM-WMA-0, IRASim) ship as separate downstream packages in the private
+OpenRAL Pro monorepo per [ADR-0083](../adr/0083-openral-pro-commercial-tier.md)._
 
 - `class WorldModel(Protocol)` — Generative simulator used by the planning layer for the three integration patterns (gating / failure anticipation / replanning). Attribute: `max_horizon`. Method: `rollout(world_state, action_chunk, horizon) -> Rollout` — predict `horizon` steps of future state; raises `ROSConfigError` (horizon exceeds max) / `ROSInferenceTimeout` (budget exceeded). (L31)
 
