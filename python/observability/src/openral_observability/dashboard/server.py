@@ -53,7 +53,7 @@ def _exposure_warning(host: str) -> str | None:
     )
 
 
-def run_dashboard(  # noqa: PLR0915  # reason: linear bootstrap (app + estop pub + discovery + uvicorn)
+def run_dashboard(  # noqa: PLR0915, PLR0912  # reason: linear bootstrap (app + vad assets + estop pub + discovery + uvicorn)
     *,
     host: str = "127.0.0.1",
     port: int = 4318,
@@ -90,6 +90,21 @@ def run_dashboard(  # noqa: PLR0915  # reason: linear bootstrap (app + estop pub
     from openral_observability.dashboard.app import _write_controls_enabled, create_app
 
     app = create_app(store)
+
+    # Voice-prompt (VAD) static assets: fetched on first start into
+    # $OPENRAL_CACHE_DIR (~/.cache/openral by default) and placed under the
+    # served static dir — see vad_assets.py. Best-effort: an offline host or
+    # upstream outage must never block the dashboard from starting; the mic
+    # button just degrades (voice_prompt_enabled=false in /api/config).
+    try:
+        from openral_observability.dashboard.vad_assets import ensure_vad_assets
+
+        if ensure_vad_assets():
+            _LOG.info("dashboard.vad_assets ready (voice prompt available)")
+        else:
+            _LOG.warning("dashboard.vad_assets incomplete — voice prompt disabled")
+    except Exception as exc:  # never gate the dashboard on the voice-prompt assets
+        _LOG.warning("dashboard.vad_assets_start_failed error=%s", exc)
 
     # Persistent e-stop publisher: created ONCE here so DDS discovery of the
     # HAL/kernel/runner subscribers happens at launch, and every later E-STOP

@@ -232,6 +232,11 @@ async def test_api_config_defaults_to_empty_jaeger_url(monkeypatch: pytest.Monke
         body = resp.json()
         assert body["jaeger_ui_url"] == ""
         assert body["write_controls_enabled"] is False
+        # voice_prompt_enabled (vad_assets.py) reflects whether the offline
+        # VAD binary assets are present on disk — not asserted True/False
+        # here since that depends on whether they were ever downloaded on
+        # this host; only the shape of the flag is contractual.
+        assert isinstance(body["voice_prompt_enabled"], bool)
 
 
 @pytest.mark.asyncio
